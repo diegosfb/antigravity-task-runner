@@ -1,0 +1,4 @@
+Environment: QA
+Purpose: integration and regression testing
+Infrastructure: config/Infrastructure/aws-dev.yaml
+# Note: AWS ECS target for QA validation.

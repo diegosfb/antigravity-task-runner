@@ -1,0 +1,12 @@
+Account: diegosfb@gmail.com
+GCP ProjectID: bettertris
+Region: us-central1
+WebService: battletris-server
+Target Architecture: linux/amd64
+Repository: https://github.com/diegosfb/BetterTris-v2
+Artifact Registry Repo: battletris-images
+Application Image: battletris-server
+Tag: latest
+Deployment URL: https://battletris-server-435080045459.us-central1.run.app
+Platform: GCP
+Cloud Service: CloudRun

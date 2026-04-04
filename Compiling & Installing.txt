@@ -1,0 +1,12 @@
+npm install
+
+
+
+npm run compile
+vsce package
+
+cd /Users/diego.brihuega/antigravity-launcher
+code --install-extension antigravity-launcher-1.0.0.vsix --force
+
+Uninstall
+code --uninstall-extension local.antigravity-launcher

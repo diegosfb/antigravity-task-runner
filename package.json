@@ -1,0 +1,175 @@
+{
+  "name": "antigravity-launcher",
+  "displayName": "Task Runner",
+  "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
+  "version": "1.0.0",
+  "publisher": "local",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://example.com/local/antigravity-launcher"
+  },
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:antigravityView",
+    "onCommand:antigravity.refresh",
+    "onCommand:antigravity.selectPlatform",
+    "onCommand:antigravity.openAgent",
+    "onCommand:antigravity.runAgent",
+    "onCommand:antigravity.runWorkflow"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "antigravity.refresh",
+        "title": "Antigravity: Refresh"
+      },
+      {
+        "command": "antigravity.selectPlatform",
+        "title": "Antigravity: Select Platform"
+      },
+      {
+        "command": "antigravity.runAgent",
+        "title": "Antigravity: Run Agent"
+      },
+      {
+        "command": "antigravity.openAgent",
+        "title": "Antigravity: Open Agent"
+      },
+      {
+        "command": "antigravity.runWorkflow",
+        "title": "Antigravity: Run Workflow"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "antigravityContainer",
+          "title": "Task Runner",
+          "icon": "media/taskrunner.svg"
+        }
+      ]
+    },
+    "views": {
+      "antigravityContainer": [
+        {
+          "id": "antigravityView",
+          "name": "Tasky Runner",
+          "icon": "media/taskrunner.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "antigravity.refresh",
+          "when": "view == antigravityView",
+          "group": "navigation"
+        },
+        {
+          "command": "antigravity.selectPlatform",
+          "when": "view == antigravityView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "antigravity.runAgent",
+          "when": "view == antigravityView && viewItem == antigravityAgent",
+          "group": "inline"
+        },
+        {
+          "command": "antigravity.openAgent",
+          "when": "view == antigravityView && viewItem == antigravityAgent",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Task Runner",
+      "properties": {
+        "antigravity.rootPath": {
+          "type": "string",
+          "default": "./.agent/antigravity",
+          "description": "Path to the antigravity directory that contains agents/ and workflows/."
+        },
+        "antigravity.terminalName": {
+          "type": "string",
+          "default": "Antigravity Workflow",
+          "description": "Terminal name used when running workflow scripts."
+        },
+        "antigravity.agentTerminalName": {
+          "type": "string",
+          "default": "Antigravity Agent",
+          "description": "Terminal name used when running agents."
+        },
+        "antigravity.agenticPlatform": {
+          "type": "string",
+          "enum": [
+            "antigravity",
+            "openclaude",
+            "codex",
+            "ollama"
+          ],
+          "default": "antigravity",
+          "description": "Agentic platform used to run agents."
+        },
+        "antigravity.antigravityPath": {
+          "type": "string",
+          "default": "antigravity",
+          "description": "Path to the Antigravity executable for running agents."
+        },
+        "antigravity.antigravityArgs": {
+          "type": "string",
+          "default": "--agent \"{agent}\"",
+          "description": "Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders."
+        },
+        "antigravity.openClaudePath": {
+          "type": "string",
+          "default": "openclaude",
+          "description": "Path to the OpenClaude executable for running agents."
+        },
+        "antigravity.codexPath": {
+          "type": "string",
+          "default": "codex",
+          "description": "Path to the OpenAI Codex executable for running agents."
+        },
+        "antigravity.codexArgs": {
+          "type": "string",
+          "default": "exec \"@{agent} on this project\" --skip-git-repo-check",
+          "description": "Arguments template for Codex. Supports {agent} and {agentFile} placeholders."
+        },
+        "antigravity.ollamaPath": {
+          "type": "string",
+          "default": "ollama",
+          "description": "Path to the Ollama executable for running agents."
+        },
+        "antigravity.ollamaArgs": {
+          "type": "string",
+          "default": "run \"{agent}\"",
+          "description": "Arguments template for Ollama. Supports {agent} and {agentFile} placeholders."
+        }
+      }
+    }
+  },
+  "files": [
+    "out/**",
+    "media/**",
+    "package.json"
+  ],
+  "scripts": {
+    "compile": "node node_modules/typescript/lib/tsc.js -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "@types/vscode": "^1.98.0",
+    "typescript": "^5.8.3"
+  }
+}

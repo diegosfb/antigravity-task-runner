@@ -1,0 +1,4 @@
+Environment: PROD
+Purpose: Production user-facing environment
+Infrastructure: config/Infrastructure/aws.yaml
+# Note: Primary Production service hosted on AWS App Runner (Ohio).
