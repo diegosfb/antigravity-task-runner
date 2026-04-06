@@ -1,13 +1,13 @@
 {
-  "name": "antigravity-launcher",
+  "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "local",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://example.com/local/antigravity-launcher"
+    "url": "https://example.com/local/antigravity-task-runner"
   },
   "engines": {
     "vscode": "^1.98.0"
@@ -165,7 +165,8 @@
     "package.json"
   ],
   "scripts": {
-    "compile": "node node_modules/typescript/lib/tsc.js -p ./"
+    "compile": "node node_modules/typescript/lib/tsc.js -p ./",
+    "create-release": "bash scripts/create-release.sh"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
