@@ -2,12 +2,12 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "1.0.1",
-  "publisher": "local",
+  "version": "1.2.4",
+  "publisher": "dsfb",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://example.com/local/antigravity-task-runner"
+    "url": "https://example.com/dsfb/antigravity-task-runner"
   },
   "engines": {
     "vscode": "^1.98.0"
@@ -22,7 +22,9 @@
     "onCommand:antigravity.selectPlatform",
     "onCommand:antigravity.openAgent",
     "onCommand:antigravity.runAgent",
-    "onCommand:antigravity.runWorkflow"
+    "onCommand:antigravity.runWorkflow",
+    "onCommand:antigravity.openClaudeTerminal",
+    "onCommand:antigravity.openOpenClaudeTerminal"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -46,6 +48,14 @@
       {
         "command": "antigravity.runWorkflow",
         "title": "Antigravity: Run Workflow"
+      },
+      {
+        "command": "antigravity.openClaudeTerminal",
+        "title": "Antigravity: Open Claude Terminal"
+      },
+      {
+        "command": "antigravity.openOpenClaudeTerminal",
+        "title": "Antigravity: Open OpenClaude Terminal"
       }
     ],
     "viewsContainers": {

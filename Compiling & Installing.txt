@@ -9,4 +9,4 @@ cd /Users/diego.brihuega/antigravity-task-runner
 code --install-extension antigravity-task-runner-1.0.0.vsix --force
 
 Uninstall
-code --uninstall-extension local.antigravity-task-runner
+code --uninstall-extension dsfb.antigravity-task-runner
