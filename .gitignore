@@ -7,6 +7,9 @@ coverage/
 .env*
 !.env.example
 !config/.env.example
+.claude/settings.local.json
+.agent/claude/routerconfig.json
+.agent/claude/settings.json
 
 
 # Terraform
