@@ -29,7 +29,7 @@ class AntigravityViewProvider {
             const antigravityRoot = getAntigravityHomePath();
             const antigravityLabel = antigravityRoot ? path.basename(antigravityRoot) : ".antigravity";
             const antigravityItem = new NodeItem({ kind: "folder", label: antigravityLabel, filePath: antigravityRoot }, antigravityRoot
-                ? vscode.TreeItemCollapsibleState.Expanded
+                ? vscode.TreeItemCollapsibleState.Collapsed
                 : vscode.TreeItemCollapsibleState.None);
             antigravityItem.iconPath = new vscode.ThemeIcon("folder");
             if (!antigravityRoot) {
@@ -41,9 +41,13 @@ class AntigravityViewProvider {
             separatorItem.tooltip = "";
             separatorItem.contextValue = "antigravitySeparator";
             const actionItems = getQuickActionItems();
+            const claudeItems = getClaudeActionItems();
             const actionSeparator = new NodeItem({ kind: "separator", label: "────────" }, vscode.TreeItemCollapsibleState.None);
             actionSeparator.tooltip = "";
             actionSeparator.contextValue = "antigravitySeparator";
+            const claudeSeparator = new NodeItem({ kind: "separator", label: "────────" }, vscode.TreeItemCollapsibleState.None);
+            claudeSeparator.tooltip = "";
+            claudeSeparator.contextValue = "antigravitySeparator";
             const platform = getAgenticPlatform();
             const platformLabel = platform === "codex"
                 ? "Codex"
@@ -58,11 +62,13 @@ class AntigravityViewProvider {
                 command: "antigravity.selectPlatform",
                 title: "Select Agentic Platform"
             };
-            const agents = new NodeItem({ kind: "category", label: "Agents" }, vscode.TreeItemCollapsibleState.Expanded);
+            const agents = new NodeItem({ kind: "category", label: "Agents" }, vscode.TreeItemCollapsibleState.Collapsed);
             agents.iconPath = new vscode.ThemeIcon("organization");
-            const workflows = new NodeItem({ kind: "category", label: "Workflows" }, vscode.TreeItemCollapsibleState.Expanded);
+            const workflows = new NodeItem({ kind: "category", label: "Workflows" }, vscode.TreeItemCollapsibleState.Collapsed);
             workflows.iconPath = new vscode.ThemeIcon("run-all");
             return [
+                ...claudeItems,
+                claudeSeparator,
                 antigravityItem,
                 actionSeparator,
                 ...actionItems,
@@ -163,6 +169,7 @@ class AntigravityViewProvider {
     }
 }
 const QUICK_ACTION_COLOR = new vscode.ThemeColor("charts.green");
+const CLAUDE_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
 function getQuickActionItems() {
     const items = [];
     const rootPath = getRootPath();
@@ -273,6 +280,21 @@ function getQuickActionItems() {
     };
     items.push(environmentSwitch);
     return items;
+}
+function getClaudeActionItems() {
+    const item = new NodeItem({ kind: "action", label: "Claude Terminal" }, vscode.TreeItemCollapsibleState.None);
+    item.iconPath = new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR);
+    item.command = {
+        command: "antigravity.openClaudeTerminal",
+        title: "Open Claude Terminal"
+    };
+    const openClaudeItem = new NodeItem({ kind: "action", label: "OpenClaude Terminal" }, vscode.TreeItemCollapsibleState.None);
+    openClaudeItem.iconPath = new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR);
+    openClaudeItem.command = {
+        command: "antigravity.openOpenClaudeTerminal",
+        title: "Open OpenClaude Terminal"
+    };
+    return [item, openClaudeItem];
 }
 const ANTIGRAVITY_ROOT_HIDDEN = new Set([
     "argv.json",
@@ -537,11 +559,48 @@ function getOllamaArgsTemplate() {
 function interpolateAgentArgs(template, agentName, agentFile) {
     return template.replace(/\{agent\}/g, agentName).replace(/\{agentFile\}/g, agentFile);
 }
+const SECONDARY_TERMINAL_COMMANDS = {
+    create: "secondaryTerminal.createTerminal",
+    focus: "secondaryTerminal.focusTerminal",
+    send: "secondaryTerminal.sendToTerminal"
+};
+async function hasSecondaryTerminal() {
+    const commands = await vscode.commands.getCommands(true);
+    return (commands.includes(SECONDARY_TERMINAL_COMMANDS.create) &&
+        commands.includes(SECONDARY_TERMINAL_COMMANDS.send));
+}
+async function runInSecondaryTerminal(lines) {
+    const available = await hasSecondaryTerminal();
+    if (!available) {
+        void vscode.window.showErrorMessage("Secondary Terminal extension not available. Install 'Secondary Terminal' to run tasks there.");
+        return false;
+    }
+    try {
+        await vscode.commands.executeCommand(SECONDARY_TERMINAL_COMMANDS.create);
+        await vscode.commands.executeCommand(SECONDARY_TERMINAL_COMMANDS.focus);
+        for (const line of lines) {
+            await vscode.commands.executeCommand(SECONDARY_TERMINAL_COMMANDS.send, line);
+        }
+        return true;
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        void vscode.window.showErrorMessage(`Failed to send commands to Secondary Terminal: ${message}`);
+        return false;
+    }
+}
 function getOrCreateTerminal(name) {
     const existing = vscode.window.terminals.find((terminal) => terminal.name === name);
     if (existing)
         return existing;
     return vscode.window.createTerminal({ name });
+}
+function runInNewTerminal(name, lines, options = {}) {
+    const terminal = vscode.window.createTerminal({ name, ...options });
+    terminal.show();
+    for (const line of lines) {
+        terminal.sendText(line, true);
+    }
 }
 function quoteShellArg(value) {
     return `"${value.replace(/"/g, '\\"')}"`;
@@ -564,12 +623,9 @@ async function runRepoScript(scriptName, args = [], options = {}) {
         void vscode.window.showErrorMessage(`Script not found: ${homeScript ? " ~/.antigravity/scripts/" : ""}scripts/${scriptName}.sh`);
         return;
     }
-    const terminal = getOrCreateTerminal(getTerminalName());
-    terminal.show(true);
-    terminal.sendText(`cd "${workingDir}"`);
     const argString = args.map((arg) => quoteShellArg(arg)).join(" ");
     const command = argString ? `${quoteShellArg(scriptPath)} ${argString}` : quoteShellArg(scriptPath);
-    terminal.sendText(command);
+    await runInSecondaryTerminal([`cd "${workingDir}"`, command]);
 }
 async function openFile(filePath) {
     const uri = vscode.Uri.file(filePath);
@@ -584,10 +640,10 @@ async function runWorkflow(workflowFile) {
     const scriptPath = getWorkflowScriptPath(rootPath, workflowFile);
     if (fs.existsSync(scriptPath)) {
         const repoRoot = getRepoRoot(rootPath);
-        const terminal = getOrCreateTerminal(getTerminalName());
-        terminal.show(true);
-        terminal.sendText(`cd "${repoRoot}"`);
-        terminal.sendText(`./scripts/${path.basename(scriptPath)}`);
+        await runInSecondaryTerminal([
+            `cd "${repoRoot}"`,
+            `./scripts/${path.basename(scriptPath)}`
+        ]);
         return;
     }
     await openFile(workflowFile);
@@ -599,32 +655,29 @@ async function runAgent(agentName, agentFile) {
         return;
     }
     const repoRoot = getRepoRoot(rootPath);
-    const terminal = getOrCreateTerminal(getAgentTerminalName());
-    terminal.show(true);
-    terminal.sendText(`cd "${repoRoot}"`);
     const safeAgentName = agentName.replace(/"/g, '\\"');
     const safeAgentFile = agentFile.replace(/"/g, '\\"');
     const platform = getAgenticPlatform();
     if (platform === "codex") {
         const command = getCodexExecutable();
         const args = interpolateAgentArgs(getCodexArgsTemplate(), safeAgentName, safeAgentFile).trim();
-        terminal.sendText(args ? `${command} ${args}` : command);
+        await runInSecondaryTerminal([`cd "${repoRoot}"`, args ? `${command} ${args}` : command]);
         return;
     }
     if (platform === "ollama") {
         const command = getOllamaExecutable();
         const args = interpolateAgentArgs(getOllamaArgsTemplate(), safeAgentName, safeAgentFile).trim();
-        terminal.sendText(args ? `${command} ${args}` : command);
+        await runInSecondaryTerminal([`cd "${repoRoot}"`, args ? `${command} ${args}` : command]);
         return;
     }
     if (platform === "antigravity") {
         const command = getAntigravityExecutable();
         const args = interpolateAgentArgs(getAntigravityArgsTemplate(), safeAgentName, safeAgentFile).trim();
-        terminal.sendText(args ? `${command} ${args}` : command);
+        await runInSecondaryTerminal([`cd "${repoRoot}"`, args ? `${command} ${args}` : command]);
         return;
     }
     const command = getOpenClaudeExecutable();
-    terminal.sendText(`${command} --agent "${safeAgentName}"`);
+    await runInSecondaryTerminal([`cd "${repoRoot}"`, `${command} --agent "${safeAgentName}"`]);
 }
 function activate(context) {
     const provider = new AntigravityViewProvider();
@@ -657,6 +710,30 @@ function activate(context) {
             return;
         }
         await runWorkflow(filePath);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openClaudeTerminal", async () => {
+        const rootPath = getRootPath();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = getRepoRoot(rootPath);
+        runInNewTerminal("Claude", [`cd "${repoRoot}"`, "claude"], {
+            iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
+            color: CLAUDE_ACTION_COLOR
+        });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOpenClaudeTerminal", async () => {
+        const rootPath = getRootPath();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = getRepoRoot(rootPath);
+        runInNewTerminal("OpenClaude", [`cd "${repoRoot}"`, getOpenClaudeExecutable()], {
+            iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
+            color: CLAUDE_ACTION_COLOR
+        });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.workspaceSetup", async () => {
         const rootPath = getRootPath();
@@ -739,9 +816,9 @@ function activate(context) {
             return;
         }
         const action = isAutocommitRunning(repoRoot) ? "stop" : "start";
-        const terminal = getOrCreateTerminal(getTerminalName());
-        terminal.show(true);
-        terminal.sendText(`cd "${repoRoot}"; ./scripts/autocommit_changes.py ${action}; ./scripts/autocommit_changes.py status`);
+        await runInSecondaryTerminal([
+            `cd "${repoRoot}"; ./scripts/autocommit_changes.py ${action}; ./scripts/autocommit_changes.py status`
+        ]);
         void vscode.commands.executeCommand("antigravity.refresh");
         setTimeout(() => {
             void vscode.commands.executeCommand("antigravity.refresh");
@@ -762,9 +839,7 @@ function activate(context) {
             return;
         }
         const scriptCommand = scriptPath === bareScript ? "./scripts/autocommit_revert" : "./scripts/autocommit_revert.sh";
-        const terminal = getOrCreateTerminal(getTerminalName());
-        terminal.show(true);
-        terminal.sendText(`cd "${repoRoot}" && ${scriptCommand}`);
+        await runInSecondaryTerminal([`cd "${repoRoot}" && ${scriptCommand}`]);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.switchEnvironment", async () => {
         const selection = await vscode.window.showQuickPick([

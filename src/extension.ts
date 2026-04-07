@@ -107,11 +107,11 @@ class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem> {
       workflows.iconPath = new vscode.ThemeIcon("run-all");
 
       return [
+        ...claudeItems,
+        claudeSeparator,
         antigravityItem,
         actionSeparator,
         ...actionItems,
-        claudeSeparator,
-        ...claudeItems,
         separatorItem,
         platformItem,
         agents,
