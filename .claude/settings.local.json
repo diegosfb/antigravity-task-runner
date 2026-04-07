@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(chmod +x:*)",
+      "Bash(npx vsce:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
