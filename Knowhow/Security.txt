@@ -1,0 +1,10 @@
+Claude stores ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, and ANTHROPIC_BASE_URL in plain text within configuration files like settings.json or claude_desktop_config.json. 
+
+While this is standard behavior for many developer tools, it is a notable security trade-off that you should manage carefully.
+
+⚠️ The Specific Risks of Plain Text Storage
+Accidental Repo Commits: The most common danger is accidentally committing .claude/settings.json to a public GitHub repository. Unlike standard .env files, this directory isn't always automatically added to your .gitignore.
+
+Local Tool Exploitation: If you use an agentic tool like Claude Code, it has the power to read its own configuration files. A malicious prompt or an untrusted repository could theoretically trick the tool into "leaking" its own key back to a third-party server.
+
+Malware "Stealers": Modern info-stealing malware specifically targets common paths like ~/.claude/ or %APPDATA%\Claude\ to find and exfiltrate these exact JSON files. 

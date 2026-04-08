@@ -2,12 +2,15 @@
     "routers": [
         "ollama",
         "openrouter",
-        "litellm",
-        "openai"
+        "litellm"
     ],
+    "tool-run": {
+        "litellm-openai": "OPENAI_API_KEY=APIKEY LITELLM_DROP_PARAMS=true litellm --model openai/gpt-5.2-codex",
+        "ollama-qwen3-coder": "ollama run --model qwen3-coder"
+    },
     "openrouter-settings": {
         "baseurl": "https://openrouter.ai/api",
-        "auth_token": "sk-or-v1-05..",
+        "auth_token": "APIKEY",
         "api_key": "",
         "models": [
             "qwen/qwen3.6-plus:free",
@@ -45,7 +48,7 @@
             "openai/gpt-5.2-codex",
             "openai/gpt-5.3"
         ],
-        "post_run": "OPENAI_API_KEY=sk-proj-P.. LITELLM_DROP_PARAMS=true litellm --model openai/gpt-5.2-codex"
+        "post_run": "litellm-openai"
     },
     "claude-effort-levels": [
         "low",

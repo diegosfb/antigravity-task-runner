@@ -1,0 +1,1 @@
+ANTHROPIC_API_KEY is used for direct authentication with Anthropic's API (using an x-api-key header), suitable for developers, while ANTHROPIC_AUTH_TOKEN is typically used for bearer-token authentication via intermediaries like OpenRouter,

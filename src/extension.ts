@@ -299,26 +299,6 @@ function getQuickActionItems(): NodeItem[] {
   };
   items.push(buildVersion);
 
-  const createRepository = new NodeItem(
-    { kind: "action", label: "Create Repository" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  createRepository.iconPath = new vscode.ThemeIcon("repo-create", QUICK_ACTION_COLOR);
-  if (hasRepo) {
-    createRepository.label = "C̶r̶e̶a̶t̶e̶ ̶R̶e̶p̶o̶s̶i̶t̶o̶r̶y̶";
-    createRepository.iconPath = new vscode.ThemeIcon(
-      "repo-create",
-      new vscode.ThemeColor("disabledForeground")
-    );
-    createRepository.tooltip = "Repository already exists in this project.";
-  } else {
-    createRepository.command = {
-      command: "antigravity.createRepository",
-      title: "Create Repository"
-    };
-  }
-  items.push(createRepository);
-
   const createInfrastructure = new NodeItem(
     { kind: "action", label: "Create Infrastructure" },
     vscode.TreeItemCollapsibleState.None
@@ -449,7 +429,16 @@ function getClaudeActionItems(): NodeItem[] {
     command: "antigravity.setClaudeModel",
     title: "Set Claude Model"
   };
-  return [item, setClaudeModel];
+  const runLiteLLMOpenAI = new NodeItem(
+    { kind: "action", label: "Run liteLLM OpenAI" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  runLiteLLMOpenAI.iconPath = new vscode.ThemeIcon("rocket", CLAUDE_MODEL_ACTION_COLOR);
+  runLiteLLMOpenAI.command = {
+    command: "antigravity.runLiteLLMOpenAI",
+    title: "Run liteLLM OpenAI"
+  };
+  return [item, setClaudeModel, runLiteLLMOpenAI];
 }
 
 const ANTIGRAVITY_ROOT_HIDDEN = new Set([
@@ -920,6 +909,7 @@ type OpenRouterConfig = {
   routers?: unknown;
   "claude-effort-levels"?: unknown;
   "claude-internalbehaviour"?: unknown;
+  "tool-run"?: unknown;
   [key: string]: unknown;
 };
 
@@ -929,6 +919,7 @@ type RouterSettings = {
   apikey: string;
   models: string[];
   post_run?: string;
+  mandatory_params?: string[];
 };
 
 type ClaudeSettings = {
@@ -951,6 +942,13 @@ function normalizeStringArray(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
+function getToolRunCommand(config: OpenRouterConfig, name: string): string | undefined {
+  const raw = config["tool-run"];
+  if (!raw || typeof raw !== "object") return undefined;
+  const data = raw as Record<string, unknown>;
+  return typeof data[name] === "string" ? data[name].trim() : undefined;
+}
+
 function getRouterSettings(config: OpenRouterConfig, router: string): RouterSettings | undefined {
   const key = `${router}-settings`;
   const raw = config[key];
@@ -961,9 +959,12 @@ function getRouterSettings(config: OpenRouterConfig, router: string): RouterSett
     auth_token: typeof data.auth_token === "string" ? data.auth_token : "",
     apikey: typeof data.apikey === "string" ? data.apikey : "",
     models: normalizeStringArray(data.models),
-    post_run: parseOptionalString(data.post_run)
+    post_run: parseOptionalString(data.post_run),
+    mandatory_params: normalizeStringArray(data.mandatory_params)
   };
 }
+
+// Secrets are not managed here; routerconfig.json is the source of truth.
 
 async function loadOpenRouterConfig(): Promise<OpenRouterConfig | null> {
   const filePath = path.join(os.homedir(), ".claude", "routerconfig.json");
@@ -1044,7 +1045,6 @@ function renderClaudeModelConfigHtml(
       effortLevel: claudeSettings?.effortLevel,
       internalBehaviour: claudeSettings?.model,
       baseurl: claudeSettings?.env?.ANTHROPIC_BASE_URL,
-      authToken: claudeSettings?.env?.ANTHROPIC_AUTH_TOKEN,
       apiKey: claudeSettings?.env?.ANTHROPIC_API_KEY
     }
   };
@@ -1552,7 +1552,11 @@ export function activate(context: vscode.ExtensionContext) {
         { enableScripts: true }
       );
       const claudeSettings = await loadClaudeSettings();
-      panel.webview.html = renderClaudeModelConfigHtml(panel.webview, config, claudeSettings);
+      panel.webview.html = renderClaudeModelConfigHtml(
+        panel.webview,
+        config,
+        claudeSettings
+      );
       panel.webview.onDidReceiveMessage(
         async (message) => {
           if (!message || message.type !== "applyClaudeModel") return;
@@ -1567,10 +1571,22 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          const settings = getRouterSettings(config, router);
-          if (!settings) {
+          const baseSettings = getRouterSettings(config, router);
+          if (!baseSettings) {
             void vscode.window.showErrorMessage(
               `routerconfig.json is missing ${router}-settings configuration.`
+            );
+            return;
+          }
+          const settings = baseSettings;
+          const missingKeys: string[] = [];
+          const mandatory = new Set((settings.mandatory_params || []).map((value) => value.trim()));
+          if (mandatory.has("api_key") && !settings.apikey) missingKeys.push("api_key");
+          if (mandatory.has("auth_token") && !settings.auth_token) missingKeys.push("auth_token");
+          if (missingKeys.length > 0) {
+            void vscode.window.showErrorMessage(
+              `Missing ${missingKeys.join(", ")} for ${router}. ` +
+                "Set it in ~/.claude/routerconfig.json."
             );
             return;
           }
@@ -1591,10 +1607,14 @@ export function activate(context: vscode.ExtensionContext) {
         ` --internal-model ${quoteShellArg(internalBehaviour)}`;
           const commands = [`cd "${repoRoot}"`, command];
           const postRun = settings.post_run?.trim();
-          if (postRun) {
+          const toolRunCommand = postRun ? getToolRunCommand(config, postRun) : undefined;
+          if (postRun && !toolRunCommand) {
             commands.push(`nohup sh -c ${quoteShellArg(postRun)} >/dev/null 2>&1 &`);
           }
           await runInSecondaryTerminal(commands);
+          if (toolRunCommand) {
+            await runInSecondaryTerminal([`cd "${repoRoot}"`, toolRunCommand]);
+          }
           panel.dispose();
         },
         undefined,
@@ -1644,12 +1664,34 @@ export function activate(context: vscode.ExtensionContext) {
       });
       if (!repoName || repoName.trim() === "") return;
       await runRepoScript("init-repo", [repoName.trim()]);
+      provider.refresh();
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.buildVersion", async () => {
       await runRepoScript("build-version");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.runLiteLLMOpenAI", async () => {
+      const config = await loadOpenRouterConfig();
+      if (!config) return;
+      const command = getToolRunCommand(config, "litellm-openai");
+      if (!command) {
+        void vscode.window.showErrorMessage(
+          'routerconfig.json is missing "tool-run.litellm-openai".'
+        );
+        return;
+      }
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      await runInSecondaryTerminal([`cd "${repoRoot}"`, command]);
     })
   );
 
