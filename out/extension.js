@@ -50,32 +50,19 @@ class AntigravityViewProvider {
             const claudeSeparator = new NodeItem({ kind: "separator", label: "────────" }, vscode.TreeItemCollapsibleState.None);
             claudeSeparator.tooltip = "";
             claudeSeparator.contextValue = "antigravitySeparator";
-            const platform = getAgenticPlatform();
-            const platformLabel = platform === "codex"
-                ? "Codex"
-                : platform === "ollama"
-                    ? "Ollama"
-                    : platform === "antigravity"
-                        ? "Antigravity Agent"
-                        : "OpenClaude";
-            const platformItem = new NodeItem({ kind: "config", label: `Agentic Platform: ${platformLabel}` }, vscode.TreeItemCollapsibleState.None);
-            platformItem.iconPath = new vscode.ThemeIcon("settings-gear");
-            platformItem.command = {
-                command: "antigravity.selectPlatform",
-                title: "Select Agentic Platform"
-            };
             const agents = new NodeItem({ kind: "category", label: "Agents" }, vscode.TreeItemCollapsibleState.Collapsed);
             agents.iconPath = new vscode.ThemeIcon("organization");
             const workflows = new NodeItem({ kind: "category", label: "Workflows" }, vscode.TreeItemCollapsibleState.Collapsed);
             workflows.iconPath = new vscode.ThemeIcon("run-all");
+            const linkedFolderItems = getLinkedFolderItems();
             return [
                 ...claudeItems,
                 claudeSeparator,
                 antigravityItem,
+                ...linkedFolderItems,
                 actionSeparator,
                 ...actionItems,
                 separatorItem,
-                platformItem,
                 agents,
                 workflows
             ];
@@ -94,7 +81,7 @@ class AntigravityViewProvider {
         return [];
     }
     async getAgentItems() {
-        const rootPath = getRootPath();
+        const rootPath = getAntigravityHomePath();
         if (!rootPath) {
             return [missingRootItem()];
         }
@@ -120,7 +107,7 @@ class AntigravityViewProvider {
         return items.length > 0 ? items : [emptyItem("No agents found")];
     }
     async getWorkflowItems() {
-        const rootPath = getRootPath();
+        const rootPath = getAntigravityHomePath();
         if (!rootPath) {
             return [missingRootItem()];
         }
@@ -173,6 +160,20 @@ class AntigravityViewProvider {
 const QUICK_ACTION_COLOR = new vscode.ThemeColor("charts.green");
 const CLAUDE_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
 const CLAUDE_MODEL_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
+const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
+const TOP_LEVEL_LINKED_FOLDERS = [
+    { label: ".claude", path: "/Users/diego.brihuega/.claude" },
+    { label: ".codex", path: "/Users/diego.brihuega/.codex" },
+    { label: ".opencode", path: "/Users/diego.brihuega/.config/opencode" }
+];
+function getLinkedFolderItems() {
+    return TOP_LEVEL_LINKED_FOLDERS.filter((linked) => fs.existsSync(linked.path)).map((linked) => {
+        const item = new NodeItem({ kind: "folder", label: linked.label, filePath: linked.path }, vscode.TreeItemCollapsibleState.Collapsed);
+        item.iconPath = new vscode.ThemeIcon("folder", WHITE_FOLDER_COLOR);
+        item.tooltip = linked.path;
+        return item;
+    });
+}
 function getQuickActionItems() {
     const items = [];
     const rootPath = getRootPath();
@@ -334,6 +335,15 @@ function getRootPath() {
         return workspaceRoot;
     return undefined;
 }
+function getProjectAntigravityPath() {
+    const workspaceRoot = getWorkspaceRoot();
+    if (!workspaceRoot)
+        return undefined;
+    const antigravityRoot = path.join(workspaceRoot, ".agent", "antigravity");
+    if (fs.existsSync(antigravityRoot))
+        return antigravityRoot;
+    return undefined;
+}
 function getAntigravityHomePath() {
     const homePath = "/Users/diego.brihuega/.antigravity";
     if (!fs.existsSync(homePath))
@@ -341,9 +351,9 @@ function getAntigravityHomePath() {
     return homePath;
 }
 function missingRootItem() {
-    const item = new NodeItem({ kind: "category", label: "Set antigravity.rootPath" }, vscode.TreeItemCollapsibleState.None);
+    const item = new NodeItem({ kind: "category", label: "Missing ~/.antigravity" }, vscode.TreeItemCollapsibleState.None);
     item.iconPath = new vscode.ThemeIcon("warning");
-    item.tooltip = "Update the Antigravity settings to point to the .agent/antigravity folder.";
+    item.tooltip = "Expected /Users/diego.brihuega/.antigravity to exist.";
     return item;
 }
 function emptyItem(label) {
@@ -501,48 +511,6 @@ function getAgentTerminalName() {
     return (vscode.workspace.getConfiguration("antigravity").get("agentTerminalName") ||
         "Antigravity Agent");
 }
-function getAgenticPlatform() {
-    const platform = vscode.workspace.getConfiguration("antigravity").get("agenticPlatform");
-    if (platform === "codex")
-        return "codex";
-    if (platform === "ollama")
-        return "ollama";
-    if (platform === "antigravity")
-        return "antigravity";
-    return "openclaude";
-}
-async function selectAgenticPlatform() {
-    const current = getAgenticPlatform();
-    const selection = await vscode.window.showQuickPick([
-        {
-            label: "Antigravity Agent",
-            value: "antigravity",
-            description: "Run agents with the IDE-selected Antigravity model"
-        },
-        { label: "OpenClaude", value: "openclaude", description: "Run agents with OpenClaude" },
-        { label: "Codex", value: "codex", description: "Run agents with OpenAI Codex" },
-        { label: "Ollama", value: "ollama", description: "Run agents with Ollama" }
-    ], {
-        title: "Select Agentic Platform",
-        placeHolder: "Choose how agents should run"
-    });
-    if (!selection || selection.value === current)
-        return;
-    const target = vscode.workspace.workspaceFolders
-        ? vscode.ConfigurationTarget.Workspace
-        : vscode.ConfigurationTarget.Global;
-    await vscode.workspace
-        .getConfiguration("antigravity")
-        .update("agenticPlatform", selection.value, target);
-}
-function getOpenClaudeExecutable() {
-    const antigravityConfig = vscode.workspace.getConfiguration("antigravity");
-    const override = antigravityConfig.get("openClaudePath");
-    if (override)
-        return override;
-    const openClaudeConfig = vscode.workspace.getConfiguration("openclaude");
-    return openClaudeConfig.get("executablePath") || "openclaude";
-}
 function getAntigravityExecutable() {
     return (vscode.workspace.getConfiguration("antigravity").get("antigravityPath") ||
         "antigravity");
@@ -550,19 +518,6 @@ function getAntigravityExecutable() {
 function getAntigravityArgsTemplate() {
     return (vscode.workspace.getConfiguration("antigravity").get("antigravityArgs") ||
         '--agent "{agent}"');
-}
-function getCodexExecutable() {
-    return vscode.workspace.getConfiguration("antigravity").get("codexPath") || "codex";
-}
-function getCodexArgsTemplate() {
-    return (vscode.workspace.getConfiguration("antigravity").get("codexArgs") ||
-        'exec "@{agent} on this project" --skip-git-repo-check');
-}
-function getOllamaExecutable() {
-    return vscode.workspace.getConfiguration("antigravity").get("ollamaPath") || "ollama";
-}
-function getOllamaArgsTemplate() {
-    return vscode.workspace.getConfiguration("antigravity").get("ollamaArgs") || 'run "{agent}"';
 }
 function interpolateAgentArgs(template, agentName, agentFile) {
     return template.replace(/\{agent\}/g, agentName).replace(/\{agentFile\}/g, agentFile);
@@ -658,16 +613,6 @@ function buildScriptFallbackUrls(baseUrl, scriptFileName) {
 function getScriptFallbackUrls(scriptFileName) {
     const config = vscode.workspace.getConfiguration("antigravity");
     const urls = [];
-    const initRepoOverride = config.get("initRepoFallbackUrl");
-    if (scriptFileName === "init-repo.sh" && initRepoOverride && initRepoOverride.trim()) {
-        const normalized = normalizeGithubRawUrl(initRepoOverride.trim());
-        if (normalized.endsWith(".sh")) {
-            urls.push(normalized);
-        }
-        else {
-            urls.push(...buildScriptFallbackUrls(normalized, scriptFileName));
-        }
-    }
     const baseUrl = config.get("scriptFallbackBaseUrl") || SCRIPT_FALLBACK_BASE_URL;
     urls.push(...buildScriptFallbackUrls(baseUrl, scriptFileName));
     return Array.from(new Set(urls));
@@ -790,6 +735,206 @@ function getNonce() {
         nonce += chars[Math.floor(Math.random() * chars.length)];
     }
     return nonce;
+}
+function getExtensionSettingsFields() {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    return [
+        {
+            key: "rootPath",
+            label: "Antigravity Root Path",
+            description: "Path to the antigravity directory that contains agents/ and workflows/.",
+            placeholder: "./.agent/antigravity",
+            value: config.get("rootPath") || ""
+        },
+        {
+            key: "terminalName",
+            label: "Workflow Terminal Name",
+            description: "Terminal name used when running workflow scripts.",
+            placeholder: "Antigravity Workflow",
+            value: config.get("terminalName") || ""
+        },
+        {
+            key: "agentTerminalName",
+            label: "Agent Terminal Name",
+            description: "Terminal name used when running agents.",
+            placeholder: "Antigravity Agent",
+            value: config.get("agentTerminalName") || ""
+        },
+        {
+            key: "antigravityPath",
+            label: "Antigravity Executable",
+            description: "Path to the Antigravity executable for running agents.",
+            placeholder: "antigravity",
+            value: config.get("antigravityPath") || ""
+        },
+        {
+            key: "antigravityArgs",
+            label: "Antigravity Arguments",
+            description: "Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders.",
+            placeholder: '--agent "{agent}"',
+            value: config.get("antigravityArgs") || ""
+        },
+        {
+            key: "scriptFallbackBaseUrl",
+            label: "Script Fallback Base URL",
+            description: "Base URL used to download missing scripts when ./scripts/<name>.sh is not present.",
+            placeholder: "https://raw.githubusercontent.com/diegosfb/antigravity-workspace",
+            value: config.get("scriptFallbackBaseUrl") || ""
+        },
+    ];
+}
+function renderAntigravitySettingsHtml(webview) {
+    const nonce = getNonce();
+    const fields = getExtensionSettingsFields();
+    const canUseWorkspace = !!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length);
+    const payload = {
+        fields,
+        canUseWorkspace,
+        defaultTarget: canUseWorkspace ? "workspace" : "user"
+    };
+    const csp = `default-src 'none'; img-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+    return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Antigravity Settings</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+        margin: 0;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 0 0 16px;
+        color: var(--vscode-descriptionForeground);
+        font-size: 12px;
+      }
+      .targets {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 18px;
+        font-size: 12px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+      label {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+      }
+      input {
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--vscode-input-border);
+        background: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        font-size: 13px;
+      }
+      .description {
+        font-size: 11px;
+        color: var(--vscode-descriptionForeground);
+      }
+      .actions {
+        margin-top: 18px;
+        display: flex;
+        justify-content: flex-end;
+      }
+      button {
+        padding: 8px 14px;
+        border-radius: 6px;
+        border: none;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Antigravity Settings</h1>
+    <p>Update extension settings and apply them to your workspace or user profile.</p>
+    <div class="targets" id="targets">
+      <label><input type="radio" name="target" value="workspace" id="target-workspace" /> Workspace</label>
+      <label><input type="radio" name="target" value="user" id="target-user" /> User</label>
+    </div>
+    <div id="fields"></div>
+    <div class="actions">
+      <button id="apply">Apply</button>
+    </div>
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const data = ${JSON.stringify(payload)};
+      const fieldsEl = document.getElementById("fields");
+      const targetWorkspace = document.getElementById("target-workspace");
+      const targetUser = document.getElementById("target-user");
+      const applyBtn = document.getElementById("apply");
+
+      function createField(field) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "field";
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        label.setAttribute("for", "field-" + field.key);
+        const input = document.createElement("input");
+        input.id = "field-" + field.key;
+        input.type = "text";
+        input.value = field.value || "";
+        if (field.placeholder) input.placeholder = field.placeholder;
+        const desc = document.createElement("div");
+        desc.className = "description";
+        desc.textContent = field.description || "";
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+        wrapper.appendChild(desc);
+        return wrapper;
+      }
+
+      if (!data.canUseWorkspace) {
+        targetWorkspace.disabled = true;
+        targetWorkspace.parentElement.classList.add("hidden");
+        targetUser.checked = true;
+      } else if (data.defaultTarget === "workspace") {
+        targetWorkspace.checked = true;
+      } else {
+        targetUser.checked = true;
+      }
+
+      (data.fields || []).forEach((field) => {
+        fieldsEl.appendChild(createField(field));
+      });
+
+      applyBtn.addEventListener("click", () => {
+        const values = {};
+        (data.fields || []).forEach((field) => {
+          const input = document.getElementById("field-" + field.key);
+          values[field.key] = input ? input.value : "";
+        });
+        const target = targetWorkspace && targetWorkspace.checked ? "workspace" : "user";
+        vscode.postMessage({
+          type: "applySettings",
+          payload: { target, values }
+        });
+      });
+    </script>
+  </body>
+</html>`;
 }
 function renderClaudeModelConfigHtml(webview, config, claudeSettings) {
     const nonce = getNonce();
@@ -1147,35 +1292,38 @@ async function runAgent(agentName, agentFile) {
     const repoRoot = getRepoRoot(rootPath);
     const safeAgentName = agentName.replace(/"/g, '\\"');
     const safeAgentFile = agentFile.replace(/"/g, '\\"');
-    const platform = getAgenticPlatform();
-    if (platform === "codex") {
-        const command = getCodexExecutable();
-        const args = interpolateAgentArgs(getCodexArgsTemplate(), safeAgentName, safeAgentFile).trim();
-        await runInSecondaryTerminal([`cd "${repoRoot}"`, args ? `${command} ${args}` : command]);
-        return;
-    }
-    if (platform === "ollama") {
-        const command = getOllamaExecutable();
-        const args = interpolateAgentArgs(getOllamaArgsTemplate(), safeAgentName, safeAgentFile).trim();
-        await runInSecondaryTerminal([`cd "${repoRoot}"`, args ? `${command} ${args}` : command]);
-        return;
-    }
-    if (platform === "antigravity") {
-        const command = getAntigravityExecutable();
-        const args = interpolateAgentArgs(getAntigravityArgsTemplate(), safeAgentName, safeAgentFile).trim();
-        await runInSecondaryTerminal([`cd "${repoRoot}"`, args ? `${command} ${args}` : command]);
-        return;
-    }
-    const command = getOpenClaudeExecutable();
-    await runInSecondaryTerminal([`cd "${repoRoot}"`, `${command} --agent "${safeAgentName}"`]);
+    const command = getAntigravityExecutable();
+    const args = interpolateAgentArgs(getAntigravityArgsTemplate(), safeAgentName, safeAgentFile).trim();
+    await runInSecondaryTerminal([`cd "${repoRoot}"`, args ? `${command} ${args}` : command]);
 }
 function activate(context) {
     const provider = new AntigravityViewProvider();
     const extensionRoot = context.extensionPath;
     context.subscriptions.push(vscode.window.registerTreeDataProvider("antigravityView", provider));
-    context.subscriptions.push(vscode.commands.registerCommand("antigravity.refresh", () => provider.refresh()));
-    context.subscriptions.push(vscode.commands.registerCommand("antigravity.selectPlatform", async () => {
-        await selectAgenticPlatform();
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openSettings", async () => {
+        const panel = vscode.window.createWebviewPanel("antigravitySettings", "Antigravity Settings", vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = renderAntigravitySettingsHtml(panel.webview);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message || message.type !== "applySettings")
+                return;
+            const payload = message.payload || {};
+            const values = payload.values || {};
+            const target = payload.target === "workspace" && vscode.workspace.workspaceFolders
+                ? vscode.ConfigurationTarget.Workspace
+                : vscode.ConfigurationTarget.Global;
+            const config = vscode.workspace.getConfiguration("antigravity");
+            for (const [key, rawValue] of Object.entries(values)) {
+                const normalized = typeof rawValue === "string" ? rawValue.trim() : "";
+                if (normalized === "") {
+                    await config.update(key, undefined, target);
+                }
+                else {
+                    await config.update(key, normalized, target);
+                }
+            }
+            provider.refresh();
+            void vscode.window.showInformationMessage("Antigravity settings updated.");
+        }, undefined, context.subscriptions);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.runAgent", async (agentName, filePath) => {
         if (!agentName) {
@@ -1233,7 +1381,7 @@ function activate(context) {
             return;
         }
         const repoRoot = getRepoRoot(rootPath);
-        runInNewTerminal("OpenClaude", [`cd "${repoRoot}"`, getOpenClaudeExecutable()], {
+        runInNewTerminal("OpenClaude", [`cd "${repoRoot}"`, "openclaude"], {
             iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
             color: CLAUDE_ACTION_COLOR
         });
@@ -1425,9 +1573,9 @@ function activate(context) {
         await runInSecondaryTerminal([
             `cd "${repoRoot}"; ./scripts/${scriptFile} ${action}; ./scripts/${scriptFile} status`
         ]);
-        void vscode.commands.executeCommand("antigravity.refresh");
+        provider.refresh();
         setTimeout(() => {
-            void vscode.commands.executeCommand("antigravity.refresh");
+            provider.refresh();
         }, 1000);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.autocommitRevert", async () => {
@@ -1463,11 +1611,6 @@ function activate(context) {
         if (!selection)
             return;
         await runRepoScript("switch-env", [selection.value]);
-    }));
-    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration("antigravity.agenticPlatform")) {
-            provider.refresh();
-        }
     }));
 }
 function deactivate() { }

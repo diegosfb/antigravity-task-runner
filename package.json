@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "1.6.11",
+  "version": "2.0.0",
   "publisher": "dsfb",
   "license": "MIT",
   "repository": {
@@ -18,8 +18,7 @@
   "activationEvents": [
     "onStartupFinished",
     "onView:antigravityView",
-    "onCommand:antigravity.refresh",
-    "onCommand:antigravity.selectPlatform",
+    "onCommand:antigravity.openSettings",
     "onCommand:antigravity.openAgent",
     "onCommand:antigravity.runAgent",
     "onCommand:antigravity.runWorkflow",
@@ -30,12 +29,9 @@
   "contributes": {
     "commands": [
       {
-        "command": "antigravity.refresh",
-        "title": "Antigravity: Refresh"
-      },
-      {
-        "command": "antigravity.selectPlatform",
-        "title": "Antigravity: Select Platform"
+        "command": "antigravity.openSettings",
+        "title": "Antigravity: Settings",
+        "icon": "$(settings-gear)"
       },
       {
         "command": "antigravity.runAgent",
@@ -91,12 +87,7 @@
     "menus": {
       "view/title": [
         {
-          "command": "antigravity.refresh",
-          "when": "view == antigravityView",
-          "group": "navigation"
-        },
-        {
-          "command": "antigravity.selectPlatform",
+          "command": "antigravity.openSettings",
           "when": "view == antigravityView",
           "group": "navigation"
         }
@@ -132,17 +123,6 @@
           "default": "Antigravity Agent",
           "description": "Terminal name used when running agents."
         },
-        "antigravity.agenticPlatform": {
-          "type": "string",
-          "enum": [
-            "antigravity",
-            "openclaude",
-            "codex",
-            "ollama"
-          ],
-          "default": "antigravity",
-          "description": "Agentic platform used to run agents."
-        },
         "antigravity.antigravityPath": {
           "type": "string",
           "default": "antigravity",
@@ -153,40 +133,10 @@
           "default": "--agent \"{agent}\"",
           "description": "Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders."
         },
-        "antigravity.openClaudePath": {
-          "type": "string",
-          "default": "openclaude",
-          "description": "Path to the OpenClaude executable for running agents."
-        },
-        "antigravity.codexPath": {
-          "type": "string",
-          "default": "codex",
-          "description": "Path to the OpenAI Codex executable for running agents."
-        },
-        "antigravity.codexArgs": {
-          "type": "string",
-          "default": "exec \"@{agent} on this project\" --skip-git-repo-check",
-          "description": "Arguments template for Codex. Supports {agent} and {agentFile} placeholders."
-        },
-        "antigravity.ollamaPath": {
-          "type": "string",
-          "default": "ollama",
-          "description": "Path to the Ollama executable for running agents."
-        },
-        "antigravity.ollamaArgs": {
-          "type": "string",
-          "default": "run \"{agent}\"",
-          "description": "Arguments template for Ollama. Supports {agent} and {agentFile} placeholders."
-        },
         "antigravity.scriptFallbackBaseUrl": {
           "type": "string",
           "default": "https://raw.githubusercontent.com/diegosfb/antigravity-workspace",
           "description": "Base URL used to download missing scripts when ./scripts/<name>.sh is not present. Supports GitHub blob URLs and raw GitHub base URLs."
-        },
-        "antigravity.initRepoFallbackUrl": {
-          "type": "string",
-          "default": "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts/init-repo.sh",
-          "description": "Optional override URL for init-repo.sh when ./scripts/init-repo.sh is missing. GitHub blob URLs are accepted and will be normalized to raw URLs."
         }
       }
     }
