@@ -178,8 +178,8 @@
   "scripts": {
     "compile": "node node_modules/typescript/lib/tsc.js -p ./",
     "create-release": "bash scripts/create-release.sh",
-    "sync-view-name": "node scripts/sync-view-name.js",
-    "version": "node scripts/sync-view-name.js"
+    "sync-view-name": "node src/sync-view-name.js",
+    "version": "node src/sync-view-name.js"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
