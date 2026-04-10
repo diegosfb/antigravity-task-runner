@@ -559,7 +559,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (!scriptPath) return;
 
       // Offer to download missing config files from Config Fallback Base URL.
-      await downloadConfigFileIfMissing(repoRoot, `${selection.value}-settings.yaml`);
+      await downloadConfigFileIfMissing(repoRoot, `${selection.value.toLowerCase()}-settings.yaml`);
       await downloadConfigFileIfMissing(repoRoot, ".env");
 
       await runInSecondaryTerminal([

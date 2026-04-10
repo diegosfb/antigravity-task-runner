@@ -407,7 +407,7 @@ function activate(context) {
         if (!scriptPath)
             return;
         // Offer to download missing config files from Config Fallback Base URL.
-        await (0, scripts_1.downloadConfigFileIfMissing)(repoRoot, `${selection.value}-settings.yaml`);
+        await (0, scripts_1.downloadConfigFileIfMissing)(repoRoot, `${selection.value.toLowerCase()}-settings.yaml`);
         await (0, scripts_1.downloadConfigFileIfMissing)(repoRoot, ".env");
         await (0, terminal_1.runInSecondaryTerminal)([
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
