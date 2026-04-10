@@ -5,7 +5,6 @@ import { AntigravityViewProvider } from "./treeProvider";
 import {
   appendAutocommitLogLine,
   isAutocommitRunning,
-  stopAutocommit,
   hasGitHubRemote
 } from "./git";
 import {
@@ -494,20 +493,18 @@ export function activate(context: vscode.ExtensionContext) {
           );
           return;
         }
-        const scriptCandidates = ["autocommit_changes.py", "autocommit_changes.sh"];
-        let scriptPath: string | undefined;
-        for (const candidate of scriptCandidates) {
-          scriptPath = await ensureScriptFile(repoRoot, candidate);
-          if (scriptPath) break;
-        }
-        if (!scriptPath) return;
-        await runInSecondaryTerminal([
-          `cd ${quoteShellArg(repoRoot)}`,
-          `${quoteShellArg(scriptPath)} start`
-        ]);
-      } else {
-        await stopAutocommit(repoRoot);
       }
+      const scriptCandidates = ["autocommit_changes.py", "autocommit_changes.sh"];
+      let scriptPath: string | undefined;
+      for (const candidate of scriptCandidates) {
+        scriptPath = await ensureScriptFile(repoRoot, candidate);
+        if (scriptPath) break;
+      }
+      if (!scriptPath) return;
+      await runInSecondaryTerminal([
+        `cd ${quoteShellArg(repoRoot)}`,
+        `${quoteShellArg(scriptPath)} ${action}`
+      ]);
       provider.refresh();
       setTimeout(() => {
         provider.refresh();

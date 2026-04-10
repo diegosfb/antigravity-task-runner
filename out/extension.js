@@ -348,23 +348,20 @@ function activate(context) {
                 void vscode.window.showErrorMessage("No GitHub remote found for this project. Set up a GitHub repository before starting autocommit.");
                 return;
             }
-            const scriptCandidates = ["autocommit_changes.py", "autocommit_changes.sh"];
-            let scriptPath;
-            for (const candidate of scriptCandidates) {
-                scriptPath = await (0, scripts_1.ensureScriptFile)(repoRoot, candidate);
-                if (scriptPath)
-                    break;
-            }
-            if (!scriptPath)
-                return;
-            await (0, terminal_1.runInSecondaryTerminal)([
-                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                `${(0, utils_1.quoteShellArg)(scriptPath)} start`
-            ]);
         }
-        else {
-            await (0, git_1.stopAutocommit)(repoRoot);
+        const scriptCandidates = ["autocommit_changes.py", "autocommit_changes.sh"];
+        let scriptPath;
+        for (const candidate of scriptCandidates) {
+            scriptPath = await (0, scripts_1.ensureScriptFile)(repoRoot, candidate);
+            if (scriptPath)
+                break;
         }
+        if (!scriptPath)
+            return;
+        await (0, terminal_1.runInSecondaryTerminal)([
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            `${(0, utils_1.quoteShellArg)(scriptPath)} ${action}`
+        ]);
         provider.refresh();
         setTimeout(() => {
             provider.refresh();
