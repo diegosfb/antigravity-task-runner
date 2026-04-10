@@ -6,6 +6,7 @@ import { getRootPath, getRepoRoot, getWorkspaceRoot, quoteShellArg } from "./uti
 import { runInSecondaryTerminal } from "./terminal";
 
 const SCRIPT_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts";
+const CONFIG_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config";
 
 function buildScriptUrl(baseUrl: string, scriptFileName: string): string {
   // Convert github.com blob URLs to raw URLs.
@@ -27,6 +28,42 @@ function getScriptFallbackUrl(scriptFileName: string): string {
   const config = vscode.workspace.getConfiguration("antigravity");
   const baseUrl = config.get<string>("scriptFallbackBaseUrl") || SCRIPT_FALLBACK_BASE_URL;
   return buildScriptUrl(baseUrl, scriptFileName);
+}
+
+function getConfigFallbackUrl(fileName: string): string {
+  const config = vscode.workspace.getConfiguration("antigravity");
+  let baseUrl = config.get<string>("configFallbackBaseUrl") || CONFIG_FALLBACK_BASE_URL;
+  if (baseUrl.includes("github.com/") && !baseUrl.includes("raw.githubusercontent.com")) {
+    baseUrl = baseUrl
+      .replace("https://github.com/", "https://raw.githubusercontent.com/")
+      .replace("/blob/", "/");
+  }
+  baseUrl = baseUrl.replace(/\/+$/, "");
+  return `${baseUrl}/${fileName}`;
+}
+
+export async function downloadConfigFileIfMissing(
+  repoRoot: string,
+  fileName: string
+): Promise<void> {
+  const filePath = path.join(repoRoot, "config", fileName);
+  if (fs.existsSync(filePath)) return;
+  const url = getConfigFallbackUrl(fileName);
+  const answer = await vscode.window.showWarningMessage(
+    `Config file config/${fileName} is missing. Download from ${url}?`,
+    "Yes",
+    "No"
+  );
+  if (answer !== "Yes") return;
+  try {
+    await fs.promises.mkdir(path.join(repoRoot, "config"), { recursive: true });
+    await downloadFile(url, filePath);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    void vscode.window.showErrorMessage(
+      `Failed to download config/${fileName} from ${url}: ${message}`
+    );
+  }
 }
 
 function downloadFile(url: string, destination: string): Promise<void> {

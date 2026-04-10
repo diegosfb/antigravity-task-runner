@@ -209,6 +209,14 @@ function getExtensionSettingsFields(): SettingsField[] {
       value: config.get<string>("scriptFallbackBaseUrl") || ""
     },
     {
+      key: "configFallbackBaseUrl",
+      label: "Config Fallback Base URL",
+      description:
+        "Base URL used to download missing config files (e.g. DEV-settings.yaml, .env).",
+      placeholder: "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config",
+      value: config.get<string>("configFallbackBaseUrl") || ""
+    },
+    {
       key: "autoUpdateClaudeMd",
       label: "Auto-update CLAUDE.md on autocommit start",
       description: "When enabled, autocommit start will also run Claude to update CLAUDE.md.",

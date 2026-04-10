@@ -385,6 +385,12 @@ function activate(context) {
         ]);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.switchEnvironment", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         const selection = await vscode.window.showQuickPick([
             { label: "DEV", value: "DEV" },
             { label: "QA", value: "QA" },
@@ -396,7 +402,17 @@ function activate(context) {
         });
         if (!selection)
             return;
-        await (0, scripts_1.runRepoScript)("switch-env", [selection.value]);
+        // Ensure switch-env.sh is present, downloading from Script Fallback Base URL if missing.
+        const scriptPath = await (0, scripts_1.ensureScriptFile)(repoRoot, "switch-env.sh");
+        if (!scriptPath)
+            return;
+        // Offer to download missing config files from Config Fallback Base URL.
+        await (0, scripts_1.downloadConfigFileIfMissing)(repoRoot, `${selection.value}-settings.yaml`);
+        await (0, scripts_1.downloadConfigFileIfMissing)(repoRoot, ".env");
+        await (0, terminal_1.runInSecondaryTerminal)([
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(selection.value)}`
+        ]);
     }));
 }
 function deactivate() { }

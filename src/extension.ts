@@ -25,7 +25,7 @@ import {
   isLocalLiteLLMBaseUrl,
   LOCAL_LITELLM_READY_URL
 } from "./settings";
-import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile } from "./scripts";
+import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing } from "./scripts";
 import {
   getRootPath,
   getRepoRoot,
@@ -533,6 +533,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.switchEnvironment", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+
       const selection = await vscode.window.showQuickPick(
         [
           { label: "DEV", value: "DEV" },
@@ -546,7 +553,19 @@ export function activate(context: vscode.ExtensionContext) {
         }
       );
       if (!selection) return;
-      await runRepoScript("switch-env", [selection.value]);
+
+      // Ensure switch-env.sh is present, downloading from Script Fallback Base URL if missing.
+      const scriptPath = await ensureScriptFile(repoRoot, "switch-env.sh");
+      if (!scriptPath) return;
+
+      // Offer to download missing config files from Config Fallback Base URL.
+      await downloadConfigFileIfMissing(repoRoot, `${selection.value}-settings.yaml`);
+      await downloadConfigFileIfMissing(repoRoot, ".env");
+
+      await runInSecondaryTerminal([
+        `cd ${quoteShellArg(repoRoot)}`,
+        `${quoteShellArg(scriptPath)} ${quoteShellArg(selection.value)}`
+      ]);
     })
   );
 }

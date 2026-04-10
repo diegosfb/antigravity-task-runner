@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.downloadConfigFileIfMissing = downloadConfigFileIfMissing;
 exports.ensureScriptFile = ensureScriptFile;
 exports.runRepoScript = runRepoScript;
 exports.openFile = openFile;
@@ -12,6 +13,7 @@ const https = require("https");
 const utils_1 = require("./utils");
 const terminal_1 = require("./terminal");
 const SCRIPT_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts";
+const CONFIG_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config";
 function buildScriptUrl(baseUrl, scriptFileName) {
     // Convert github.com blob URLs to raw URLs.
     let url = baseUrl;
@@ -31,6 +33,34 @@ function getScriptFallbackUrl(scriptFileName) {
     const config = vscode.workspace.getConfiguration("antigravity");
     const baseUrl = config.get("scriptFallbackBaseUrl") || SCRIPT_FALLBACK_BASE_URL;
     return buildScriptUrl(baseUrl, scriptFileName);
+}
+function getConfigFallbackUrl(fileName) {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    let baseUrl = config.get("configFallbackBaseUrl") || CONFIG_FALLBACK_BASE_URL;
+    if (baseUrl.includes("github.com/") && !baseUrl.includes("raw.githubusercontent.com")) {
+        baseUrl = baseUrl
+            .replace("https://github.com/", "https://raw.githubusercontent.com/")
+            .replace("/blob/", "/");
+    }
+    baseUrl = baseUrl.replace(/\/+$/, "");
+    return `${baseUrl}/${fileName}`;
+}
+async function downloadConfigFileIfMissing(repoRoot, fileName) {
+    const filePath = path.join(repoRoot, "config", fileName);
+    if (fs.existsSync(filePath))
+        return;
+    const url = getConfigFallbackUrl(fileName);
+    const answer = await vscode.window.showWarningMessage(`Config file config/${fileName} is missing. Download from ${url}?`, "Yes", "No");
+    if (answer !== "Yes")
+        return;
+    try {
+        await fs.promises.mkdir(path.join(repoRoot, "config"), { recursive: true });
+        await downloadFile(url, filePath);
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        void vscode.window.showErrorMessage(`Failed to download config/${fileName} from ${url}: ${message}`);
+    }
 }
 function downloadFile(url, destination) {
     return new Promise((resolve, reject) => {
