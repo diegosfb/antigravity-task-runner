@@ -172,7 +172,8 @@
     "out/**",
     "media/**",
     "package.json",
-    "LICENSE"
+    "LICENSE",
+    "Project Level CLAUDE.md Guidelines.txt"
   ],
   "scripts": {
     "compile": "node node_modules/typescript/lib/tsc.js -p ./",

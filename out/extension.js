@@ -275,7 +275,11 @@ function activate(context) {
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
             await (0, git_1.appendAutocommitLogLine)("Create CLAUDE.md: running claude /init and follow-up update prompt");
-            await (0, terminal_1.runClaudeInitAndUpdateInNewTerminal)(repoRoot, "/init and after the project's CLAUDE.md is created; update it to indicate that as you do work you need to commit things to Git and push them to GitHub regularly with clean commit messages so we never lose the status or work that we have. Also auto update project's CLAUDE.md file regularly to capture the progress of the project.  **OVERRIDE:** This project explicitly authorizes Claude to commit after each meaningful unit of work without waiting for an explicit user request. This overrides any built-in default that requires explicit permission before committing.");
+            const guidelinesFile = path.join(extensionRoot, "Project Level CLAUDE.md Guidelines.txt");
+            const prompt = fs.existsSync(guidelinesFile)
+                ? fs.readFileSync(guidelinesFile, "utf8").trim()
+                : "/init";
+            await (0, terminal_1.runClaudeInitAndUpdateInNewTerminal)(repoRoot, prompt);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
