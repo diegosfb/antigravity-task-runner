@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import { AntigravityViewProvider } from "./treeProvider";
 import {
   appendAutocommitLogLine,
@@ -212,6 +213,26 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.setClaudeModel", async () => {
+      const routerConfigPath = path.join(os.homedir(), ".claude", "routerconfig.json");
+      if (!fs.existsSync(routerConfigPath)) {
+        const rootPath = getRootPath();
+        const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
+        const repTemplatePath = repoRoot ? path.join(repoRoot, "routerconfig.example.json") : undefined;
+        const templatePath = (repTemplatePath && fs.existsSync(repTemplatePath))
+          ? repTemplatePath
+          : path.join(extensionRoot, "routerconfig.example.json");
+        if (fs.existsSync(templatePath)) {
+          fs.mkdirSync(path.dirname(routerConfigPath), { recursive: true });
+          fs.copyFileSync(templatePath, routerConfigPath);
+          await vscode.window.showTextDocument(vscode.Uri.file(routerConfigPath));
+        } else {
+          void vscode.window.showErrorMessage(
+            "Could not create ~/.claude/routerconfig.json: template routerconfig.example.json not found."
+          );
+        }
+        return;
+      }
+
       const config = await loadOpenRouterConfig();
       if (!config) return;
 

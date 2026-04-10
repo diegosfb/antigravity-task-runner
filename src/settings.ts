@@ -93,7 +93,7 @@ export function getRouterSettings(
 export async function loadOpenRouterConfig(): Promise<Record<string, unknown> | null> {
   const filePath = path.join(os.homedir(), ".claude", "routerconfig.json");
   if (!fs.existsSync(filePath)) {
-    void vscode.window.showErrorMessage(`routerconfig.json not found at ${filePath}`);
+    void vscode.window.showErrorMessage("routerconfig.json not found at ~/.claude/routerconfig.json");
     return null;
   }
   try {

@@ -34,7 +34,7 @@ export function isAutocommitRunning(repoRoot: string): boolean {
     if (isFalsyEnvValue(value)) return false;
     return isTruthyEnvValue(value);
   }
-  const pid = env["autocommit_pid"];
+  const pid = env["autocommit_pid"] ?? env["agentic_autocommit_pid"];
   if (pid && /^[0-9]+$/.test(pid.trim())) return true;
   return autocommitTimers.has(repoRoot);
 }

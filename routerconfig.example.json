@@ -1,16 +1,27 @@
 {
     "routers": [
-        "ollama",
-        "openrouter",
-        "litellm"
+        "Ollama",
+        "OpenRouter",
+        "LiteLLM",
+        "Anthropic"
     ],
     "tool-run": {
-        "litellm-openai": "OPENAI_API_KEY=APIKEY LITELLM_DROP_PARAMS=true litellm --model openai/gpt-5.2-codex",
+        "litellm-openai": "<OPENAI_API_KEY> LITELLM_DROP_PARAMS=true litellm --model openai/gpt-5.2-codex",
         "ollama-qwen3-coder": "ollama run --model qwen3-coder"
     },
-    "openrouter-settings": {
+    "Anthropic-settings": {
+        "baseurl": "https://api.anthropic.com",
+        "auth_token": "",
+        "api_key": "",
+        "models": [
+            "claude-sonnet-4-6",
+            "claude-opus-4-6",
+            "claude-haiku-4-5-20251001"
+        ]
+    },
+    "OpenRouter-settings": {
         "baseurl": "https://openrouter.ai/api",
-        "auth_token": "APIKEY",
+        "auth_token": "<AUTH_TOKEN>",
         "api_key": "",
         "models": [
             "qwen/qwen3.6-plus:free",
@@ -22,7 +33,7 @@
             "glm-4.7:cloud"
         ]
     },
-    "ollama-settings": {
+    "Ollama-settings": {
         "baseurl": "http://localhost:11434",
         "auth_token": "ollama",
         "api_key": "",
@@ -40,7 +51,7 @@
             "devstral-2:cloud"
         ]
     },
-    "litellm-settings": {
+    "LiteLLM-settings": {
         "baseurl": "http://localhost:4000",
         "auth_token": "",
         "api_key": "",

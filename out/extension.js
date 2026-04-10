@@ -5,6 +5,7 @@ exports.deactivate = deactivate;
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const treeProvider_1 = require("./treeProvider");
 const git_1 = require("./git");
 const terminal_1 = require("./terminal");
@@ -145,6 +146,24 @@ function activate(context) {
         });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.setClaudeModel", async () => {
+        const routerConfigPath = path.join(os.homedir(), ".claude", "routerconfig.json");
+        if (!fs.existsSync(routerConfigPath)) {
+            const rootPath = (0, utils_1.getRootPath)();
+            const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : undefined;
+            const repTemplatePath = repoRoot ? path.join(repoRoot, "routerconfig.example.json") : undefined;
+            const templatePath = (repTemplatePath && fs.existsSync(repTemplatePath))
+                ? repTemplatePath
+                : path.join(extensionRoot, "routerconfig.example.json");
+            if (fs.existsSync(templatePath)) {
+                fs.mkdirSync(path.dirname(routerConfigPath), { recursive: true });
+                fs.copyFileSync(templatePath, routerConfigPath);
+                await vscode.window.showTextDocument(vscode.Uri.file(routerConfigPath));
+            }
+            else {
+                void vscode.window.showErrorMessage("Could not create ~/.claude/routerconfig.json: template routerconfig.example.json not found.");
+            }
+            return;
+        }
         const config = await (0, settings_1.loadOpenRouterConfig)();
         if (!config)
             return;

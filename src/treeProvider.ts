@@ -327,38 +327,6 @@ function getQuickActionItems(): NodeItem[] {
   }
   items.push(initRepo);
 
-  const buildVersion = new NodeItem(
-    { kind: "action", label: "Build version" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  buildVersion.iconPath = new vscode.ThemeIcon("tools", QUICK_ACTION_COLOR);
-  buildVersion.command = {
-    command: "antigravity.buildVersion",
-    title: "Run Build Version"
-  };
-  items.push(buildVersion);
-
-  const createInfrastructure = new NodeItem(
-    { kind: "action", label: "Create Infrastructure" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  createInfrastructure.iconPath = new vscode.ThemeIcon("cloud", QUICK_ACTION_COLOR);
-  createInfrastructure.command = {
-    command: "antigravity.createInfrastructure",
-    title: "Run Create Infrastructure"
-  };
-  items.push(createInfrastructure);
-
-  const deploy = new NodeItem(
-    { kind: "action", label: "Deploy" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  deploy.iconPath = new vscode.ThemeIcon("cloud-upload", QUICK_ACTION_COLOR);
-  deploy.command = {
-    command: "antigravity.deploy",
-    title: "Run Deploy"
-  };
-  items.push(deploy);
 
   const incrementMajor = new NodeItem(
     { kind: "action", label: "Increment Major Version" },
