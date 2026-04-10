@@ -349,7 +349,8 @@ function activate(context) {
                 return;
             }
         }
-        const scriptCandidates = ["autocommit_changes.py", "autocommit_changes.sh"];
+        // Ensure both autocommit scripts are present, downloading from GitHub if missing.
+        const scriptCandidates = ["autocommit_changes.sh", "autocommit_changes.py"];
         let scriptPath;
         for (const candidate of scriptCandidates) {
             scriptPath = await (0, scripts_1.ensureScriptFile)(repoRoot, candidate);
@@ -358,6 +359,7 @@ function activate(context) {
         }
         if (!scriptPath)
             return;
+        await (0, scripts_1.ensureScriptFile)(repoRoot, "autocommit_revert.sh");
         await (0, terminal_1.runInSecondaryTerminal)([
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
             `${(0, utils_1.quoteShellArg)(scriptPath)} ${action}`

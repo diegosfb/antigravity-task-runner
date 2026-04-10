@@ -494,13 +494,15 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
       }
-      const scriptCandidates = ["autocommit_changes.py", "autocommit_changes.sh"];
+      // Ensure both autocommit scripts are present, downloading from GitHub if missing.
+      const scriptCandidates = ["autocommit_changes.sh", "autocommit_changes.py"];
       let scriptPath: string | undefined;
       for (const candidate of scriptCandidates) {
         scriptPath = await ensureScriptFile(repoRoot, candidate);
         if (scriptPath) break;
       }
       if (!scriptPath) return;
+      await ensureScriptFile(repoRoot, "autocommit_revert.sh");
       await runInSecondaryTerminal([
         `cd ${quoteShellArg(repoRoot)}`,
         `${quoteShellArg(scriptPath)} ${action}`
