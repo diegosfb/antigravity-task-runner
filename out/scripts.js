@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.downloadInfrastructureFileIfMissing = downloadInfrastructureFileIfMissing;
 exports.downloadConfigFileIfMissing = downloadConfigFileIfMissing;
 exports.ensureScriptFile = ensureScriptFile;
 exports.runRepoScript = runRepoScript;
@@ -44,6 +45,47 @@ function getConfigFallbackUrl(fileName) {
     }
     baseUrl = baseUrl.replace(/\/+$/, "");
     return `${baseUrl}/${fileName}`;
+}
+function readYamlStringField(filePath, fieldName) {
+    try {
+        const content = fs.readFileSync(filePath, "utf8");
+        for (const line of content.split("\n")) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith(`${fieldName}:`)) {
+                const value = trimmed.slice(fieldName.length + 1).trim();
+                if (value)
+                    return value;
+            }
+        }
+    }
+    catch { /* ignore */ }
+    return undefined;
+}
+async function downloadInfrastructureFileIfMissing(repoRoot, settingsFileName) {
+    const settingsPath = path.join(repoRoot, "config", settingsFileName);
+    if (!fs.existsSync(settingsPath))
+        return;
+    const infraRef = readYamlStringField(settingsPath, "Infrastructure");
+    if (!infraRef)
+        return;
+    const localPath = path.join(repoRoot, infraRef);
+    if (fs.existsSync(localPath))
+        return;
+    // Strip leading "config/" — configFallbackBaseUrl already points to the config directory.
+    const urlRelativePath = infraRef.replace(/^config\//, "");
+    const url = getConfigFallbackUrl(urlRelativePath);
+    const answer = await vscode.window.showWarningMessage(`Infrastructure file ${infraRef} is missing. Download from ${url}?`, "Yes", "No");
+    if (answer !== "Yes")
+        return;
+    try {
+        await fs.promises.mkdir(path.dirname(localPath), { recursive: true });
+        await downloadFile(url, localPath);
+    }
+    catch (error) {
+        const raw = error instanceof Error ? error.message : String(error);
+        const message = raw || "Request failed (unknown error)";
+        void vscode.window.showErrorMessage(`Failed to download ${infraRef}: ${message}`, { modal: true }, "OK");
+    }
 }
 async function downloadConfigFileIfMissing(repoRoot, fileName) {
     const filePath = path.join(repoRoot, "config", fileName);

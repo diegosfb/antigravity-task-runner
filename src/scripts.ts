@@ -42,6 +42,58 @@ function getConfigFallbackUrl(fileName: string): string {
   return `${baseUrl}/${fileName}`;
 }
 
+function readYamlStringField(filePath: string, fieldName: string): string | undefined {
+  try {
+    const content = fs.readFileSync(filePath, "utf8");
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith(`${fieldName}:`)) {
+        const value = trimmed.slice(fieldName.length + 1).trim();
+        if (value) return value;
+      }
+    }
+  } catch { /* ignore */ }
+  return undefined;
+}
+
+export async function downloadInfrastructureFileIfMissing(
+  repoRoot: string,
+  settingsFileName: string
+): Promise<void> {
+  const settingsPath = path.join(repoRoot, "config", settingsFileName);
+  if (!fs.existsSync(settingsPath)) return;
+
+  const infraRef = readYamlStringField(settingsPath, "Infrastructure");
+  if (!infraRef) return;
+
+  const localPath = path.join(repoRoot, infraRef);
+  if (fs.existsSync(localPath)) return;
+
+  // Strip leading "config/" — configFallbackBaseUrl already points to the config directory.
+  const urlRelativePath = infraRef.replace(/^config\//, "");
+  const url = getConfigFallbackUrl(urlRelativePath);
+
+  const answer = await vscode.window.showWarningMessage(
+    `Infrastructure file ${infraRef} is missing. Download from ${url}?`,
+    "Yes",
+    "No"
+  );
+  if (answer !== "Yes") return;
+
+  try {
+    await fs.promises.mkdir(path.dirname(localPath), { recursive: true });
+    await downloadFile(url, localPath);
+  } catch (error) {
+    const raw = error instanceof Error ? error.message : String(error);
+    const message = raw || "Request failed (unknown error)";
+    void vscode.window.showErrorMessage(
+      `Failed to download ${infraRef}: ${message}`,
+      { modal: true },
+      "OK"
+    );
+  }
+}
+
 export async function downloadConfigFileIfMissing(
   repoRoot: string,
   fileName: string

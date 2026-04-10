@@ -25,7 +25,7 @@ import {
   isLocalLiteLLMBaseUrl,
   LOCAL_LITELLM_READY_URL
 } from "./settings";
-import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing } from "./scripts";
+import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing } from "./scripts";
 import {
   getRootPath,
   getRepoRoot,
@@ -559,7 +559,9 @@ export function activate(context: vscode.ExtensionContext) {
       if (!scriptPath) return;
 
       // Offer to download missing config files from Config Fallback Base URL.
-      await downloadConfigFileIfMissing(repoRoot, `${selection.value.toLowerCase()}-settings.yaml`);
+      const settingsFileName = `${selection.value.toLowerCase()}-settings.yaml`;
+      await downloadConfigFileIfMissing(repoRoot, settingsFileName);
+      await downloadInfrastructureFileIfMissing(repoRoot, settingsFileName);
       await downloadConfigFileIfMissing(repoRoot, ".env");
 
       await runInSecondaryTerminal([
