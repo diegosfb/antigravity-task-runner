@@ -60,7 +60,7 @@ async function downloadConfigFileIfMissing(repoRoot, fileName) {
     catch (error) {
         const raw = error instanceof Error ? error.message : String(error);
         const message = raw || "Request failed (unknown error)";
-        void vscode.window.showErrorMessage(`Failed to download config/${fileName}: ${message}`);
+        void vscode.window.showErrorMessage(`Failed to download config/${fileName}: ${message}`, { modal: true }, "OK");
     }
 }
 function downloadFile(url, destination) {
@@ -77,7 +77,12 @@ function downloadFile(url, destination) {
             if (response.statusCode !== 200) {
                 const status = response.statusCode ?? "unknown";
                 response.resume();
-                reject(new Error(`Request failed with status ${status}`));
+                if (status === 404) {
+                    reject(new Error(`File not found at URL (404). Make sure it exists in your repo.`));
+                }
+                else {
+                    reject(new Error(`HTTP ${status}`));
+                }
                 return;
             }
             const fileStream = fs.createWriteStream(destination, { mode: 0o755 });

@@ -62,7 +62,9 @@ export async function downloadConfigFileIfMissing(
     const raw = error instanceof Error ? error.message : String(error);
     const message = raw || "Request failed (unknown error)";
     void vscode.window.showErrorMessage(
-      `Failed to download config/${fileName}: ${message}`
+      `Failed to download config/${fileName}: ${message}`,
+      { modal: true },
+      "OK"
     );
   }
 }
@@ -83,7 +85,11 @@ function downloadFile(url: string, destination: string): Promise<void> {
       if (response.statusCode !== 200) {
         const status = response.statusCode ?? "unknown";
         response.resume();
-        reject(new Error(`Request failed with status ${status}`));
+        if (status === 404) {
+          reject(new Error(`File not found at URL (404). Make sure it exists in your repo.`));
+        } else {
+          reject(new Error(`HTTP ${status}`));
+        }
         return;
       }
       const fileStream = fs.createWriteStream(destination, { mode: 0o755 });
