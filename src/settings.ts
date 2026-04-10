@@ -205,7 +205,7 @@ function getExtensionSettingsFields(): SettingsField[] {
       label: "Script Fallback Base URL",
       description:
         "Base URL used to download missing scripts when ./scripts/<name>.sh is not present.",
-      placeholder: "https://raw.githubusercontent.com/diegosfb/antigravity-workspace",
+      placeholder: "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts",
       value: config.get<string>("scriptFallbackBaseUrl") || ""
     },
     {

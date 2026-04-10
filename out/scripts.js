@@ -11,7 +11,7 @@ const path = require("path");
 const https = require("https");
 const utils_1 = require("./utils");
 const terminal_1 = require("./terminal");
-const SCRIPT_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace";
+const SCRIPT_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts";
 function buildScriptUrl(baseUrl, scriptFileName) {
     // Convert github.com blob URLs to raw URLs.
     let url = baseUrl;

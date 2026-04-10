@@ -5,7 +5,7 @@ import * as https from "https";
 import { getRootPath, getRepoRoot, getWorkspaceRoot, quoteShellArg } from "./utils";
 import { runInSecondaryTerminal } from "./terminal";
 
-const SCRIPT_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace";
+const SCRIPT_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts";
 
 function buildScriptUrl(baseUrl: string, scriptFileName: string): string {
   // Convert github.com blob URLs to raw URLs.

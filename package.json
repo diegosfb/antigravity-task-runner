@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "2.0.52",
+  "version": "2.0.53",
   "publisher": "dsfb",
   "license": "MIT",
   "repository": {
@@ -91,7 +91,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v2.0.52",
+          "name": "Tasky Runner v2.0.53",
           "icon": "media/taskrunner.svg"
         }
       ]
@@ -157,7 +157,7 @@
         },
         "antigravity.scriptFallbackBaseUrl": {
           "type": "string",
-          "default": "https://raw.githubusercontent.com/diegosfb/antigravity-workspace",
+          "default": "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts",
           "description": "Base URL used to download missing scripts when ./scripts/<name>.sh is not present. Supports GitHub blob URLs and raw GitHub base URLs."
         },
         "antigravity.autoUpdateClaudeMd": {
