@@ -365,28 +365,6 @@ function activate(context) {
         else {
             await (0, git_1.stopAutocommit)(repoRoot);
         }
-        const autoUpdateEnabled = vscode.workspace
-            .getConfiguration("antigravity")
-            .get("autoUpdateClaudeMd");
-        if (autoUpdateEnabled && action === "start") {
-            try {
-                const baseUrl = await (0, settings_1.readClaudeAnthropicBaseUrl)(repoRoot);
-                if ((0, settings_1.isLocalLiteLLMBaseUrl)(baseUrl)) {
-                    await vscode.commands.executeCommand("antigravity.runLiteLLMOpenAI");
-                    const ready = await (0, utils_1.waitForUrlReady)(settings_1.LOCAL_LITELLM_READY_URL);
-                    if (!ready) {
-                        void vscode.window.showErrorMessage(`liteLLM did not become ready at ${settings_1.LOCAL_LITELLM_READY_URL}.`);
-                        return;
-                    }
-                }
-                void vscode.window.showInformationMessage("Updating CLAUDE.md...");
-                (0, terminal_1.runClaudePromptInNewTerminal)(repoRoot, "Update the project's CLAUDE.md with the relevant project information");
-            }
-            catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                void vscode.window.showErrorMessage(`Auto-update CLAUDE.md failed: ${message}`);
-            }
-        }
         provider.refresh();
         setTimeout(() => {
             provider.refresh();

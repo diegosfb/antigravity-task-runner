@@ -12,7 +12,6 @@ import {
   runInSecondaryTerminal,
   runInNewTerminal,
   runClaudeInitAndUpdateInNewTerminal,
-  runClaudePromptInNewTerminal,
   CLAUDE_ACTION_COLOR
 } from "./terminal";
 import {
@@ -508,32 +507,6 @@ export function activate(context: vscode.ExtensionContext) {
         ]);
       } else {
         await stopAutocommit(repoRoot);
-      }
-      const autoUpdateEnabled = vscode.workspace
-        .getConfiguration("antigravity")
-        .get<boolean>("autoUpdateClaudeMd");
-      if (autoUpdateEnabled && action === "start") {
-        try {
-          const baseUrl = await readClaudeAnthropicBaseUrl(repoRoot);
-          if (isLocalLiteLLMBaseUrl(baseUrl)) {
-            await vscode.commands.executeCommand("antigravity.runLiteLLMOpenAI");
-            const ready = await waitForUrlReady(LOCAL_LITELLM_READY_URL);
-            if (!ready) {
-              void vscode.window.showErrorMessage(
-                `liteLLM did not become ready at ${LOCAL_LITELLM_READY_URL}.`
-              );
-              return;
-            }
-          }
-          void vscode.window.showInformationMessage("Updating CLAUDE.md...");
-          runClaudePromptInNewTerminal(
-            repoRoot,
-            "Update the project's CLAUDE.md with the relevant project information"
-          );
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          void vscode.window.showErrorMessage(`Auto-update CLAUDE.md failed: ${message}`);
-        }
       }
       provider.refresh();
       setTimeout(() => {
