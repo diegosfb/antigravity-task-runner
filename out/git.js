@@ -4,6 +4,7 @@ exports.isAutocommitRunning = isAutocommitRunning;
 exports.appendAutocommitLogLine = appendAutocommitLogLine;
 exports.startAutocommit = startAutocommit;
 exports.stopAutocommit = stopAutocommit;
+exports.hasGitHubRemote = hasGitHubRemote;
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -84,5 +85,12 @@ async function stopAutocommit(repoRoot) {
         autocommitTimers.delete(repoRoot);
     }
     await appendAutocommitLogLine(`stopAutocommit: ${repoRoot}`);
+}
+function hasGitHubRemote(repoRoot) {
+    return new Promise((resolve) => {
+        (0, child_process_1.exec)(`git -C "${repoRoot}" remote -v`, (_err, stdout) => {
+            resolve(typeof stdout === "string" && stdout.includes("github.com"));
+        });
+    });
 }
 //# sourceMappingURL=git.js.map

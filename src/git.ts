@@ -82,3 +82,11 @@ export async function stopAutocommit(repoRoot: string): Promise<void> {
   }
   await appendAutocommitLogLine(`stopAutocommit: ${repoRoot}`);
 }
+
+export function hasGitHubRemote(repoRoot: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    exec(`git -C "${repoRoot}" remote -v`, (_err, stdout) => {
+      resolve(typeof stdout === "string" && stdout.includes("github.com"));
+    });
+  });
+}

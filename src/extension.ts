@@ -5,8 +5,8 @@ import { AntigravityViewProvider } from "./treeProvider";
 import {
   appendAutocommitLogLine,
   isAutocommitRunning,
-  startAutocommit,
-  stopAutocommit
+  stopAutocommit,
+  hasGitHubRemote
 } from "./git";
 import {
   runInSecondaryTerminal,
@@ -488,7 +488,24 @@ export function activate(context: vscode.ExtensionContext) {
       const repoRoot = getRepoRoot(rootPath);
       const action = isAutocommitRunning(repoRoot) ? "stop" : "start";
       if (action === "start") {
-        await startAutocommit(repoRoot);
+        const hasGithub = await hasGitHubRemote(repoRoot);
+        if (!hasGithub) {
+          void vscode.window.showErrorMessage(
+            "No GitHub remote found for this project. Set up a GitHub repository before starting autocommit."
+          );
+          return;
+        }
+        const scriptCandidates = ["autocommit_changes.py", "autocommit_changes.sh"];
+        let scriptPath: string | undefined;
+        for (const candidate of scriptCandidates) {
+          scriptPath = await ensureScriptFile(repoRoot, candidate);
+          if (scriptPath) break;
+        }
+        if (!scriptPath) return;
+        await runInSecondaryTerminal([
+          `cd ${quoteShellArg(repoRoot)}`,
+          `${quoteShellArg(scriptPath)} start`
+        ]);
       } else {
         await stopAutocommit(repoRoot);
       }
