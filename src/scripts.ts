@@ -7,45 +7,26 @@ import { runInSecondaryTerminal } from "./terminal";
 
 const SCRIPT_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace";
 
-function normalizeGithubRawUrl(url: string): string {
+function buildScriptUrl(baseUrl: string, scriptFileName: string): string {
+  // Convert github.com blob URLs to raw URLs.
+  let url = baseUrl;
   if (url.includes("github.com/") && !url.includes("raw.githubusercontent.com")) {
-    return url
+    url = url
       .replace("https://github.com/", "https://raw.githubusercontent.com/")
       .replace("/blob/", "/");
   }
-  return url.replace(/\/+$/, "");
-}
-
-function buildScriptFallbackUrls(baseUrl: string, scriptFileName: string): string[] {
-  const trimmed = normalizeGithubRawUrl(baseUrl);
-  const urls: string[] = [];
-  const add = (url: string) => {
-    if (!urls.includes(url)) urls.push(url);
-  };
-  const hasScriptsSuffix = trimmed.endsWith("/scripts");
-  const baseWithoutScripts = hasScriptsSuffix ? trimmed.slice(0, -"/scripts".length) : trimmed;
-  const hasBranch = /\/(main|master)(\/|$)/.test(baseWithoutScripts);
-  if (hasBranch) {
-    const primaryBase = hasScriptsSuffix ? trimmed : `${baseWithoutScripts}/scripts`;
-    add(`${primaryBase}/${scriptFileName}`);
-    if (baseWithoutScripts.includes("/main/")) {
-      const swapped = baseWithoutScripts.replace("/main/", "/master/");
-      add(`${swapped}/scripts/${scriptFileName}`);
-    } else if (baseWithoutScripts.includes("/master/")) {
-      const swapped = baseWithoutScripts.replace("/master/", "/main/");
-      add(`${swapped}/scripts/${scriptFileName}`);
-    }
-  } else {
-    add(`${baseWithoutScripts}/main/scripts/${scriptFileName}`);
-    add(`${baseWithoutScripts}/master/scripts/${scriptFileName}`);
+  url = url.replace(/\/+$/, "");
+  // If the base URL already ends with /scripts, append filename directly.
+  if (url.endsWith("/scripts")) {
+    return `${url}/${scriptFileName}`;
   }
-  return urls;
+  return `${url}/scripts/${scriptFileName}`;
 }
 
-function getScriptFallbackUrls(scriptFileName: string): string[] {
+function getScriptFallbackUrl(scriptFileName: string): string {
   const config = vscode.workspace.getConfiguration("antigravity");
   const baseUrl = config.get<string>("scriptFallbackBaseUrl") || SCRIPT_FALLBACK_BASE_URL;
-  return Array.from(new Set(buildScriptFallbackUrls(baseUrl, scriptFileName)));
+  return buildScriptUrl(baseUrl, scriptFileName);
 }
 
 function downloadFile(url: string, destination: string): Promise<void> {
@@ -87,33 +68,25 @@ async function downloadScript(
   scriptFileName: string,
   repoRoot: string
 ): Promise<string | undefined> {
-  const urls = getScriptFallbackUrls(scriptFileName);
-  let lastError: string | undefined;
+  const url = getScriptFallbackUrl(scriptFileName);
   try {
     const scriptsDir = path.join(repoRoot, "scripts");
     await fs.promises.mkdir(scriptsDir, { recursive: true });
     const destination = path.join(scriptsDir, scriptFileName);
-    for (const url of urls) {
-      try {
-        await downloadFile(url, destination);
-        await fs.promises.chmod(destination, 0o755);
-        return destination;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
-        lastError = `${url} (${message})`;
-        try { await fs.promises.unlink(destination); } catch { /* ignore */ }
-      }
+    try {
+      await downloadFile(url, destination);
+      await fs.promises.chmod(destination, 0o755);
+      return destination;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      try { await fs.promises.unlink(destination); } catch { /* ignore */ }
+      void vscode.window.showErrorMessage(
+        `Failed to download ${scriptFileName} from ${url}: ${message}`
+      );
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    lastError = message;
-  }
-  if (lastError) {
-    void vscode.window.showErrorMessage(
-      `Failed to download ${scriptFileName}. Last error: ${lastError}`
-    );
-  } else {
-    void vscode.window.showErrorMessage(`Failed to download ${scriptFileName}.`);
+    void vscode.window.showErrorMessage(`Failed to download ${scriptFileName}: ${message}`);
   }
   return undefined;
 }
