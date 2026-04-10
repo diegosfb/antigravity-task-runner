@@ -294,7 +294,7 @@ export function activate(context: vscode.ExtensionContext) {
           }
           const repoRoot = getRepoRoot(rootPath);
           const command =
-            quoteShellArg(path.join(extensionRoot, "Switch-ClaudeCode-Model")) +
+            quoteShellArg(path.join(extensionRoot, "src", "Switch-ClaudeCode-Model.sh")) +
             ` --model ${quoteShellArg(model)}` +
             ` --baseurl ${quoteShellArg(settings.baseurl)}` +
             ` --auth-token ${quoteShellArg(settings.auth_token)}` +

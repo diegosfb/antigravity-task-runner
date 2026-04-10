@@ -209,7 +209,7 @@ function activate(context) {
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-            const command = (0, utils_1.quoteShellArg)(path.join(extensionRoot, "Switch-ClaudeCode-Model")) +
+            const command = (0, utils_1.quoteShellArg)(path.join(extensionRoot, "src", "Switch-ClaudeCode-Model.sh")) +
                 ` --model ${(0, utils_1.quoteShellArg)(model)}` +
                 ` --baseurl ${(0, utils_1.quoteShellArg)(settings.baseurl)}` +
                 ` --auth-token ${(0, utils_1.quoteShellArg)(settings.auth_token)}` +
