@@ -58,8 +58,9 @@ async function downloadConfigFileIfMissing(repoRoot, fileName) {
         await downloadFile(url, filePath);
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown error";
-        void vscode.window.showErrorMessage(`Failed to download config/${fileName} from ${url}: ${message}`);
+        const raw = error instanceof Error ? error.message : String(error);
+        const message = raw || "Request failed (unknown error)";
+        void vscode.window.showErrorMessage(`Failed to download config/${fileName}: ${message}`);
     }
 }
 function downloadFile(url, destination) {

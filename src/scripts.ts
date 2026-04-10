@@ -59,9 +59,10 @@ export async function downloadConfigFileIfMissing(
     await fs.promises.mkdir(path.join(repoRoot, "config"), { recursive: true });
     await downloadFile(url, filePath);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const raw = error instanceof Error ? error.message : String(error);
+    const message = raw || "Request failed (unknown error)";
     void vscode.window.showErrorMessage(
-      `Failed to download config/${fileName} from ${url}: ${message}`
+      `Failed to download config/${fileName}: ${message}`
     );
   }
 }
