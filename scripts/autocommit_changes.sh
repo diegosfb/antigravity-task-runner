@@ -69,6 +69,34 @@ run_loop() {
 # Daemon management
 # ---------------------------------------------------------------------------
 
+env_file() {
+  echo "$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.env"
+}
+
+set_env_pid() {
+  local pid="$1"
+  local file
+  file="$(env_file)"
+  if [ -f "$file" ]; then
+    # Update existing entry if present, otherwise append.
+    if grep -q "^AGENTIC_AUTOCOMMIT_PID=" "$file" 2>/dev/null; then
+      sed -i.bak "s/^AGENTIC_AUTOCOMMIT_PID=.*/AGENTIC_AUTOCOMMIT_PID=${pid}/" "$file" && rm -f "${file}.bak"
+    else
+      echo "AGENTIC_AUTOCOMMIT_PID=${pid}" >> "$file"
+    fi
+  else
+    echo "AGENTIC_AUTOCOMMIT_PID=${pid}" > "$file"
+  fi
+}
+
+clear_env_pid() {
+  local file
+  file="$(env_file)"
+  if [ -f "$file" ]; then
+    sed -i.bak "/^AGENTIC_AUTOCOMMIT_PID=/d" "$file" && rm -f "${file}.bak"
+  fi
+}
+
 start_daemon() {
   local pidfile
   pidfile="$(pid_path)"
@@ -88,6 +116,7 @@ start_daemon() {
     </dev/null >/dev/null 2>&1 &
   local child_pid=$!
   echo "$child_pid" > "$pidfile"
+  set_env_pid "$child_pid"
   echo "Started (pid $child_pid)."
 }
 
@@ -117,6 +146,7 @@ stop_daemon() {
 
   kill "$pid"
   rm -f "$pidfile"
+  clear_env_pid
   echo "Stopped."
 }
 
