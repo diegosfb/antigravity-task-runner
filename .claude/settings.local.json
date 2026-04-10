@@ -4,7 +4,30 @@
       "Bash(npx tsc:*)",
       "Bash(chmod +x:*)",
       "Bash(npx vsce:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(xargs ls:*)",
+      "Bash(wc -l /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/src/*.ts)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(npm version:*)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)",
+      "Bash(node scripts/sync-view-name.js)",
+      "Bash(ls *.vsix)",
+      "Bash(unzip -l antigravity-task-runner-2.0.40.vsix)",
+      "Bash(unzip -l antigravity-task-runner-2.0.0.vsix)",
+      "Bash(unzip -l antigravity-task-runner-1.6.16.vsix)",
+      "Bash(unzip -p antigravity-task-runner-2.0.0.vsix extension/out/extension.js)",
+      "Read(//tmp/**)",
+      "Bash(git commit:*)",
+      "Bash(node -p \"require\\('./package.json'\\).version\")",
+      "Bash(node -e ':*)",
+      "Bash(node src/sync-view-name.js)",
+      "Bash(git rm:*)",
+      "Bash(bash -n /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/scripts/autocommit_changes.sh)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const p=JSON.parse\\(fs.readFileSync\\('package.json','utf8'\\)\\);const parts=p.version.split\\('.'\\);parts[2]=String\\(Number\\(parts[2]\\)+1\\);p.version=parts.join\\('.'\\);fs.writeFileSync\\('package.json',JSON.stringify\\(p,null,2\\)+'\\\\n'\\);console.log\\('Version:',p.version\\);\")",
+      "Bash(git push:*)",
+      "Bash(bash scripts/create-release.sh)"
     ]
   }
 }
