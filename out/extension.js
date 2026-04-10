@@ -376,20 +376,12 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        const scriptCandidates = ["autocommit_revert", "autocommit_revert.sh"];
-        let scriptFile;
-        for (const candidate of scriptCandidates) {
-            const ensured = await (0, scripts_1.ensureScriptFile)(repoRoot, candidate);
-            if (ensured) {
-                scriptFile = candidate;
-                break;
-            }
-        }
-        if (!scriptFile)
+        const scriptPath = await (0, scripts_1.ensureScriptFile)(repoRoot, "autocommit_revert.sh");
+        if (!scriptPath)
             return;
         await (0, terminal_1.runInSecondaryTerminal)([
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `./scripts/${scriptFile}`
+            `${(0, utils_1.quoteShellArg)(scriptPath)}`
         ]);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.switchEnvironment", async () => {

@@ -522,19 +522,11 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      const scriptCandidates = ["autocommit_revert", "autocommit_revert.sh"];
-      let scriptFile: string | undefined;
-      for (const candidate of scriptCandidates) {
-        const ensured = await ensureScriptFile(repoRoot, candidate);
-        if (ensured) {
-          scriptFile = candidate;
-          break;
-        }
-      }
-      if (!scriptFile) return;
+      const scriptPath = await ensureScriptFile(repoRoot, "autocommit_revert.sh");
+      if (!scriptPath) return;
       await runInSecondaryTerminal([
         `cd ${quoteShellArg(repoRoot)}`,
-        `./scripts/${scriptFile}`
+        `${quoteShellArg(scriptPath)}`
       ]);
     })
   );
