@@ -226,6 +226,7 @@ export async function runRepoScript(
     ]);
     return;
   }
+  await fs.promises.chmod(scriptPath, 0o755).catch(() => { /* ignore if already executable */ });
   const argString = args.map((arg) => quoteShellArg(arg)).join(" ");
   const command = argString
     ? `${quoteShellArg(scriptPath)} ${argString}`

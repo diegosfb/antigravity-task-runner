@@ -378,7 +378,7 @@ export function activate(context: vscode.ExtensionContext) {
           fs.rmSync(gitDir, { recursive: true, force: true });
         }
       }
-      await runRepoScript("init-repo", [repoName.trim()]);
+      await runRepoScript("init-repo", [repoName.trim()], { scriptDir: path.join(extensionRoot, "src") });
       provider.refresh();
     })
   );
@@ -529,15 +529,11 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
       }
-      // Ensure both autocommit scripts are present, downloading from GitHub if missing.
-      const scriptCandidates = ["autocommit_changes.sh", "autocommit_changes.py"];
-      let scriptPath: string | undefined;
-      for (const candidate of scriptCandidates) {
-        scriptPath = await ensureScriptFile(repoRoot, candidate);
-        if (scriptPath) break;
-      }
+      // Ensure both autocommit scripts are present, using bundled src/ versions.
+      const srcDir = path.join(extensionRoot, "src");
+      const scriptPath = await ensureScriptFile(repoRoot, "autocommit_changes.sh", srcDir);
       if (!scriptPath) return;
-      await ensureScriptFile(repoRoot, "autocommit_revert.sh");
+      await ensureScriptFile(repoRoot, "autocommit_revert.sh", srcDir);
       await runInSecondaryTerminal([
         `cd ${quoteShellArg(repoRoot)}`,
         `${quoteShellArg(scriptPath)} ${action}`
@@ -557,7 +553,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      const scriptPath = await ensureScriptFile(repoRoot, "autocommit_revert.sh");
+      const scriptPath = await ensureScriptFile(repoRoot, "autocommit_revert.sh", path.join(extensionRoot, "src"));
       if (!scriptPath) return;
       await runInSecondaryTerminal([
         `cd ${quoteShellArg(repoRoot)}`,
@@ -607,7 +603,9 @@ export function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.updateAgenticWorkspace", async () => {
-      await runRepoScript("update-agentic-workspace");
+      const rawWorkspaceProjectDir = vscode.workspace.getConfiguration("antigravity").get<string>("antigravityWorkspaceProject") || "~/antigravity-workspace";
+      const workspaceProjectDir = rawWorkspaceProjectDir.replace(/^~/, os.homedir());
+      await runRepoScript("update-agentic-workspace", [workspaceProjectDir], { scriptDir: path.join(extensionRoot, "src") });
     })
   );
 

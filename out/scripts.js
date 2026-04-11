@@ -201,6 +201,7 @@ async function runRepoScript(scriptName, args = [], options = {}) {
         ]);
         return;
     }
+    await fs.promises.chmod(scriptPath, 0o755).catch(() => { });
     const argString = args.map((arg) => (0, utils_1.quoteShellArg)(arg)).join(" ");
     const command = argString
         ? `${(0, utils_1.quoteShellArg)(scriptPath)} ${argString}`

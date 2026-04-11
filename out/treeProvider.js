@@ -332,6 +332,6 @@ function getClaudeActionItems() {
         command: "antigravity.updateAgenticSetup",
         title: "Update Agentic Setup"
     };
-    return [item, setClaudeModel, runLiteLLMOpenAI, createClaudeMd, updateAgenticWorkspace, updateAgenticSetup];
+    return [item, setClaudeModel, runLiteLLMOpenAI, createClaudeMd, updateAgenticSetup];
 }
 //# sourceMappingURL=treeProvider.js.map
