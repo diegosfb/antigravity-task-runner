@@ -417,6 +417,7 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const workspaceDir = path.join(repoRoot, "workspace");
         const selection = await vscode.window.showQuickPick([
             { label: "DEV", value: "DEV" },
             { label: "QA", value: "QA" },
@@ -433,12 +434,13 @@ function activate(context) {
         if (!scriptPath)
             return;
         // Offer to download missing config files from Config Fallback Base URL.
+        // Files live in workspace/config/ so pass workspaceDir as the root.
         const settingsFileName = `${selection.value.toLowerCase()}-settings.yaml`;
-        await (0, scripts_1.downloadConfigFileIfMissing)(repoRoot, settingsFileName);
-        await (0, scripts_1.downloadInfrastructureFileIfMissing)(repoRoot, settingsFileName);
-        await (0, scripts_1.downloadConfigFileIfMissing)(repoRoot, ".env");
+        await (0, scripts_1.downloadConfigFileIfMissing)(workspaceDir, settingsFileName);
+        await (0, scripts_1.downloadInfrastructureFileIfMissing)(workspaceDir, settingsFileName);
+        await (0, scripts_1.downloadConfigFileIfMissing)(workspaceDir, ".env");
         await (0, terminal_1.runInSecondaryTerminal)([
-            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            `cd ${(0, utils_1.quoteShellArg)(workspaceDir)}`,
             `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(selection.value)}`
         ]);
     }));

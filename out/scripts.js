@@ -62,7 +62,7 @@ function readYamlStringField(filePath, fieldName) {
     return undefined;
 }
 async function downloadInfrastructureFileIfMissing(repoRoot, settingsFileName) {
-    const settingsPath = path.join(repoRoot, "workspace", "config", settingsFileName);
+    const settingsPath = path.join(repoRoot, "config", settingsFileName);
     if (!fs.existsSync(settingsPath))
         return;
     const infraRef = readYamlStringField(settingsPath, "Infrastructure");
@@ -88,21 +88,21 @@ async function downloadInfrastructureFileIfMissing(repoRoot, settingsFileName) {
     }
 }
 async function downloadConfigFileIfMissing(repoRoot, fileName) {
-    const filePath = path.join(repoRoot, "workspace", "config", fileName);
+    const filePath = path.join(repoRoot, "config", fileName);
     if (fs.existsSync(filePath))
         return;
     const url = getConfigFallbackUrl(fileName);
-    const answer = await vscode.window.showWarningMessage(`Config file workspace/config/${fileName} is missing. Download from ${url}?`, "Yes", "No");
+    const answer = await vscode.window.showWarningMessage(`Config file config/${fileName} is missing. Download from ${url}?`, "Yes", "No");
     if (answer !== "Yes")
         return;
     try {
-        await fs.promises.mkdir(path.join(repoRoot, "workspace", "config"), { recursive: true });
+        await fs.promises.mkdir(path.join(repoRoot, "config"), { recursive: true });
         await downloadFile(url, filePath);
     }
     catch (error) {
         const raw = error instanceof Error ? error.message : String(error);
         const message = raw || "Request failed (unknown error)";
-        void vscode.window.showErrorMessage(`Failed to download workspace/config/${fileName}: ${message}`, { modal: true }, "OK");
+        void vscode.window.showErrorMessage(`Failed to download config/${fileName}: ${message}`, { modal: true }, "OK");
     }
 }
 function downloadFile(url, destination) {
