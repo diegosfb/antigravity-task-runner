@@ -340,7 +340,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (!fs.existsSync(workspaceDir)) {
         fs.mkdirSync(path.join(workspaceDir, "scripts"), { recursive: true });
       }
-      await runRepoScript("workspace-setup", ["--force"], { cwd: workspaceDir });
+      await runRepoScript("workspace-setup", ["--force"], { cwd: workspaceDir, scriptDir: path.join(extensionRoot, "src") });
     })
   );
 
@@ -641,7 +641,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (all.geminiGithub) await config.update("geminiSetupGithub", all.geminiGithub, vscode.ConfigurationTarget.Global);
             if (all.codexGithub) await config.update("codexSetupGithub", all.codexGithub, vscode.ConfigurationTarget.Global);
             await runInSecondaryTerminal([`echo "[antigravity] config saved, running script..."`]);
-            await runRepoScript("update-agent-setup", url ? [tool, url] : [tool], { fallbackScriptDir: path.join(extensionRoot, "src") });
+            await runRepoScript("update-agent-setup", url ? [tool, url] : [tool], { scriptDir: path.join(extensionRoot, "src") });
           } catch (err) {
             await runInSecondaryTerminal([`echo "[antigravity] ERROR: ${String(err)}"`]);
           }

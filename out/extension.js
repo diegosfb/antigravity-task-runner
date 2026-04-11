@@ -245,7 +245,7 @@ function activate(context) {
         if (!fs.existsSync(workspaceDir)) {
             fs.mkdirSync(path.join(workspaceDir, "scripts"), { recursive: true });
         }
-        await (0, scripts_1.runRepoScript)("workspace-setup", ["--force"], { cwd: workspaceDir });
+        await (0, scripts_1.runRepoScript)("workspace-setup", ["--force"], { cwd: workspaceDir, scriptDir: path.join(extensionRoot, "src") });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.initRepository", async () => {
         const rootPath = (0, utils_1.getRootPath)();
@@ -476,7 +476,7 @@ function activate(context) {
                 if (all.codexGithub)
                     await config.update("codexSetupGithub", all.codexGithub, vscode.ConfigurationTarget.Global);
                 await (0, terminal_1.runInSecondaryTerminal)([`echo "[antigravity] config saved, running script..."`]);
-                await (0, scripts_1.runRepoScript)("update-agent-setup", url ? [tool, url] : [tool], { fallbackScriptDir: path.join(extensionRoot, "src") });
+                await (0, scripts_1.runRepoScript)("update-agent-setup", url ? [tool, url] : [tool], { scriptDir: path.join(extensionRoot, "src") });
             }
             catch (err) {
                 await (0, terminal_1.runInSecondaryTerminal)([`echo "[antigravity] ERROR: ${String(err)}"`]);
