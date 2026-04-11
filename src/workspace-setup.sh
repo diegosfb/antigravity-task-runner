@@ -27,6 +27,7 @@ SRC_DIR="${TMP_DIR}/$(ls "${TMP_DIR}")"
 # Sync the entire repo without overwriting existing local files.
 rsync -a --ignore-existing \
   --exclude ".agent/global-config" \
+  --exclude ".gitignore" \
   "${SRC_DIR}/" "${DEST_DIR}/"
 
 echo "workspace-setup: copied missing files from ${REPO_URL}"
