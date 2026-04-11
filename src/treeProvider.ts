@@ -230,9 +230,9 @@ const CLAUDE_MODEL_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 
 const TOP_LEVEL_LINKED_FOLDERS = [
-  { label: ".claude", path: path.join(os.homedir(), ".claude") },
-  { label: ".codex", path: path.join(os.homedir(), ".codex") },
-  { label: ".opencode", path: path.join(os.homedir(), ".config", "opencode") }
+  { label: "claude", path: path.join(os.homedir(), ".claude") },
+  { label: "codex", path: path.join(os.homedir(), ".codex") },
+  { label: "opencode", path: path.join(os.homedir(), ".config", "opencode") }
 ];
 
 const ANTIGRAVITY_ROOT_HIDDEN = new Set([
