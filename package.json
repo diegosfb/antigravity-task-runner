@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "2.3.1",
+  "version": "2.6.36",
   "publisher": "dsfb",
   "license": "MIT",
   "repository": {
@@ -70,12 +70,20 @@
         "title": "Antigravity: Create CLAUDE.md"
       },
       {
+        "command": "antigravity.updateAgenticWorkspace",
+        "title": "Antigravity: Update Agentic Workspace"
+      },
+      {
         "command": "antigravity.copyPath",
         "title": "Copy Path"
       },
       {
         "command": "antigravity.openPath",
         "title": "Open"
+      },
+      {
+        "command": "antigravity.addToProject",
+        "title": "Add to project"
       }
     ],
     "viewsContainers": {
@@ -91,7 +99,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v2.3.1",
+          "name": "Tasky Runner v2.6.36",
           "icon": "media/taskrunner.svg"
         }
       ]
@@ -124,6 +132,11 @@
           "command": "antigravity.openPath",
           "when": "view == antigravityView && viewItem == antigravityFolderItem",
           "group": "navigation@2"
+        },
+        {
+          "command": "antigravity.addToProject",
+          "when": "view == antigravityView && viewItem == antigravityFolderItem",
+          "group": "navigation@3"
         }
       ]
     },
@@ -169,6 +182,26 @@
           "type": "boolean",
           "default": false,
           "description": "When enabled, autocommit start will also run Claude to update CLAUDE.md."
+        },
+        "antigravity.enableDebugLogging": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, debug logs are written to the Antigravity output channel."
+        },
+        "antigravity.claudeSetupGithub": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub repo URL for Claude agentic setup."
+        },
+        "antigravity.geminiSetupGithub": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub repo URL for Gemini agentic setup."
+        },
+        "antigravity.codexSetupGithub": {
+          "type": "string",
+          "default": "",
+          "description": "GitHub repo URL for Codex agentic setup."
         }
       }
     }
@@ -180,7 +213,8 @@
     "LICENSE",
     "Project Level CLAUDE.md Guidelines.txt",
     "routerconfig.example.json",
-    "src/Switch-ClaudeCode-Model.sh"
+    "src/Switch-ClaudeCode-Model.sh",
+    "src/update-agent-setup.sh"
   ],
   "scripts": {
     "compile": "node node_modules/typescript/lib/tsc.js -p ./",

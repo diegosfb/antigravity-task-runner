@@ -1,15 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isAutocommitRunning = isAutocommitRunning;
-exports.appendAutocommitLogLine = appendAutocommitLogLine;
 exports.startAutocommit = startAutocommit;
 exports.stopAutocommit = stopAutocommit;
 exports.hasGitHubRemote = hasGitHubRemote;
-const fs = require("fs");
 const path = require("path");
-const os = require("os");
 const child_process_1 = require("child_process");
 const utils_1 = require("./utils");
+const logger_1 = require("./logger");
 const autocommitTimers = new Map();
 function isTruthyEnvValue(value) {
     const normalized = value.trim().toLowerCase();
@@ -44,19 +42,6 @@ function isAutocommitRunning(repoRoot) {
         return true;
     return autocommitTimers.has(repoRoot);
 }
-async function appendAutocommitLogLine(message) {
-    const logDir = path.join(os.homedir(), "Downloads", "log");
-    const logFile = path.join(logDir, "autocommit.log");
-    const timestamp = new Date().toISOString();
-    const line = `${timestamp} ${message}\n`;
-    try {
-        await fs.promises.mkdir(logDir, { recursive: true });
-        await fs.promises.appendFile(logFile, line, "utf8");
-    }
-    catch {
-        // best-effort logging
-    }
-}
 function commitCheckpoint(repoRoot) {
     const timestamp = new Date().toISOString();
     const msg = `[AGENTIC DEV CHECKPOINT] ${timestamp}`;
@@ -68,23 +53,23 @@ function commitCheckpoint(repoRoot) {
     ].join(" && ");
     (0, child_process_1.exec)(cmd, (_err, stdout) => {
         const result = stdout?.trim() || "ok";
-        void appendAutocommitLogLine(`checkpoint: ${result}`);
+        (0, logger_1.log)(`checkpoint: ${result}`);
     });
 }
-async function startAutocommit(repoRoot) {
+function startAutocommit(repoRoot) {
     if (autocommitTimers.has(repoRoot))
         return;
-    await appendAutocommitLogLine(`startAutocommit: ${repoRoot}`);
+    (0, logger_1.log)(`startAutocommit: ${repoRoot}`);
     const timer = setInterval(() => commitCheckpoint(repoRoot), 5 * 60 * 1000);
     autocommitTimers.set(repoRoot, timer);
 }
-async function stopAutocommit(repoRoot) {
+function stopAutocommit(repoRoot) {
     const timer = autocommitTimers.get(repoRoot);
     if (timer) {
         clearInterval(timer);
         autocommitTimers.delete(repoRoot);
     }
-    await appendAutocommitLogLine(`stopAutocommit: ${repoRoot}`);
+    (0, logger_1.log)(`stopAutocommit: ${repoRoot}`);
 }
 function hasGitHubRemote(repoRoot) {
     return new Promise((resolve) => {

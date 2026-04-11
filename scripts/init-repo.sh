@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# Use the working directory the script was launched from (set by the extension)
+REPO_ROOT="$(pwd)"
 
 REPO_NAME="${1:-}"
 if [[ -z "${REPO_NAME}" ]]; then
@@ -39,6 +39,50 @@ fi
 
 git init
 git config user.email "${GIT_EMAIL}"
+
+# Create .gitignore if not present
+if [ ! -f ".gitignore" ]; then
+  cat > .gitignore <<'GITIGNORE'
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+build/
+out/
+*.vsix
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+*.tmp
+*.swp
+GITIGNORE
+  echo "Created .gitignore"
+fi
 
 GITHUB_LOGIN="$(gh api user -q .login)"
 REPO_FULL="${GITHUB_LOGIN}/${REPO_NAME}"

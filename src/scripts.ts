@@ -162,13 +162,14 @@ function downloadFile(url: string, destination: string): Promise<void> {
 
 async function downloadScript(
   scriptFileName: string,
-  repoRoot: string
+  repoRoot: string,
+  scriptsDir?: string
 ): Promise<string | undefined> {
   const url = getScriptFallbackUrl(scriptFileName);
+  const targetDir = scriptsDir ?? path.join(repoRoot, "workspace", "scripts");
   try {
-    const scriptsDir = path.join(repoRoot, "scripts");
-    await fs.promises.mkdir(scriptsDir, { recursive: true });
-    const destination = path.join(scriptsDir, scriptFileName);
+    await fs.promises.mkdir(targetDir, { recursive: true });
+    const destination = path.join(targetDir, scriptFileName);
     try {
       await downloadFile(url, destination);
       await fs.promises.chmod(destination, 0o755);
@@ -189,33 +190,52 @@ async function downloadScript(
 
 export async function ensureScriptFile(
   repoRoot: string,
-  scriptFileName: string
+  scriptFileName: string,
+  scriptsDir?: string,
+  fallbackDir?: string
 ): Promise<string | undefined> {
-  const scriptPath = path.join(repoRoot, "scripts", scriptFileName);
+  const targetDir = scriptsDir ?? path.join(repoRoot, "workspace", "scripts");
+  const scriptPath = path.join(targetDir, scriptFileName);
   if (fs.existsSync(scriptPath)) return scriptPath;
-  return await downloadScript(scriptFileName, repoRoot);
+  if (fallbackDir) {
+    const fallbackPath = path.join(fallbackDir, scriptFileName);
+    if (fs.existsSync(fallbackPath)) return fallbackPath;
+  }
+  return await downloadScript(scriptFileName, repoRoot, targetDir);
 }
 
 export async function runRepoScript(
   scriptName: string,
   args: string[] = [],
-  options: { cwd?: string } = {}
+  options: { cwd?: string; scriptDir?: string; fallbackScriptDir?: string } = {}
 ): Promise<void> {
   const rootPath = getRootPath();
   if (!rootPath) {
     void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+    await runInSecondaryTerminal([`echo "[antigravity] ERROR: rootPath not set or invalid"`]);
     return;
   }
   const repoRoot = getRepoRoot(rootPath);
   const workingDir = options.cwd || repoRoot;
   const scriptFileName = `${scriptName}.sh`;
-  const scriptPath = await ensureScriptFile(repoRoot, scriptFileName);
-  if (!scriptPath) return;
+  const scriptPath = await ensureScriptFile(repoRoot, scriptFileName, options.scriptDir, options.fallbackScriptDir);
+  if (!scriptPath) {
+    await runInSecondaryTerminal([
+      `echo "[antigravity] ERROR: script not found: ${scriptFileName}"`,
+      `echo "[antigravity] looked in: ${options.scriptDir ?? path.join(repoRoot, "workspace", "scripts")}"`
+    ]);
+    return;
+  }
   const argString = args.map((arg) => quoteShellArg(arg)).join(" ");
   const command = argString
     ? `${quoteShellArg(scriptPath)} ${argString}`
     : quoteShellArg(scriptPath);
-  await runInSecondaryTerminal([`cd ${quoteShellArg(workingDir)}`, command]);
+  await runInSecondaryTerminal([
+    `echo "[antigravity] running: ${scriptFileName} ${argString}"`,
+    `echo "[antigravity] cwd: ${workingDir}"`,
+    `cd ${quoteShellArg(workingDir)}`,
+    command
+  ]);
 }
 
 export async function openFile(filePath: string): Promise<void> {

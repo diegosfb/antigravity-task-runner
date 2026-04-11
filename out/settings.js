@@ -9,6 +9,7 @@ exports.getRouterSettings = getRouterSettings;
 exports.loadOpenRouterConfig = loadOpenRouterConfig;
 exports.loadClaudeSettings = loadClaudeSettings;
 exports.renderAntigravitySettingsHtml = renderAntigravitySettingsHtml;
+exports.renderAgenticSetupHtml = renderAgenticSetupHtml;
 exports.renderClaudeModelConfigHtml = renderClaudeModelConfigHtml;
 const vscode = require("vscode");
 const fs = require("fs");
@@ -192,6 +193,15 @@ function getExtensionSettingsFields() {
             value: "",
             type: "checkbox",
             checked: config.get("autoUpdateClaudeMd") ?? false
+        },
+        {
+            key: "enableDebugLogging",
+            label: "Enable debug logging",
+            description: "When enabled, debug logs are written to the Antigravity output channel.",
+            placeholder: "",
+            value: "",
+            type: "checkbox",
+            checked: config.get("enableDebugLogging") ?? false
         }
     ];
 }
@@ -306,6 +316,68 @@ function renderAntigravitySettingsHtml(webview) {
         const target = targetWorkspace && targetWorkspace.checked ? "workspace" : "user";
         vscode.postMessage({ type: "applySettings", payload: { target, values } });
       });
+    </script>
+  </body>
+</html>`;
+}
+function renderAgenticSetupHtml(webview, initialValues) {
+    const nonce = getNonce();
+    const csp = `default-src 'none'; img-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+    const payload = JSON.stringify(initialValues);
+    return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Update Agentic Setup</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--vscode-foreground); background: var(--vscode-editor-background); margin: 0; padding: 24px; }
+      h1 { font-size: 18px; margin: 0 0 20px; }
+      .row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+      .row label { font-size: 12px; color: var(--vscode-descriptionForeground); width: 220px; flex-shrink: 0; }
+      .row input { flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); font-size: 13px; }
+      button { padding: 8px 14px; border-radius: 6px; border: none; background: var(--vscode-button-background); color: var(--vscode-button-foreground); cursor: pointer; white-space: nowrap; }
+      button:hover { background: var(--vscode-button-hoverBackground); }
+    </style>
+  </head>
+  <body>
+    <h1>Update Agentic Setup</h1>
+    <div class="row">
+      <label>Claude Setup GitHub</label>
+      <input id="claudeGithub" type="text" placeholder="https://github.com/..." />
+      <button id="claudeUpdate">Update</button>
+    </div>
+    <div class="row">
+      <label>Gemini-Antigravity Setup GitHub</label>
+      <input id="geminiGithub" type="text" placeholder="https://github.com/..." />
+      <button id="geminiUpdate">Update</button>
+    </div>
+    <div class="row">
+      <label>Codex Setup GitHub</label>
+      <input id="codexGithub" type="text" placeholder="https://github.com/..." />
+      <button id="codexUpdate">Update</button>
+    </div>
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const init = ${payload};
+      document.getElementById("claudeGithub").value = init.claudeGithub || "";
+      document.getElementById("geminiGithub").value = init.geminiGithub || "";
+      document.getElementById("codexGithub").value = init.codexGithub || "";
+      function getAllValues() {
+        return {
+          claudeGithub: document.getElementById("claudeGithub").value.trim(),
+          geminiGithub: document.getElementById("geminiGithub").value.trim(),
+          codexGithub: document.getElementById("codexGithub").value.trim()
+        };
+      }
+      function sendUpdate(tool) {
+        const all = getAllValues();
+        vscode.postMessage({ type: "agenticSetupUpdate", tool, url: all[tool + "Github"], all });
+      }
+      document.getElementById("claudeUpdate").addEventListener("click", () => sendUpdate("claude"));
+      document.getElementById("geminiUpdate").addEventListener("click", () => sendUpdate("gemini"));
+      document.getElementById("codexUpdate").addEventListener("click", () => sendUpdate("codex"));
     </script>
   </body>
 </html>`;

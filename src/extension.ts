@@ -4,7 +4,6 @@ import * as path from "path";
 import * as os from "os";
 import { AntigravityViewProvider } from "./treeProvider";
 import {
-  appendAutocommitLogLine,
   isAutocommitRunning,
   hasGitHubRemote
 } from "./git";
@@ -17,6 +16,7 @@ import {
 import {
   renderAntigravitySettingsHtml,
   renderClaudeModelConfigHtml,
+  renderAgenticSetupHtml,
   loadOpenRouterConfig,
   loadClaudeSettings,
   getRouterSettings,
@@ -31,6 +31,7 @@ import {
   getRootPath,
   getRepoRoot,
   listInfrastructureYamlFiles,
+  findNestedGitFolders,
   quoteShellArg,
   waitForUrlReady
 } from "./utils";
@@ -38,8 +39,6 @@ import {
 export function activate(context: vscode.ExtensionContext) {
   const provider = new AntigravityViewProvider();
   const extensionRoot = context.extensionPath;
-
-  void appendAutocommitLogLine("Extension loaded");
 
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("antigravityView", provider)
@@ -327,7 +326,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      const hasAgentFolder = fs.existsSync(path.join(repoRoot, ".agent"));
+      const hasAgentFolder = fs.existsSync(path.join(repoRoot, "workspace", ".agent"));
       if (hasAgentFolder) {
         const selection = await vscode.window.showWarningMessage(
           "There is already a .agent at the project. Do you still want to run Workspace Setup?",
@@ -337,7 +336,11 @@ export function activate(context: vscode.ExtensionContext) {
         );
         if (selection !== "Yes") return;
       }
-      await runRepoScript("workspace-setup", ["--force"]);
+      const workspaceDir = path.join(repoRoot, "workspace");
+      if (!fs.existsSync(workspaceDir)) {
+        fs.mkdirSync(path.join(workspaceDir, "scripts"), { recursive: true });
+      }
+      await runRepoScript("workspace-setup", ["--force"], { cwd: workspaceDir });
     })
   );
 
@@ -361,6 +364,20 @@ export function activate(context: vscode.ExtensionContext) {
         placeHolder: "my-repository"
       });
       if (!repoName || repoName.trim() === "") return;
+      const nestedGitFolders = findNestedGitFolders(repoRoot);
+      if (nestedGitFolders.length > 0) {
+        const relPaths = nestedGitFolders.map((p) => path.relative(repoRoot, p));
+        const selection = await vscode.window.showWarningMessage(
+          `Found ${nestedGitFolders.length} nested .git folder(s):\n${relPaths.join(", ")}\n\nRemove them and absorb into one repo?`,
+          { modal: true },
+          "Yes",
+          "No"
+        );
+        if (selection !== "Yes") return;
+        for (const gitDir of nestedGitFolders) {
+          fs.rmSync(gitDir, { recursive: true, force: true });
+        }
+      }
       await runRepoScript("init-repo", [repoName.trim()]);
       provider.refresh();
     })
@@ -402,9 +419,6 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
         const repoRoot = getRepoRoot(rootPath);
-        await appendAutocommitLogLine(
-          "Create CLAUDE.md: running claude /init and follow-up update prompt"
-        );
         const guidelinesFile = path.join(
           extensionRoot,
           "Project Level CLAUDE.md Guidelines.txt"
@@ -589,6 +603,52 @@ export function activate(context: vscode.ExtensionContext) {
         `cd ${quoteShellArg(repoRoot)}`,
         `${quoteShellArg(scriptPath)} ${quoteShellArg(selection.value)}`
       ]);
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.updateAgenticWorkspace", async () => {
+      await runRepoScript("update-agentic-workspace");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.updateAgenticSetup", async () => {
+      const config = vscode.workspace.getConfiguration("antigravity");
+      const initialValues = {
+        claudeGithub: config.get<string>("claudeSetupGithub") || "",
+        geminiGithub: config.get<string>("geminiSetupGithub") || "",
+        codexGithub: config.get<string>("codexSetupGithub") || ""
+      };
+      const panel = vscode.window.createWebviewPanel(
+        "antigravityAgenticSetup",
+        "Update Agentic Setup",
+        vscode.ViewColumn.Active,
+        { enableScripts: true }
+      );
+      panel.webview.html = renderAgenticSetupHtml(panel.webview, initialValues);
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          try {
+            await runInSecondaryTerminal([`echo "[antigravity] message received: ${JSON.stringify(message)}"`]);
+            if (!message || message.type !== "agenticSetupUpdate") {
+              await runInSecondaryTerminal([`echo "[antigravity] ignored message type: ${message?.type}"`]);
+              return;
+            }
+            const { tool, url, all } = message as { tool: string; url: string; all: Record<string, string> };
+            await runInSecondaryTerminal([`echo "[antigravity] update triggered: tool=${tool} url=${url}"`]);
+            // Save all three values every time any Update is clicked
+            if (all.claudeGithub) await config.update("claudeSetupGithub", all.claudeGithub, vscode.ConfigurationTarget.Global);
+            if (all.geminiGithub) await config.update("geminiSetupGithub", all.geminiGithub, vscode.ConfigurationTarget.Global);
+            if (all.codexGithub) await config.update("codexSetupGithub", all.codexGithub, vscode.ConfigurationTarget.Global);
+            await runInSecondaryTerminal([`echo "[antigravity] config saved, running script..."`]);
+            await runRepoScript("update-agent-setup", url ? [tool, url] : [tool], { fallbackScriptDir: path.join(extensionRoot, "src") });
+          } catch (err) {
+            await runInSecondaryTerminal([`echo "[antigravity] ERROR: ${String(err)}"`]);
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
     })
   );
 }

@@ -8,7 +8,6 @@
 
 TARGET=$(echo "$1" | tr '[:lower:]' '[:upper:]')
 PROJECT_ROOT=$(pwd)
-ACTIVE_ENV_FILE="$PROJECT_ROOT/.agent/.active_env"
 ARCHITECTURE_DOC="$PROJECT_ROOT/architecture_readme.md"
 
 # Validation
@@ -130,9 +129,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Write active environment marker
-mkdir -p "$(dirname "$ACTIVE_ENV_FILE")"
-echo "$TARGET" > "$ACTIVE_ENV_FILE"
 echo "Switched to $TARGET environment (.env updated via YAML generation)."
 
 # Update architecture_readme.md (if it exists)

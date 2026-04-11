@@ -1,8 +1,7 @@
-import * as fs from "fs";
 import * as path from "path";
-import * as os from "os";
 import { exec } from "child_process";
 import { parseEnvFile } from "./utils";
+import { log } from "./logger";
 
 const autocommitTimers = new Map<string, NodeJS.Timeout>();
 
@@ -39,19 +38,6 @@ export function isAutocommitRunning(repoRoot: string): boolean {
   return autocommitTimers.has(repoRoot);
 }
 
-export async function appendAutocommitLogLine(message: string): Promise<void> {
-  const logDir = path.join(os.homedir(), "Downloads", "log");
-  const logFile = path.join(logDir, "autocommit.log");
-  const timestamp = new Date().toISOString();
-  const line = `${timestamp} ${message}\n`;
-  try {
-    await fs.promises.mkdir(logDir, { recursive: true });
-    await fs.promises.appendFile(logFile, line, "utf8");
-  } catch {
-    // best-effort logging
-  }
-}
-
 function commitCheckpoint(repoRoot: string): void {
   const timestamp = new Date().toISOString();
   const msg = `[AGENTIC DEV CHECKPOINT] ${timestamp}`;
@@ -63,24 +49,24 @@ function commitCheckpoint(repoRoot: string): void {
   ].join(" && ");
   exec(cmd, (_err, stdout) => {
     const result = stdout?.trim() || "ok";
-    void appendAutocommitLogLine(`checkpoint: ${result}`);
+    log(`checkpoint: ${result}`);
   });
 }
 
-export async function startAutocommit(repoRoot: string): Promise<void> {
+export function startAutocommit(repoRoot: string): void {
   if (autocommitTimers.has(repoRoot)) return;
-  await appendAutocommitLogLine(`startAutocommit: ${repoRoot}`);
+  log(`startAutocommit: ${repoRoot}`);
   const timer = setInterval(() => commitCheckpoint(repoRoot), 5 * 60 * 1000);
   autocommitTimers.set(repoRoot, timer);
 }
 
-export async function stopAutocommit(repoRoot: string): Promise<void> {
+export function stopAutocommit(repoRoot: string): void {
   const timer = autocommitTimers.get(repoRoot);
   if (timer) {
     clearInterval(timer);
     autocommitTimers.delete(repoRoot);
   }
-  await appendAutocommitLogLine(`stopAutocommit: ${repoRoot}`);
+  log(`stopAutocommit: ${repoRoot}`);
 }
 
 export function hasGitHubRemote(repoRoot: string): Promise<boolean> {

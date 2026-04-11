@@ -6,6 +6,7 @@ exports.getWorkspaceRoot = getWorkspaceRoot;
 exports.getAntigravityHomePath = getAntigravityHomePath;
 exports.safeReadDir = safeReadDir;
 exports.quoteShellArg = quoteShellArg;
+exports.findNestedGitFolders = findNestedGitFolders;
 exports.listInfrastructureYamlFiles = listInfrastructureYamlFiles;
 exports.parseEnvFile = parseEnvFile;
 exports.waitForUrlReady = waitForUrlReady;
@@ -61,6 +62,34 @@ async function safeReadDir(dirPath) {
 }
 function quoteShellArg(value) {
     return `"${value.replace(/"/g, '\\"')}"`;
+}
+const SKIP_DIRS = new Set(["node_modules", ".git"]);
+function findNestedGitFolders(rootDir) {
+    const results = [];
+    const stack = [rootDir];
+    while (stack.length > 0) {
+        const current = stack.pop();
+        let entries;
+        try {
+            entries = fs.readdirSync(current, { withFileTypes: true });
+        }
+        catch {
+            continue;
+        }
+        for (const entry of entries) {
+            if (!entry.isDirectory())
+                continue;
+            const fullPath = path.join(current, entry.name);
+            if (entry.name === ".git" && current !== rootDir) {
+                results.push(fullPath);
+                // don't descend into nested repos
+            }
+            else if (!SKIP_DIRS.has(entry.name)) {
+                stack.push(fullPath);
+            }
+        }
+    }
+    return results;
 }
 async function listInfrastructureYamlFiles(repoRoot) {
     const infraRoot = path.join(repoRoot, "config", "Infrastructure");

@@ -53,6 +53,33 @@ export function quoteShellArg(value: string): string {
   return `"${value.replace(/"/g, '\\"')}"`;
 }
 
+const SKIP_DIRS = new Set(["node_modules", ".git"]);
+
+export function findNestedGitFolders(rootDir: string): string[] {
+  const results: string[] = [];
+  const stack: string[] = [rootDir];
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const fullPath = path.join(current, entry.name);
+      if (entry.name === ".git" && current !== rootDir) {
+        results.push(fullPath);
+        // don't descend into nested repos
+      } else if (!SKIP_DIRS.has(entry.name)) {
+        stack.push(fullPath);
+      }
+    }
+  }
+  return results;
+}
+
 export async function listInfrastructureYamlFiles(repoRoot: string): Promise<string[]> {
   const infraRoot = path.join(repoRoot, "config", "Infrastructure");
   if (!fs.existsSync(infraRoot)) return [];

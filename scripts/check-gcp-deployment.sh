@@ -3,7 +3,6 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ACTIVE_ENV_FILE="$PROJECT_ROOT/.agent/.active_env"
 ENV_CONFIG_FILE=""
 CONFIG_FILE="$PROJECT_ROOT/config/Infrastructure/gcp.yaml"
 
@@ -14,10 +13,12 @@ read_setting() {
 }
 
 resolve_infra_file() {
-  if [[ -f "$ACTIVE_ENV_FILE" ]]; then
-    local env
-    env="$(tr '[:upper:]' '[:lower:]' < "$ACTIVE_ENV_FILE" | tr -d '\n')"
-    ENV_CONFIG_FILE="$PROJECT_ROOT/config/${env}.yaml"
+  local env=""
+  if [[ -f "$PROJECT_ROOT/.env" ]]; then
+    env="$(grep -E '^NODE_ENV=' "$PROJECT_ROOT/.env" | cut -d'=' -f2 | tr '[:upper:]' '[:lower:]' | tr -d '\n')"
+  fi
+  if [[ -n "$env" ]]; then
+    ENV_CONFIG_FILE="$PROJECT_ROOT/config/${env}-settings.yaml"
     if [[ -f "$ENV_CONFIG_FILE" ]]; then
       local infra
       infra="$(read_setting "$ENV_CONFIG_FILE" "Infrastructure")"

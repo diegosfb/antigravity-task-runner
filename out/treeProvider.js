@@ -211,7 +211,7 @@ function getQuickActionItems() {
     const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : undefined;
     const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
     const autocommitRunning = repoRoot ? (0, git_1.isAutocommitRunning)(repoRoot) : false;
-    const hasAgentFolder = repoRoot ? fs.existsSync(path.join(repoRoot, ".agent")) : false;
+    const hasAgentFolder = repoRoot ? fs.existsSync(path.join(repoRoot, "workspace", ".agent")) : false;
     const workspaceSetup = new NodeItem({ kind: "action", label: "Workspace Setup" }, vscode.TreeItemCollapsibleState.None);
     workspaceSetup.iconPath = new vscode.ThemeIcon("run-all", QUICK_ACTION_COLOR);
     if (hasAgentFolder) {
@@ -320,6 +320,18 @@ function getClaudeActionItems() {
         command: "antigravity.createClaudeMd",
         title: "Create CLAUDE.md"
     };
-    return [item, setClaudeModel, runLiteLLMOpenAI, createClaudeMd];
+    const updateAgenticWorkspace = new NodeItem({ kind: "action", label: "Update Agentic Workspace" }, vscode.TreeItemCollapsibleState.None);
+    updateAgenticWorkspace.iconPath = new vscode.ThemeIcon("cloud-upload", terminal_1.CLAUDE_ACTION_COLOR);
+    updateAgenticWorkspace.command = {
+        command: "antigravity.updateAgenticWorkspace",
+        title: "Update Agentic Workspace"
+    };
+    const updateAgenticSetup = new NodeItem({ kind: "action", label: "Update Agentic Setup" }, vscode.TreeItemCollapsibleState.None);
+    updateAgenticSetup.iconPath = new vscode.ThemeIcon("cloud-upload", terminal_1.CLAUDE_ACTION_COLOR);
+    updateAgenticSetup.command = {
+        command: "antigravity.updateAgenticSetup",
+        title: "Update Agentic Setup"
+    };
+    return [item, setClaudeModel, runLiteLLMOpenAI, createClaudeMd, updateAgenticWorkspace, updateAgenticSetup];
 }
 //# sourceMappingURL=treeProvider.js.map
