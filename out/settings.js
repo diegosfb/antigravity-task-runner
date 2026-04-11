@@ -147,7 +147,7 @@ function getExtensionSettingsFields() {
             key: "workspaceProjectPath",
             label: "Workspace Project Path",
             description: "Path where workspace files are extracted and downloaded to. Relative paths are resolved from the project root.",
-            placeholder: "./workspace",
+            placeholder: "./",
             value: config.get("workspaceProjectPath") || ""
         },
         {

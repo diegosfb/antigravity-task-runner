@@ -36,7 +36,7 @@ export function getWorkspaceRoot(): string | undefined {
 }
 
 export function getWorkspaceProjectPath(repoRoot: string): string {
-  const configured = vscode.workspace.getConfiguration("antigravity").get<string>("workspaceProjectPath") || "./workspace";
+  const configured = vscode.workspace.getConfiguration("antigravity").get<string>("workspaceProjectPath") || "./";
   return path.isAbsolute(configured)
     ? configured
     : path.resolve(repoRoot, configured);
