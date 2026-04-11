@@ -588,7 +588,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (!selection) return;
 
       // Ensure switch-env.sh is present, downloading from Script Fallback Base URL if missing.
-      const scriptPath = await ensureScriptFile(repoRoot, "switch-env.sh");
+      const scriptPath = await ensureScriptFile(repoRoot, "switch-env.sh", path.join(workspaceDir, "scripts"));
       if (!scriptPath) return;
 
       // Offer to download missing config files from Config Fallback Base URL.

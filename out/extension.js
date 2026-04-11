@@ -430,7 +430,7 @@ function activate(context) {
         if (!selection)
             return;
         // Ensure switch-env.sh is present, downloading from Script Fallback Base URL if missing.
-        const scriptPath = await (0, scripts_1.ensureScriptFile)(repoRoot, "switch-env.sh");
+        const scriptPath = await (0, scripts_1.ensureScriptFile)(repoRoot, "switch-env.sh", path.join(workspaceDir, "scripts"));
         if (!scriptPath)
             return;
         // Offer to download missing config files from Config Fallback Base URL.
