@@ -35,6 +35,13 @@ export function getWorkspaceRoot(): string | undefined {
   return folders[0].uri.fsPath;
 }
 
+export function getWorkspaceProjectPath(repoRoot: string): string {
+  const configured = vscode.workspace.getConfiguration("antigravity").get<string>("workspaceProjectPath") || "./workspace";
+  return path.isAbsolute(configured)
+    ? configured
+    : path.resolve(repoRoot, configured);
+}
+
 export function getAntigravityHomePath(): string | undefined {
   const homePath = path.join(os.homedir(), ".gemini", "antigravity");
   if (!fs.existsSync(homePath)) return undefined;

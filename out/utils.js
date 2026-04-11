@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getRootPath = getRootPath;
 exports.getRepoRoot = getRepoRoot;
 exports.getWorkspaceRoot = getWorkspaceRoot;
+exports.getWorkspaceProjectPath = getWorkspaceProjectPath;
 exports.getAntigravityHomePath = getAntigravityHomePath;
 exports.safeReadDir = safeReadDir;
 exports.quoteShellArg = quoteShellArg;
@@ -45,6 +46,12 @@ function getWorkspaceRoot() {
     if (!folders || folders.length === 0)
         return undefined;
     return folders[0].uri.fsPath;
+}
+function getWorkspaceProjectPath(repoRoot) {
+    const configured = vscode.workspace.getConfiguration("antigravity").get("workspaceProjectPath") || "./workspace";
+    return path.isAbsolute(configured)
+        ? configured
+        : path.resolve(repoRoot, configured);
 }
 function getAntigravityHomePath() {
     const homePath = path.join(os.homedir(), ".gemini", "antigravity");

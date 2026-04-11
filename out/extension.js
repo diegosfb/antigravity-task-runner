@@ -235,13 +235,13 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        const hasAgentFolder = fs.existsSync(path.join(repoRoot, "workspace", ".agent"));
+        const workspaceDir = (0, utils_1.getWorkspaceProjectPath)(repoRoot);
+        const hasAgentFolder = fs.existsSync(path.join(workspaceDir, ".agent"));
         if (hasAgentFolder) {
             const selection = await vscode.window.showWarningMessage("There is already a .agent at the project. Do you still want to run Workspace Setup?", { modal: true }, "Yes", "No");
             if (selection !== "Yes")
                 return;
         }
-        const workspaceDir = path.join(repoRoot, "workspace");
         if (!fs.existsSync(workspaceDir)) {
             fs.mkdirSync(path.join(workspaceDir, "scripts"), { recursive: true });
         }
@@ -417,7 +417,7 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        const workspaceDir = path.join(repoRoot, "workspace");
+        const workspaceDir = (0, utils_1.getWorkspaceProjectPath)(repoRoot);
         const selection = await vscode.window.showQuickPick([
             { label: "DEV", value: "DEV" },
             { label: "QA", value: "QA" },

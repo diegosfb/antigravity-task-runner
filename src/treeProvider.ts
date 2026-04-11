@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { getRootPath, getRepoRoot, getAntigravityHomePath, safeReadDir } from "./utils";
+import { getRootPath, getRepoRoot, getWorkspaceProjectPath, getAntigravityHomePath, safeReadDir } from "./utils";
 import { isAutocommitRunning } from "./git";
 import { CLAUDE_ACTION_COLOR } from "./terminal";
 
@@ -287,7 +287,7 @@ function getQuickActionItems(): NodeItem[] {
   const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
   const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
   const autocommitRunning = repoRoot ? isAutocommitRunning(repoRoot) : false;
-  const hasAgentFolder = repoRoot ? fs.existsSync(path.join(repoRoot, "workspace", ".agent")) : false;
+  const hasAgentFolder = repoRoot ? fs.existsSync(path.join(getWorkspaceProjectPath(repoRoot), ".agent")) : false;
 
   const workspaceSetup = new NodeItem(
     { kind: "action", label: "Workspace Setup" },
