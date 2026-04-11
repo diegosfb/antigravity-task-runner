@@ -36,7 +36,7 @@ export function getWorkspaceRoot(): string | undefined {
 }
 
 export function getAntigravityHomePath(): string | undefined {
-  const homePath = path.join(os.homedir(), ".antigravity");
+  const homePath = path.join(os.homedir(), ".gemini", "antigravity");
   if (!fs.existsSync(homePath)) return undefined;
   return homePath;
 }

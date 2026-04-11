@@ -80,7 +80,7 @@ function activate(context) {
         }
         const stat = fs.statSync(filePath);
         if (stat.isDirectory()) {
-            await vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(filePath));
+            await vscode.env.openExternal(vscode.Uri.file(filePath));
         }
         else {
             await (0, scripts_1.openFile)(filePath);

@@ -38,9 +38,9 @@ class AntigravityViewProvider {
             antigravityItem.iconPath = new vscode.ThemeIcon("folder");
             antigravityItem.contextValue = "antigravityFolderItem";
             if (!antigravityRoot) {
-                antigravityItem.label = "Missing ~/.antigravity";
+                antigravityItem.label = "Missing ~/.gemini/antigravity";
                 antigravityItem.iconPath = new vscode.ThemeIcon("warning");
-                antigravityItem.tooltip = `Expected ${path.join(os.homedir(), ".antigravity")} to exist.`;
+                antigravityItem.tooltip = `Expected ${path.join(os.homedir(), ".gemini", "antigravity")} to exist.`;
             }
             const separatorItem = new NodeItem({ kind: "separator", label: "────────" }, vscode.TreeItemCollapsibleState.None);
             separatorItem.tooltip = "";
@@ -188,7 +188,7 @@ function shouldHideAntigravityEntry(dirPath, entry) {
 function missingRootItem() {
     const item = new NodeItem({ kind: "category", label: "Missing ~/.antigravity" }, vscode.TreeItemCollapsibleState.None);
     item.iconPath = new vscode.ThemeIcon("warning");
-    item.tooltip = `Expected ${path.join(os.homedir(), ".antigravity")} to exist.`;
+    item.tooltip = `Expected ${path.join(os.homedir(), ".gemini", "antigravity")} to exist.`;
     return item;
 }
 function emptyItem(label) {

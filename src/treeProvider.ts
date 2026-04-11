@@ -53,9 +53,9 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
       antigravityItem.iconPath = new vscode.ThemeIcon("folder");
       antigravityItem.contextValue = "antigravityFolderItem";
       if (!antigravityRoot) {
-        antigravityItem.label = "Missing ~/.antigravity";
+        antigravityItem.label = "Missing ~/.gemini/antigravity";
         antigravityItem.iconPath = new vscode.ThemeIcon("warning");
-        antigravityItem.tooltip = `Expected ${path.join(os.homedir(), ".antigravity")} to exist.`;
+        antigravityItem.tooltip = `Expected ${path.join(os.homedir(), ".gemini", "antigravity")} to exist.`;
       }
 
       const separatorItem = new NodeItem(
@@ -256,7 +256,7 @@ function missingRootItem(): NodeItem {
     vscode.TreeItemCollapsibleState.None
   );
   item.iconPath = new vscode.ThemeIcon("warning");
-  item.tooltip = `Expected ${path.join(os.homedir(), ".antigravity")} to exist.`;
+  item.tooltip = `Expected ${path.join(os.homedir(), ".gemini", "antigravity")} to exist.`;
   return item;
 }
 

@@ -132,7 +132,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
       const stat = fs.statSync(filePath);
       if (stat.isDirectory()) {
-        await vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(filePath));
+        await vscode.env.openExternal(vscode.Uri.file(filePath));
       } else {
         await openFile(filePath);
       }
