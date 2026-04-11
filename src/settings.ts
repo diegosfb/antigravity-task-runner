@@ -172,6 +172,13 @@ function getExtensionSettingsFields(): SettingsField[] {
       value: config.get<string>("rootPath") || ""
     },
     {
+      key: "workspaceProjectPath",
+      label: "Workspace Project Path",
+      description: "Path where workspace files are extracted and downloaded to. Relative paths are resolved from the project root.",
+      placeholder: "./workspace",
+      value: config.get<string>("workspaceProjectPath") || ""
+    },
+    {
       key: "terminalName",
       label: "Workflow Terminal Name",
       description: "Terminal name used when running workflow scripts.",
