@@ -118,7 +118,10 @@ class AntigravityViewProvider {
     }
     async getAgentItems() {
         try {
-            const { stdout, stderr } = await execAsync("claude agents 2>&1", { timeout: 8000 });
+            const rootPath = (0, utils_1.getRootPath)();
+            const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : undefined;
+            const opts = repoRoot ? { timeout: 8000, cwd: repoRoot } : { timeout: 8000 };
+            const { stdout, stderr } = await execAsync("claude agents 2>&1", opts);
             const agents = parseAgentsOutput(stdout || stderr || "");
             if (agents.length === 0) {
                 return [emptyItem("No agents found")];
@@ -126,14 +129,18 @@ class AntigravityViewProvider {
             const SECTION_ICON = {
                 user: "account",
                 plugin: "extensions",
-                "built-in": "robot"
+                "built-in": "robot",
+                project: "home"
             };
+            const PROJECT_COLOR = new vscode.ThemeColor("terminal.ansiGreen");
             return agents.map(({ name, model, section }) => {
+                const sectionKey = section.toLowerCase();
+                const isProject = sectionKey === "project";
                 const item = new NodeItem({ kind: "agent", label: name, filePath: name }, vscode.TreeItemCollapsibleState.None);
                 item.contextValue = "antigravityClaudeAgent";
                 item.description = model;
                 item.tooltip = `${section} agent · ${model}`;
-                item.iconPath = new vscode.ThemeIcon(SECTION_ICON[section.toLowerCase()] ?? "robot", terminal_1.CLAUDE_ACTION_COLOR);
+                item.iconPath = new vscode.ThemeIcon(SECTION_ICON[sectionKey] ?? "robot", isProject ? PROJECT_COLOR : terminal_1.CLAUDE_ACTION_COLOR);
                 item.command = {
                     command: "antigravity.runClaudeAgent",
                     title: `Run ${name}`,
