@@ -49,10 +49,13 @@ export function activate(context: vscode.ExtensionContext) {
   const extensionRoot = context.extensionPath;
   log(`[activate] Extension root: ${extensionRoot}`);
 
-  const launchClaudeInit = async (repoRoot: string): Promise<void> => {
+  const launchClaudeInit = async (
+    repoRoot: string,
+    guidelinesFileName = "Project Level CLAUDE.md Guidelines.txt"
+  ): Promise<void> => {
     log(`[launchClaudeInit] repoRoot: ${repoRoot}`);
     const guidelineCandidates = [
-      path.join(extensionRoot, "Project Level CLAUDE.md Guidelines.txt")
+      path.join(extensionRoot, guidelinesFileName)
     ];
     const guidelinesFile = guidelineCandidates.find((candidate) => fs.existsSync(candidate));
     log(`[launchClaudeInit] guidelinesFile: ${guidelinesFile ?? "not found, using /init"}`);
@@ -634,16 +637,18 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.initRepository", async () => {
-      log(`[initRepository] triggered`);
+      showOutputChannel();
+      logAlways(`[initRepository] triggered`);
       const rootPath = getRootPath();
       if (!rootPath) {
-        log(`[initRepository] ERROR: rootPath not set`);
+        logAlways(`[initRepository] ERROR: rootPath not set`);
         void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      log(`[initRepository] repoRoot: ${repoRoot}`);
+      logAlways(`[initRepository] repoRoot: ${repoRoot}`);
       if (fs.existsSync(path.join(repoRoot, ".git"))) {
+        logAlways(`[initRepository] existing .git directory found at ${path.join(repoRoot, ".git")}`);
         void vscode.window.showWarningMessage(
           "A Git repository already exists in this project."
         );
@@ -654,23 +659,38 @@ export function activate(context: vscode.ExtensionContext) {
         prompt: "Enter the repository name",
         placeHolder: "my-repository"
       });
-      if (!repoName || repoName.trim() === "") return;
+      if (!repoName || repoName.trim() === "") {
+        logAlways("[initRepository] cancelled before repository name was provided");
+        return;
+      }
+      const trimmedRepoName = repoName.trim();
+      logAlways(`[initRepository] requested repoName: ${trimmedRepoName}`);
       const nestedGitFolders = findNestedGitFolders(repoRoot);
+      logAlways(`[initRepository] nested .git folders found: ${nestedGitFolders.length}`);
       if (nestedGitFolders.length > 0) {
         const relPaths = nestedGitFolders.map((p) => path.relative(repoRoot, p));
+        logAlways(`[initRepository] nested .git relative paths: ${relPaths.join(", ")}`);
         const selection = await vscode.window.showWarningMessage(
           `Found ${nestedGitFolders.length} nested .git folder(s):\n${relPaths.join(", ")}\n\nRemove them and absorb into one repo?`,
           { modal: true },
           "Yes",
           "No"
         );
-        if (selection !== "Yes") return;
+        logAlways(`[initRepository] nested .git removal selection: ${selection ?? "dismissed"}`);
+        if (selection !== "Yes") {
+          logAlways("[initRepository] cancelled because nested .git folders were not approved for removal");
+          return;
+        }
         for (const gitDir of nestedGitFolders) {
+          logAlways(`[initRepository] removing nested .git folder: ${gitDir}`);
           fs.rmSync(gitDir, { recursive: true, force: true });
         }
       }
-      await runRepoScript("init-repo", [repoName.trim()], { scriptDir: path.join(extensionRoot, "src") });
+      logAlways(`[initRepository] invoking init-repo script from ${path.join(extensionRoot, "src")}`);
+      await runRepoScript("init-repo", [trimmedRepoName], { scriptDir: path.join(extensionRoot, "src") });
+      logAlways("[initRepository] init-repo script invocation completed");
       provider.refresh();
+      logAlways("[initRepository] tree provider refreshed");
     })
   );
 
@@ -706,14 +726,14 @@ export function activate(context: vscode.ExtensionContext) {
       log(`[createClaudeMd] triggered`);
       try {
         const rootPath = getRootPath();
-        if (!rootPath) {
-          log(`[createClaudeMd] ERROR: rootPath not set`);
-          void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        const repoRoot = rootPath ? getRepoRoot(rootPath) : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!repoRoot) {
+          log(`[createClaudeMd] ERROR: no workspace folder or rootPath`);
+          void vscode.window.showErrorMessage("No workspace folder is open.");
           return;
         }
-        const repoRoot = getRepoRoot(rootPath);
         log(`[createClaudeMd] repoRoot: ${repoRoot}`);
-        await launchClaudeInit(repoRoot);
+        await launchClaudeInit(repoRoot, "Project Level AGENT.md Guidelines.txt");
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         log(`[createClaudeMd] ERROR: ${message}`);
@@ -727,12 +747,12 @@ export function activate(context: vscode.ExtensionContext) {
       log(`[createAgentMd] triggered`);
       try {
         const rootPath = getRootPath();
-        if (!rootPath) {
-          log(`[createAgentMd] ERROR: rootPath not set`);
-          void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        const repoRoot = rootPath ? getRepoRoot(rootPath) : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!repoRoot) {
+          log(`[createAgentMd] ERROR: no workspace folder or rootPath`);
+          void vscode.window.showErrorMessage("No workspace folder is open.");
           return;
         }
-        const repoRoot = getRepoRoot(rootPath);
         log(`[createAgentMd] repoRoot: ${repoRoot}`);
         await launchAgentInit(repoRoot);
       } catch (error) {

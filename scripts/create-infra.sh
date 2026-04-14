@@ -193,7 +193,7 @@ existing_messages=()
 case "$STACK_NAME" in
   aws|aws-dev)
     aws_region=$(read_setting "$INFRA_FILE" "Region")
-    aws_service=$(read_setting "$INFRA_FILE" "WebService")
+    aws_service=$(read_setting "$INFRA_FILE" "Service Name")
     aws_image=$(read_setting "$INFRA_FILE" "Application Image")
 
     if [[ -n "$aws_region" && -n "$aws_service" ]]; then
@@ -219,9 +219,9 @@ case "$STACK_NAME" in
     fi
     ;;
   gcp)
-    gcp_project=$(read_setting "$INFRA_FILE" "GCP ProjectID")
+    gcp_project=$(read_setting "$INFRA_FILE" "Project ID")
     gcp_region=$(read_setting "$INFRA_FILE" "Region")
-    gcp_service=$(read_setting "$INFRA_FILE" "WebService")
+    gcp_service=$(read_setting "$INFRA_FILE" "Service Name")
     if [[ -n "$gcp_project" && -n "$gcp_region" && -n "$gcp_service" ]]; then
       if gcloud run services describe "$gcp_service" --region "$gcp_region" --project "$gcp_project" >/dev/null 2>&1; then
         existing_messages+=("Cloud Run service '${gcp_service}' exists in ${gcp_region} (${gcp_project}).")
@@ -229,7 +229,7 @@ case "$STACK_NAME" in
     fi
     ;;
   render|render-dev)
-    render_service=$(read_setting "$INFRA_FILE" "WebService")
+    render_service=$(read_setting "$INFRA_FILE" "Service Name")
     if [[ -n "${RENDER_API_KEY:-}" && -n "$render_service" ]]; then
       if command -v curl >/dev/null 2>&1; then
         if curl -sS -H "Authorization: Bearer ${RENDER_API_KEY}" https://api.render.com/v1/services | grep -q "\"name\":\"${render_service}\""; then
@@ -258,9 +258,9 @@ confirm_existing_infra "${existing_messages[@]}"
 
 case "$STACK_NAME" in
   gcp)
-    gcp_project=$(read_setting "$INFRA_FILE" "GCP ProjectID")
+    gcp_project=$(read_setting "$INFRA_FILE" "Project ID")
     gcp_region=$(read_setting "$INFRA_FILE" "Region")
-    gcp_service=$(read_setting "$INFRA_FILE" "WebService")
+    gcp_service=$(read_setting "$INFRA_FILE" "Service Name")
     if [[ -n "$gcp_project" && -n "$gcp_region" && -n "$gcp_service" ]]; then
       gcloud run services add-iam-policy-binding "$gcp_service" \
         --region "$gcp_region" \

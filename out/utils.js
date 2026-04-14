@@ -11,6 +11,7 @@ exports.findNestedGitFolders = findNestedGitFolders;
 exports.listInfrastructureYamlFiles = listInfrastructureYamlFiles;
 exports.parseEnvFile = parseEnvFile;
 exports.waitForUrlReady = waitForUrlReady;
+exports.waitForFileExists = waitForFileExists;
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
@@ -183,5 +184,14 @@ async function waitForUrlReady(url, timeoutMs = 30000, intervalMs = 1000) {
         await new Promise((r) => setTimeout(r, intervalMs));
     }
     return false;
+}
+async function waitForFileExists(filePath, timeoutMs = 300000, intervalMs = 1000) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        if (fs.existsSync(filePath))
+            return true;
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+    return fs.existsSync(filePath);
 }
 //# sourceMappingURL=utils.js.map

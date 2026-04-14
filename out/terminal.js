@@ -35,7 +35,11 @@ function runInNewTerminal(name, lines, options = {}) {
     }
 }
 async function runClaudeInitAndUpdateInNewTerminal(repoRoot, prompt) {
-    runInNewTerminal("Claude Init", [`cd "${repoRoot}"`, `claude "${prompt.replace(/"/g, '\\"')}"`], {
+    const commands = [
+        `cd "${repoRoot}"`,
+        `claude --dangerously-skip-permissions "${prompt.replace(/"/g, '\\"')}"`
+    ];
+    runInNewTerminal("Claude Init", commands, {
         iconPath: new vscode.ThemeIcon("robot", exports.CLAUDE_ACTION_COLOR),
         color: exports.CLAUDE_ACTION_COLOR
     });

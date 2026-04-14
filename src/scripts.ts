@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as https from "https";
 import { getRootPath, getRepoRoot, getWorkspaceRoot, quoteShellArg } from "./utils";
+import { logAlways } from "./logger";
 import { runInSecondaryTerminal } from "./terminal";
 
 const SCRIPT_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts";
@@ -209,8 +210,10 @@ export async function runRepoScript(
   args: string[] = [],
   options: { cwd?: string; scriptDir?: string; fallbackScriptDir?: string } = {}
 ): Promise<void> {
+  logAlways(`[runRepoScript] requested scriptName=${scriptName} args=${JSON.stringify(args)}`);
   const rootPath = getRootPath();
   if (!rootPath) {
+    logAlways("[runRepoScript] ERROR: rootPath not set or invalid");
     void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
     await runInSecondaryTerminal([`echo "[antigravity] ERROR: rootPath not set or invalid"`]);
     return;
@@ -218,25 +221,32 @@ export async function runRepoScript(
   const repoRoot = getRepoRoot(rootPath);
   const workingDir = options.cwd || repoRoot;
   const scriptFileName = `${scriptName}.sh`;
+  logAlways(`[runRepoScript] repoRoot=${repoRoot}`);
+  logAlways(`[runRepoScript] workingDir=${workingDir}`);
+  logAlways(`[runRepoScript] resolving ${scriptFileName} from ${options.scriptDir ?? path.join(repoRoot, "workspace", "scripts")}`);
   const scriptPath = await ensureScriptFile(repoRoot, scriptFileName, options.scriptDir, options.fallbackScriptDir);
   if (!scriptPath) {
+    logAlways(`[runRepoScript] ERROR: unable to resolve scriptPath for ${scriptFileName}`);
     await runInSecondaryTerminal([
       `echo "[antigravity] ERROR: script not found: ${scriptFileName}"`,
       `echo "[antigravity] looked in: ${options.scriptDir ?? path.join(repoRoot, "workspace", "scripts")}"`
     ]);
     return;
   }
+  logAlways(`[runRepoScript] scriptPath=${scriptPath}`);
   await fs.promises.chmod(scriptPath, 0o755).catch(() => { /* ignore if already executable */ });
   const argString = args.map((arg) => quoteShellArg(arg)).join(" ");
   const command = argString
     ? `${quoteShellArg(scriptPath)} ${argString}`
     : quoteShellArg(scriptPath);
+  logAlways(`[runRepoScript] command=${command}`);
   await runInSecondaryTerminal([
     `echo "[antigravity] running: ${scriptFileName} ${argString}"`,
     `echo "[antigravity] cwd: ${workingDir}"`,
     `cd ${quoteShellArg(workingDir)}`,
     command
   ]);
+  logAlways(`[runRepoScript] terminal command dispatched for ${scriptFileName}`);
 }
 
 export async function openFile(filePath: string): Promise<void> {

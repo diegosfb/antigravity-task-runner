@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# Universal Semver Bump Script
+# Universal Semver Bump Script (v1.0.0-global)
 # Supports: package.json (Node), pyproject.toml (Python), VERSION (Plain Text)
 # Usage: ./bump-version.sh [major|minor|patch]
 # ==============================================================================
@@ -14,11 +14,10 @@ bump_node() {
     local file="$PROJECT_ROOT/package.json"
     if [ ! -f "$file" ]; then return 1; fi
     
-    echo "Bumping Node.js version ($TYPE)..."
-    # Use npm version to handle the complex JSON update without jq
+    echo "Bouncing Node.js version ($TYPE)..."
     npm version "$TYPE" --no-git-tag-version > /dev/null
     
-    # Also update any src/App.tsx version strings if they exist (BattleTris specific but safe)
+    # Custom project hook: Update App.tsx if present
     local app_tsx="$PROJECT_ROOT/src/App.tsx"
     if [ -f "$app_tsx" ]; then
         local new_version=$(node -p "require('./package.json').version")
@@ -35,7 +34,6 @@ bump_python() {
     if [ ! -f "$file" ]; then return 1; fi
     
     echo "Bumping Python version ($TYPE)..."
-    # Basic sed update for pyproject [project] or [tool.poetry] section
     local old_version=$(grep -m 1 "version =" "$file" | cut -d '"' -f 2)
     IFS='.' read -ra ADDR <<< "$old_version"
     local major=${ADDR[0]}

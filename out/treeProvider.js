@@ -459,6 +459,7 @@ function getQuickActionItems() {
     const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
     const autocommitRunning = repoRoot ? (0, git_1.isAutocommitRunning)(repoRoot) : false;
     const hasAgentFolder = repoRoot ? fs.existsSync(path.join((0, utils_1.getWorkspaceProjectPath)(repoRoot), ".agent")) : false;
+    const hasGitHub = repoRoot ? (0, git_1.hasGitHubRemoteSync)(repoRoot) : false;
     const workspaceSetup = new NodeItem({ kind: "action", label: "Workspace Setup" }, vscode.TreeItemCollapsibleState.None);
     workspaceSetup.iconPath = new vscode.ThemeIcon("run-all", QUICK_ACTION_COLOR);
     if (hasAgentFolder) {
@@ -513,11 +514,17 @@ function getQuickActionItems() {
     };
     items.push(createRepoTagVersion);
     const autocommitCheckpoint = new NodeItem({ kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" }, vscode.TreeItemCollapsibleState.None);
-    autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", QUICK_ACTION_COLOR);
-    autocommitCheckpoint.command = {
-        command: "antigravity.autocommitCheckpoint",
-        title: "Autocommit Checkpoint"
-    };
+    if (!autocommitRunning && !hasGitHub) {
+        autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", new vscode.ThemeColor("disabledForeground"));
+        autocommitCheckpoint.tooltip = "No GitHub repository found. Please Init a repository first.";
+    }
+    else {
+        autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", QUICK_ACTION_COLOR);
+        autocommitCheckpoint.command = {
+            command: "antigravity.autocommitCheckpoint",
+            title: "Autocommit Checkpoint"
+        };
+    }
     items.push(autocommitCheckpoint);
     const revertChanges = new NodeItem({ kind: "action", label: "Revert Changes" }, vscode.TreeItemCollapsibleState.None);
     if (autocommitRunning) {

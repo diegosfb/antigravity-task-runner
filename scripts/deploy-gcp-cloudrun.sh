@@ -49,15 +49,15 @@ if [[ ! -f "$infra_file" ]]; then
 fi
 
 region="$(read_setting_any "$infra_file" "Region")"
-service_name="$(read_setting_any "$infra_file" "WebService" "Service Name" "Service")"
-project_id="$(read_setting_any "$infra_file" "GCP ProjectID" "Project ID" "ProjectID")"
+service_name="$(read_setting_any "$infra_file" "Service Name" "WebService" "Service")"
+project_id="$(read_setting_any "$infra_file" "Project ID" "GCP ProjectID" "ProjectID")"
 repo_id="$(read_setting_any "$infra_file" "Artifact Registry Repo" "ArtifactRegistryRepo")"
 app_image="$(read_setting_any "$infra_file" "Application Image" "ApplicationImage")"
 tag_override="${1:-${IMAGE_TAG:-}}"
 tag_from_infra="$(read_setting_any "$infra_file" "Tag" "Image Tag")"
 
 if [[ -z "$region" || -z "$service_name" || -z "$project_id" || -z "$repo_id" || -z "$app_image" ]]; then
-  echo "Error: Missing required fields in $infra_file. Need GCP ProjectID, Region, WebService, Artifact Registry Repo, Application Image."
+  echo "Error: Missing required fields in $infra_file. Need Project ID, Region, Service Name, Artifact Registry Repo, Application Image."
   exit 1
 fi
 

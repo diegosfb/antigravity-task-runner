@@ -27,7 +27,31 @@
       "Bash(bash -n /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/scripts/autocommit_changes.sh)",
       "Bash(node -e \"const fs=require\\('fs'\\);const p=JSON.parse\\(fs.readFileSync\\('package.json','utf8'\\)\\);const parts=p.version.split\\('.'\\);parts[2]=String\\(Number\\(parts[2]\\)+1\\);p.version=parts.join\\('.'\\);fs.writeFileSync\\('package.json',JSON.stringify\\(p,null,2\\)+'\\\\n'\\);console.log\\('Version:',p.version\\);\")",
       "Bash(git push:*)",
-      "Bash(bash scripts/create-release.sh)"
+      "Bash(bash scripts/create-release.sh)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(gh release:*)",
+      "Bash(gh api:*)",
+      "Bash(grep -n \"appendAutocommitLogLine\" /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/src/*.ts)",
+      "Bash(npx @vscode/vsce package)",
+      "Bash(unzip -l /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/antigravity-task-runner-2.6.17.vsix)",
+      "Bash(vsce package:*)",
+      "Bash(claude plugin:*)",
+      "Bash(git pull:*)",
+      "Bash(antigravity --help)",
+      "Bash(claude agents:*)",
+      "Bash(claude skills:*)",
+      "Read(//Users/diego.brihuega/.claude/**)",
+      "Bash(ls ~/.claude/skills/*/)",
+      "Bash(claude --print \"/skills\")",
+      "Bash(claude -p \"/skills\")",
+      "Bash(claude --print \"list all available skills\" --bare)",
+      "Bash(sips -s format png /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/Resources/taskrunner.svg --out /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/Resources/taskrunner.png)",
+      "Bash(convert -background none -resize 128x128 /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/Resources/taskrunner.svg /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/Resources/taskrunner.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/Resources/taskrunner.png)",
+      "Bash(ls \"/Users/diego.brihuega/Documents/Projects/antigravity-task-runner/Project Level\"*)",
+      "Bash(git restore:*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
     ]
   }
 }

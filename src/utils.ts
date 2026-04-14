@@ -171,3 +171,16 @@ export async function waitForUrlReady(
   }
   return false;
 }
+
+export async function waitForFileExists(
+  filePath: string,
+  timeoutMs = 300000,
+  intervalMs = 1000
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(filePath)) return true;
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  return fs.existsSync(filePath);
+}

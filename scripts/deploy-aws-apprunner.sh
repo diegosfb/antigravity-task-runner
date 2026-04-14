@@ -49,16 +49,16 @@ if [[ ! -f "$infra_file" ]]; then
 fi
 
 region="$(read_setting_any "$infra_file" "Region")"
-service_name="$(read_setting_any "$infra_file" "WebService" "AWS Service" "Service Name" "Service")"
+service_name="$(read_setting_any "$infra_file" "Service Name" "WebService" "AWS Service" "Service")"
 app_image="$(read_setting_any "$infra_file" "Application Image" "ApplicationImage" "Image")"
 tag_override="${1:-${IMAGE_TAG:-}}"
 tag_from_infra="$(read_setting_any "$infra_file" "Tag" "Image Tag")"
-account_id="$(read_setting_any "$infra_file" "AccountID" "Account Id" "Account")"
+account_id="$(read_setting_any "$infra_file" "Account" "AccountID" "Account Id")"
 auto_deploy="$(read_setting_any "$infra_file" "Auto Deploy")"
 service_arn="$(read_setting_any "$infra_file" "Service ARN" "ServiceArn")"
 
 if [[ -z "$region" || -z "$service_name" || -z "$account_id" || -z "$app_image" ]]; then
-  echo "Error: Missing required fields in $infra_file. Need Region, WebService, AccountID, Application Image."
+  echo "Error: Missing required fields in $infra_file. Need Region, Service Name, Account, Application Image."
   exit 1
 fi
 

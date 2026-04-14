@@ -4,6 +4,7 @@ exports.isAutocommitRunning = isAutocommitRunning;
 exports.startAutocommit = startAutocommit;
 exports.stopAutocommit = stopAutocommit;
 exports.hasGitHubRemote = hasGitHubRemote;
+exports.hasGitHubRemoteSync = hasGitHubRemoteSync;
 const path = require("path");
 const child_process_1 = require("child_process");
 const utils_1 = require("./utils");
@@ -77,5 +78,14 @@ function hasGitHubRemote(repoRoot) {
             resolve(typeof stdout === "string" && stdout.includes("github.com"));
         });
     });
+}
+function hasGitHubRemoteSync(repoRoot) {
+    try {
+        const stdout = (0, child_process_1.execSync)(`git -C "${repoRoot}" remote -v`, { encoding: "utf8" });
+        return stdout.includes("github.com");
+    }
+    catch {
+        return false;
+    }
 }
 //# sourceMappingURL=git.js.map

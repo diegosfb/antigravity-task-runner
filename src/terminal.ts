@@ -41,14 +41,14 @@ export async function runClaudeInitAndUpdateInNewTerminal(
   repoRoot: string,
   prompt: string
 ): Promise<void> {
-  runInNewTerminal(
-    "Claude Init",
-    [`cd "${repoRoot}"`, `claude "${prompt.replace(/"/g, '\\"')}"`],
-    {
-      iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
-      color: CLAUDE_ACTION_COLOR
-    }
-  );
+  const commands = [
+    `cd "${repoRoot}"`,
+    `claude --dangerously-skip-permissions "${prompt.replace(/"/g, '\\"')}"`
+  ];
+  runInNewTerminal("Claude Init", commands, {
+    iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
+    color: CLAUDE_ACTION_COLOR
+  });
 }
 
 export async function runCodexInitAndUpdateInNewTerminal(

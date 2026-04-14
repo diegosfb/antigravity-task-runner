@@ -4,12 +4,6 @@ This file is the authoritative agent guide for this repository. Prefer it over `
 
 ## Project Description
 
-- Project: `antigravity-task-runner`
-- Product: VS Code extension for agentic development.
-- Intent: provide a sidebar-driven way to browse, open, and run agents and workflows stored under `.agent/antigravity`.
-- Current platform support visible in the product: Antigravity, OpenClaude, Codex, and Ollama.
-- Main user flow: open the Task Runner view, inspect agents or workflows, then launch the selected item in the configured terminal and platform.
-- Core implementation areas: VS Code tree view, command registration, terminal orchestration, workspace setup helpers, and release/deployment scripts.
 
 ## Maintenance Rule
 
@@ -17,15 +11,8 @@ This file is the authoritative agent guide for this repository. Prefer it over `
 - Do not pad it with generic coding advice.
 - Regularly update `Project Description`, `Current Focus`, `Recent Changes`, and `Commands` so the file reflects the repo as it exists now.
 
-## Current Focus
+## Commits
 
-- Maintain the VS Code extension that powers the Task Runner sidebar and command palette actions.
-- Keep multi-agent workflows first-class, with `AGENTS.md` as the preferred project instruction file.
-- Preserve compatibility with the configured agent platforms and workspace bootstrap scripts.
-
-## Recent Changes
-
-- `AGENTS.md` is now the preferred project instruction source over `CLAUDE.md`.
 - This project explicitly authorizes Claude Code, Gemini, Codex, and similar agents to commit after each meaningful unit of work without waiting for an explicit user request.
 - Agents should also push those commits regularly when the change is in a safe, shareable state.
 
@@ -36,13 +23,6 @@ This file is the authoritative agent guide for this repository. Prefer it over `
 - Do not revert user changes you did not make.
 - Warn immediately if you detect a secret, token, password, or credential in the repo.
 - Never commit secrets or `config/.env`; use `config/.env.example` as the safe reference.
-
-## Git Policy
-
-- Commit after each meaningful unit of work.
-- Use focused, descriptive commit messages that explain why the change was made and what changed.
-- Push regularly after meaningful units when the branch is stable enough to share.
-- If the worktree contains unrelated user changes, avoid touching or reformatting those files unless required.
 
 ## Commands
 

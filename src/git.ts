@@ -1,5 +1,5 @@
 import * as path from "path";
-import { exec } from "child_process";
+import { exec, execSync } from "child_process";
 import { parseEnvFile } from "./utils";
 import { log } from "./logger";
 
@@ -75,4 +75,13 @@ export function hasGitHubRemote(repoRoot: string): Promise<boolean> {
       resolve(typeof stdout === "string" && stdout.includes("github.com"));
     });
   });
+}
+
+export function hasGitHubRemoteSync(repoRoot: string): boolean {
+  try {
+    const stdout = execSync(`git -C "${repoRoot}" remote -v`, { encoding: "utf8" });
+    return stdout.includes("github.com");
+  } catch {
+    return false;
+  }
 }

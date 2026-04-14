@@ -1,5 +1,5 @@
-AccountID: 434045117808
-WebService: battletris-server-dev
+Account: 434045117808
+Service Name: battletris-server-dev
 Region: us-east-2
 Target Architecture: linux/amd64
 Application Image: battletris-server
@@ -7,4 +7,4 @@ Tag: latest
 Auto Deploy: true
 Deployment URL: https://dp3yci2nu8.us-east-2.awsapprunner.com
 Platform: AWS
-Cloud Service: AppRunner
+Service Type: AppRunner

@@ -12,6 +12,7 @@ const fs = require("fs");
 const path = require("path");
 const https = require("https");
 const utils_1 = require("./utils");
+const logger_1 = require("./logger");
 const terminal_1 = require("./terminal");
 const SCRIPT_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts";
 const CONFIG_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config";
@@ -184,8 +185,10 @@ async function ensureScriptFile(repoRoot, scriptFileName, scriptsDir, fallbackDi
     return await downloadScript(scriptFileName, repoRoot, targetDir);
 }
 async function runRepoScript(scriptName, args = [], options = {}) {
+    (0, logger_1.logAlways)(`[runRepoScript] requested scriptName=${scriptName} args=${JSON.stringify(args)}`);
     const rootPath = (0, utils_1.getRootPath)();
     if (!rootPath) {
+        (0, logger_1.logAlways)("[runRepoScript] ERROR: rootPath not set or invalid");
         void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
         await (0, terminal_1.runInSecondaryTerminal)([`echo "[antigravity] ERROR: rootPath not set or invalid"`]);
         return;
@@ -193,25 +196,32 @@ async function runRepoScript(scriptName, args = [], options = {}) {
     const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
     const workingDir = options.cwd || repoRoot;
     const scriptFileName = `${scriptName}.sh`;
+    (0, logger_1.logAlways)(`[runRepoScript] repoRoot=${repoRoot}`);
+    (0, logger_1.logAlways)(`[runRepoScript] workingDir=${workingDir}`);
+    (0, logger_1.logAlways)(`[runRepoScript] resolving ${scriptFileName} from ${options.scriptDir ?? path.join(repoRoot, "workspace", "scripts")}`);
     const scriptPath = await ensureScriptFile(repoRoot, scriptFileName, options.scriptDir, options.fallbackScriptDir);
     if (!scriptPath) {
+        (0, logger_1.logAlways)(`[runRepoScript] ERROR: unable to resolve scriptPath for ${scriptFileName}`);
         await (0, terminal_1.runInSecondaryTerminal)([
             `echo "[antigravity] ERROR: script not found: ${scriptFileName}"`,
             `echo "[antigravity] looked in: ${options.scriptDir ?? path.join(repoRoot, "workspace", "scripts")}"`
         ]);
         return;
     }
+    (0, logger_1.logAlways)(`[runRepoScript] scriptPath=${scriptPath}`);
     await fs.promises.chmod(scriptPath, 0o755).catch(() => { });
     const argString = args.map((arg) => (0, utils_1.quoteShellArg)(arg)).join(" ");
     const command = argString
         ? `${(0, utils_1.quoteShellArg)(scriptPath)} ${argString}`
         : (0, utils_1.quoteShellArg)(scriptPath);
+    (0, logger_1.logAlways)(`[runRepoScript] command=${command}`);
     await (0, terminal_1.runInSecondaryTerminal)([
         `echo "[antigravity] running: ${scriptFileName} ${argString}"`,
         `echo "[antigravity] cwd: ${workingDir}"`,
         `cd ${(0, utils_1.quoteShellArg)(workingDir)}`,
         command
     ]);
+    (0, logger_1.logAlways)(`[runRepoScript] terminal command dispatched for ${scriptFileName}`);
 }
 async function openFile(filePath) {
     const uri = vscode.Uri.file(filePath);

@@ -5,7 +5,7 @@ import * as os from "os";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { getRootPath, getRepoRoot, getWorkspaceProjectPath, getAntigravityHomePath, safeReadDir } from "./utils";
-import { isAutocommitRunning } from "./git";
+import { isAutocommitRunning, hasGitHubRemoteSync } from "./git";
 import { CLAUDE_ACTION_COLOR } from "./terminal";
 
 const execAsync = promisify(exec);
@@ -555,6 +555,7 @@ function getQuickActionItems(): NodeItem[] {
   const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
   const autocommitRunning = repoRoot ? isAutocommitRunning(repoRoot) : false;
   const hasAgentFolder = repoRoot ? fs.existsSync(path.join(getWorkspaceProjectPath(repoRoot), ".agent")) : false;
+  const hasGitHub = repoRoot ? hasGitHubRemoteSync(repoRoot) : false;
 
   const workspaceSetup = new NodeItem(
     { kind: "action", label: "Workspace Setup" },
@@ -643,11 +644,16 @@ function getQuickActionItems(): NodeItem[] {
     { kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" },
     vscode.TreeItemCollapsibleState.None
   );
-  autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", QUICK_ACTION_COLOR);
-  autocommitCheckpoint.command = {
-    command: "antigravity.autocommitCheckpoint",
-    title: "Autocommit Checkpoint"
-  };
+  if (!autocommitRunning && !hasGitHub) {
+    autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", new vscode.ThemeColor("disabledForeground"));
+    autocommitCheckpoint.tooltip = "No GitHub repository found. Please Init a repository first.";
+  } else {
+    autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", QUICK_ACTION_COLOR);
+    autocommitCheckpoint.command = {
+      command: "antigravity.autocommitCheckpoint",
+      title: "Autocommit Checkpoint"
+    };
+  }
   items.push(autocommitCheckpoint);
 
   const revertChanges = new NodeItem(
@@ -694,6 +700,7 @@ function getClaudeActionItems(): NodeItem[] {
     command: "antigravity.openClaudeTerminal",
     title: "Open Claude Terminal"
   };
+
   const setClaudeModel = new NodeItem(
     { kind: "action", label: "Set Claude Model" },
     vscode.TreeItemCollapsibleState.None

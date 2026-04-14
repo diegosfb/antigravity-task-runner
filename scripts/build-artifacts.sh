@@ -32,7 +32,7 @@ aws_app_image=""
 aws_arch=""
 
 if [[ -f "$AWS_INFRA" ]]; then
-  aws_account=$(read_setting "$AWS_INFRA" "AccountID")
+  aws_account=$(read_setting "$AWS_INFRA" "Account")
   aws_region=$(read_setting "$AWS_INFRA" "Region")
   aws_app_image=$(read_setting "$AWS_INFRA" "Application Image")
   aws_arch=$(read_setting "$AWS_INFRA" "Target Architecture")
@@ -45,7 +45,7 @@ gcp_app_image=""
 gcp_arch=""
 
 if [[ -f "$GCP_INFRA" ]]; then
-  gcp_project=$(read_setting "$GCP_INFRA" "GCP ProjectID")
+  gcp_project=$(read_setting "$GCP_INFRA" "Project ID")
   gcp_region=$(read_setting "$GCP_INFRA" "Region")
   gcp_repo=$(read_setting "$GCP_INFRA" "Artifact Registry Repo")
   gcp_app_image=$(read_setting "$GCP_INFRA" "Application Image")
@@ -89,7 +89,7 @@ if [[ -f "$GCP_INFRA" ]]; then
     echo "Pushing image to Artifact Registry: ${gcp_image_uri}"
     docker push "$gcp_image_uri"
   else
-    echo "Warning: GCP infra not fully configured (GCP ProjectID/Region/Artifact Registry Repo/Application Image). Skipping Artifact Registry push."
+    echo "Warning: GCP infra not fully configured (Project ID/Region/Artifact Registry Repo/Application Image). Skipping Artifact Registry push."
   fi
 else
   echo "Warning: GCP infra file not found. Skipping Artifact Registry push."
