@@ -15,6 +15,24 @@ const utils_1 = require("./utils");
 function activate(context) {
     const provider = new treeProvider_1.AntigravityViewProvider();
     const extensionRoot = context.extensionPath;
+    const launchClaudeInit = async (repoRoot) => {
+        const guidelineCandidates = [
+            path.join(extensionRoot, "Project Level CLAUDE.md Guidelines copy.txt"),
+            path.join(extensionRoot, "Project Level CLAUDE.md Guidelines.txt")
+        ];
+        const guidelinesFile = guidelineCandidates.find((candidate) => fs.existsSync(candidate));
+        const prompt = guidelinesFile
+            ? fs.readFileSync(guidelinesFile, "utf8").trim()
+            : "/init";
+        await (0, terminal_1.runClaudeInitAndUpdateInNewTerminal)(repoRoot, prompt);
+    };
+    const launchAgentInit = async (repoRoot) => {
+        const guidelinesFile = path.join(extensionRoot, "Project Level AGENT.md Guidelines.txt");
+        const prompt = fs.existsSync(guidelinesFile)
+            ? fs.readFileSync(guidelinesFile, "utf8").trim()
+            : "/init";
+        await (0, terminal_1.runCodexInitAndUpdateInNewTerminal)(repoRoot, prompt);
+    };
     context.subscriptions.push(vscode.window.registerTreeDataProvider("antigravityView", provider));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openSettings", async () => {
         const panel = vscode.window.createWebviewPanel("antigravitySettings", "Antigravity Settings", vscode.ViewColumn.Active, { enableScripts: true });
@@ -435,6 +453,8 @@ function activate(context) {
             fs.mkdirSync(path.join(workspaceDir, "scripts"), { recursive: true });
         }
         await (0, scripts_1.runRepoScript)("workspace-setup", ["--force"], { cwd: workspaceDir, scriptDir: path.join(extensionRoot, "src") });
+        await launchClaudeInit(repoRoot);
+        await launchAgentInit(repoRoot);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.initRepository", async () => {
         const rootPath = (0, utils_1.getRootPath)();
@@ -495,15 +515,7 @@ function activate(context) {
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-            const guidelineCandidates = [
-                path.join(extensionRoot, "Project Level CLAUDE.md Guidelines copy.txt"),
-                path.join(extensionRoot, "Project Level CLAUDE.md Guidelines.txt")
-            ];
-            const guidelinesFile = guidelineCandidates.find((candidate) => fs.existsSync(candidate));
-            const prompt = guidelinesFile
-                ? fs.readFileSync(guidelinesFile, "utf8").trim()
-                : "/init";
-            await (0, terminal_1.runClaudeInitAndUpdateInNewTerminal)(repoRoot, prompt);
+            await launchClaudeInit(repoRoot);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -518,11 +530,7 @@ function activate(context) {
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-            const guidelinesFile = path.join(extensionRoot, "Project Level AGENT.md Guidelines.txt");
-            const prompt = fs.existsSync(guidelinesFile)
-                ? fs.readFileSync(guidelinesFile, "utf8").trim()
-                : "/init";
-            await (0, terminal_1.runCodexInitAndUpdateInNewTerminal)(repoRoot, prompt);
+            await launchAgentInit(repoRoot);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
