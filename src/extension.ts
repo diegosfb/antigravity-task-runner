@@ -624,10 +624,10 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      logAlways(`[Workspace Setup] launching AGENTS.md init`);
-      await launchAgentInit(repoRoot);
+      // logAlways(`[Workspace Setup] launching AGENTS.md init`);
+      // await launchAgentInit(repoRoot);
       // await launchClaudeInit(repoRoot);
-      logAlways(`[Workspace Setup] AGENTS.md init launched`);
+      // logAlways(`[Workspace Setup] AGENTS.md init launched`);
       logAlways(`[Workspace Setup] Done`);
     })
   );

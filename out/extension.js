@@ -513,10 +513,10 @@ function activate(context) {
             void vscode.window.showErrorMessage(`workspace-setup.sh failed (exit ${exitCode}). Check the Antigravity Task Runner output panel.`);
             return;
         }
-        (0, logger_1.logAlways)(`[Workspace Setup] launching AGENTS.md init`);
-        await launchAgentInit(repoRoot);
+        // logAlways(`[Workspace Setup] launching AGENTS.md init`);
+        // await launchAgentInit(repoRoot);
         // await launchClaudeInit(repoRoot);
-        (0, logger_1.logAlways)(`[Workspace Setup] AGENTS.md init launched`);
+        // logAlways(`[Workspace Setup] AGENTS.md init launched`);
         (0, logger_1.logAlways)(`[Workspace Setup] Done`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.initRepository", async () => {
