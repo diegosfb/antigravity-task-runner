@@ -88,7 +88,7 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
         { kind: "category", label: "Agents" },
         vscode.TreeItemCollapsibleState.Collapsed
       );
-      agents.iconPath = new vscode.ThemeIcon("organization");
+      agents.iconPath = new vscode.ThemeIcon("organization", new vscode.ThemeColor("charts.purple"));
 
       const skills = new NodeItem(
         { kind: "category", label: "Skills" },
@@ -100,7 +100,7 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
         { kind: "category", label: "Workflows" },
         vscode.TreeItemCollapsibleState.Collapsed
       );
-      workflows.iconPath = new vscode.ThemeIcon("run-all");
+      workflows.iconPath = new vscode.ThemeIcon("run-all", new vscode.ThemeColor("charts.purple"));
 
       const linkedFolderItems = getLinkedFolderItems();
 

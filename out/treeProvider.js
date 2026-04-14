@@ -57,11 +57,11 @@ class AntigravityViewProvider {
             claudeSeparator.tooltip = "";
             claudeSeparator.contextValue = "antigravitySeparator";
             const agents = new NodeItem({ kind: "category", label: "Agents" }, vscode.TreeItemCollapsibleState.Collapsed);
-            agents.iconPath = new vscode.ThemeIcon("organization");
+            agents.iconPath = new vscode.ThemeIcon("organization", new vscode.ThemeColor("charts.purple"));
             const skills = new NodeItem({ kind: "category", label: "Skills" }, vscode.TreeItemCollapsibleState.Collapsed);
             skills.iconPath = new vscode.ThemeIcon("symbol-method", new vscode.ThemeColor("charts.purple"));
             const workflows = new NodeItem({ kind: "category", label: "Workflows" }, vscode.TreeItemCollapsibleState.Collapsed);
-            workflows.iconPath = new vscode.ThemeIcon("run-all");
+            workflows.iconPath = new vscode.ThemeIcon("run-all", new vscode.ThemeColor("charts.purple"));
             const linkedFolderItems = getLinkedFolderItems();
             const claudePluginsPath = path.join(os.homedir(), ".claude", "plugins");
             const claudePlugins = new NodeItem({ kind: "folder", label: "Claude Plugins", filePath: claudePluginsPath }, vscode.TreeItemCollapsibleState.Collapsed);
