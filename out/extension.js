@@ -86,6 +86,180 @@ function activate(context) {
             await (0, scripts_1.openFile)(filePath);
         }
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.addToProject", async (item) => {
+        const filePath = item?.filePath;
+        if (!filePath || !fs.existsSync(filePath)) {
+            void vscode.window.showErrorMessage("Path not found.");
+            return;
+        }
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const projectRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const linkName = path.basename(filePath);
+        const linkPath = path.join(projectRoot, linkName);
+        let linkExists = false;
+        try {
+            fs.lstatSync(linkPath); // succeeds for regular files and symlinks (including broken)
+            linkExists = true;
+        }
+        catch {
+            // path doesn't exist at all
+        }
+        if (linkExists) {
+            void vscode.window.showErrorMessage(`"${linkName}" already exists in the project root.`);
+            return;
+        }
+        try {
+            fs.symlinkSync(filePath, linkPath);
+            void vscode.window.showInformationMessage(`Symlink created: ${linkName} → ${filePath}`);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to create symlink: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.addToAgent", async (item) => {
+        const filePath = item?.filePath;
+        if (!filePath || !fs.existsSync(filePath)) {
+            void vscode.window.showErrorMessage("Path not found.");
+            return;
+        }
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const projectRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const agentDir = path.join(projectRoot, ".agent");
+        if (!fs.existsSync(agentDir)) {
+            fs.mkdirSync(agentDir, { recursive: true });
+        }
+        const linkName = path.basename(filePath);
+        const linkPath = path.join(agentDir, linkName);
+        let linkExists = false;
+        try {
+            fs.lstatSync(linkPath);
+            linkExists = true;
+        }
+        catch {
+            // path doesn't exist at all
+        }
+        if (linkExists) {
+            void vscode.window.showErrorMessage(`"${linkName}" already exists in .agent.`);
+            return;
+        }
+        try {
+            fs.symlinkSync(filePath, linkPath);
+            void vscode.window.showInformationMessage(`Symlink created: .agent/${linkName} → ${filePath}`);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to create symlink: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.addToCustomSkills", async (item) => {
+        const filePath = item?.filePath;
+        if (!filePath || !fs.existsSync(filePath)) {
+            void vscode.window.showErrorMessage("Path not found.");
+            return;
+        }
+        // If item is a SKILL.md file, symlink its parent folder; if it's a folder, symlink it directly
+        const stat = fs.statSync(filePath);
+        const skillSource = stat.isDirectory() ? filePath : path.dirname(filePath);
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const projectRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const skillsDir = path.join(projectRoot, ".agent", "skills");
+        if (!fs.existsSync(skillsDir)) {
+            fs.mkdirSync(skillsDir, { recursive: true });
+        }
+        const linkName = path.basename(skillSource);
+        const linkPath = path.join(skillsDir, linkName);
+        let linkExists = false;
+        try {
+            fs.lstatSync(linkPath);
+            linkExists = true;
+        }
+        catch {
+            // path doesn't exist at all
+        }
+        if (linkExists) {
+            void vscode.window.showErrorMessage(`"${linkName}" already exists in .agent/skills.`);
+            return;
+        }
+        try {
+            fs.symlinkSync(skillSource, linkPath);
+            void vscode.window.showInformationMessage(`Symlink created: .agent/skills/${linkName} → ${skillSource}`);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to create symlink: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.addToCustomAgents", async (item) => {
+        const filePath = item?.filePath;
+        if (!filePath || !fs.existsSync(filePath)) {
+            void vscode.window.showErrorMessage("Path not found.");
+            return;
+        }
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const projectRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const agentsDir = path.join(projectRoot, ".agent", "agents");
+        if (!fs.existsSync(agentsDir)) {
+            fs.mkdirSync(agentsDir, { recursive: true });
+        }
+        // If the selected item is an AGENT.md file, symlink its parent folder instead.
+        const stat = fs.statSync(filePath);
+        const agentSource = (!stat.isDirectory() && path.basename(filePath) === "AGENT.md")
+            ? path.dirname(filePath)
+            : filePath;
+        const linkName = path.basename(agentSource);
+        const linkPath = path.join(agentsDir, linkName);
+        let linkExists = false;
+        try {
+            fs.lstatSync(linkPath);
+            linkExists = true;
+        }
+        catch {
+            // path doesn't exist at all
+        }
+        if (linkExists) {
+            void vscode.window.showErrorMessage(`"${linkName}" already exists in .agent/agents.`);
+            return;
+        }
+        try {
+            fs.symlinkSync(agentSource, linkPath);
+            void vscode.window.showInformationMessage(`Symlink created: .agent/agents/${linkName} → ${agentSource}`);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to create symlink: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.enablePlugin", async (item) => {
+        const pluginName = item?.filePath;
+        if (!pluginName)
+            return;
+        await (0, terminal_1.runInSecondaryTerminal)([`claude plugin enable ${(0, utils_1.quoteShellArg)(pluginName)}`]);
+        setTimeout(() => provider.refresh(), 1500);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.disablePlugin", async (item) => {
+        const pluginName = item?.filePath;
+        if (!pluginName)
+            return;
+        await (0, terminal_1.runInSecondaryTerminal)([`claude plugin disable ${(0, utils_1.quoteShellArg)(pluginName)}`]);
+        setTimeout(() => provider.refresh(), 1500);
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.runWorkflow", async (filePath) => {
         if (!filePath || !fs.existsSync(filePath)) {
             void vscode.window.showErrorMessage("Workflow file not found.");

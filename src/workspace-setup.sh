@@ -31,3 +31,17 @@ rsync -a --ignore-existing \
   "${SRC_DIR}/" "${DEST_DIR}/"
 
 echo "workspace-setup: copied missing files from ${REPO_URL}"
+
+# Create .claude folder and symlinks into .agent if not already present.
+CLAUDE_DIR="${DEST_DIR}/.claude"
+if [ ! -d "${CLAUDE_DIR}" ]; then
+  mkdir -p "${CLAUDE_DIR}"
+fi
+if [ ! -e "${CLAUDE_DIR}/skills" ]; then
+  ln -s "../.agent/skills" "${CLAUDE_DIR}/skills"
+  echo "workspace-setup: created symlink .claude/skills -> .agent/skills"
+fi
+if [ ! -e "${CLAUDE_DIR}/agents" ]; then
+  ln -s "../.agent/agents" "${CLAUDE_DIR}/agents"
+  echo "workspace-setup: created symlink .claude/agents -> .agent/agents"
+fi

@@ -2,11 +2,15 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { getRootPath, getRepoRoot, getWorkspaceProjectPath, getAntigravityHomePath, safeReadDir } from "./utils";
 import { isAutocommitRunning } from "./git";
 import { CLAUDE_ACTION_COLOR } from "./terminal";
 
-export type NodeKind = "category" | "agent" | "workflow" | "folder" | "separator" | "action";
+const execAsync = promisify(exec);
+
+export type NodeKind = "category" | "agent" | "workflow" | "folder" | "separator" | "action" | "plugin";
 
 export type NodePayload = {
   kind: NodeKind;
@@ -94,6 +98,15 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
 
       const linkedFolderItems = getLinkedFolderItems();
 
+      const claudePluginsPath = path.join(os.homedir(), ".claude", "plugins");
+      const claudePlugins = new NodeItem(
+        { kind: "folder", label: "Claude Plugins", filePath: claudePluginsPath },
+        vscode.TreeItemCollapsibleState.Collapsed
+      );
+      claudePlugins.iconPath = new vscode.ThemeIcon("folder", WHITE_FOLDER_COLOR);
+      claudePlugins.tooltip = claudePluginsPath;
+      claudePlugins.contextValue = "antigravityFolderItem";
+
       return [
         ...claudeItems,
         claudeSeparator,
@@ -102,6 +115,7 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
         actionSeparator,
         ...actionItems,
         separatorItem,
+        claudePlugins,
         agents,
         workflows
       ];
@@ -115,12 +129,42 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
       return this.getWorkflowItems();
     }
 
+    if (element.kind === "folder" && element.label === "Claude Plugins") {
+      return this.getClaudePluginItems();
+    }
+
     if (element.kind === "folder") {
       if (!element.filePath) return [];
       return this.getFolderItems(element.filePath);
     }
 
     return [];
+  }
+
+  private async getClaudePluginItems(): Promise<NodeItem[]> {
+    try {
+      const { stdout, stderr } = await execAsync("claude plugin list 2>&1", { timeout: 8000 });
+      const plugins = parsePluginListOutput(stdout || stderr || "");
+      if (plugins.length === 0) {
+        return [emptyItem("No plugins found")];
+      }
+      return plugins.map(({ name, enabled }) => {
+        const displayName = name.split("@")[0];
+        const item = new NodeItem(
+          { kind: "plugin", label: displayName, filePath: name }, // filePath = full "name@marketplace"
+          vscode.TreeItemCollapsibleState.None
+        );
+        item.contextValue = enabled ? "claudePluginEnabled" : "claudePluginDisabled";
+        item.iconPath = new vscode.ThemeIcon(
+          "extensions",
+          new vscode.ThemeColor(enabled ? "terminal.ansiGreen" : "disabledForeground")
+        );
+        item.description = enabled ? "enabled" : "disabled";
+        return item;
+      });
+    } catch {
+      return [emptyItem("Failed to list plugins")];
+    }
   }
 
   private async getAgentItems(): Promise<NodeItem[]> {
@@ -203,7 +247,21 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
           : vscode.TreeItemCollapsibleState.None
       );
       item.iconPath = new vscode.ThemeIcon(isDirectory ? "folder" : "file");
-      item.contextValue = "antigravityFolderItem";
+      if (isDirectory) {
+        item.contextValue = fs.existsSync(path.join(entryPath, "SKILL.md"))
+          ? "antigravityFolderItemSkillFolder"
+          : fs.existsSync(path.join(entryPath, "AGENT.md"))
+            ? "antigravityFolderItemAgentFolder"
+            : "antigravityFolderItem";
+      } else {
+        if (entry.name === "SKILL.md") {
+          item.contextValue = "antigravityFolderItemSkillFile";
+        } else if (entry.name.endsWith(".md")) {
+          item.contextValue = "antigravityFolderItemAgentFile";
+        } else {
+          item.contextValue = "antigravityFolderItem";
+        }
+      }
       if (!isDirectory) {
         item.command = {
           command: "antigravity.openAgent",
@@ -266,8 +324,66 @@ function emptyItem(label: string): NodeItem {
   return item;
 }
 
+function parsePluginListOutput(output: string): Array<{ name: string; enabled: boolean }> {
+  // Strip ANSI escape codes
+  const clean = output.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
+
+  // Try JSON first
+  const trimmed = clean.trim();
+  if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+    try {
+      const data = JSON.parse(trimmed);
+      const arr: unknown[] = Array.isArray(data) ? data : [data];
+      return arr
+        .map((item) => {
+          const obj = item as Record<string, unknown>;
+          return {
+            name: String(obj["name"] ?? obj["id"] ?? ""),
+            enabled: obj["enabled"] !== false && obj["status"] !== "disabled"
+          };
+        })
+        .filter((p) => p.name);
+    } catch { /* fall through */ }
+  }
+
+  // Primary format — multi-line blocks:
+  //   ❯ frontend-design@claude-plugins-official
+  //     Version: 6223f4d740e7
+  //     Scope: user
+  //     Status: ✔ enabled
+  const plugins: Array<{ name: string; enabled: boolean }> = [];
+  let pendingName: string | null = null;
+
+  for (const rawLine of clean.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // Plugin header: "❯ frontend-design@source" — capture full id including @source
+    const headerMatch = line.match(/^❯\s+([a-zA-Z0-9_.-]+(?:@\S+)?)/);
+    if (headerMatch) {
+      pendingName = headerMatch[1];
+      continue;
+    }
+
+    // Status line: "Status: ✔ enabled" / "Status: ✘ disabled"
+    const statusMatch = line.match(/^Status:\s*[✔✘✗☐△]\s*(enabled|disabled)/i);
+    if (statusMatch && pendingName) {
+      plugins.push({ name: pendingName, enabled: statusMatch[1].toLowerCase() === "enabled" });
+      pendingName = null;
+    }
+  }
+
+  return plugins;
+}
+
 function getLinkedFolderItems(): NodeItem[] {
-  return TOP_LEVEL_LINKED_FOLDERS.filter((linked) => fs.existsSync(linked.path)).map(
+  const folders = [...TOP_LEVEL_LINKED_FOLDERS];
+  const rawAddons = vscode.workspace.getConfiguration("antigravity").get<string>("customAgenticPlatformAddons") || "";
+  const addonsPath = rawAddons.trim().replace(/^~/, os.homedir());
+  if (addonsPath) {
+    folders.push({ label: path.basename(addonsPath) || "addons", path: addonsPath });
+  }
+  return folders.filter((linked) => fs.existsSync(linked.path)).map(
     (linked) => {
       const item = new NodeItem(
         { kind: "folder", label: linked.label, filePath: linked.path },

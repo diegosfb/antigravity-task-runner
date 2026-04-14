@@ -209,6 +209,13 @@ function getExtensionSettingsFields() {
             value: "",
             type: "checkbox",
             checked: config.get("enableDebugLogging") ?? false
+        },
+        {
+            key: "customAgenticPlatformAddons",
+            label: "Custom Agentic Platform Addons",
+            description: "Path to a custom agentic platform addons directory shown in the folder section.",
+            placeholder: "~/my-addons",
+            value: config.get("customAgenticPlatformAddons") || ""
         }
     ];
 }

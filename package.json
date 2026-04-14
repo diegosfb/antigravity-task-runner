@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.0.6",
+  "version": "4.1.10",
   "publisher": "dsfb",
   "license": "MIT",
   "repository": {
@@ -84,6 +84,26 @@
       {
         "command": "antigravity.addToProject",
         "title": "Add to project"
+      },
+      {
+        "command": "antigravity.addToAgent",
+        "title": "Add to .agent"
+      },
+      {
+        "command": "antigravity.addToCustomSkills",
+        "title": "Add to Custom Skills"
+      },
+      {
+        "command": "antigravity.addToCustomAgents",
+        "title": "Add to Custom Agents"
+      },
+      {
+        "command": "antigravity.enablePlugin",
+        "title": "Enable Plugin"
+      },
+      {
+        "command": "antigravity.disablePlugin",
+        "title": "Disable Plugin"
       }
     ],
     "viewsContainers": {
@@ -99,7 +119,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.0.6",
+          "name": "Tasky Runner v4.1.10",
           "icon": "media/taskrunner.svg"
         }
       ]
@@ -125,18 +145,38 @@
         },
         {
           "command": "antigravity.copyPath",
-          "when": "view == antigravityView && viewItem == antigravityFolderItem",
+          "when": "view == antigravityView && viewItem =~ /antigravityFolderItem/",
           "group": "navigation@1"
         },
         {
           "command": "antigravity.openPath",
-          "when": "view == antigravityView && viewItem == antigravityFolderItem",
+          "when": "view == antigravityView && viewItem =~ /antigravityFolderItem/",
           "group": "navigation@2"
         },
         {
           "command": "antigravity.addToProject",
-          "when": "view == antigravityView && viewItem == antigravityFolderItem",
+          "when": "view == antigravityView && viewItem =~ /antigravityFolderItem/",
           "group": "navigation@3"
+        },
+        {
+          "command": "antigravity.addToCustomSkills",
+          "when": "view == antigravityView && viewItem =~ /antigravityFolderItemSkill/",
+          "group": "navigation@5"
+        },
+        {
+          "command": "antigravity.addToCustomAgents",
+          "when": "view == antigravityView && viewItem =~ /antigravityFolderItemAgent/",
+          "group": "navigation@6"
+        },
+        {
+          "command": "antigravity.enablePlugin",
+          "when": "view == antigravityView && viewItem == claudePluginDisabled",
+          "group": "navigation"
+        },
+        {
+          "command": "antigravity.disablePlugin",
+          "when": "view == antigravityView && viewItem == claudePluginEnabled",
+          "group": "navigation"
         }
       ]
     },
@@ -212,6 +252,11 @@
           "type": "string",
           "default": "",
           "description": "GitHub repo URL for Codex agentic setup."
+        },
+        "antigravity.customAgenticPlatformAddons": {
+          "type": "string",
+          "default": "",
+          "description": "Path to a custom agentic platform addons directory shown in the folder section."
         }
       }
     }
