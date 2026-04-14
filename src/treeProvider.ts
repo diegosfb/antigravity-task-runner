@@ -275,7 +275,7 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
   }
 
   private async getWorkflowItems(): Promise<NodeItem[]> {
-    const rootPath = getAntigravityHomePath();
+    const rootPath = getRootPath();
     if (!rootPath) {
       return [missingRootItem()];
     }
@@ -383,11 +383,11 @@ function shouldHideAntigravityEntry(dirPath: string, entry: fs.Dirent): boolean 
 
 function missingRootItem(): NodeItem {
   const item = new NodeItem(
-    { kind: "category", label: "Missing ~/.antigravity" },
+    { kind: "category", label: "Missing .agent/antigravity" },
     vscode.TreeItemCollapsibleState.None
   );
   item.iconPath = new vscode.ThemeIcon("warning");
-  item.tooltip = `Expected ${path.join(os.homedir(), ".gemini", "antigravity")} to exist.`;
+  item.tooltip = "Expected antigravity.rootPath (default ./.agent/antigravity) to exist.";
   return item;
 }
 
