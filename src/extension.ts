@@ -1066,7 +1066,7 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const proc = spawn("open", ["-a", "/Applications/DiffMerge.app", ...filePaths], { shell: false });
+    const proc = spawn("open", ["-a", "/Applications/DiffMerge.app", "--args", ...filePaths], { shell: false });
     proc.on("error", (error) => {
       void vscode.window.showErrorMessage(`DiffMerge failed: ${error.message}`);
     });

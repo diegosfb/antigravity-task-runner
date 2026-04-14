@@ -873,7 +873,7 @@ function activate(context) {
             void vscode.window.showErrorMessage("DiffMerge can only be launched with existing files.");
             return;
         }
-        const proc = (0, child_process_1.spawn)("open", ["-a", "/Applications/DiffMerge.app", ...filePaths], { shell: false });
+        const proc = (0, child_process_1.spawn)("open", ["-a", "/Applications/DiffMerge.app", "--args", ...filePaths], { shell: false });
         proc.on("error", (error) => {
             void vscode.window.showErrorMessage(`DiffMerge failed: ${error.message}`);
         });
