@@ -58,6 +58,8 @@ class AntigravityViewProvider {
             claudeSeparator.contextValue = "antigravitySeparator";
             const agents = new NodeItem({ kind: "category", label: "Agents" }, vscode.TreeItemCollapsibleState.Collapsed);
             agents.iconPath = new vscode.ThemeIcon("organization");
+            const skills = new NodeItem({ kind: "category", label: "Skills" }, vscode.TreeItemCollapsibleState.Collapsed);
+            skills.iconPath = new vscode.ThemeIcon("symbol-method");
             const workflows = new NodeItem({ kind: "category", label: "Workflows" }, vscode.TreeItemCollapsibleState.Collapsed);
             workflows.iconPath = new vscode.ThemeIcon("run-all");
             const linkedFolderItems = getLinkedFolderItems();
@@ -76,11 +78,15 @@ class AntigravityViewProvider {
                 separatorItem,
                 claudePlugins,
                 agents,
+                skills,
                 workflows
             ];
         }
         if (element.kind === "category" && element.label === "Agents") {
             return this.getAgentItems();
+        }
+        if (element.kind === "category" && element.label === "Skills") {
+            return this.getSkillItems();
         }
         if (element.kind === "category" && element.label === "Workflows") {
             return this.getWorkflowItems();
@@ -150,6 +156,43 @@ class AntigravityViewProvider {
         catch {
             return [emptyItem("Failed to list agents")];
         }
+    }
+    async getSkillItems() {
+        const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : undefined;
+        const allSkills = [];
+        // Project skills: <repoRoot>/.claude/skills/<name>/SKILL.md
+        if (repoRoot) {
+            const dir = path.join(repoRoot, ".claude", "skills");
+            for (const s of readSkillsDir(dir)) {
+                allSkills.push({ ...s, section: "Project" });
+            }
+        }
+        // User skills: ~/.claude/skills/<name>/SKILL.md
+        const userSkillsDir = path.join(os.homedir(), ".claude", "skills");
+        for (const s of readSkillsDir(userSkillsDir)) {
+            allSkills.push({ ...s, section: "User" });
+        }
+        // Plugin skills: enabled plugins → cache → skills
+        for (const s of await readEnabledPluginSkills()) {
+            allSkills.push({ ...s, section: "Plugin" });
+        }
+        if (allSkills.length === 0) {
+            return [emptyItem("No skills found")];
+        }
+        return allSkills.map(({ name, filePath, source, section }) => {
+            const item = new NodeItem({ kind: "skill", label: name, filePath }, vscode.TreeItemCollapsibleState.None);
+            item.contextValue = "antigravitySkillItem";
+            item.description = source;
+            item.tooltip = `${section} skill · ${source}`;
+            item.iconPath = new vscode.ThemeIcon("symbol-keyword", terminal_1.CLAUDE_ACTION_COLOR);
+            item.command = {
+                command: "antigravity.openAgent",
+                title: "Open Skill",
+                arguments: [filePath]
+            };
+            return item;
+        });
     }
     async getWorkflowItems() {
         const rootPath = (0, utils_1.getAntigravityHomePath)();
@@ -254,6 +297,55 @@ function emptyItem(label) {
     const item = new NodeItem({ kind: "category", label }, vscode.TreeItemCollapsibleState.None);
     item.iconPath = new vscode.ThemeIcon("circle-slash");
     return item;
+}
+function readSkillsDir(dir) {
+    if (!fs.existsSync(dir))
+        return [];
+    try {
+        return fs.readdirSync(dir, { withFileTypes: true })
+            .filter((e) => e.isDirectory())
+            .map((e) => ({ name: e.name, filePath: path.join(dir, e.name, "SKILL.md"), source: path.basename(dir) }))
+            .filter((s) => fs.existsSync(s.filePath));
+    }
+    catch {
+        return [];
+    }
+}
+async function readEnabledPluginSkills() {
+    try {
+        const { stdout, stderr } = await execAsync("claude plugin list 2>&1", { timeout: 8000 });
+        const clean = (stdout || stderr || "").replace(/\x1b\[[0-9;]*[A-Za-z]/g, "");
+        const skills = [];
+        let pluginName = "";
+        let marketplace = "";
+        let version = "";
+        for (const rawLine of clean.split("\n")) {
+            const line = rawLine.trim();
+            const headerMatch = line.match(/^❯\s+([a-zA-Z0-9_.-]+)@([a-zA-Z0-9_.-]+)/);
+            if (headerMatch) {
+                pluginName = headerMatch[1];
+                marketplace = headerMatch[2];
+                version = "";
+                continue;
+            }
+            const versionMatch = line.match(/^Version:\s+(\S+)/);
+            if (versionMatch) {
+                version = versionMatch[1];
+                continue;
+            }
+            const statusMatch = line.match(/^Status:\s*[✔✘✗]\s*(enabled|disabled)/i);
+            if (statusMatch && statusMatch[1].toLowerCase() === "enabled" && pluginName && version) {
+                const skillsDir = path.join(os.homedir(), ".claude", "plugins", "cache", marketplace, pluginName, version, "skills");
+                for (const s of readSkillsDir(skillsDir)) {
+                    skills.push({ name: s.name, filePath: s.filePath, source: pluginName });
+                }
+            }
+        }
+        return skills;
+    }
+    catch {
+        return [];
+    }
 }
 function parseAgentsOutput(output) {
     const agents = [];
