@@ -277,8 +277,7 @@ const CLAUDE_MODEL_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const TOP_LEVEL_LINKED_FOLDERS = [
     { label: "claude", path: path.join(os.homedir(), ".claude") },
-    { label: "codex", path: path.join(os.homedir(), ".codex") },
-    { label: "opencode", path: path.join(os.homedir(), ".config", "opencode") }
+    { label: "codex", path: path.join(os.homedir(), ".codex") }
 ];
 const ANTIGRAVITY_ROOT_HIDDEN = new Set([
     "argv.json",
@@ -562,30 +561,12 @@ function getClaudeActionItems() {
         command: "antigravity.runLiteLLMOpenAI",
         title: "Run liteLLM OpenAI"
     };
-    const createClaudeMd = new NodeItem({ kind: "action", label: "Create CLAUDE.md" }, vscode.TreeItemCollapsibleState.None);
-    createClaudeMd.iconPath = new vscode.ThemeIcon("debug-start", terminal_1.CLAUDE_ACTION_COLOR);
-    createClaudeMd.command = {
-        command: "antigravity.createClaudeMd",
-        title: "Create CLAUDE.md"
-    };
-    const createAgentMd = new NodeItem({ kind: "action", label: "Create AGENT.md" }, vscode.TreeItemCollapsibleState.None);
-    createAgentMd.iconPath = new vscode.ThemeIcon("debug-start", terminal_1.CLAUDE_ACTION_COLOR);
-    createAgentMd.command = {
-        command: "antigravity.createAgentMd",
-        title: "Create AGENT.md"
-    };
     const updateAgenticWorkspace = new NodeItem({ kind: "action", label: "Update Agentic Workspace" }, vscode.TreeItemCollapsibleState.None);
     updateAgenticWorkspace.iconPath = new vscode.ThemeIcon("cloud-upload", terminal_1.CLAUDE_ACTION_COLOR);
     updateAgenticWorkspace.command = {
         command: "antigravity.updateAgenticWorkspace",
         title: "Update Agentic Workspace"
     };
-    const updateAgenticSetup = new NodeItem({ kind: "action", label: "Update Agentic Setup" }, vscode.TreeItemCollapsibleState.None);
-    updateAgenticSetup.iconPath = new vscode.ThemeIcon("cloud-upload", terminal_1.CLAUDE_ACTION_COLOR);
-    updateAgenticSetup.command = {
-        command: "antigravity.updateAgenticSetup",
-        title: "Update Agentic Setup"
-    };
-    return [item, setClaudeModel, runLiteLLMOpenAI, createClaudeMd, createAgentMd, updateAgenticSetup];
+    return [item, setClaudeModel, runLiteLLMOpenAI, updateAgenticWorkspace];
 }
 //# sourceMappingURL=treeProvider.js.map
