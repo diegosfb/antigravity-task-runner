@@ -203,7 +203,7 @@ class AntigravityViewProvider {
         });
     }
     async getWorkflowItems() {
-        const rootPath = (0, utils_1.getRootPath)();
+        const rootPath = (0, utils_1.getAntigravityHomePath)();
         if (!rootPath) {
             return [missingRootItem()];
         }
@@ -295,9 +295,9 @@ function shouldHideAntigravityEntry(dirPath, entry) {
     return ANTIGRAVITY_ROOT_HIDDEN.has(entry.name);
 }
 function missingRootItem() {
-    const item = new NodeItem({ kind: "category", label: "Missing .agent/antigravity" }, vscode.TreeItemCollapsibleState.None);
+    const item = new NodeItem({ kind: "category", label: "Missing ~/.antigravity" }, vscode.TreeItemCollapsibleState.None);
     item.iconPath = new vscode.ThemeIcon("warning");
-    item.tooltip = "Expected antigravity.rootPath (default ./.agent/antigravity) to exist.";
+    item.tooltip = `Expected ${path.join(os.homedir(), ".gemini", "antigravity")} to exist.`;
     return item;
 }
 function emptyItem(label) {
