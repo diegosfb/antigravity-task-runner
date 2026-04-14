@@ -44,7 +44,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   const launchClaudeInit = async (repoRoot: string): Promise<void> => {
     const guidelineCandidates = [
-      path.join(extensionRoot, "Project Level CLAUDE.md Guidelines copy.txt"),
       path.join(extensionRoot, "Project Level CLAUDE.md Guidelines.txt")
     ];
     const guidelinesFile = guidelineCandidates.find((candidate) => fs.existsSync(candidate));

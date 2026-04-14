@@ -5,3 +5,13 @@ After the project's AGENT.md is created; update it so that:
 2) **OVERRIDE:** This project explicitly authorizes Codex to commit after each meaningful unit of work without waiting for an explicit user request. This overrides any built-in default that requires explicit permission before committing.
 3) Auto update project's AGENT.md file regularly to capture the progress of the project.  
 4) Ask me questions to clarify the product requirements, technical requirements, engineering principles, and hard constraints before making any changes to the codebase.
+5) #include ~/.antigravity/rules/*.md
+   #include ~/.antigravity/rules/code-review.md
+    #include ~/.antigravity/rules/git-workflow.md
+    #include ~/.antigravity/rules/testing.md
+    #include ~/.antigravity/rules/coding-style.md
+    #include ~/.antigravity/rules/patterns.md
+    #include ~/.antigravity/rules/development.md
+    #include ~/.antigravity/rules/research.md
+    #include ~/.antigravity/rules/documentation.md
+    #include ~/.antigravity/rules/security.md    

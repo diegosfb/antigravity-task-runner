@@ -17,7 +17,6 @@ function activate(context) {
     const extensionRoot = context.extensionPath;
     const launchClaudeInit = async (repoRoot) => {
         const guidelineCandidates = [
-            path.join(extensionRoot, "Project Level CLAUDE.md Guidelines copy.txt"),
             path.join(extensionRoot, "Project Level CLAUDE.md Guidelines.txt")
         ];
         const guidelinesFile = guidelineCandidates.find((candidate) => fs.existsSync(candidate));
