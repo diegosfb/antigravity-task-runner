@@ -121,6 +121,14 @@
       {
         "command": "antigravity.backupCompress",
         "title": "Backup-Compress"
+      },
+      {
+        "command": "antigravity.diffMergeSingle",
+        "title": "DiffMerge"
+      },
+      {
+        "command": "antigravity.diffMergeFiles",
+        "title": "DiffMerge files"
       }
     ],
     "viewsContainers": {
@@ -146,6 +154,16 @@
         {
           "command": "antigravity.backupCompress",
           "group": "7_modification@99"
+        },
+        {
+          "command": "antigravity.diffMergeSingle",
+          "when": "resourceScheme == file && !explorerResourceIsFolder && explorerResourceCount == 1",
+          "group": "7_modification@100"
+        },
+        {
+          "command": "antigravity.diffMergeFiles",
+          "when": "resourceScheme == file && !explorerResourceIsFolder && (explorerResourceCount == 2 || explorerResourceCount == 3)",
+          "group": "7_modification@101"
         }
       ],
       "view/title": [

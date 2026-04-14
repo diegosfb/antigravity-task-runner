@@ -1035,6 +1035,53 @@ export function activate(context: vscode.ExtensionContext) {
       });
     })
   );
+  const runDiffMerge = async (uri: vscode.Uri | undefined, uris?: vscode.Uri[]) => {
+    const selectedUris = Array.isArray(uris) && uris.length > 0
+      ? uris
+      : uri
+        ? [uri]
+        : [];
+    if (selectedUris.length === 0) {
+      void vscode.window.showErrorMessage("No files selected.");
+      return;
+    }
+    if (selectedUris.length > 3) {
+      void vscode.window.showErrorMessage("DiffMerge supports selecting up to 3 files from the Explorer menu.");
+      return;
+    }
+
+    const filePaths = selectedUris
+      .map((item) => item.fsPath)
+      .filter((item): item is string => Boolean(item));
+
+    const invalidPath = filePaths.find((filePath) => {
+      try {
+        return fs.statSync(filePath).isDirectory();
+      } catch {
+        return true;
+      }
+    });
+    if (invalidPath) {
+      void vscode.window.showErrorMessage("DiffMerge can only be launched with existing files.");
+      return;
+    }
+
+    const proc = spawn("open", ["-a", "/Applications/DiffMerge.app", ...filePaths], { shell: false });
+    proc.on("error", (error) => {
+      void vscode.window.showErrorMessage(`DiffMerge failed: ${error.message}`);
+    });
+    proc.on("exit", (code) => {
+      if (code && code !== 0) {
+        void vscode.window.showErrorMessage(`DiffMerge exited with code ${code}.`);
+      }
+    });
+  };
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.diffMergeSingle", runDiffMerge)
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.diffMergeFiles", runDiffMerge)
+  );
 }
 
 export function deactivate() { }
