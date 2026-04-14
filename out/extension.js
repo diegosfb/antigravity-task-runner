@@ -583,7 +583,33 @@ function activate(context) {
         if (description === undefined)
             return;
         const trimmed = description.trim();
-        await (0, scripts_1.runRepoScript)("commit-push-tag", trimmed ? [trimmed] : []);
+        await (0, scripts_1.runRepoScript)("commit-push-tag", trimmed ? [trimmed] : [], { scriptDir: path.join(extensionRoot, "src") });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepoTag", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const tagName = await vscode.window.showInputBox({
+            title: "Create Repo Tag",
+            prompt: "Tag name (e.g. v1.0.0)"
+        });
+        if (!tagName?.trim())
+            return;
+        const tag = tagName.trim();
+        const message = await vscode.window.showInputBox({
+            title: "Create Repo Tag",
+            prompt: "Tag message (optional)"
+        });
+        if (message === undefined)
+            return;
+        const msg = message.trim() || tag;
+        (0, terminal_1.runInNewTerminal)("Antigravity", [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            `git tag -a ${(0, utils_1.quoteShellArg)(tag)} -m ${(0, utils_1.quoteShellArg)(msg)} && git push origin ${(0, utils_1.quoteShellArg)(tag)} && echo "[antigravity] tag ${tag} pushed"`,
+        ]);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.autocommitCheckpoint", async () => {
         const rootPath = (0, utils_1.getRootPath)();

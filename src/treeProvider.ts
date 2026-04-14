@@ -525,11 +525,11 @@ function parsePluginListOutput(output: string): Array<{ name: string; enabled: b
 }
 
 function getLinkedFolderItems(): NodeItem[] {
-  const folders = [...TOP_LEVEL_LINKED_FOLDERS];
+  const folders: Array<{ label: string; path: string; isAddons?: boolean }> = [...TOP_LEVEL_LINKED_FOLDERS];
   const rawAddons = vscode.workspace.getConfiguration("antigravity").get<string>("customAgenticPlatformAddons") || "";
   const addonsPath = rawAddons.trim().replace(/^~/, os.homedir());
   if (addonsPath) {
-    folders.push({ label: path.basename(addonsPath) || "addons", path: addonsPath });
+    folders.push({ label: path.basename(addonsPath) || "addons", path: addonsPath, isAddons: true });
   }
   return folders.filter((linked) => fs.existsSync(linked.path)).map(
     (linked) => {
@@ -537,7 +537,10 @@ function getLinkedFolderItems(): NodeItem[] {
         { kind: "folder", label: linked.label, filePath: linked.path },
         vscode.TreeItemCollapsibleState.Collapsed
       );
-      item.iconPath = new vscode.ThemeIcon("folder", WHITE_FOLDER_COLOR);
+      item.iconPath = new vscode.ThemeIcon(
+        "folder",
+        linked.isAddons ? CLAUDE_ACTION_COLOR : WHITE_FOLDER_COLOR
+      );
       item.tooltip = linked.path;
       item.contextValue = "antigravityFolderItem";
       return item;
@@ -626,13 +629,13 @@ function getQuickActionItems(): NodeItem[] {
   items.push(incrementPatch);
 
   const createRepoTagVersion = new NodeItem(
-    { kind: "action", label: "Create Repo Tag Version" },
+    { kind: "action", label: "Create Repo Release" },
     vscode.TreeItemCollapsibleState.None
   );
   createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", QUICK_ACTION_COLOR);
   createRepoTagVersion.command = {
     command: "antigravity.createRepoTagVersion",
-    title: "Create Repo Tag Version"
+    title: "Create Repo Release"
   };
   items.push(createRepoTagVersion);
 
@@ -709,14 +712,5 @@ function getClaudeActionItems(): NodeItem[] {
     command: "antigravity.runLiteLLMOpenAI",
     title: "Run liteLLM OpenAI"
   };
-  const updateAgenticWorkspace = new NodeItem(
-    { kind: "action", label: "Update Agentic Workspace" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  updateAgenticWorkspace.iconPath = new vscode.ThemeIcon("cloud-upload", CLAUDE_ACTION_COLOR);
-  updateAgenticWorkspace.command = {
-    command: "antigravity.updateAgenticWorkspace",
-    title: "Update Agentic Workspace"
-  };
-  return [item, setClaudeModel, runLiteLLMOpenAI, updateAgenticWorkspace];
+  return [item, setClaudeModel, runLiteLLMOpenAI];
 }

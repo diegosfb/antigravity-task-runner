@@ -743,7 +743,34 @@ export function activate(context: vscode.ExtensionContext) {
       });
       if (description === undefined) return;
       const trimmed = description.trim();
-      await runRepoScript("commit-push-tag", trimmed ? [trimmed] : []);
+      await runRepoScript("commit-push-tag", trimmed ? [trimmed] : [], { scriptDir: path.join(extensionRoot, "src") });
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.createRepoTag", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      const tagName = await vscode.window.showInputBox({
+        title: "Create Repo Tag",
+        prompt: "Tag name (e.g. v1.0.0)"
+      });
+      if (!tagName?.trim()) return;
+      const tag = tagName.trim();
+      const message = await vscode.window.showInputBox({
+        title: "Create Repo Tag",
+        prompt: "Tag message (optional)"
+      });
+      if (message === undefined) return;
+      const msg = message.trim() || tag;
+      runInNewTerminal("Antigravity", [
+        `cd ${quoteShellArg(repoRoot)}`,
+        `git tag -a ${quoteShellArg(tag)} -m ${quoteShellArg(msg)} && git push origin ${quoteShellArg(tag)} && echo "[antigravity] tag ${tag} pushed"`,
+      ]);
     })
   );
 
