@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { quoteShellArg } from "./utils";
 
 export const CLAUDE_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
 
@@ -54,9 +55,13 @@ export async function runCodexInitAndUpdateInNewTerminal(
   repoRoot: string,
   prompt: string
 ): Promise<void> {
+  const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
   runInNewTerminal(
     "Codex Init",
-    [`cd "${repoRoot}"`, `codex "${prompt.replace(/"/g, '\\"')}"`],
+    [
+      `cd ${quoteShellArg(repoRoot)}`,
+      `codex -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} ${quoteShellArg(prompt)}`
+    ],
     {
       iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
       color: CLAUDE_ACTION_COLOR

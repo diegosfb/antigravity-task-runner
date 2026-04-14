@@ -7,6 +7,7 @@ exports.runClaudeInitAndUpdateInNewTerminal = runClaudeInitAndUpdateInNewTermina
 exports.runCodexInitAndUpdateInNewTerminal = runCodexInitAndUpdateInNewTerminal;
 exports.runClaudePromptInNewTerminal = runClaudePromptInNewTerminal;
 const vscode = require("vscode");
+const utils_1 = require("./utils");
 exports.CLAUDE_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
 function getOrCreateTerminal(name) {
     const existing = vscode.window.terminals.find((t) => t.name === name);
@@ -40,7 +41,11 @@ async function runClaudeInitAndUpdateInNewTerminal(repoRoot, prompt) {
     });
 }
 async function runCodexInitAndUpdateInNewTerminal(repoRoot, prompt) {
-    runInNewTerminal("Codex Init", [`cd "${repoRoot}"`, `codex "${prompt.replace(/"/g, '\\"')}"`], {
+    const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
+    runInNewTerminal("Codex Init", [
+        `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+        `codex -C ${(0, utils_1.quoteShellArg)(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${(0, utils_1.quoteShellArg)(trustOverride)} ${(0, utils_1.quoteShellArg)(prompt)}`
+    ], {
         iconPath: new vscode.ThemeIcon("robot", exports.CLAUDE_ACTION_COLOR),
         color: exports.CLAUDE_ACTION_COLOR
     });
