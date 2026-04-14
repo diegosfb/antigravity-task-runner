@@ -513,10 +513,10 @@ function activate(context) {
             void vscode.window.showErrorMessage(`workspace-setup.sh failed (exit ${exitCode}). Check the Antigravity Task Runner output panel.`);
             return;
         }
-        (0, logger_1.logAlways)(`[Workspace Setup] launching Claude init`);
-        await launchClaudeInit(repoRoot);
-        (0, logger_1.logAlways)(`[Workspace Setup] Claude init launched, launching Agent init`);
+        (0, logger_1.logAlways)(`[Workspace Setup] launching AGENTS.md init`);
         await launchAgentInit(repoRoot);
+        // await launchClaudeInit(repoRoot);
+        (0, logger_1.logAlways)(`[Workspace Setup] AGENTS.md init launched`);
         (0, logger_1.logAlways)(`[Workspace Setup] Done`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.initRepository", async () => {
@@ -608,7 +608,7 @@ function activate(context) {
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             (0, logger_1.log)(`[createAgentMd] ERROR: ${message}`);
-            void vscode.window.showErrorMessage(`Create AGENT.md failed: ${message}`);
+            void vscode.window.showErrorMessage(`Create AGENTS.md failed: ${message}`);
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepository", async () => {

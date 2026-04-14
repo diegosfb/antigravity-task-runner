@@ -624,10 +624,10 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      logAlways(`[Workspace Setup] launching Claude init`);
-      await launchClaudeInit(repoRoot);
-      logAlways(`[Workspace Setup] Claude init launched, launching Agent init`);
+      logAlways(`[Workspace Setup] launching AGENTS.md init`);
       await launchAgentInit(repoRoot);
+      // await launchClaudeInit(repoRoot);
+      logAlways(`[Workspace Setup] AGENTS.md init launched`);
       logAlways(`[Workspace Setup] Done`);
     })
   );
@@ -738,7 +738,7 @@ export function activate(context: vscode.ExtensionContext) {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         log(`[createAgentMd] ERROR: ${message}`);
-        void vscode.window.showErrorMessage(`Create AGENT.md failed: ${message}`);
+        void vscode.window.showErrorMessage(`Create AGENTS.md failed: ${message}`);
       }
     })
   );

@@ -72,7 +72,7 @@
       },
       {
         "command": "antigravity.createAgentMd",
-        "title": "Antigravity: Create AGENT.md"
+        "title": "Antigravity: Create AGENTS.md"
       },
       {
         "command": "antigravity.updateAgenticWorkspace",
