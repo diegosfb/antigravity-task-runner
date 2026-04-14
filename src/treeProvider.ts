@@ -94,7 +94,7 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
         { kind: "category", label: "Skills" },
         vscode.TreeItemCollapsibleState.Collapsed
       );
-      skills.iconPath = new vscode.ThemeIcon("symbol-method");
+      skills.iconPath = new vscode.ThemeIcon("symbol-method", new vscode.ThemeColor("charts.purple"));
 
       const workflows = new NodeItem(
         { kind: "category", label: "Workflows" },
@@ -109,7 +109,7 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
         { kind: "folder", label: "Claude Plugins", filePath: claudePluginsPath },
         vscode.TreeItemCollapsibleState.Collapsed
       );
-      claudePlugins.iconPath = new vscode.ThemeIcon("folder", WHITE_FOLDER_COLOR);
+      claudePlugins.iconPath = new vscode.ThemeIcon("extensions", new vscode.ThemeColor("charts.purple"));
       claudePlugins.tooltip = claudePluginsPath;
       claudePlugins.contextValue = "antigravityFolderItem";
 
@@ -225,11 +225,19 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
 
     const allSkills: Array<{ name: string; filePath: string; source: string; section: string }> = [];
 
-    // Project skills: <repoRoot>/.claude/skills/<name>/SKILL.md
+    // Project skills: <workspaceProjectPath>/.agent/skills/ and <repoRoot>/.claude/skills/ (deduped)
     if (repoRoot) {
-      const dir = path.join(repoRoot, ".claude", "skills");
-      for (const s of readSkillsDir(dir)) {
+      const projectBase = getWorkspaceProjectPath(repoRoot);
+      const seenProjectSkills = new Set<string>();
+      for (const s of readSkillsDir(path.join(projectBase, ".agent", "skills"))) {
+        seenProjectSkills.add(s.name);
         allSkills.push({ ...s, section: "Project" });
+      }
+      // .claude/skills is often a symlink to .agent/skills — only add extras
+      for (const s of readSkillsDir(path.join(repoRoot, ".claude", "skills"))) {
+        if (!seenProjectSkills.has(s.name)) {
+          allSkills.push({ ...s, section: "Project" });
+        }
       }
     }
 
@@ -394,7 +402,14 @@ function readSkillsDir(dir: string): Array<{ name: string; filePath: string; sou
   if (!fs.existsSync(dir)) return [];
   try {
     return fs.readdirSync(dir, { withFileTypes: true })
-      .filter((e) => e.isDirectory())
+      .filter((e) => {
+        // isDirectory() returns false for symlinks — follow them explicitly
+        if (e.isDirectory()) return true;
+        if (e.isSymbolicLink()) {
+          try { return fs.statSync(path.join(dir, e.name)).isDirectory(); } catch { return false; }
+        }
+        return false;
+      })
       .map((e) => ({ name: e.name, filePath: path.join(dir, e.name, "SKILL.md"), source: path.basename(dir) }))
       .filter((s) => fs.existsSync(s.filePath));
   } catch {
