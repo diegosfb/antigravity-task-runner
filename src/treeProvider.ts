@@ -181,12 +181,10 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
         user: "account",
         plugin: "extensions",
         "built-in": "robot",
-        project: "home"
+        project: "account"
       };
-      const PROJECT_COLOR = new vscode.ThemeColor("terminal.ansiGreen");
       return agents.map(({ name, model, section }) => {
         const sectionKey = section.toLowerCase();
-        const isProject = sectionKey === "project";
         const item = new NodeItem(
           { kind: "agent", label: name, filePath: name },
           vscode.TreeItemCollapsibleState.None
@@ -196,7 +194,7 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
         item.tooltip = `${section} agent · ${model}`;
         item.iconPath = new vscode.ThemeIcon(
           SECTION_ICON[sectionKey] ?? "robot",
-          isProject ? PROJECT_COLOR : CLAUDE_ACTION_COLOR
+          CLAUDE_ACTION_COLOR
         );
         item.command = {
           command: "antigravity.runClaudeAgent",

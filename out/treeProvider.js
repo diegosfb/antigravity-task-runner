@@ -130,17 +130,15 @@ class AntigravityViewProvider {
                 user: "account",
                 plugin: "extensions",
                 "built-in": "robot",
-                project: "home"
+                project: "account"
             };
-            const PROJECT_COLOR = new vscode.ThemeColor("terminal.ansiGreen");
             return agents.map(({ name, model, section }) => {
                 const sectionKey = section.toLowerCase();
-                const isProject = sectionKey === "project";
                 const item = new NodeItem({ kind: "agent", label: name, filePath: name }, vscode.TreeItemCollapsibleState.None);
                 item.contextValue = "antigravityClaudeAgent";
                 item.description = model;
                 item.tooltip = `${section} agent · ${model}`;
-                item.iconPath = new vscode.ThemeIcon(SECTION_ICON[sectionKey] ?? "robot", isProject ? PROJECT_COLOR : terminal_1.CLAUDE_ACTION_COLOR);
+                item.iconPath = new vscode.ThemeIcon(SECTION_ICON[sectionKey] ?? "robot", terminal_1.CLAUDE_ACTION_COLOR);
                 item.command = {
                     command: "antigravity.runClaudeAgent",
                     title: `Run ${name}`,
