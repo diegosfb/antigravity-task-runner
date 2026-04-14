@@ -168,36 +168,39 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
   }
 
   private async getAgentItems(): Promise<NodeItem[]> {
-    const rootPath = getAntigravityHomePath();
-    if (!rootPath) {
-      return [missingRootItem()];
-    }
-
-    const agentsDir = path.join(rootPath, "agents");
-    const entries = await safeReadDir(agentsDir);
-
-    const directories = entries.filter((entry) => entry.isDirectory());
-    const items = directories
-      .map((entry) => {
-        const agentDir = path.join(agentsDir, entry.name);
-        const agentFile = path.join(agentDir, "AGENT.md");
-        const agentName = entry.name;
+    try {
+      const { stdout, stderr } = await execAsync("claude agents 2>&1", { timeout: 8000 });
+      const agents = parseAgentsOutput(stdout || stderr || "");
+      if (agents.length === 0) {
+        return [emptyItem("No agents found")];
+      }
+      const SECTION_ICON: Record<string, string> = {
+        user: "account",
+        plugin: "extensions",
+        "built-in": "robot"
+      };
+      return agents.map(({ name, model, section }) => {
         const item = new NodeItem(
-          { kind: "agent", label: agentName, filePath: agentFile },
+          { kind: "agent", label: name, filePath: name },
           vscode.TreeItemCollapsibleState.None
         );
-        item.contextValue = "antigravityAgent";
+        item.contextValue = "antigravityClaudeAgent";
+        item.description = model;
+        item.tooltip = `${section} agent · ${model}`;
+        item.iconPath = new vscode.ThemeIcon(
+          SECTION_ICON[section.toLowerCase()] ?? "robot",
+          CLAUDE_ACTION_COLOR
+        );
         item.command = {
-          command: "antigravity.runAgent",
-          title: `Run ${agentName}`,
-          arguments: [agentName, agentFile]
+          command: "antigravity.runClaudeAgent",
+          title: `Run ${name}`,
+          arguments: [name]
         };
-        item.iconPath = new vscode.ThemeIcon("robot");
         return item;
-      })
-      .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-
-    return items.length > 0 ? items : [emptyItem("No agents found")];
+      });
+    } catch {
+      return [emptyItem("Failed to list agents")];
+    }
   }
 
   private async getWorkflowItems(): Promise<NodeItem[]> {
@@ -322,6 +325,33 @@ function emptyItem(label: string): NodeItem {
   const item = new NodeItem({ kind: "category", label }, vscode.TreeItemCollapsibleState.None);
   item.iconPath = new vscode.ThemeIcon("circle-slash");
   return item;
+}
+
+function parseAgentsOutput(output: string): Array<{ name: string; model: string; section: string }> {
+  const agents: Array<{ name: string; model: string; section: string }> = [];
+  let currentSection = "";
+
+  for (const rawLine of output.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // Section header: "User agents:", "Plugin agents:", "Built-in agents:"
+    const sectionMatch = line.match(/^(.+?)\s+agents:\s*$/i);
+    if (sectionMatch) {
+      currentSection = sectionMatch[1].trim();
+      continue;
+    }
+
+    // Agent line: "ai-advisor · inherit · user memory"
+    const agentMatch = line.match(/^([a-zA-Z0-9_:.-]+)\s+·\s+(.+)/);
+    if (agentMatch && currentSection) {
+      const name = agentMatch[1];
+      const model = agentMatch[2].split(" · ")[0].trim();
+      agents.push({ name, model, section: currentSection });
+    }
+  }
+
+  return agents;
 }
 
 function parsePluginListOutput(output: string): Array<{ name: string; enabled: boolean }> {

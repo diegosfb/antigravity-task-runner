@@ -86,6 +86,24 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.runClaudeAgent", async (agentName: string) => {
+      if (!agentName) {
+        void vscode.window.showErrorMessage("Agent name is missing.");
+        return;
+      }
+      const rootPath = getRootPath();
+      const repoRoot = rootPath ? getRepoRoot(rootPath) : process.cwd();
+      runInNewTerminal(`Agent: ${agentName}`, [
+        `cd ${quoteShellArg(repoRoot)}`,
+        `claude --agent ${quoteShellArg(agentName)}`
+      ], {
+        iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
+        color: CLAUDE_ACTION_COLOR
+      });
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand(
       "antigravity.runAgent",
       async (agentName: string, filePath: string) => {

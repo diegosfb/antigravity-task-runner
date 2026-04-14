@@ -45,6 +45,21 @@ function activate(context) {
             void vscode.window.showInformationMessage("Antigravity settings updated.");
         }, undefined, context.subscriptions);
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.runClaudeAgent", async (agentName) => {
+        if (!agentName) {
+            void vscode.window.showErrorMessage("Agent name is missing.");
+            return;
+        }
+        const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : process.cwd();
+        (0, terminal_1.runInNewTerminal)(`Agent: ${agentName}`, [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            `claude --agent ${(0, utils_1.quoteShellArg)(agentName)}`
+        ], {
+            iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
+            color: terminal_1.CLAUDE_ACTION_COLOR
+        });
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.runAgent", async (agentName, filePath) => {
         if (!agentName) {
             void vscode.window.showErrorMessage("Agent name is missing.");
