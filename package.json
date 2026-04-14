@@ -157,12 +157,12 @@
         },
         {
           "command": "antigravity.diffMergeSingle",
-          "when": "resourceScheme == file && !explorerResourceIsFolder && explorerResourceCount == 1",
+          "when": "resourceScheme == file && !explorerResourceIsFolder && !listMultiSelection",
           "group": "7_modification@100"
         },
         {
           "command": "antigravity.diffMergeFiles",
-          "when": "resourceScheme == file && !explorerResourceIsFolder && (explorerResourceCount == 2 || explorerResourceCount == 3)",
+          "when": "resourceScheme == file && !explorerResourceIsFolder && listMultiSelection",
           "group": "7_modification@101"
         }
       ],
