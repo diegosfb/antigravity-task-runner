@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initLogger = initLogger;
 exports.log = log;
+exports.logAlways = logAlways;
+exports.showOutputChannel = showOutputChannel;
 const vscode = require("vscode");
 let outputChannel;
 function initLogger(channel) {
@@ -13,5 +15,12 @@ function log(message) {
         return;
     const timestamp = new Date().toISOString();
     outputChannel?.appendLine(`${timestamp} ${message}`);
+}
+function logAlways(message) {
+    const timestamp = new Date().toISOString();
+    outputChannel?.appendLine(`${timestamp} ${message}`);
+}
+function showOutputChannel() {
+    outputChannel?.show(true);
 }
 //# sourceMappingURL=logger.js.map

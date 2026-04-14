@@ -12,3 +12,12 @@ export function log(message: string): void {
   const timestamp = new Date().toISOString();
   outputChannel?.appendLine(`${timestamp} ${message}`);
 }
+
+export function logAlways(message: string): void {
+  const timestamp = new Date().toISOString();
+  outputChannel?.appendLine(`${timestamp} ${message}`);
+}
+
+export function showOutputChannel(): void {
+  outputChannel?.show(true);
+}

@@ -6,31 +6,45 @@ const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const child_process_1 = require("child_process");
 const treeProvider_1 = require("./treeProvider");
 const git_1 = require("./git");
 const terminal_1 = require("./terminal");
 const settings_1 = require("./settings");
 const scripts_1 = require("./scripts");
 const utils_1 = require("./utils");
+const logger_1 = require("./logger");
 function activate(context) {
+    const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
+    context.subscriptions.push(outputChannel);
+    (0, logger_1.initLogger)(outputChannel);
     const provider = new treeProvider_1.AntigravityViewProvider();
     const extensionRoot = context.extensionPath;
+    (0, logger_1.log)(`[activate] Extension root: ${extensionRoot}`);
     const launchClaudeInit = async (repoRoot) => {
+        (0, logger_1.log)(`[launchClaudeInit] repoRoot: ${repoRoot}`);
         const guidelineCandidates = [
             path.join(extensionRoot, "Project Level CLAUDE.md Guidelines.txt")
         ];
         const guidelinesFile = guidelineCandidates.find((candidate) => fs.existsSync(candidate));
+        (0, logger_1.log)(`[launchClaudeInit] guidelinesFile: ${guidelinesFile ?? "not found, using /init"}`);
         const prompt = guidelinesFile
             ? fs.readFileSync(guidelinesFile, "utf8").trim()
             : "/init";
+        (0, logger_1.log)(`[launchClaudeInit] launching Claude init terminal`);
         await (0, terminal_1.runClaudeInitAndUpdateInNewTerminal)(repoRoot, prompt);
+        (0, logger_1.log)(`[launchClaudeInit] done`);
     };
     const launchAgentInit = async (repoRoot) => {
+        (0, logger_1.log)(`[launchAgentInit] repoRoot: ${repoRoot}`);
         const guidelinesFile = path.join(extensionRoot, "Project Level AGENT.md Guidelines.txt");
+        (0, logger_1.log)(`[launchAgentInit] guidelinesFile: ${guidelinesFile} exists=${fs.existsSync(guidelinesFile)}`);
         const prompt = fs.existsSync(guidelinesFile)
             ? fs.readFileSync(guidelinesFile, "utf8").trim()
             : "/init";
+        (0, logger_1.log)(`[launchAgentInit] launching Codex init terminal`);
         await (0, terminal_1.runCodexInitAndUpdateInNewTerminal)(repoRoot, prompt);
+        (0, logger_1.log)(`[launchAgentInit] done`);
     };
     context.subscriptions.push(vscode.window.registerTreeDataProvider("antigravityView", provider));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openSettings", async () => {
@@ -63,12 +77,15 @@ function activate(context) {
         }, undefined, context.subscriptions);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.runClaudeAgent", async (agentName) => {
+        (0, logger_1.log)(`[runClaudeAgent] agentName: ${agentName}`);
         if (!agentName) {
+            (0, logger_1.log)(`[runClaudeAgent] ERROR: agent name missing`);
             void vscode.window.showErrorMessage("Agent name is missing.");
             return;
         }
         const rootPath = (0, utils_1.getRootPath)();
         const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : process.cwd();
+        (0, logger_1.log)(`[runClaudeAgent] repoRoot: ${repoRoot}`);
         (0, terminal_1.runInNewTerminal)(`Agent: ${agentName}`, [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
             `claude --agent ${(0, utils_1.quoteShellArg)(agentName)}`
@@ -78,14 +95,18 @@ function activate(context) {
         });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.runAgent", async (agentName, filePath) => {
+        (0, logger_1.log)(`[runAgent] agentName: ${agentName}, filePath: ${filePath}`);
         if (!agentName) {
+            (0, logger_1.log)(`[runAgent] ERROR: agent name missing`);
             void vscode.window.showErrorMessage("Agent name is missing.");
             return;
         }
         if (!filePath || !fs.existsSync(filePath)) {
+            (0, logger_1.log)(`[runAgent] ERROR: agent file not found: ${filePath}`);
             void vscode.window.showErrorMessage("Agent file not found.");
             return;
         }
+        (0, logger_1.log)(`[runAgent] running agent`);
         await (0, scripts_1.runAgent)(agentName, filePath);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openAgent", async (filePath) => {
@@ -293,20 +314,26 @@ function activate(context) {
         setTimeout(() => provider.refresh(), 1500);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.runWorkflow", async (filePath) => {
+        (0, logger_1.log)(`[runWorkflow] filePath: ${filePath}`);
         if (!filePath || !fs.existsSync(filePath)) {
+            (0, logger_1.log)(`[runWorkflow] ERROR: workflow file not found: ${filePath}`);
             void vscode.window.showErrorMessage("Workflow file not found.");
             return;
         }
+        (0, logger_1.log)(`[runWorkflow] running workflow`);
         await (0, scripts_1.runWorkflow)(filePath);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openClaudeTerminal", async () => {
+        (0, logger_1.log)(`[openClaudeTerminal] triggered`);
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
+                (0, logger_1.log)(`[openClaudeTerminal] ERROR: rootPath not set`);
                 void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.log)(`[openClaudeTerminal] repoRoot: ${repoRoot}`);
             const baseUrl = await (0, settings_1.readClaudeAnthropicBaseUrl)(repoRoot);
             if ((0, settings_1.isLocalLiteLLMBaseUrl)(baseUrl)) {
                 await vscode.commands.executeCommand("antigravity.runLiteLLMOpenAI");
@@ -435,33 +462,73 @@ function activate(context) {
         }, undefined, context.subscriptions);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.workspaceSetup", async () => {
-        const rootPath = (0, utils_1.getRootPath)();
-        if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        (0, logger_1.showOutputChannel)();
+        (0, logger_1.logAlways)("[Workspace Setup] Command triggered");
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspaceRoot) {
+            (0, logger_1.logAlways)("[Workspace Setup] ERROR: No workspace folder is open");
+            void vscode.window.showErrorMessage("No workspace folder is open.");
             return;
         }
-        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        (0, logger_1.logAlways)(`[Workspace Setup] workspaceRoot: ${workspaceRoot}`);
+        const repoRoot = workspaceRoot;
         const workspaceDir = (0, utils_1.getWorkspaceProjectPath)(repoRoot);
-        const hasAgentFolder = fs.existsSync(path.join(workspaceDir, ".agent"));
-        if (hasAgentFolder) {
-            const selection = await vscode.window.showWarningMessage("There is already a .agent at the project. Do you still want to run Workspace Setup?", { modal: true }, "Yes", "No");
-            if (selection !== "Yes")
-                return;
-        }
+        (0, logger_1.logAlways)(`[Workspace Setup] workspaceDir: ${workspaceDir}`);
         if (!fs.existsSync(workspaceDir)) {
+            (0, logger_1.logAlways)(`[Workspace Setup] workspaceDir does not exist, creating: ${workspaceDir}`);
             fs.mkdirSync(path.join(workspaceDir, "scripts"), { recursive: true });
         }
-        await (0, scripts_1.runRepoScript)("workspace-setup", ["--force"], { cwd: workspaceDir, scriptDir: path.join(extensionRoot, "src") });
+        const scriptPath = path.join(extensionRoot, "src", "workspace-setup.sh");
+        (0, logger_1.logAlways)(`[Workspace Setup] scriptPath: ${scriptPath}`);
+        if (!fs.existsSync(scriptPath)) {
+            (0, logger_1.logAlways)(`[Workspace Setup] ERROR: workspace-setup.sh not found at: ${scriptPath}`);
+            void vscode.window.showErrorMessage(`workspace-setup.sh not found in extension at: ${scriptPath}`);
+            return;
+        }
+        (0, logger_1.logAlways)(`[Workspace Setup] workspace-setup.sh found, making executable`);
+        await fs.promises.chmod(scriptPath, 0o755).catch((e) => (0, logger_1.logAlways)(`[Workspace Setup] chmod failed: ${e}`));
+        (0, logger_1.logAlways)(`[Workspace Setup] running workspace-setup.sh in: ${workspaceDir}`);
+        const exitCode = await new Promise((resolve) => {
+            const proc = (0, child_process_1.spawn)(scriptPath, ["--force"], { cwd: workspaceDir, shell: false });
+            proc.stdout.on("data", (data) => {
+                for (const line of data.toString().split("\n")) {
+                    if (line.trim())
+                        (0, logger_1.logAlways)(`[workspace-setup.sh] ${line}`);
+                }
+            });
+            proc.stderr.on("data", (data) => {
+                for (const line of data.toString().split("\n")) {
+                    if (line.trim())
+                        (0, logger_1.logAlways)(`[workspace-setup.sh STDERR] ${line}`);
+                }
+            });
+            proc.on("close", (code) => resolve(code ?? 1));
+            proc.on("error", (err) => {
+                (0, logger_1.logAlways)(`[Workspace Setup] spawn error: ${err.message}`);
+                resolve(1);
+            });
+        });
+        (0, logger_1.logAlways)(`[Workspace Setup] workspace-setup.sh exited with code: ${exitCode}`);
+        if (exitCode !== 0) {
+            void vscode.window.showErrorMessage(`workspace-setup.sh failed (exit ${exitCode}). Check the Antigravity Task Runner output panel.`);
+            return;
+        }
+        (0, logger_1.logAlways)(`[Workspace Setup] launching Claude init`);
         await launchClaudeInit(repoRoot);
+        (0, logger_1.logAlways)(`[Workspace Setup] Claude init launched, launching Agent init`);
         await launchAgentInit(repoRoot);
+        (0, logger_1.logAlways)(`[Workspace Setup] Done`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.initRepository", async () => {
+        (0, logger_1.log)(`[initRepository] triggered`);
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
+            (0, logger_1.log)(`[initRepository] ERROR: rootPath not set`);
             void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        (0, logger_1.log)(`[initRepository] repoRoot: ${repoRoot}`);
         if (fs.existsSync(path.join(repoRoot, ".git"))) {
             void vscode.window.showWarningMessage("A Git repository already exists in this project.");
             return;
@@ -507,32 +574,40 @@ function activate(context) {
         await (0, terminal_1.runInSecondaryTerminal)([`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, command]);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createClaudeMd", async () => {
+        (0, logger_1.log)(`[createClaudeMd] triggered`);
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
+                (0, logger_1.log)(`[createClaudeMd] ERROR: rootPath not set`);
                 void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.log)(`[createClaudeMd] repoRoot: ${repoRoot}`);
             await launchClaudeInit(repoRoot);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.log)(`[createClaudeMd] ERROR: ${message}`);
             void vscode.window.showErrorMessage(`Create CLAUDE.md failed: ${message}`);
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createAgentMd", async () => {
+        (0, logger_1.log)(`[createAgentMd] triggered`);
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
+                (0, logger_1.log)(`[createAgentMd] ERROR: rootPath not set`);
                 void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.log)(`[createAgentMd] repoRoot: ${repoRoot}`);
             await launchAgentInit(repoRoot);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.log)(`[createAgentMd] ERROR: ${message}`);
             void vscode.window.showErrorMessage(`Create AGENT.md failed: ${message}`);
         }
     }));
@@ -575,6 +650,7 @@ function activate(context) {
         await (0, scripts_1.runRepoScript)("bump-version", ["patch"]);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepoTagVersion", async () => {
+        (0, logger_1.log)(`[createRepoTagVersion] triggered`);
         const description = await vscode.window.showInputBox({
             title: "Create Repo Tag Version",
             prompt: "Add a tag description (optional)"
@@ -582,6 +658,7 @@ function activate(context) {
         if (description === undefined)
             return;
         const trimmed = description.trim();
+        (0, logger_1.log)(`[createRepoTagVersion] description: "${trimmed}"`);
         await (0, scripts_1.runRepoScript)("commit-push-tag", trimmed ? [trimmed] : [], { scriptDir: path.join(extensionRoot, "src") });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepoTag", async () => {
@@ -726,6 +803,31 @@ function activate(context) {
                 await (0, terminal_1.runInSecondaryTerminal)([`echo "[antigravity] ERROR: ${String(err)}"`]);
             }
         }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.backupCompress", async (uri) => {
+        const targetPath = uri?.fsPath;
+        if (!targetPath) {
+            void vscode.window.showErrorMessage("No file or folder selected.");
+            return;
+        }
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, "0");
+        const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+        const dir = path.dirname(targetPath);
+        const base = path.basename(targetPath);
+        const zipName = `${base} [${timestamp}].zip`;
+        const zipPath = path.join(dir, zipName);
+        const isDir = fs.statSync(targetPath).isDirectory();
+        const flag = isDir ? "-r" : "";
+        const cmd = `zip ${flag} ${(0, utils_1.quoteShellArg)(zipPath)} ${(0, utils_1.quoteShellArg)(base)}`.trim();
+        (0, child_process_1.exec)(cmd, { cwd: dir }, (error) => {
+            if (error) {
+                void vscode.window.showErrorMessage(`Backup-Compress failed: ${error.message}`);
+            }
+            else {
+                void vscode.window.showInformationMessage(`Backup created: ${zipName}`);
+            }
+        });
     }));
 }
 function deactivate() { }

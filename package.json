@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.2.1",
+  "version": "4.2.16",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -117,6 +117,10 @@
       {
         "command": "antigravity.createRepoTag",
         "title": "Antigravity: Create Repo Tag"
+      },
+      {
+        "command": "antigravity.backupCompress",
+        "title": "Backup-Compress"
       }
     ],
     "viewsContainers": {
@@ -132,12 +136,18 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.2.1",
+          "name": "Tasky Runner v4.2.16",
           "icon": "Resources/taskrunner.svg"
         }
       ]
     },
     "menus": {
+      "explorer/context": [
+        {
+          "command": "antigravity.backupCompress",
+          "group": "7_modification@99"
+        }
+      ],
       "view/title": [
         {
           "command": "antigravity.openSettings",
@@ -253,7 +263,7 @@
         },
         "antigravity.enableDebugLogging": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "When enabled, debug logs are written to the Antigravity output channel."
         },
         "antigravity.claudeSetupGithub": {
@@ -300,7 +310,8 @@
     "compile": "node node_modules/typescript/lib/tsc.js -p ./",
     "create-release": "bash scripts/create-release.sh",
     "sync-view-name": "node src/sync-view-name.js",
-    "version": "node src/sync-view-name.js"
+    "version": "node src/sync-view-name.js",
+    "bump-version": "./scripts/bump-version.sh"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
