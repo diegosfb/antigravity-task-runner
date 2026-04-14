@@ -71,6 +71,10 @@
         "title": "Antigravity: Create CLAUDE.md"
       },
       {
+        "command": "antigravity.createAgentMd",
+        "title": "Antigravity: Create AGENT.md"
+      },
+      {
         "command": "antigravity.updateAgenticWorkspace",
         "title": "Antigravity: Update Agentic Workspace"
       },
@@ -276,7 +280,8 @@
     "Resources/**",
     "package.json",
     "LICENSE",
-    "Project Level CLAUDE.md Guidelines.txt",
+    "Project Level CLAUDE.md Guidelines copy.txt",
+    "Project Level AGENT.md Guidelines.txt",
     "routerconfig.example.json",
     "src/Switch-ClaudeCode-Model.sh",
     "src/autocommit_changes.sh",

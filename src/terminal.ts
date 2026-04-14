@@ -50,6 +50,20 @@ export async function runClaudeInitAndUpdateInNewTerminal(
   );
 }
 
+export async function runCodexInitAndUpdateInNewTerminal(
+  repoRoot: string,
+  prompt: string
+): Promise<void> {
+  runInNewTerminal(
+    "Codex Init",
+    [`cd "${repoRoot}"`, `codex "${prompt.replace(/"/g, '\\"')}"`],
+    {
+      iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
+      color: CLAUDE_ACTION_COLOR
+    }
+  );
+}
+
 export function runClaudePromptInNewTerminal(repoRoot: string, prompt: string): void {
   runInNewTerminal(
     "Claude",

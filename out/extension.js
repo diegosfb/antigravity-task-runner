@@ -495,8 +495,12 @@ function activate(context) {
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-            const guidelinesFile = path.join(extensionRoot, "Project Level CLAUDE.md Guidelines.txt");
-            const prompt = fs.existsSync(guidelinesFile)
+            const guidelineCandidates = [
+                path.join(extensionRoot, "Project Level CLAUDE.md Guidelines copy.txt"),
+                path.join(extensionRoot, "Project Level CLAUDE.md Guidelines.txt")
+            ];
+            const guidelinesFile = guidelineCandidates.find((candidate) => fs.existsSync(candidate));
+            const prompt = guidelinesFile
                 ? fs.readFileSync(guidelinesFile, "utf8").trim()
                 : "/init";
             await (0, terminal_1.runClaudeInitAndUpdateInNewTerminal)(repoRoot, prompt);
@@ -504,6 +508,25 @@ function activate(context) {
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             void vscode.window.showErrorMessage(`Create CLAUDE.md failed: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.createAgentMd", async () => {
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            const guidelinesFile = path.join(extensionRoot, "Project Level AGENT.md Guidelines.txt");
+            const prompt = fs.existsSync(guidelinesFile)
+                ? fs.readFileSync(guidelinesFile, "utf8").trim()
+                : "/init";
+            await (0, terminal_1.runCodexInitAndUpdateInNewTerminal)(repoRoot, prompt);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Create AGENT.md failed: ${message}`);
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepository", async () => {

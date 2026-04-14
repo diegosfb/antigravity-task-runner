@@ -568,6 +568,12 @@ function getClaudeActionItems() {
         command: "antigravity.createClaudeMd",
         title: "Create CLAUDE.md"
     };
+    const createAgentMd = new NodeItem({ kind: "action", label: "Create AGENT.md" }, vscode.TreeItemCollapsibleState.None);
+    createAgentMd.iconPath = new vscode.ThemeIcon("debug-start", terminal_1.CLAUDE_ACTION_COLOR);
+    createAgentMd.command = {
+        command: "antigravity.createAgentMd",
+        title: "Create AGENT.md"
+    };
     const updateAgenticWorkspace = new NodeItem({ kind: "action", label: "Update Agentic Workspace" }, vscode.TreeItemCollapsibleState.None);
     updateAgenticWorkspace.iconPath = new vscode.ThemeIcon("cloud-upload", terminal_1.CLAUDE_ACTION_COLOR);
     updateAgenticWorkspace.command = {
@@ -580,6 +586,6 @@ function getClaudeActionItems() {
         command: "antigravity.updateAgenticSetup",
         title: "Update Agentic Setup"
     };
-    return [item, setClaudeModel, runLiteLLMOpenAI, createClaudeMd, updateAgenticSetup];
+    return [item, setClaudeModel, runLiteLLMOpenAI, createClaudeMd, createAgentMd, updateAgenticSetup];
 }
 //# sourceMappingURL=treeProvider.js.map

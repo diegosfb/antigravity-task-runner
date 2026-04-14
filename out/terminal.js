@@ -4,6 +4,7 @@ exports.CLAUDE_ACTION_COLOR = void 0;
 exports.runInSecondaryTerminal = runInSecondaryTerminal;
 exports.runInNewTerminal = runInNewTerminal;
 exports.runClaudeInitAndUpdateInNewTerminal = runClaudeInitAndUpdateInNewTerminal;
+exports.runCodexInitAndUpdateInNewTerminal = runCodexInitAndUpdateInNewTerminal;
 exports.runClaudePromptInNewTerminal = runClaudePromptInNewTerminal;
 const vscode = require("vscode");
 exports.CLAUDE_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
@@ -34,6 +35,12 @@ function runInNewTerminal(name, lines, options = {}) {
 }
 async function runClaudeInitAndUpdateInNewTerminal(repoRoot, prompt) {
     runInNewTerminal("Claude Init", [`cd "${repoRoot}"`, `claude "${prompt.replace(/"/g, '\\"')}"`], {
+        iconPath: new vscode.ThemeIcon("robot", exports.CLAUDE_ACTION_COLOR),
+        color: exports.CLAUDE_ACTION_COLOR
+    });
+}
+async function runCodexInitAndUpdateInNewTerminal(repoRoot, prompt) {
+    runInNewTerminal("Codex Init", [`cd "${repoRoot}"`, `codex "${prompt.replace(/"/g, '\\"')}"`], {
         iconPath: new vscode.ThemeIcon("robot", exports.CLAUDE_ACTION_COLOR),
         color: exports.CLAUDE_ACTION_COLOR
     });
