@@ -208,7 +208,12 @@ export async function ensureScriptFile(
 export async function runRepoScript(
   scriptName: string,
   args: string[] = [],
-  options: { cwd?: string; scriptDir?: string; fallbackScriptDir?: string } = {}
+  options: {
+    cwd?: string;
+    scriptDir?: string;
+    fallbackScriptDir?: string;
+    env?: Record<string, string>;
+  } = {}
 ): Promise<void> {
   logAlways(`[runRepoScript] requested scriptName=${scriptName} args=${JSON.stringify(args)}`);
   const rootPath = getRootPath();
@@ -236,9 +241,13 @@ export async function runRepoScript(
   logAlways(`[runRepoScript] scriptPath=${scriptPath}`);
   await fs.promises.chmod(scriptPath, 0o755).catch(() => { /* ignore if already executable */ });
   const argString = args.map((arg) => quoteShellArg(arg)).join(" ");
-  const command = argString
+  const baseCommand = argString
     ? `${quoteShellArg(scriptPath)} ${argString}`
     : quoteShellArg(scriptPath);
+  const envString = Object.entries(options.env ?? {})
+    .map(([key, value]) => `${key}=${quoteShellArg(value)}`)
+    .join(" ");
+  const command = envString ? `${envString} ${baseCommand}` : baseCommand;
   logAlways(`[runRepoScript] command=${command}`);
   await runInSecondaryTerminal([
     `echo "[antigravity] running: ${scriptFileName} ${argString}"`,

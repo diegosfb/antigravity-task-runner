@@ -233,6 +233,16 @@ function getExtensionSettingsFields(): SettingsField[] {
       checked: config.get<boolean>("autoUpdateClaudeMd") ?? false
     },
     {
+      key: "createReleaseBranchWhenCreatingReleases",
+      label: "Create release Branch when creating releases",
+      description:
+        "When enabled, creating a repo release also creates, switches to, and pushes a release branch with the release name.",
+      placeholder: "",
+      value: "",
+      type: "checkbox",
+      checked: config.get<boolean>("createReleaseBranchWhenCreatingReleases") ?? true
+    },
+    {
       key: "enableDebugLogging",
       label: "Enable debug logging",
       description: "When enabled, debug logs are written to the Antigravity output channel.",

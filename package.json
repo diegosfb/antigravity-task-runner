@@ -279,6 +279,11 @@
           "default": false,
           "description": "When enabled, autocommit start will also run Claude to update CLAUDE.md."
         },
+        "antigravity.createReleaseBranchWhenCreatingReleases": {
+          "type": "boolean",
+          "default": true,
+          "description": "When enabled, creating a repo release also creates, switches to, and pushes a release branch with the release name."
+        },
         "antigravity.enableDebugLogging": {
           "type": "boolean",
           "default": true,

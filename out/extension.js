@@ -674,7 +674,15 @@ function activate(context) {
             return;
         const trimmed = description.trim();
         (0, logger_1.log)(`[createRepoTagVersion] description: "${trimmed}"`);
-        await (0, scripts_1.runRepoScript)("commit-push-tag", trimmed ? [trimmed] : [], { scriptDir: path.join(extensionRoot, "src") });
+        const createReleaseBranch = vscode.workspace
+            .getConfiguration("antigravity")
+            .get("createReleaseBranchWhenCreatingReleases") ?? true;
+        await (0, scripts_1.runRepoScript)("commit-push-tag", trimmed ? [trimmed] : [], {
+            scriptDir: path.join(extensionRoot, "src"),
+            env: {
+                CREATE_RELEASE_BRANCH: createReleaseBranch ? "1" : "0"
+            }
+        });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepoTag", async () => {
         const rootPath = (0, utils_1.getRootPath)();

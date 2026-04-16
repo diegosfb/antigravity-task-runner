@@ -211,9 +211,13 @@ async function runRepoScript(scriptName, args = [], options = {}) {
     (0, logger_1.logAlways)(`[runRepoScript] scriptPath=${scriptPath}`);
     await fs.promises.chmod(scriptPath, 0o755).catch(() => { });
     const argString = args.map((arg) => (0, utils_1.quoteShellArg)(arg)).join(" ");
-    const command = argString
+    const baseCommand = argString
         ? `${(0, utils_1.quoteShellArg)(scriptPath)} ${argString}`
         : (0, utils_1.quoteShellArg)(scriptPath);
+    const envString = Object.entries(options.env ?? {})
+        .map(([key, value]) => `${key}=${(0, utils_1.quoteShellArg)(value)}`)
+        .join(" ");
+    const command = envString ? `${envString} ${baseCommand}` : baseCommand;
     (0, logger_1.logAlways)(`[runRepoScript] command=${command}`);
     await (0, terminal_1.runInSecondaryTerminal)([
         `echo "[antigravity] running: ${scriptFileName} ${argString}"`,

@@ -837,7 +837,15 @@ export function activate(context: vscode.ExtensionContext) {
       if (description === undefined) return;
       const trimmed = description.trim();
       log(`[createRepoTagVersion] description: "${trimmed}"`);
-      await runRepoScript("commit-push-tag", trimmed ? [trimmed] : [], { scriptDir: path.join(extensionRoot, "src") });
+      const createReleaseBranch = vscode.workspace
+        .getConfiguration("antigravity")
+        .get<boolean>("createReleaseBranchWhenCreatingReleases") ?? true;
+      await runRepoScript("commit-push-tag", trimmed ? [trimmed] : [], {
+        scriptDir: path.join(extensionRoot, "src"),
+        env: {
+          CREATE_RELEASE_BRANCH: createReleaseBranch ? "1" : "0"
+        }
+      });
     })
   );
 

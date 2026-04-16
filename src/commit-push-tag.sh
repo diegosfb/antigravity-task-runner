@@ -16,6 +16,9 @@ set -euo pipefail
 #                  Leave unset to skip release tag creation.
 #   ARTIFACT       Path or glob pattern for the artifact to attach to the GitHub release.
 #                  Supports multiple files (space-separated or glob). Optional.
+#   CREATE_RELEASE_BRANCH
+#                  When set to 1 (default), create, switch to, and push a branch
+#                  that matches the release tag after creating the release.
 #
 # Examples:
 #   commit-push-tag.sh "feat: new feature"
@@ -32,6 +35,7 @@ fi
 
 MSG="$1"
 [[ -z "${MSG}" ]] && { echo "Commit message cannot be empty."; exit 1; }
+CREATE_RELEASE_BRANCH="${CREATE_RELEASE_BRANCH:-1}"
 
 # ─── Git sanity checks ───────────────────────────────────────────────────────
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -135,6 +139,20 @@ if [[ -n "${VERSION}" ]]; then
       --title "${TAG_NAME}" \
       --notes "${MSG}"
     echo "Release ${TAG_NAME} created."
+  fi
+
+  if [[ "${CREATE_RELEASE_BRANCH}" == "1" ]]; then
+    if git show-ref --verify --quiet "refs/heads/${TAG_NAME}"; then
+      git switch "${TAG_NAME}"
+      echo "Switched to existing local release branch ${TAG_NAME}."
+    elif git ls-remote --exit-code --heads origin "${TAG_NAME}" >/dev/null 2>&1; then
+      git switch -c "${TAG_NAME}" --track "origin/${TAG_NAME}"
+      echo "Checked out existing remote release branch ${TAG_NAME}."
+    else
+      git switch -c "${TAG_NAME}"
+      git push -u origin "${TAG_NAME}"
+      echo "Created and pushed release branch ${TAG_NAME}."
+    fi
   fi
 fi
 
