@@ -46,6 +46,15 @@ function activate(context) {
         await (0, terminal_1.runCodexInitAndUpdateInNewTerminal)(repoRoot, prompt);
         (0, logger_1.log)(`[launchAgentInit] done`);
     };
+    const resolveCreateFeatureBranchWorkflow = () => {
+        const primaryPath = path.join(os.homedir(), ".gemini", "workflows", "create_feature_branch", "WORKFLOW.md");
+        if (fs.existsSync(primaryPath))
+            return primaryPath;
+        const bundledPath = path.join(extensionRoot, "Knowhow", "Antigravity workflows", "create_feature_branch", "WORKFLOW.md");
+        if (fs.existsSync(bundledPath))
+            return bundledPath;
+        return undefined;
+    };
     context.subscriptions.push(vscode.window.registerTreeDataProvider("antigravityView", provider));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openSettings", async () => {
         const panel = vscode.window.createWebviewPanel("antigravitySettings", "Antigravity Settings", vscode.ViewColumn.Active, { enableScripts: true });
@@ -682,6 +691,27 @@ function activate(context) {
             env: {
                 CREATE_RELEASE_BRANCH: createReleaseBranch ? "1" : "0"
             }
+        });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.createFeatureBranch", async () => {
+        (0, logger_1.log)("[createFeatureBranch] triggered");
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const workflowFile = resolveCreateFeatureBranchWorkflow();
+        if (!workflowFile) {
+            void vscode.window.showErrorMessage("Create feature branch workflow not found in ~/.gemini or the bundled extension files.");
+            return;
+        }
+        (0, terminal_1.runInNewTerminal)("Claude Feature Branch", [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            `bash ${(0, utils_1.quoteShellArg)(path.join(extensionRoot, "src", "run-claude-workflow.sh"))} ${(0, utils_1.quoteShellArg)(workflowFile)}`
+        ], {
+            iconPath: new vscode.ThemeIcon("git-branch", terminal_1.CLAUDE_ACTION_COLOR),
+            color: terminal_1.CLAUDE_ACTION_COLOR
         });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepoTag", async () => {

@@ -640,6 +640,17 @@ function getQuickActionItems(): NodeItem[] {
   };
   items.push(createRepoTagVersion);
 
+  const createFeatureBranch = new NodeItem(
+    { kind: "action", label: "Create Feature Branch" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  createFeatureBranch.iconPath = new vscode.ThemeIcon("git-branch", QUICK_ACTION_COLOR);
+  createFeatureBranch.command = {
+    command: "antigravity.createFeatureBranch",
+    title: "Create Feature Branch"
+  };
+  items.push(createFeatureBranch);
+
   const autocommitCheckpoint = new NodeItem(
     { kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" },
     vscode.TreeItemCollapsibleState.None

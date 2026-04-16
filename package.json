@@ -23,6 +23,7 @@
     "onCommand:antigravity.openAgent",
     "onCommand:antigravity.runAgent",
     "onCommand:antigravity.runWorkflow",
+    "onCommand:antigravity.createFeatureBranch",
     "onCommand:antigravity.openClaudeTerminal",
     "onCommand:antigravity.openOpenClaudeTerminal"
   ],
@@ -113,6 +114,10 @@
       {
         "command": "antigravity.runClaudeAgent",
         "title": "Run Agent"
+      },
+      {
+        "command": "antigravity.createFeatureBranch",
+        "title": "Antigravity: Create Feature Branch"
       },
       {
         "command": "antigravity.createRepoTag",
@@ -322,13 +327,15 @@
     "CLAUDE rules.md",
     "routerconfig.example.json",
     "src/commit-push-tag.sh",
+    "src/run-claude-workflow.sh",
     "src/Switch-ClaudeCode-Model.sh",
     "src/autocommit_changes.sh",
     "src/autocommit_revert.sh",
     "src/init-repo.sh",
     "src/update-agent-setup.sh",
     "src/update-agentic-workspace.sh",
-    "src/workspace-setup.sh"
+    "src/workspace-setup.sh",
+    "Knowhow/Antigravity workflows/create_feature_branch/WORKFLOW.md"
   ],
   "scripts": {
     "compile": "node node_modules/typescript/lib/tsc.js -p ./",

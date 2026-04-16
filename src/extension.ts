@@ -82,6 +82,28 @@ export function activate(context: vscode.ExtensionContext) {
     log(`[launchAgentInit] done`);
   };
 
+  const resolveCreateFeatureBranchWorkflow = (): string | undefined => {
+    const primaryPath = path.join(
+      os.homedir(),
+      ".gemini",
+      "workflows",
+      "create_feature_branch",
+      "WORKFLOW.md"
+    );
+    if (fs.existsSync(primaryPath)) return primaryPath;
+
+    const bundledPath = path.join(
+      extensionRoot,
+      "Knowhow",
+      "Antigravity workflows",
+      "create_feature_branch",
+      "WORKFLOW.md"
+    );
+    if (fs.existsSync(bundledPath)) return bundledPath;
+
+    return undefined;
+  };
+
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("antigravityView", provider)
   );
@@ -846,6 +868,36 @@ export function activate(context: vscode.ExtensionContext) {
           CREATE_RELEASE_BRANCH: createReleaseBranch ? "1" : "0"
         }
       });
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.createFeatureBranch", async () => {
+      log("[createFeatureBranch] triggered");
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      const workflowFile = resolveCreateFeatureBranchWorkflow();
+      if (!workflowFile) {
+        void vscode.window.showErrorMessage(
+          "Create feature branch workflow not found in ~/.gemini or the bundled extension files."
+        );
+        return;
+      }
+      runInNewTerminal(
+        "Claude Feature Branch",
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          `bash ${quoteShellArg(path.join(extensionRoot, "src", "run-claude-workflow.sh"))} ${quoteShellArg(workflowFile)}`
+        ],
+        {
+          iconPath: new vscode.ThemeIcon("git-branch", CLAUDE_ACTION_COLOR),
+          color: CLAUDE_ACTION_COLOR
+        }
+      );
     })
   );
 
