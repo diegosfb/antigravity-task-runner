@@ -584,7 +584,7 @@ function getQuickActionItems(): NodeItem[] {
     { kind: "action", label: "Init Repository" },
     vscode.TreeItemCollapsibleState.None
   );
-  initRepo.iconPath = new vscode.ThemeIcon("repo", QUICK_ACTION_COLOR);
+  initRepo.iconPath = new vscode.ThemeIcon("repo", ORANGE_ACTION_COLOR);
   if (hasRepo) {
     initRepo.label = "I̶n̶i̶t̶ ̶R̶e̶p̶o̶s̶i̶t̶o̶r̶y̶";
     initRepo.iconPath = new vscode.ThemeIcon(
@@ -599,40 +599,6 @@ function getQuickActionItems(): NodeItem[] {
     };
   }
   items.push(initRepo);
-
-
-  const incrementMajor = new NodeItem(
-    { kind: "action", label: "Increment Major Version" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  incrementMajor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
-  incrementMajor.command = {
-    command: "antigravity.incrementMajorVersion",
-    title: "Increment Major Version"
-  };
-  items.push(incrementMajor);
-
-  const incrementMinor = new NodeItem(
-    { kind: "action", label: "Increment Minor Version" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  incrementMinor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
-  incrementMinor.command = {
-    command: "antigravity.incrementMinorVersion",
-    title: "Increment Minor Version"
-  };
-  items.push(incrementMinor);
-
-  const incrementPatch = new NodeItem(
-    { kind: "action", label: "Increment Patch Version" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  incrementPatch.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
-  incrementPatch.command = {
-    command: "antigravity.incrementPatchVersion",
-    title: "Increment Patch Version"
-  };
-  items.push(incrementPatch);
 
   const createRepoTagVersion = new NodeItem(
     { kind: "action", label: "Create Repo Release" },
@@ -684,6 +650,39 @@ function getQuickActionItems(): NodeItem[] {
   );
   prReviewer.iconPath = new vscode.ThemeIcon("git-pull-request", QUICK_ACTION_COLOR);
   items.push(prReviewer);
+
+  const incrementMajor = new NodeItem(
+    { kind: "action", label: "Increment Major Version" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  incrementMajor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
+  incrementMajor.command = {
+    command: "antigravity.incrementMajorVersion",
+    title: "Increment Major Version"
+  };
+  items.push(incrementMajor);
+
+  const incrementMinor = new NodeItem(
+    { kind: "action", label: "Increment Minor Version" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  incrementMinor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
+  incrementMinor.command = {
+    command: "antigravity.incrementMinorVersion",
+    title: "Increment Minor Version"
+  };
+  items.push(incrementMinor);
+
+  const incrementPatch = new NodeItem(
+    { kind: "action", label: "Increment Patch Version" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  incrementPatch.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
+  incrementPatch.command = {
+    command: "antigravity.incrementPatchVersion",
+    title: "Increment Patch Version"
+  };
+  items.push(incrementPatch);
 
   const autocommitCheckpoint = new NodeItem(
     { kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" },
