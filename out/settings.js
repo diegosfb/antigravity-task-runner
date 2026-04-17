@@ -151,6 +151,13 @@ function getExtensionSettingsFields() {
             value: config.get("workspaceProjectPath") || ""
         },
         {
+            key: "workflowsFolder",
+            label: "Antigravity Workflows Folder",
+            description: "Base folder used to look up Claude workflows. The extension checks both <folder>/workflows/<name>/WORKFLOW.md and <folder>/<name>/WORKFLOW.md before falling back to bundled workflows.",
+            placeholder: "/Users/diego.brihuega/.gemini",
+            value: config.get("workflowsFolder") || ""
+        },
+        {
             key: "terminalName",
             label: "Workflow Terminal Name",
             description: "Terminal name used when running workflow scripts.",

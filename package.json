@@ -304,6 +304,11 @@
           "default": "./",
           "description": "Path where workspace files are extracted and downloaded to. Relative paths are resolved from the project root."
         },
+        "antigravity.workflowsFolder": {
+          "type": "string",
+          "default": "/Users/diego.brihuega/.gemini",
+          "description": "Base folder used to resolve Claude workflows. The extension checks both <folder>/workflows/<name>/WORKFLOW.md and <folder>/<name>/WORKFLOW.md before falling back to bundled workflows."
+        },
         "antigravity.autoUpdateClaudeMd": {
           "type": "boolean",
           "default": false,

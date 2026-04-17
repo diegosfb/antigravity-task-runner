@@ -100,9 +100,18 @@ function activate(context) {
         return `feature/${issueKey}-${description}`;
     };
     const resolveClaudeWorkflowFile = (workflowName) => {
-        const primaryPath = path.join(os.homedir(), ".gemini", "workflows", workflowName, "WORKFLOW.md");
-        if (fs.existsSync(primaryPath))
-            return primaryPath;
+        const config = vscode.workspace.getConfiguration("antigravity");
+        const configuredFolderRaw = config.get("workflowsFolder") || path.join(os.homedir(), ".gemini");
+        const configuredFolder = configuredFolderRaw.startsWith("~")
+            ? path.join(os.homedir(), configuredFolderRaw.slice(1))
+            : configuredFolderRaw;
+        const configuredCandidates = [
+            path.join(configuredFolder, "workflows", workflowName, "WORKFLOW.md"),
+            path.join(configuredFolder, workflowName, "WORKFLOW.md")
+        ];
+        const configuredPath = configuredCandidates.find((candidate) => fs.existsSync(candidate));
+        if (configuredPath)
+            return configuredPath;
         const bundledPath = path.join(extensionRoot, "Knowhow", "Antigravity workflows", workflowName, "WORKFLOW.md");
         if (fs.existsSync(bundledPath))
             return bundledPath;
@@ -1346,7 +1355,7 @@ function activate(context) {
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         const workflowFile = resolveClaudeWorkflowFile("create_feature_branch");
         if (!workflowFile) {
-            void vscode.window.showErrorMessage("Create feature branch workflow not found in ~/.gemini or the bundled extension files.");
+            void vscode.window.showErrorMessage("Create feature branch workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
             return;
         }
         const dialogResult = await showCreateFeatureBranchDialog();
@@ -1372,7 +1381,7 @@ function activate(context) {
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         const workflowFile = resolveClaudeWorkflowFile("create_pull_request");
         if (!workflowFile) {
-            void vscode.window.showErrorMessage("Create pull request workflow not found in ~/.gemini or the bundled extension files.");
+            void vscode.window.showErrorMessage("Create pull request workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
             return;
         }
         (0, terminal_1.runInNewTerminal)("Claude Pull Request", [
@@ -1464,7 +1473,7 @@ function activate(context) {
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         const workflowFile = resolveClaudeWorkflowFile("approve_pull_request");
         if (!workflowFile) {
-            void vscode.window.showErrorMessage("Approve pull request workflow not found in ~/.gemini or the bundled extension files.");
+            void vscode.window.showErrorMessage("Approve pull request workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
             return;
         }
         (0, terminal_1.runInNewTerminal)("Claude Approve Pull Request", [
