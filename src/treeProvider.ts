@@ -648,7 +648,7 @@ function getQuickActionItems(): NodeItem[] {
     { kind: "action", label: "Create Feature Branch" },
     vscode.TreeItemCollapsibleState.None
   );
-  createFeatureBranch.iconPath = new vscode.ThemeIcon("git-branch", QUICK_ACTION_COLOR);
+  createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", QUICK_ACTION_COLOR);
   createFeatureBranch.command = {
     command: "antigravity.createFeatureBranch",
     title: "Create Feature Branch"
