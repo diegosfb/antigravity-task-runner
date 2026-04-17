@@ -49,6 +49,25 @@ import {
   JiraProjectSummary
 } from "./jira";
 
+type GitInputBox = {
+  value: string;
+};
+
+type GitRepository = {
+  rootUri: vscode.Uri;
+  inputBox: GitInputBox;
+  commit(message: string, options?: { all?: boolean; noVerify?: boolean }): Thenable<void>;
+};
+
+type GitApi = {
+  repositories: GitRepository[];
+  getRepository?(uri: vscode.Uri): GitRepository | null | undefined;
+};
+
+type GitExtensionExports = {
+  getAPI(version: 1): GitApi;
+};
+
 export function activate(context: vscode.ExtensionContext) {
   const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
   context.subscriptions.push(outputChannel);
@@ -907,6 +926,115 @@ export function activate(context: vscode.ExtensionContext) {
         resolve(stdout);
       });
     });
+
+  const parseGitNameStatus = (output: string): Array<{
+    status: string;
+    path: string;
+    previousPath?: string;
+  }> =>
+    output
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => {
+        const parts = line.split("\t");
+        const [status = "", firstPath = "", secondPath] = parts;
+        if (status.startsWith("R")) {
+          return {
+            status,
+            path: secondPath ?? firstPath,
+            previousPath: firstPath
+          };
+        }
+        return { status, path: firstPath };
+      })
+      .filter((entry) => entry.path.length > 0);
+
+  const describeCommitPath = (filePath: string): string => {
+    const normalized = filePath.replace(/\\/g, "/");
+    const segments = normalized.split("/").filter(Boolean);
+    if (segments.length === 0) return "project files";
+    const fileName = segments[segments.length - 1];
+    const parent = segments.length > 1 ? segments[segments.length - 2] : undefined;
+    if (!parent || parent === "." || fileName === parent) return fileName;
+    return `${parent}/${fileName}`;
+  };
+
+  const buildGeneratedCommitMessage = async (repoRoot: string): Promise<string> => {
+    const statusOutput = await execInRepo(
+      "git diff --cached --name-status --find-renames",
+      repoRoot
+    );
+    const entries = parseGitNameStatus(statusOutput);
+    if (entries.length === 0) return "";
+
+    if (entries.length === 1) {
+      const [entry] = entries;
+      const subject = describeCommitPath(entry.path);
+      if (entry.status.startsWith("A")) return `Add ${subject}`;
+      if (entry.status.startsWith("D")) return `Remove ${subject}`;
+      if (entry.status.startsWith("R") && entry.previousPath) {
+        return `Rename ${describeCommitPath(entry.previousPath)} to ${describeCommitPath(entry.path)}`;
+      }
+      return `Update ${subject}`;
+    }
+
+    const firstSegmentCounts = new Map<string, number>();
+    for (const entry of entries) {
+      const [firstSegment] = entry.path.replace(/\\/g, "/").split("/");
+      if (!firstSegment) continue;
+      firstSegmentCounts.set(firstSegment, (firstSegmentCounts.get(firstSegment) ?? 0) + 1);
+    }
+
+    const dominantArea = [...firstSegmentCounts.entries()]
+      .sort((left, right) => right[1] - left[1])[0]?.[0];
+    const prefixSet = new Set(entries.map((entry) => entry.status.charAt(0)));
+    if (dominantArea && firstSegmentCounts.size === 1) {
+      if (prefixSet.size === 1 && prefixSet.has("A")) return `Add ${dominantArea} files`;
+      if (prefixSet.size === 1 && prefixSet.has("D")) return `Remove ${dominantArea} files`;
+      return `Update ${dominantArea} files`;
+    }
+
+    if (prefixSet.size === 1 && prefixSet.has("A")) return `Add ${entries.length} files`;
+    if (prefixSet.size === 1 && prefixSet.has("D")) return `Remove ${entries.length} files`;
+    return `Update ${entries.length} files`;
+  };
+
+  const getGitApi = async (): Promise<GitApi> => {
+    const gitExtension = vscode.extensions.getExtension<GitExtensionExports>("vscode.git");
+    if (!gitExtension) {
+      throw new Error("VS Code Git integration is not available.");
+    }
+
+    const exports = gitExtension.isActive
+      ? gitExtension.exports
+      : await gitExtension.activate();
+    if (!exports?.getAPI) {
+      throw new Error("VS Code Git integration could not be activated.");
+    }
+
+    return exports.getAPI(1);
+  };
+
+  const getGitRepository = async (repoRoot: string): Promise<GitRepository | undefined> => {
+    const api = await getGitApi();
+    const repoUri = vscode.Uri.file(repoRoot);
+    const fromApi = api.getRepository?.(repoUri);
+    if (fromApi) return fromApi;
+
+    return api.repositories.find(
+      (repository) => repository.rootUri.fsPath === repoUri.fsPath
+    );
+  };
+
+  const focusSourceControlChanges = async (): Promise<void> => {
+    await vscode.commands.executeCommand("workbench.view.scm");
+    try {
+      await vscode.commands.executeCommand("workbench.scm.action.focusNextResourceGroup");
+    } catch {
+      // Focusing the SCM view is sufficient if the resource-group command is unavailable.
+    }
+  };
 
   const getAvailablePullRequestBranches = async (repoRoot: string): Promise<string[]> => {
     const stdout = await execInRepo(
@@ -1940,6 +2068,80 @@ export function activate(context: vscode.ExtensionContext) {
       logAlways("[initRepository] init-repo script invocation completed");
       provider.refresh();
       logAlways("[initRepository] tree provider refreshed");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.commitChanges", async () => {
+      showOutputChannel();
+      logAlways("[commitChanges] triggered");
+
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        logAlways("[commitChanges] ERROR: rootPath not set");
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+      logAlways(`[commitChanges] repoRoot: ${repoRoot}`);
+      if (!fs.existsSync(path.join(repoRoot, ".git"))) {
+        logAlways("[commitChanges] ERROR: repository not initialized");
+        void vscode.window.showWarningMessage(
+          "Initialize a Git repository before using Commit."
+        );
+        return;
+      }
+
+      await focusSourceControlChanges();
+      await vscode.workspace.saveAll(false);
+
+      const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+      if (statusOutput.trim().length === 0) {
+        logAlways("[commitChanges] no changes detected");
+        void vscode.window.showInformationMessage("No changes to commit.");
+        return;
+      }
+
+      const secretCandidateOutput = await execInRepo(
+        "git status --porcelain -- .env config/.env",
+        repoRoot
+      );
+      if (secretCandidateOutput.trim().length > 0) {
+        logAlways("[commitChanges] excluding .env/config/.env from automated commit");
+        void vscode.window.showWarningMessage(
+          "Excluded .env and config/.env from this automated commit for safety."
+        );
+      }
+
+      await execInRepo(
+        "git add -A -- . ':(exclude).env' ':(exclude)config/.env'",
+        repoRoot
+      );
+
+      const commitMessage = await buildGeneratedCommitMessage(repoRoot);
+      if (!commitMessage.trim()) {
+        logAlways("[commitChanges] no commit message generated");
+        void vscode.window.showWarningMessage("Nothing commitable was staged.");
+        return;
+      }
+
+      const repository = await getGitRepository(repoRoot);
+      if (!repository) {
+        logAlways("[commitChanges] ERROR: VS Code Git repository not found");
+        void vscode.window.showErrorMessage(
+          "VS Code Git integration could not find the current repository."
+        );
+        return;
+      }
+
+      logAlways(`[commitChanges] generated message: ${commitMessage}`);
+      repository.inputBox.value = commitMessage;
+      await repository.commit(commitMessage, { all: false });
+      provider.refresh();
+
+      logAlways("[commitChanges] commit completed");
+      void vscode.window.showInformationMessage(`Committed changes: ${commitMessage}`);
     })
   );
 

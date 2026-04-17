@@ -490,6 +490,19 @@ function getQuickActionItems() {
         };
     }
     items.push(initRepo);
+    const commitChanges = new NodeItem({ kind: "action", label: "Commit" }, vscode.TreeItemCollapsibleState.None);
+    if (!hasRepo) {
+        commitChanges.iconPath = new vscode.ThemeIcon("check", new vscode.ThemeColor("disabledForeground"));
+        commitChanges.tooltip = "Initialize a repository before committing changes.";
+    }
+    else {
+        commitChanges.iconPath = new vscode.ThemeIcon("check", ORANGE_ACTION_COLOR);
+        commitChanges.command = {
+            command: "antigravity.commitChanges",
+            title: "Commit"
+        };
+    }
+    items.push(commitChanges);
     const createRepoTagVersion = new NodeItem({ kind: "action", label: "Create Repo Release" }, vscode.TreeItemCollapsibleState.None);
     createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", ORANGE_ACTION_COLOR);
     createRepoTagVersion.command = {
