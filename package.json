@@ -365,6 +365,7 @@
     "src/autocommit_changes.sh",
     "src/autocommit_revert.sh",
     "src/init-repo.sh",
+    "src/create_pull_requrest.sh",
     "src/update-agent-setup.sh",
     "src/update-agentic-workspace.sh",
     "src/workspace-setup.sh",
