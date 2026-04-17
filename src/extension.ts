@@ -82,26 +82,35 @@ export function activate(context: vscode.ExtensionContext) {
     log(`[launchAgentInit] done`);
   };
 
-  const resolveCreateFeatureBranchWorkflow = (): string | undefined => {
-    const primaryPath = path.join(
-      os.homedir(),
-      ".gemini",
-      "workflows",
-      "create_feature_branch",
-      "WORKFLOW.md"
-    );
-    if (fs.existsSync(primaryPath)) return primaryPath;
+  type BranchTypeOption = {
+    label: string;
+    description: string;
+    prefix: string;
+    requiresJiraKey?: boolean;
+  };
 
-    const bundledPath = path.join(
-      extensionRoot,
-      "Knowhow",
-      "Antigravity workflows",
-      "create_feature_branch",
-      "WORKFLOW.md"
-    );
-    if (fs.existsSync(bundledPath)) return bundledPath;
+  const normalizeBranchSegment = (value: string): string =>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .replace(/-{2,}/g, "-");
 
-    return undefined;
+  const buildStandardBranchName = (prefix: string, rawValue: string): string | undefined => {
+    const withoutPrefix = rawValue.trim().replace(/^(feature|fix|hotfix)\//i, "");
+    const segment = normalizeBranchSegment(withoutPrefix);
+    return segment ? `${prefix}/${segment}` : undefined;
+  };
+
+  const buildJiraTaskBranchName = (rawValue: string): string | undefined => {
+    const withoutPrefix = rawValue.trim().replace(/^feature\//i, "");
+    const match = withoutPrefix.match(/^([A-Za-z][A-Za-z0-9]+-\d+)[-\s/]+(.+)$/);
+    if (!match) return undefined;
+    const issueKey = match[1].toUpperCase();
+    const description = normalizeBranchSegment(match[2]);
+    if (!description) return undefined;
+    return `feature/${issueKey}-${description}`;
   };
 
   context.subscriptions.push(
@@ -880,22 +889,72 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      const workflowFile = resolveCreateFeatureBranchWorkflow();
-      if (!workflowFile) {
-        void vscode.window.showErrorMessage(
-          "Create feature branch workflow not found in ~/.gemini or the bundled extension files."
-        );
+      const branchTypes: BranchTypeOption[] = [
+        {
+          label: "Feature",
+          description: "Create feature/<short-name>",
+          prefix: "feature"
+        },
+        {
+          label: "Bug Fix",
+          description: "Create fix/<short-name>",
+          prefix: "fix"
+        },
+        {
+          label: "Jira Task",
+          description: "Create feature/JIRA-123-short-name",
+          prefix: "feature",
+          requiresJiraKey: true
+        },
+        {
+          label: "Hot Fix",
+          description: "Create hotfix/<short-name>",
+          prefix: "hotfix"
+        }
+      ];
+      const branchType = await vscode.window.showQuickPick(branchTypes, {
+        title: "Create Feature Branch",
+        placeHolder: "Select the branch type"
+      });
+      if (!branchType) return;
+
+      const branchNameInput = await vscode.window.showInputBox({
+        title: "Create Feature Branch",
+        prompt: branchType.requiresJiraKey
+          ? "Enter the Jira key and short branch name"
+          : "Enter the branch name",
+        placeHolder: branchType.requiresJiraKey
+          ? "JIRA-123-short-name"
+          : "short-descriptive-name",
+        validateInput: (value) => {
+          const branchName = branchType.requiresJiraKey
+            ? buildJiraTaskBranchName(value)
+            : buildStandardBranchName(branchType.prefix, value);
+          return branchName
+            ? undefined
+            : branchType.requiresJiraKey
+              ? "Use the format JIRA-123-short-name."
+              : "Enter a short descriptive branch name.";
+        }
+      });
+      if (branchNameInput === undefined) return;
+
+      const branchName = branchType.requiresJiraKey
+        ? buildJiraTaskBranchName(branchNameInput)
+        : buildStandardBranchName(branchType.prefix, branchNameInput);
+      if (!branchName) {
+        void vscode.window.showErrorMessage("Invalid branch name.");
         return;
       }
+      log(`[createFeatureBranch] branchName: ${branchName}`);
       runInNewTerminal(
-        "Claude Feature Branch",
+        "Create Feature Branch",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          `bash ${quoteShellArg(path.join(extensionRoot, "src", "run-claude-workflow.sh"))} ${quoteShellArg(workflowFile)}`
+          `git checkout main && git pull origin main && git checkout -b ${quoteShellArg(branchName)} && git push -u origin ${quoteShellArg(branchName)} && echo "[antigravity] branch ${branchName} created"`
         ],
         {
-          iconPath: new vscode.ThemeIcon("git-branch", CLAUDE_ACTION_COLOR),
-          color: CLAUDE_ACTION_COLOR
+          iconPath: new vscode.ThemeIcon("git-branch")
         }
       );
     })
