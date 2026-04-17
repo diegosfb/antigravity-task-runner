@@ -278,6 +278,7 @@ exports.AntigravityViewProvider = AntigravityViewProvider;
 const QUICK_ACTION_COLOR = new vscode.ThemeColor("charts.green");
 const ORANGE_ACTION_COLOR = new vscode.ThemeColor("charts.orange");
 const CLAUDE_MODEL_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
+const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const TOP_LEVEL_LINKED_FOLDERS = [
     { label: "claude", path: path.join(os.homedir(), ".claude") },
@@ -575,6 +576,13 @@ function getQuickActionItems() {
         title: "Switch Environment"
     };
     items.push(environmentSwitch);
+    const sopManual = new NodeItem({ kind: "action", label: "SOP Manual" }, vscode.TreeItemCollapsibleState.None);
+    sopManual.iconPath = new vscode.ThemeIcon("repo", SOP_MANUAL_ACTION_COLOR);
+    sopManual.command = {
+        command: "antigravity.openSopManual",
+        title: "SOP Manual"
+    };
+    items.push(sopManual);
     return items;
 }
 function getPrReviewerItems() {

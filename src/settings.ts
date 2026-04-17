@@ -187,6 +187,13 @@ function getExtensionSettingsFields(): SettingsField[] {
       value: config.get<string>("workflowsFolder") || ""
     },
     {
+      key: "sopManualLink",
+      label: "SOP Manual Link",
+      description: "Editable markdown URL used by the SOP Manual quick action.",
+      placeholder: "https://example.com/sop-manual.md",
+      value: config.get<string>("sopManualLink") || ""
+    },
+    {
       key: "terminalName",
       label: "Workflow Terminal Name",
       description: "Terminal name used when running workflow scripts.",

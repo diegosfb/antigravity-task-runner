@@ -1624,6 +1624,22 @@ function activate(context) {
             `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(selection.value)}`
         ]);
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openSopManual", async () => {
+        const config = vscode.workspace.getConfiguration("antigravity");
+        const sopManualLink = (config.get("sopManualLink") || "").trim();
+        if (!sopManualLink) {
+            void vscode.window.showErrorMessage("SOP Manual Link is not set in Antigravity settings.");
+            return;
+        }
+        try {
+            const localPath = await (0, scripts_1.downloadMarkdownToTempFile)(sopManualLink, "sop-manual.md");
+            await (0, scripts_1.openFile)(localPath);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to download SOP manual: ${message}`);
+        }
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.updateAgenticWorkspace", async () => {
         const rawWorkspaceProjectDir = vscode.workspace.getConfiguration("antigravity").get("antigravityWorkspaceProject") || "~/antigravity-workspace";
         const workspaceProjectDir = rawWorkspaceProjectDir.replace(/^~/, os.homedir());

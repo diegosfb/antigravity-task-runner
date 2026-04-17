@@ -28,7 +28,7 @@ import {
   isLocalLiteLLMBaseUrl,
   LOCAL_LITELLM_READY_URL
 } from "./settings";
-import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing } from "./scripts";
+import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing, downloadMarkdownToTempFile } from "./scripts";
 import {
   getRootPath,
   getRepoRoot,
@@ -1981,6 +1981,26 @@ export function activate(context: vscode.ExtensionContext) {
       ]);
     })
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.openSopManual", async () => {
+      const config = vscode.workspace.getConfiguration("antigravity");
+      const sopManualLink = (config.get<string>("sopManualLink") || "").trim();
+      if (!sopManualLink) {
+        void vscode.window.showErrorMessage("SOP Manual Link is not set in Antigravity settings.");
+        return;
+      }
+
+      try {
+        const localPath = await downloadMarkdownToTempFile(sopManualLink, "sop-manual.md");
+        await openFile(localPath);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Failed to download SOP manual: ${message}`);
+      }
+    })
+  );
+
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.updateAgenticWorkspace", async () => {
       const rawWorkspaceProjectDir = vscode.workspace.getConfiguration("antigravity").get<string>("antigravityWorkspaceProject") || "~/antigravity-workspace";

@@ -6,10 +6,13 @@ exports.ensureScriptFile = ensureScriptFile;
 exports.runRepoScript = runRepoScript;
 exports.openFile = openFile;
 exports.runWorkflow = runWorkflow;
+exports.downloadMarkdownToTempFile = downloadMarkdownToTempFile;
 exports.runAgent = runAgent;
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
+const http = require("http");
 const https = require("https");
 const utils_1 = require("./utils");
 const logger_1 = require("./logger");
@@ -108,7 +111,8 @@ async function downloadConfigFileIfMissing(repoRoot, fileName) {
 }
 function downloadFile(url, destination) {
     return new Promise((resolve, reject) => {
-        const request = https.get(url, (response) => {
+        const client = url.startsWith("https://") ? https : http;
+        const request = client.get(url, (response) => {
             if (response.statusCode &&
                 response.statusCode >= 300 &&
                 response.statusCode < 400 &&
@@ -249,6 +253,25 @@ async function runWorkflow(workflowFile) {
         return;
     }
     await openFile(workflowFile);
+}
+async function downloadMarkdownToTempFile(url, defaultFileName) {
+    const parsedUrl = new URL(url);
+    const baseName = path.basename(parsedUrl.pathname) || defaultFileName;
+    const fileName = baseName.toLowerCase().endsWith(".md") ? baseName : defaultFileName;
+    const targetDir = path.join(os.tmpdir(), "antigravity-task-runner");
+    const destination = path.join(targetDir, fileName);
+    await fs.promises.mkdir(targetDir, { recursive: true });
+    try {
+        await downloadFile(url, destination);
+        return destination;
+    }
+    catch (error) {
+        try {
+            await fs.promises.unlink(destination);
+        }
+        catch { /* ignore */ }
+        throw error;
+    }
 }
 function getAntigravityExecutable() {
     return (vscode.workspace.getConfiguration("antigravity").get("antigravityPath") ||

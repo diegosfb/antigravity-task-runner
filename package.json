@@ -29,6 +29,7 @@
     "onCommand:antigravity.reviewPullRequest",
     "onCommand:antigravity.approvePullRequest",
     "onCommand:antigravity.feedbackOnPullRequest",
+    "onCommand:antigravity.openSopManual",
     "onCommand:antigravity.openClaudeTerminal",
     "onCommand:antigravity.openOpenClaudeTerminal"
   ],
@@ -143,6 +144,10 @@
       {
         "command": "antigravity.feedbackOnPullRequest",
         "title": "Antigravity: Feedback on Pull Request"
+      },
+      {
+        "command": "antigravity.openSopManual",
+        "title": "Antigravity: SOP Manual"
       },
       {
         "command": "antigravity.createRepoTag",
@@ -308,6 +313,11 @@
           "type": "string",
           "default": "/Users/diego.brihuega/.gemini",
           "description": "Base folder used to resolve Claude workflows. The extension checks both <folder>/workflows/<name>/WORKFLOW.md and <folder>/<name>/WORKFLOW.md before falling back to bundled workflows."
+        },
+        "antigravity.sopManualLink": {
+          "type": "string",
+          "default": "",
+          "description": "Markdown URL used by the SOP Manual quick action."
         },
         "antigravity.autoUpdateClaudeMd": {
           "type": "boolean",

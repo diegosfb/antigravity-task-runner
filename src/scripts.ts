@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
+import * as http from "http";
 import * as https from "https";
 import { getRootPath, getRepoRoot, getWorkspaceRoot, quoteShellArg } from "./utils";
 import { logAlways } from "./logger";
@@ -124,7 +126,8 @@ export async function downloadConfigFileIfMissing(
 
 function downloadFile(url: string, destination: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const request = https.get(url, (response) => {
+    const client = url.startsWith("https://") ? https : http;
+    const request = client.get(url, (response) => {
       if (
         response.statusCode &&
         response.statusCode >= 300 &&
@@ -281,6 +284,22 @@ export async function runWorkflow(workflowFile: string): Promise<void> {
     return;
   }
   await openFile(workflowFile);
+}
+
+export async function downloadMarkdownToTempFile(url: string, defaultFileName: string): Promise<string> {
+  const parsedUrl = new URL(url);
+  const baseName = path.basename(parsedUrl.pathname) || defaultFileName;
+  const fileName = baseName.toLowerCase().endsWith(".md") ? baseName : defaultFileName;
+  const targetDir = path.join(os.tmpdir(), "antigravity-task-runner");
+  const destination = path.join(targetDir, fileName);
+  await fs.promises.mkdir(targetDir, { recursive: true });
+  try {
+    await downloadFile(url, destination);
+    return destination;
+  } catch (error) {
+    try { await fs.promises.unlink(destination); } catch { /* ignore */ }
+    throw error;
+  }
 }
 
 function getAntigravityExecutable(): string {
