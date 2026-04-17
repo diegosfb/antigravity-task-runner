@@ -834,10 +834,10 @@ export function activate(context: vscode.ExtensionContext) {
     const confirmDiscard = await vscode.window.showWarningMessage(
       `Warning: you are going to lose all uncommitted and untracked changes before checking out ${targetBranch}. Are you sure?`,
       { modal: true },
-      { title: "No", isCloseAffordance: true },
-      { title: "Yes, Discard Changes" }
+      "No",
+      "Yes, Discard Changes"
     );
-    if (confirmDiscard?.title !== "Yes, Discard Changes") return false;
+    if (confirmDiscard !== "Yes, Discard Changes") return false;
 
     await execInRepo("git reset --hard HEAD && git clean -fd", repoRoot);
     return true;
