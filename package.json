@@ -324,6 +324,11 @@
           "default": true,
           "description": "When enabled, debug logs are written to the Antigravity output channel."
         },
+        "antigravity.useAgentForGithubRepositoryManagement": {
+          "type": "boolean",
+          "default": true,
+          "description": "When enabled, agent-driven flows are preferred for GitHub repository management tasks."
+        },
         "antigravity.claudeSetupGithub": {
           "type": "string",
           "default": "",

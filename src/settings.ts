@@ -260,6 +260,15 @@ function getExtensionSettingsFields(): SettingsField[] {
       checked: config.get<boolean>("enableDebugLogging") ?? false
     },
     {
+      key: "useAgentForGithubRepositoryManagement",
+      label: "Use Agent for Github Repository Management",
+      description: "When enabled, agent-driven flows are preferred for GitHub repository management tasks.",
+      placeholder: "",
+      value: "",
+      type: "checkbox",
+      checked: config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true
+    },
+    {
       key: "customAgenticPlatformAddons",
       label: "Custom Agentic Platform Addons",
       description: "Path to a custom agentic platform addons directory shown in the folder section.",
