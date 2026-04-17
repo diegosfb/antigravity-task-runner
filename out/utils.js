@@ -10,6 +10,7 @@ exports.quoteShellArg = quoteShellArg;
 exports.findNestedGitFolders = findNestedGitFolders;
 exports.listInfrastructureYamlFiles = listInfrastructureYamlFiles;
 exports.parseEnvFile = parseEnvFile;
+exports.upsertEnvFileValue = upsertEnvFileValue;
 exports.waitForUrlReady = waitForUrlReady;
 exports.waitForFileExists = waitForFileExists;
 const vscode = require("vscode");
@@ -163,6 +164,39 @@ function parseEnvFile(filePath) {
             values[key.toLowerCase()] = value;
     }
     return values;
+}
+function upsertEnvFileValue(filePath, key, value) {
+    const normalizedKey = key.trim();
+    if (!normalizedKey)
+        return;
+    const lines = fs.existsSync(filePath)
+        ? fs.readFileSync(filePath, "utf8").split(/\r?\n/)
+        : [];
+    const nextLine = `${normalizedKey}=${value}`;
+    let updated = false;
+    const rewritten = lines.map((line) => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#"))
+            return line;
+        const withoutExport = trimmed.startsWith("export ")
+            ? trimmed.slice("export ".length).trim()
+            : trimmed;
+        const eqIndex = withoutExport.indexOf("=");
+        if (eqIndex <= 0)
+            return line;
+        const existingKey = withoutExport.slice(0, eqIndex).trim();
+        if (existingKey !== normalizedKey)
+            return line;
+        updated = true;
+        return nextLine;
+    });
+    if (!updated) {
+        if (rewritten.length > 0 && rewritten[rewritten.length - 1] !== "") {
+            rewritten.push("");
+        }
+        rewritten.push(nextLine);
+    }
+    fs.writeFileSync(filePath, `${rewritten.join("\n")}\n`, "utf8");
 }
 async function waitForUrlReady(url, timeoutMs = 30000, intervalMs = 1000) {
     const client = url.startsWith("https") ? https : http;

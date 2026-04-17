@@ -14,6 +14,7 @@ const settings_1 = require("./settings");
 const scripts_1 = require("./scripts");
 const utils_1 = require("./utils");
 const logger_1 = require("./logger");
+const jira_1 = require("./jira");
 function activate(context) {
     const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
     context.subscriptions.push(outputChannel);
@@ -335,6 +336,335 @@ function activate(context) {
                 return;
             }
             resolveOnce({ branchType: selectedBranchType, branchName });
+            panel.dispose();
+        }, undefined, context.subscriptions);
+    });
+    const getRepoEnvPath = (repoRoot) => path.join(repoRoot, ".env");
+    const getJiraCredentialsFromEnv = (repoRoot) => {
+        const envPath = getRepoEnvPath(repoRoot);
+        const env = (0, utils_1.parseEnvFile)(envPath);
+        const baseUrl = (env.jira_base_url || "").trim();
+        const email = (env.jira_email || "").trim();
+        const apiToken = (env.jira_api_token || "").trim();
+        const missing = [
+            !baseUrl ? "JIRA_BASE_URL" : undefined,
+            !email ? "JIRA_EMAIL" : undefined,
+            !apiToken ? "JIRA_API_TOKEN" : undefined
+        ].filter((value) => Boolean(value));
+        if (missing.length > 0) {
+            throw new Error(`Missing Jira settings in .env: ${missing.join(", ")}.`);
+        }
+        return { baseUrl, email, apiToken };
+    };
+    const getSavedJiraProjectKey = (repoRoot) => {
+        const env = (0, utils_1.parseEnvFile)(getRepoEnvPath(repoRoot));
+        return (env.jira_project_key || "").trim().toUpperCase();
+    };
+    const validateJiraProjectKey = (value) => {
+        const normalized = value.trim().toUpperCase();
+        if (!normalized)
+            return "Enter a Jira project key.";
+        if (!/^[A-Z][A-Z0-9]+$/.test(normalized)) {
+            return "Use letters and numbers only, starting with a letter.";
+        }
+        return undefined;
+    };
+    const renderJiraProjectFormHtml = (webview) => {
+        const nonce = getNonce();
+        const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+        return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Jira Project</title>
+    <style>
+      :root { color-scheme: light dark; font-family: var(--vscode-font-family); }
+      body { margin: 0; padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
+      form { display: grid; gap: 16px; }
+      label { display: grid; gap: 6px; font-size: 13px; }
+      input, textarea, button { font: inherit; }
+      input, textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 6px;
+      }
+      textarea { min-height: 120px; resize: vertical; }
+      .hint { font-size: 12px; color: var(--vscode-descriptionForeground); }
+      .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
+      .actions { display: flex; justify-content: flex-end; gap: 8px; }
+      button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
+      button[type="submit"] { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+      button[type="button"] { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+    </style>
+  </head>
+  <body>
+    <form id="jira-project-form">
+      <label>
+        Project Name
+        <input id="project-name" type="text" autocomplete="off" />
+        <span class="hint">This will be the Jira project name shown in Jira Cloud.</span>
+      </label>
+      <label>
+        Project ID
+        <input id="project-key" type="text" autocomplete="off" />
+        <span class="hint">Use a short Jira project key like APP or WEB42.</span>
+      </label>
+      <label>
+        Description
+        <textarea id="project-description"></textarea>
+      </label>
+      <div class="error" id="error-message"></div>
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit">Create</button>
+      </div>
+    </form>
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const form = document.getElementById("jira-project-form");
+      const projectNameInput = document.getElementById("project-name");
+      const projectKeyInput = document.getElementById("project-key");
+      const projectDescriptionInput = document.getElementById("project-description");
+      const errorMessage = document.getElementById("error-message");
+      const cancelButton = document.getElementById("cancel-button");
+
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelCreateJiraProject" });
+      });
+
+      projectKeyInput.addEventListener("input", () => {
+        projectKeyInput.value = projectKeyInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        errorMessage.textContent = "";
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const payload = {
+          projectName: projectNameInput.value.trim(),
+          projectKey: projectKeyInput.value.trim(),
+          description: projectDescriptionInput.value.trim()
+        };
+        if (!payload.projectName) {
+          errorMessage.textContent = "Enter a Jira project name.";
+          projectNameInput.focus();
+          return;
+        }
+        if (!payload.projectKey) {
+          errorMessage.textContent = "Enter a Jira project ID.";
+          projectKeyInput.focus();
+          return;
+        }
+        vscode.postMessage({ type: "submitCreateJiraProject", payload });
+      });
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (message?.type === "createJiraProjectError") {
+          errorMessage.textContent = message.payload?.message || "Unable to create the Jira project.";
+        }
+      });
+
+      projectNameInput.focus();
+    </script>
+  </body>
+</html>`;
+    };
+    const showCreateJiraProjectDialog = async () => new Promise((resolve) => {
+        const panel = vscode.window.createWebviewPanel("createJiraProject", "Create Jira Project", vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = renderJiraProjectFormHtml(panel.webview);
+        let settled = false;
+        const resolveOnce = (value) => {
+            if (settled)
+                return;
+            settled = true;
+            resolve(value);
+        };
+        panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelCreateJiraProject") {
+                panel.dispose();
+                return;
+            }
+            if (message.type !== "submitCreateJiraProject")
+                return;
+            const payload = message.payload || {};
+            const name = typeof payload.projectName === "string" ? payload.projectName.trim() : "";
+            const key = typeof payload.projectKey === "string" ? payload.projectKey.trim().toUpperCase() : "";
+            const description = typeof payload.description === "string" ? payload.description.trim() : "";
+            const keyError = validateJiraProjectKey(key);
+            if (!name) {
+                void panel.webview.postMessage({
+                    type: "createJiraProjectError",
+                    payload: { message: "Enter a Jira project name." }
+                });
+                return;
+            }
+            if (keyError) {
+                void panel.webview.postMessage({
+                    type: "createJiraProjectError",
+                    payload: { message: keyError }
+                });
+                return;
+            }
+            resolveOnce({ name, key, description });
+            panel.dispose();
+        }, undefined, context.subscriptions);
+    });
+    const renderCreateJiraItemHtml = (webview, projectKey) => {
+        const nonce = getNonce();
+        const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+        const issueTypes = ["Epic", "Story", "Task", "Bug"];
+        return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Jira Item</title>
+    <style>
+      :root { color-scheme: light dark; font-family: var(--vscode-font-family); }
+      body { margin: 0; padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
+      form { display: grid; gap: 16px; }
+      label { display: grid; gap: 6px; font-size: 13px; }
+      input, textarea, select, button { font: inherit; }
+      input, textarea, select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 6px;
+      }
+      textarea { min-height: 140px; resize: vertical; }
+      .current-branch-title { font-size: 18px; font-weight: 600; }
+      .current-branch-value { color: #7cc7ff; }
+      .hint { font-size: 12px; color: var(--vscode-descriptionForeground); }
+      .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
+      .actions { display: flex; justify-content: flex-end; gap: 8px; }
+      button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
+      button[type="submit"] { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+      button[type="button"] { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+    </style>
+  </head>
+  <body>
+    <form id="jira-item-form">
+      <div class="current-branch-title">Jira Project: <span class="current-branch-value">${projectKey}</span></div>
+      <label>
+        Item Type
+        <select id="issue-type"></select>
+      </label>
+      <label>
+        Name
+        <input id="issue-name" type="text" autocomplete="off" />
+      </label>
+      <label>
+        Description
+        <textarea id="issue-description"></textarea>
+        <span class="hint">The description will be sent to Jira as rich text.</span>
+      </label>
+      <div class="error" id="error-message"></div>
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit">Create</button>
+      </div>
+    </form>
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const issueTypes = ${JSON.stringify(issueTypes)};
+      const issueTypeSelect = document.getElementById("issue-type");
+      const issueNameInput = document.getElementById("issue-name");
+      const issueDescriptionInput = document.getElementById("issue-description");
+      const errorMessage = document.getElementById("error-message");
+      const form = document.getElementById("jira-item-form");
+      const cancelButton = document.getElementById("cancel-button");
+
+      for (const issueType of issueTypes) {
+        const option = document.createElement("option");
+        option.value = issueType;
+        option.textContent = issueType;
+        issueTypeSelect.appendChild(option);
+      }
+
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelCreateJiraItem" });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const payload = {
+          issueType: issueTypeSelect.value,
+          summary: issueNameInput.value.trim(),
+          description: issueDescriptionInput.value.trim()
+        };
+        if (!payload.summary) {
+          errorMessage.textContent = "Enter a Jira item name.";
+          issueNameInput.focus();
+          return;
+        }
+        vscode.postMessage({ type: "submitCreateJiraItem", payload });
+      });
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (message?.type === "createJiraItemError") {
+          errorMessage.textContent = message.payload?.message || "Unable to create the Jira item.";
+        }
+      });
+
+      issueTypeSelect.value = issueTypes[0];
+      issueNameInput.focus();
+    </script>
+  </body>
+</html>`;
+    };
+    const showCreateJiraItemDialog = async (projectKey) => new Promise((resolve) => {
+        const panel = vscode.window.createWebviewPanel("createJiraItem", "Add Jira Item", vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = renderCreateJiraItemHtml(panel.webview, projectKey);
+        let settled = false;
+        const resolveOnce = (value) => {
+            if (settled)
+                return;
+            settled = true;
+            resolve(value);
+        };
+        panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelCreateJiraItem") {
+                panel.dispose();
+                return;
+            }
+            if (message.type !== "submitCreateJiraItem")
+                return;
+            const payload = message.payload || {};
+            const issueType = typeof payload.issueType === "string" ? payload.issueType.trim() : "";
+            const summary = typeof payload.summary === "string" ? payload.summary.trim() : "";
+            const description = typeof payload.description === "string" ? payload.description.trim() : "";
+            if (!issueType) {
+                void panel.webview.postMessage({
+                    type: "createJiraItemError",
+                    payload: { message: "Select a Jira item type." }
+                });
+                return;
+            }
+            if (!summary) {
+                void panel.webview.postMessage({
+                    type: "createJiraItemError",
+                    payload: { message: "Enter a Jira item name." }
+                });
+                return;
+            }
+            resolveOnce({ issueType, summary, description });
             panel.dispose();
         }, undefined, context.subscriptions);
     });
@@ -1315,6 +1645,98 @@ function activate(context) {
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.deploy", async () => {
         await (0, scripts_1.runRepoScript)("deploy");
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.addJiraItem", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        let credentials;
+        try {
+            credentials = getJiraCredentialsFromEnv(repoRoot);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(message);
+            return;
+        }
+        const envPath = getRepoEnvPath(repoRoot);
+        let projectKey = getSavedJiraProjectKey(repoRoot);
+        if (!projectKey) {
+            const selection = await vscode.window.showQuickPick([
+                {
+                    label: "Enter Jira Project ID",
+                    description: "Save an existing Jira project key into this repo .env file.",
+                    value: "enter"
+                },
+                {
+                    label: "Create New Jira Project",
+                    description: "Create a new Jira project in Jira Cloud and save its key to .env.",
+                    value: "create"
+                }
+            ], {
+                title: "Add Jira Item",
+                placeHolder: "No Jira project is configured in this repo .env file."
+            });
+            if (!selection)
+                return;
+            if (selection.value === "enter") {
+                const enteredProjectKey = await vscode.window.showInputBox({
+                    title: "Jira Project ID",
+                    prompt: "Enter the Jira project ID to save in this repository .env file.",
+                    validateInput: validateJiraProjectKey
+                });
+                if (!enteredProjectKey)
+                    return;
+                projectKey = enteredProjectKey.trim().toUpperCase();
+            }
+            else {
+                const newProject = await showCreateJiraProjectDialog();
+                if (!newProject)
+                    return;
+                try {
+                    const createdProject = await vscode.window.withProgress({
+                        location: vscode.ProgressLocation.Notification,
+                        title: "Creating Jira project",
+                        cancellable: false
+                    }, async () => (0, jira_1.createJiraProject)(credentials, {
+                        key: newProject.key,
+                        name: newProject.name,
+                        description: newProject.description
+                    }));
+                    projectKey = createdProject.key.toUpperCase();
+                    void vscode.window.showInformationMessage(`Created Jira project ${projectKey} and saved it to this repository .env file.`);
+                }
+                catch (error) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    void vscode.window.showErrorMessage(`Failed to create Jira project: ${message}`);
+                    return;
+                }
+            }
+            (0, utils_1.upsertEnvFileValue)(envPath, "JIRA_PROJECT_KEY", projectKey);
+        }
+        const jiraItem = await showCreateJiraItemDialog(projectKey);
+        if (!jiraItem)
+            return;
+        try {
+            const createdIssue = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "Creating Jira item",
+                cancellable: false
+            }, async () => (0, jira_1.createJiraIssue)(credentials, {
+                projectKey,
+                issueTypeName: jiraItem.issueType,
+                summary: jiraItem.summary,
+                description: jiraItem.description
+            }));
+            void vscode.window.showInformationMessage(`Created Jira ${jiraItem.issueType} ${createdIssue.key} in project ${projectKey}.`);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to create Jira item: ${message}`);
+        }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.incrementMajorVersion", async () => {
         await (0, scripts_1.runRepoScript)("bump-version", ["major"]);

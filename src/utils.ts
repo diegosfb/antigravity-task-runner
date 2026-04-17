@@ -147,6 +147,44 @@ export function parseEnvFile(filePath: string): Record<string, string> {
   return values;
 }
 
+export function upsertEnvFileValue(filePath: string, key: string, value: string): void {
+  const normalizedKey = key.trim();
+  if (!normalizedKey) return;
+
+  const lines = fs.existsSync(filePath)
+    ? fs.readFileSync(filePath, "utf8").split(/\r?\n/)
+    : [];
+
+  const nextLine = `${normalizedKey}=${value}`;
+  let updated = false;
+
+  const rewritten = lines.map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return line;
+
+    const withoutExport = trimmed.startsWith("export ")
+      ? trimmed.slice("export ".length).trim()
+      : trimmed;
+    const eqIndex = withoutExport.indexOf("=");
+    if (eqIndex <= 0) return line;
+
+    const existingKey = withoutExport.slice(0, eqIndex).trim();
+    if (existingKey !== normalizedKey) return line;
+
+    updated = true;
+    return nextLine;
+  });
+
+  if (!updated) {
+    if (rewritten.length > 0 && rewritten[rewritten.length - 1] !== "") {
+      rewritten.push("");
+    }
+    rewritten.push(nextLine);
+  }
+
+  fs.writeFileSync(filePath, `${rewritten.join("\n")}\n`, "utf8");
+}
+
 export async function waitForUrlReady(
   url: string,
   timeoutMs = 30000,

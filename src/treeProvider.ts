@@ -652,6 +652,17 @@ function getQuickActionItems(): NodeItem[] {
   prReviewer.iconPath = new vscode.ThemeIcon("git-pull-request", QUICK_ACTION_COLOR);
   items.push(prReviewer);
 
+  const addJiraItem = new NodeItem(
+    { kind: "action", label: "Add Jira Item" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  addJiraItem.iconPath = new vscode.ThemeIcon("issues", QUICK_ACTION_COLOR);
+  addJiraItem.command = {
+    command: "antigravity.addJiraItem",
+    title: "Add Jira Item"
+  };
+  items.push(addJiraItem);
+
   const incrementMajor = new NodeItem(
     { kind: "action", label: "Increment Major Version" },
     vscode.TreeItemCollapsibleState.None

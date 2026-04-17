@@ -29,6 +29,7 @@
     "onCommand:antigravity.reviewPullRequest",
     "onCommand:antigravity.approvePullRequest",
     "onCommand:antigravity.feedbackOnPullRequest",
+    "onCommand:antigravity.addJiraItem",
     "onCommand:antigravity.openSopManual",
     "onCommand:antigravity.openClaudeTerminal",
     "onCommand:antigravity.openOpenClaudeTerminal"
@@ -144,6 +145,10 @@
       {
         "command": "antigravity.feedbackOnPullRequest",
         "title": "Antigravity: Feedback on Pull Request"
+      },
+      {
+        "command": "antigravity.addJiraItem",
+        "title": "Antigravity: Add Jira Item"
       },
       {
         "command": "antigravity.openSopManual",
