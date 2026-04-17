@@ -89,6 +89,39 @@ export function activate(context: vscode.ExtensionContext) {
     requiresJiraKey?: boolean;
   };
 
+  const branchTypes: BranchTypeOption[] = [
+    {
+      label: "Feature",
+      description: "Create feature/<short-name>",
+      prefix: "feature"
+    },
+    {
+      label: "Bug Fix",
+      description: "Create fix/<short-name>",
+      prefix: "fix"
+    },
+    {
+      label: "Jira Task",
+      description: "Create feature/JIRA-123-short-name",
+      prefix: "feature",
+      requiresJiraKey: true
+    },
+    {
+      label: "Hot Fix",
+      description: "Create hotfix/<short-name>",
+      prefix: "hotfix"
+    }
+  ];
+
+  const getNonce = (): string => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let nonce = "";
+    for (let i = 0; i < 32; i += 1) {
+      nonce += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return nonce;
+  };
+
   const normalizeBranchSegment = (value: string): string =>
     value
       .trim()
@@ -134,6 +167,239 @@ export function activate(context: vscode.ExtensionContext) {
 
     return undefined;
   };
+
+  const renderCreateFeatureBranchHtml = (webview: vscode.Webview): string => {
+    const nonce = getNonce();
+    const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+    const branchTypeData = branchTypes.map((option) => ({
+      label: option.label,
+      description: option.description,
+      requiresJiraKey: option.requiresJiraKey ?? false
+    }));
+
+    return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Feature Branch</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: var(--vscode-font-family);
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+      }
+      form {
+        display: grid;
+        gap: 16px;
+      }
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+      }
+      select,
+      input,
+      button {
+        font: inherit;
+      }
+      select,
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 6px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+      }
+      .error {
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--vscode-errorForeground);
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      button {
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 14px;
+        cursor: pointer;
+      }
+      button[type="submit"] {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+      }
+      button[type="button"] {
+        color: var(--vscode-button-secondaryForeground);
+        background: var(--vscode-button-secondaryBackground);
+      }
+    </style>
+  </head>
+  <body>
+    <form id="feature-branch-form">
+      <label>
+        Branch type
+        <select id="branch-type"></select>
+        <span class="hint" id="branch-type-hint"></span>
+      </label>
+      <label>
+        Name
+        <input id="branch-name" type="text" autocomplete="off" />
+        <span class="hint" id="branch-name-hint"></span>
+      </label>
+      <div class="error" id="error-message"></div>
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit">Create</button>
+      </div>
+    </form>
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const branchTypes = ${JSON.stringify(branchTypeData)};
+      const branchTypeSelect = document.getElementById("branch-type");
+      const branchTypeHint = document.getElementById("branch-type-hint");
+      const branchNameInput = document.getElementById("branch-name");
+      const branchNameHint = document.getElementById("branch-name-hint");
+      const errorMessage = document.getElementById("error-message");
+      const form = document.getElementById("feature-branch-form");
+      const cancelButton = document.getElementById("cancel-button");
+
+      const updateHints = () => {
+        const selected = branchTypes.find((option) => option.label === branchTypeSelect.value) || branchTypes[0];
+        branchTypeHint.textContent = selected.description;
+        branchNameInput.placeholder = selected.requiresJiraKey ? "JIRA-123-short-name" : "short-descriptive-name";
+        branchNameHint.textContent = selected.requiresJiraKey
+          ? "Use the Jira key followed by a short kebab-case description."
+          : "Use a short kebab-case description.";
+        errorMessage.textContent = "";
+      };
+
+      for (const option of branchTypes) {
+        const element = document.createElement("option");
+        element.value = option.label;
+        element.textContent = option.label;
+        branchTypeSelect.appendChild(element);
+      }
+
+      branchTypeSelect.addEventListener("change", updateHints);
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelCreateFeatureBranch" });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const branchType = branchTypeSelect.value;
+        const branchNameInputValue = branchNameInput.value.trim();
+        if (!branchNameInputValue) {
+          errorMessage.textContent = "Enter a branch name.";
+          branchNameInput.focus();
+          return;
+        }
+        vscode.postMessage({
+          type: "submitCreateFeatureBranch",
+          payload: {
+            branchType,
+            branchNameInput: branchNameInputValue
+          }
+        });
+      });
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (!message) return;
+        if (message.type === "createFeatureBranchError") {
+          errorMessage.textContent = message.payload?.message || "Invalid branch name.";
+        }
+      });
+
+      branchTypeSelect.value = branchTypes[0].label;
+      updateHints();
+      branchNameInput.focus();
+    </script>
+  </body>
+</html>`;
+  };
+
+  const showCreateFeatureBranchDialog = async (): Promise<
+    { branchType: BranchTypeOption; branchName: string } | undefined
+  > =>
+    new Promise((resolve) => {
+      const panel = vscode.window.createWebviewPanel(
+        "createFeatureBranch",
+        "Create Feature Branch",
+        vscode.ViewColumn.Active,
+        { enableScripts: true }
+      );
+      panel.webview.html = renderCreateFeatureBranchHtml(panel.webview);
+
+      let settled = false;
+      const resolveOnce = (value: { branchType: BranchTypeOption; branchName: string } | undefined) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
+      panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          if (!message) return;
+          if (message.type === "cancelCreateFeatureBranch") {
+            panel.dispose();
+            return;
+          }
+          if (message.type !== "submitCreateFeatureBranch") return;
+
+          const payload = message.payload || {};
+          const selectedBranchType = branchTypes.find((option) => option.label === payload.branchType);
+          const branchNameInput =
+            typeof payload.branchNameInput === "string" ? payload.branchNameInput : "";
+
+          if (!selectedBranchType) {
+            void panel.webview.postMessage({
+              type: "createFeatureBranchError",
+              payload: { message: "Select a branch type." }
+            });
+            return;
+          }
+
+          const branchName = selectedBranchType.requiresJiraKey
+            ? buildJiraTaskBranchName(branchNameInput)
+            : buildStandardBranchName(selectedBranchType.prefix, branchNameInput);
+
+          if (!branchName) {
+            void panel.webview.postMessage({
+              type: "createFeatureBranchError",
+              payload: {
+                message: selectedBranchType.requiresJiraKey
+                  ? "Use the format JIRA-123-short-name."
+                  : "Enter a short descriptive branch name."
+              }
+            });
+            return;
+          }
+
+          resolveOnce({ branchType: selectedBranchType, branchName });
+          panel.dispose();
+        },
+        undefined,
+        context.subscriptions
+      );
+    });
 
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("antigravityView", provider)
@@ -911,72 +1177,28 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      const branchTypes: BranchTypeOption[] = [
-        {
-          label: "Feature",
-          description: "Create feature/<short-name>",
-          prefix: "feature"
-        },
-        {
-          label: "Bug Fix",
-          description: "Create fix/<short-name>",
-          prefix: "fix"
-        },
-        {
-          label: "Jira Task",
-          description: "Create feature/JIRA-123-short-name",
-          prefix: "feature",
-          requiresJiraKey: true
-        },
-        {
-          label: "Hot Fix",
-          description: "Create hotfix/<short-name>",
-          prefix: "hotfix"
-        }
-      ];
-      const branchType = await vscode.window.showQuickPick(branchTypes, {
-        title: "Create Feature Branch",
-        placeHolder: "Select the branch type"
-      });
-      if (!branchType) return;
-
-      const branchNameInput = await vscode.window.showInputBox({
-        title: "Create Feature Branch",
-        prompt: branchType.requiresJiraKey
-          ? "Enter the Jira key and short branch name"
-          : "Enter the branch name",
-        placeHolder: branchType.requiresJiraKey
-          ? "JIRA-123-short-name"
-          : "short-descriptive-name",
-        validateInput: (value) => {
-          const branchName = branchType.requiresJiraKey
-            ? buildJiraTaskBranchName(value)
-            : buildStandardBranchName(branchType.prefix, value);
-          return branchName
-            ? undefined
-            : branchType.requiresJiraKey
-              ? "Use the format JIRA-123-short-name."
-              : "Enter a short descriptive branch name.";
-        }
-      });
-      if (branchNameInput === undefined) return;
-
-      const branchName = branchType.requiresJiraKey
-        ? buildJiraTaskBranchName(branchNameInput)
-        : buildStandardBranchName(branchType.prefix, branchNameInput);
-      if (!branchName) {
-        void vscode.window.showErrorMessage("Invalid branch name.");
+      const workflowFile = resolveClaudeWorkflowFile("create_feature_branch");
+      if (!workflowFile) {
+        void vscode.window.showErrorMessage(
+          "Create feature branch workflow not found in ~/.gemini or the bundled extension files."
+        );
         return;
       }
+      const dialogResult = await showCreateFeatureBranchDialog();
+      if (!dialogResult) return;
+      const { branchType, branchName } = dialogResult;
       log(`[createFeatureBranch] branchName: ${branchName}`);
       runInNewTerminal(
-        "Create Feature Branch",
+        "Claude Feature Branch",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          `git checkout main && git pull origin main && git checkout -b ${quoteShellArg(branchName)} && git push -u origin ${quoteShellArg(branchName)} && echo "[antigravity] branch ${branchName} created"`
+          `claude --dangerously-skip-permissions ${quoteShellArg(
+            `run this workflow ${workflowFile}. Use branch type ${branchType.label} and branch name ${branchName}. Do not ask for them again.`
+          )}`
         ],
         {
-          iconPath: new vscode.ThemeIcon("git-branch")
+          iconPath: new vscode.ThemeIcon("git-branch", CLAUDE_ACTION_COLOR),
+          color: CLAUDE_ACTION_COLOR
         }
       );
     })
