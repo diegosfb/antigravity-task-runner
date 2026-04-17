@@ -810,22 +810,36 @@ export function activate(context: vscode.ExtensionContext) {
     const selection = await vscode.window.showWarningMessage(
       `You have uncommitted changes that could be overwritten when checking out ${targetBranch}. Commit them with a message or cancel the checkout.`,
       { modal: true },
-      "Commit Changes"
+      "Commit Changes",
+      "Discard All Changes"
     );
-    if (selection !== "Commit Changes") return false;
+    if (selection === "Commit Changes") {
+      const commitMessage = await vscode.window.showInputBox({
+        title: "Commit Changes Before Checkout",
+        prompt: "Enter a commit message for the uncommitted changes.",
+        ignoreFocusOut: true,
+        validateInput: (value) => value.trim().length === 0 ? "Commit message is required." : undefined
+      });
+      if (commitMessage === undefined) return false;
 
-    const commitMessage = await vscode.window.showInputBox({
-      title: "Commit Changes Before Checkout",
-      prompt: "Enter a commit message for the uncommitted changes.",
-      ignoreFocusOut: true,
-      validateInput: (value) => value.trim().length === 0 ? "Commit message is required." : undefined
-    });
-    if (commitMessage === undefined) return false;
+      await execInRepo(
+        `git add -A && git commit -m ${quoteShellArg(commitMessage.trim())}`,
+        repoRoot
+      );
+      return true;
+    }
 
-    await execInRepo(
-      `git add -A && git commit -m ${quoteShellArg(commitMessage.trim())}`,
-      repoRoot
+    if (selection !== "Discard All Changes") return false;
+
+    const confirmDiscard = await vscode.window.showWarningMessage(
+      `Warning: you are going to lose all uncommitted and untracked changes before checking out ${targetBranch}. Are you sure?`,
+      { modal: true },
+      { title: "No", isCloseAffordance: true },
+      { title: "Yes, Discard Changes" }
     );
+    if (confirmDiscard?.title !== "Yes, Discard Changes") return false;
+
+    await execInRepo("git reset --hard HEAD && git clean -fd", repoRoot);
     return true;
   };
 
