@@ -91,6 +91,9 @@ class AntigravityViewProvider {
         if (element.kind === "category" && element.label === "Workflows") {
             return this.getWorkflowItems();
         }
+        if (element.kind === "category" && element.label === "PR Reviewer") {
+            return getPrReviewerItems();
+        }
         if (element.kind === "folder" && element.label === "Claude Plugins") {
             return this.getClaudePluginItems();
         }
@@ -520,6 +523,23 @@ function getQuickActionItems() {
         title: "Create Feature Branch"
     };
     items.push(createFeatureBranch);
+    const createPullRequest = new NodeItem({ kind: "action", label: "Create Pull Request" }, vscode.TreeItemCollapsibleState.None);
+    createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", QUICK_ACTION_COLOR);
+    createPullRequest.command = {
+        command: "antigravity.createPullRequest",
+        title: "Create Pull Request"
+    };
+    items.push(createPullRequest);
+    const checkoutMain = new NodeItem({ kind: "action", label: "Checkout Main (Branch work done)" }, vscode.TreeItemCollapsibleState.None);
+    checkoutMain.iconPath = new vscode.ThemeIcon("source-control", QUICK_ACTION_COLOR);
+    checkoutMain.command = {
+        command: "antigravity.checkoutMain",
+        title: "Checkout Main (Branch work done)"
+    };
+    items.push(checkoutMain);
+    const prReviewer = new NodeItem({ kind: "category", label: "PR Reviewer" }, vscode.TreeItemCollapsibleState.Collapsed);
+    prReviewer.iconPath = new vscode.ThemeIcon("git-pull-request", QUICK_ACTION_COLOR);
+    items.push(prReviewer);
     const autocommitCheckpoint = new NodeItem({ kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" }, vscode.TreeItemCollapsibleState.None);
     if (!autocommitRunning && !hasGitHub) {
         autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", new vscode.ThemeColor("disabledForeground"));
@@ -555,6 +575,27 @@ function getQuickActionItems() {
     };
     items.push(environmentSwitch);
     return items;
+}
+function getPrReviewerItems() {
+    const reviewPullRequest = new NodeItem({ kind: "action", label: "Review a Pull Request" }, vscode.TreeItemCollapsibleState.None);
+    reviewPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", QUICK_ACTION_COLOR);
+    reviewPullRequest.command = {
+        command: "antigravity.reviewPullRequest",
+        title: "Review a Pull Request"
+    };
+    const approvePullRequest = new NodeItem({ kind: "action", label: "Approve a Pull Request" }, vscode.TreeItemCollapsibleState.None);
+    approvePullRequest.iconPath = new vscode.ThemeIcon("pass", QUICK_ACTION_COLOR);
+    approvePullRequest.command = {
+        command: "antigravity.approvePullRequest",
+        title: "Approve a Pull Request"
+    };
+    const feedbackOnPullRequest = new NodeItem({ kind: "action", label: "Feedback on Pull Request" }, vscode.TreeItemCollapsibleState.None);
+    feedbackOnPullRequest.iconPath = new vscode.ThemeIcon("comment-discussion", QUICK_ACTION_COLOR);
+    feedbackOnPullRequest.command = {
+        command: "antigravity.feedbackOnPullRequest",
+        title: "Feedback on Pull Request"
+    };
+    return [reviewPullRequest, approvePullRequest, feedbackOnPullRequest];
 }
 function getClaudeActionItems() {
     const item = new NodeItem({ kind: "action", label: "Claude Terminal" }, vscode.TreeItemCollapsibleState.None);
