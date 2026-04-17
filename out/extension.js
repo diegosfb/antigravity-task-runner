@@ -163,9 +163,12 @@ function activate(context) {
         color: var(--vscode-descriptionForeground);
       }
       .current-branch-title {
-        font-size: 18px;
+        font-size: 22px;
         font-weight: 600;
         line-height: 1.3;
+      }
+      .current-branch-value {
+        color: #7cc7ff;
       }
       .error {
         min-height: 18px;
@@ -591,7 +594,7 @@ function activate(context) {
   </head>
   <body>
     <form id="checkout-branch-form">
-      <div class="current-branch-title">Current Branch: ${currentBranch}</div>
+      <div class="current-branch-title">Current Branch: <span class="current-branch-value">${currentBranch}</span></div>
       <label>
         Checkout Branch
         <select id="branch-select"></select>
