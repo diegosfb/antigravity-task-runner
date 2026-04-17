@@ -230,6 +230,7 @@ export async function createJiraIssue(
     summary: details.summary.trim(),
     description: toAdfDocument(details.description)
   };
+  const autoPopulatedFieldKeys = new Set<string>();
 
   const metadata = await getJiraCreateFieldMetadata(credentials, details.projectKey, issueType.id);
   let currentUserAccountId: string | undefined;
@@ -240,12 +241,14 @@ export async function createJiraIssue(
 
     if (fieldName === "epic name") {
       fields[fieldKey] = details.summary.trim();
+      autoPopulatedFieldKeys.add(fieldKey);
       continue;
     }
 
     if (fieldName === "reporter") {
       currentUserAccountId ||= await getJiraCurrentUserAccountId(credentials);
       fields[fieldKey] = { accountId: currentUserAccountId };
+      autoPopulatedFieldKeys.add(fieldKey);
     }
   }
 
@@ -263,9 +266,34 @@ export async function createJiraIssue(
     );
   }
 
-  return jiraRequest<{ id: string; key: string; self: string }>(credentials, {
-    method: "POST",
-    apiPath: "/rest/api/3/issue",
-    body: { fields }
-  });
+  const createIssueRequest = () =>
+    jiraRequest<{ id: string; key: string; self: string }>(credentials, {
+      method: "POST",
+      apiPath: "/rest/api/3/issue",
+      body: { fields }
+    });
+
+  try {
+    return await createIssueRequest();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const unsupportedFieldKeys = Array.from(
+      message.matchAll(/Field '([^']+)' cannot be set\./g),
+      (match) => match[1]
+    );
+
+    const retryableFieldKeys = unsupportedFieldKeys.filter((fieldKey) =>
+      autoPopulatedFieldKeys.has(fieldKey)
+    );
+
+    if (retryableFieldKeys.length === 0) {
+      throw error;
+    }
+
+    for (const fieldKey of retryableFieldKeys) {
+      delete fields[fieldKey];
+    }
+
+    return createIssueRequest();
+  }
 }

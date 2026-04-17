@@ -154,6 +154,7 @@ async function createJiraIssue(credentials, details) {
         summary: details.summary.trim(),
         description: toAdfDocument(details.description)
     };
+    const autoPopulatedFieldKeys = new Set();
     const metadata = await getJiraCreateFieldMetadata(credentials, details.projectKey, issueType.id);
     let currentUserAccountId;
     for (const [fieldKey, field] of Object.entries(metadata)) {
@@ -162,11 +163,13 @@ async function createJiraIssue(credentials, details) {
         const fieldName = normalizeFieldName(fieldKey, field);
         if (fieldName === "epic name") {
             fields[fieldKey] = details.summary.trim();
+            autoPopulatedFieldKeys.add(fieldKey);
             continue;
         }
         if (fieldName === "reporter") {
             currentUserAccountId || (currentUserAccountId = await getJiraCurrentUserAccountId(credentials));
             fields[fieldKey] = { accountId: currentUserAccountId };
+            autoPopulatedFieldKeys.add(fieldKey);
         }
     }
     const unsupportedRequiredFields = Object.entries(metadata)
@@ -181,10 +184,25 @@ async function createJiraIssue(credentials, details) {
     if (unsupportedRequiredFields.length > 0) {
         throw new Error(`Jira requires additional fields for this issue type: ${unsupportedRequiredFields.join(", ")}.`);
     }
-    return jiraRequest(credentials, {
+    const createIssueRequest = () => jiraRequest(credentials, {
         method: "POST",
         apiPath: "/rest/api/3/issue",
         body: { fields }
     });
+    try {
+        return await createIssueRequest();
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const unsupportedFieldKeys = Array.from(message.matchAll(/Field '([^']+)' cannot be set\./g), (match) => match[1]);
+        const retryableFieldKeys = unsupportedFieldKeys.filter((fieldKey) => autoPopulatedFieldKeys.has(fieldKey));
+        if (retryableFieldKeys.length === 0) {
+            throw error;
+        }
+        for (const fieldKey of retryableFieldKeys) {
+            delete fields[fieldKey];
+        }
+        return createIssueRequest();
+    }
 }
 //# sourceMappingURL=jira.js.map
