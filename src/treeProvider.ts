@@ -670,7 +670,7 @@ function getQuickActionItems(): NodeItem[] {
     { kind: "action", label: "Go To Branch" },
     vscode.TreeItemCollapsibleState.None
   );
-  checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", QUICK_ACTION_COLOR);
+  checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", new vscode.ThemeColor("charts.orange"));
   checkoutMain.command = {
     command: "antigravity.checkoutMain",
     title: "Go To Branch"
