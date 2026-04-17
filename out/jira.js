@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getJiraCurrentUserAccountId = getJiraCurrentUserAccountId;
 exports.createJiraProject = createJiraProject;
+exports.getJiraProjects = getJiraProjects;
 exports.getJiraIssueTypes = getJiraIssueTypes;
 exports.getJiraCreateFieldMetadata = getJiraCreateFieldMetadata;
 exports.createJiraIssue = createJiraIssue;
@@ -127,6 +128,13 @@ async function createJiraProject(credentials, details) {
             projectTypeKey: "software"
         }
     });
+}
+async function getJiraProjects(credentials) {
+    const response = await jiraRequest(credentials, {
+        method: "GET",
+        apiPath: "/rest/api/3/project/search?maxResults=100&orderBy=name"
+    });
+    return (response.values ?? []).sort((a, b) => a.name.localeCompare(b.name));
 }
 async function getJiraIssueTypes(credentials, projectKey) {
     const response = await jiraRequest(credentials, {

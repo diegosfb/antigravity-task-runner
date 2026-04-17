@@ -18,6 +18,12 @@ export interface JiraIssueType {
   name: string;
 }
 
+export interface JiraProjectSummary {
+  id: string;
+  key: string;
+  name: string;
+}
+
 export interface JiraIssueDetails {
   projectKey: string;
   issueTypeName: string;
@@ -184,6 +190,16 @@ export async function createJiraProject(
       projectTypeKey: "software"
     }
   });
+}
+
+export async function getJiraProjects(
+  credentials: JiraCredentials
+): Promise<JiraProjectSummary[]> {
+  const response = await jiraRequest<{ values?: JiraProjectSummary[] }>(credentials, {
+    method: "GET",
+    apiPath: "/rest/api/3/project/search?maxResults=100&orderBy=name"
+  });
+  return (response.values ?? []).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getJiraIssueTypes(
