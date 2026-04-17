@@ -276,6 +276,7 @@ class AntigravityViewProvider {
 }
 exports.AntigravityViewProvider = AntigravityViewProvider;
 const QUICK_ACTION_COLOR = new vscode.ThemeColor("charts.green");
+const ORANGE_ACTION_COLOR = new vscode.ThemeColor("charts.orange");
 const CLAUDE_MODEL_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const TOP_LEVEL_LINKED_FOLDERS = [
@@ -510,28 +511,28 @@ function getQuickActionItems() {
     };
     items.push(incrementPatch);
     const createRepoTagVersion = new NodeItem({ kind: "action", label: "Create Repo Release" }, vscode.TreeItemCollapsibleState.None);
-    createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", QUICK_ACTION_COLOR);
+    createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", ORANGE_ACTION_COLOR);
     createRepoTagVersion.command = {
         command: "antigravity.createRepoTagVersion",
         title: "Create Repo Release"
     };
     items.push(createRepoTagVersion);
     const createFeatureBranch = new NodeItem({ kind: "action", label: "Create Feature Branch" }, vscode.TreeItemCollapsibleState.None);
-    createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", QUICK_ACTION_COLOR);
+    createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", ORANGE_ACTION_COLOR);
     createFeatureBranch.command = {
         command: "antigravity.createFeatureBranch",
         title: "Create Feature Branch"
     };
     items.push(createFeatureBranch);
     const createPullRequest = new NodeItem({ kind: "action", label: "Create Pull Request" }, vscode.TreeItemCollapsibleState.None);
-    createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", QUICK_ACTION_COLOR);
+    createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
     createPullRequest.command = {
         command: "antigravity.createPullRequest",
         title: "Create Pull Request"
     };
     items.push(createPullRequest);
     const checkoutMain = new NodeItem({ kind: "action", label: "Go To Branch" }, vscode.TreeItemCollapsibleState.None);
-    checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", new vscode.ThemeColor("charts.orange"));
+    checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
     checkoutMain.command = {
         command: "antigravity.checkoutMain",
         title: "Go To Branch"
