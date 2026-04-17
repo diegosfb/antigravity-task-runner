@@ -1623,6 +1623,32 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
+      const config = vscode.workspace.getConfiguration("antigravity");
+      const useAgentForGithubRepositoryManagement =
+        config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true;
+
+      if (!useAgentForGithubRepositoryManagement) {
+        const scriptPath = path.join(extensionRoot, "src", "create_feature_branch.sh");
+        if (!fs.existsSync(scriptPath)) {
+          void vscode.window.showErrorMessage(
+            "Create feature branch script not found in the extension package."
+          );
+          return;
+        }
+
+        runInNewTerminal(
+          "Create Feature Branch",
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            quoteShellArg(scriptPath)
+          ],
+          {
+            iconPath: new vscode.ThemeIcon("git-branch")
+          }
+        );
+        return;
+      }
+
       const workflowFile = resolveClaudeWorkflowFile("create_feature_branch");
       if (!workflowFile) {
         void vscode.window.showErrorMessage(

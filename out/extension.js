@@ -1353,6 +1353,22 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const config = vscode.workspace.getConfiguration("antigravity");
+        const useAgentForGithubRepositoryManagement = config.get("useAgentForGithubRepositoryManagement") ?? true;
+        if (!useAgentForGithubRepositoryManagement) {
+            const scriptPath = path.join(extensionRoot, "src", "create_feature_branch.sh");
+            if (!fs.existsSync(scriptPath)) {
+                void vscode.window.showErrorMessage("Create feature branch script not found in the extension package.");
+                return;
+            }
+            (0, terminal_1.runInNewTerminal)("Create Feature Branch", [
+                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+                (0, utils_1.quoteShellArg)(scriptPath)
+            ], {
+                iconPath: new vscode.ThemeIcon("git-branch")
+            });
+            return;
+        }
         const workflowFile = resolveClaudeWorkflowFile("create_feature_branch");
         if (!workflowFile) {
             void vscode.window.showErrorMessage("Create feature branch workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
