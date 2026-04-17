@@ -1235,6 +1235,29 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.checkoutMain", async () => {
+      log("[checkoutMain] triggered");
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      runInNewTerminal(
+        "Checkout Main",
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          "git checkout main",
+          "git pull origin main"
+        ],
+        {
+          iconPath: new vscode.ThemeIcon("source-control")
+        }
+      );
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.createRepoTag", async () => {
       const rootPath = getRootPath();
       if (!rootPath) {

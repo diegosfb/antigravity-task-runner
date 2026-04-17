@@ -662,6 +662,17 @@ function getQuickActionItems(): NodeItem[] {
   };
   items.push(createPullRequest);
 
+  const checkoutMain = new NodeItem(
+    { kind: "action", label: "Checkout Main (Branch work done)" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  checkoutMain.iconPath = new vscode.ThemeIcon("source-control", QUICK_ACTION_COLOR);
+  checkoutMain.command = {
+    command: "antigravity.checkoutMain",
+    title: "Checkout Main (Branch work done)"
+  };
+  items.push(checkoutMain);
+
   const autocommitCheckpoint = new NodeItem(
     { kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" },
     vscode.TreeItemCollapsibleState.None
