@@ -677,7 +677,7 @@ function activate(context) {
         const statusOutput = await execInRepo("git status --porcelain", repoRoot);
         if (statusOutput.trim().length === 0)
             return true;
-        const selection = await vscode.window.showWarningMessage(`You have uncommitted changes that could be overwritten when checking out ${targetBranch}. Commit them with a message or cancel the checkout.`, { modal: true }, "Commit Changes", "Cancel");
+        const selection = await vscode.window.showWarningMessage(`You have uncommitted changes that could be overwritten when checking out ${targetBranch}. Commit them with a message or cancel the checkout.`, { modal: true }, "Commit Changes");
         if (selection !== "Commit Changes")
             return false;
         const commitMessage = await vscode.window.showInputBox({

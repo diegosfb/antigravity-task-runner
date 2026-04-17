@@ -810,8 +810,7 @@ export function activate(context: vscode.ExtensionContext) {
     const selection = await vscode.window.showWarningMessage(
       `You have uncommitted changes that could be overwritten when checking out ${targetBranch}. Commit them with a message or cancel the checkout.`,
       { modal: true },
-      "Commit Changes",
-      "Cancel"
+      "Commit Changes"
     );
     if (selection !== "Commit Changes") return false;
 
