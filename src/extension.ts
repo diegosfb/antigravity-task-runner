@@ -1002,7 +1002,7 @@ export function activate(context: vscode.ExtensionContext) {
         "Claude Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          `bash ${quoteShellArg(path.join(extensionRoot, "src", "run-claude-workflow.sh"))} ${quoteShellArg(workflowFile)}`
+          `claude --dangerously-skip-permissions ${quoteShellArg(`run this workflow ${workflowFile}`)}`
         ],
         {
           iconPath: new vscode.ThemeIcon("git-pull-request", CLAUDE_ACTION_COLOR),
