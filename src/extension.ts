@@ -1496,8 +1496,30 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.approvePullRequest", async () => {
-      void vscode.window.showInformationMessage(
-        "Approve a Pull Request is added to the sidebar. Detailed functionality will be wired in later."
+      log("[approvePullRequest] triggered");
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      const workflowFile = resolveClaudeWorkflowFile("approve_pull_request");
+      if (!workflowFile) {
+        void vscode.window.showErrorMessage(
+          "Approve pull request workflow not found in ~/.gemini or the bundled extension files."
+        );
+        return;
+      }
+      runInNewTerminal(
+        "Claude Approve Pull Request",
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          `claude --dangerously-skip-permissions ${quoteShellArg(`run this workflow ${workflowFile}`)}`
+        ],
+        {
+          iconPath: new vscode.ThemeIcon("pass", CLAUDE_ACTION_COLOR),
+          color: CLAUDE_ACTION_COLOR
+        }
       );
     })
   );
