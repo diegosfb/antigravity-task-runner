@@ -1005,9 +1005,32 @@ export function activate(context: vscode.ExtensionContext) {
     repository: GitRepository
   ): Promise<string> => {
     const commandId = "github.copilot.git.generateCommitMessage";
+    const copilotExtensionIds = ["github.copilot-chat", "GitHub.copilot-chat"];
+    const copilotExtension = copilotExtensionIds
+      .map((id) => vscode.extensions.getExtension(id))
+      .find((extension): extension is vscode.Extension<unknown> => Boolean(extension));
+
+    if (!copilotExtension) {
+      logAlways("[commitChanges] Copilot Chat extension not installed");
+      return "";
+    }
+
+    if (!copilotExtension.isActive) {
+      try {
+        await copilotExtension.activate();
+      } catch (error) {
+        logAlways(
+          `[commitChanges] Copilot Chat activation failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        return "";
+      }
+    }
+
     const availableCommands = await vscode.commands.getCommands(true);
     if (!availableCommands.includes(commandId)) {
-      logAlways("[commitChanges] Copilot commit message command unavailable");
+      logAlways("[commitChanges] Copilot commit message command unavailable after activation");
       return "";
     }
 
