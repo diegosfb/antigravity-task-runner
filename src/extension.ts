@@ -1000,6 +1000,52 @@ export function activate(context: vscode.ExtensionContext) {
     return `Update ${entries.length} files`;
   };
 
+  const generateCommitMessageWithCopilot = async (
+    repoRoot: string,
+    repository: GitRepository
+  ): Promise<string> => {
+    const commandId = "github.copilot.git.generateCommitMessage";
+    const availableCommands = await vscode.commands.getCommands(true);
+    if (!availableCommands.includes(commandId)) {
+      logAlways("[commitChanges] Copilot commit message command unavailable");
+      return "";
+    }
+
+    const previousInputValue = repository.inputBox.value;
+    repository.inputBox.value = "";
+
+    try {
+      const cancellation = new vscode.CancellationTokenSource();
+      try {
+        await vscode.commands.executeCommand(
+          commandId,
+          vscode.Uri.file(repoRoot),
+          undefined,
+          cancellation.token
+        );
+      } finally {
+        cancellation.dispose();
+      }
+    } catch (error) {
+      repository.inputBox.value = previousInputValue;
+      logAlways(
+        `[commitChanges] Copilot commit message generation failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return "";
+    }
+
+    const generatedMessage = repository.inputBox.value.trim();
+    if (!generatedMessage) {
+      repository.inputBox.value = previousInputValue;
+      logAlways("[commitChanges] Copilot commit message generation returned no message");
+      return "";
+    }
+
+    return generatedMessage;
+  };
+
   const getGitApi = async (): Promise<GitApi> => {
     const gitExtension = vscode.extensions.getExtension<GitExtensionExports>("vscode.git");
     if (!gitExtension) {
@@ -2119,19 +2165,21 @@ export function activate(context: vscode.ExtensionContext) {
         repoRoot
       );
 
-      const commitMessage = await buildGeneratedCommitMessage(repoRoot);
-      if (!commitMessage.trim()) {
-        logAlways("[commitChanges] no commit message generated");
-        void vscode.window.showWarningMessage("Nothing commitable was staged.");
-        return;
-      }
-
       const repository = await getGitRepository(repoRoot);
       if (!repository) {
         logAlways("[commitChanges] ERROR: VS Code Git repository not found");
         void vscode.window.showErrorMessage(
           "VS Code Git integration could not find the current repository."
         );
+        return;
+      }
+
+      const commitMessage =
+        (await generateCommitMessageWithCopilot(repoRoot, repository)) ||
+        (await buildGeneratedCommitMessage(repoRoot));
+      if (!commitMessage.trim()) {
+        logAlways("[commitChanges] no commit message generated");
+        void vscode.window.showWarningMessage("Nothing commitable was staged.");
         return;
       }
 
