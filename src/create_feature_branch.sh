@@ -120,16 +120,18 @@ run_and_echo() {
 }
 
 main() {
-  local branch_name
+  local branch_name="${1:-}"
 
   ensure_git_repo
   ensure_remote_origin
 
-  branch_name="$(build_branch_name)"
+  if [[ -z "$branch_name" ]]; then
+    branch_name="$(build_branch_name)"
 
-  if ! confirm_yes_no "I'll create the branch: ${branch_name}. Sound good? (yes / no)"; then
-    echo "Branch creation cancelled."
-    exit 0
+    if ! confirm_yes_no "I'll create the branch: ${branch_name}. Sound good? (yes / no)"; then
+      echo "Branch creation cancelled."
+      exit 0
+    fi
   fi
 
   echo "This ensures your new branch starts from the latest version of the codebase."

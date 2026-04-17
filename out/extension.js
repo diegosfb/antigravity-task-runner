@@ -1353,6 +1353,11 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const dialogResult = await showCreateFeatureBranchDialog();
+        if (!dialogResult)
+            return;
+        const { branchType, branchName } = dialogResult;
+        (0, logger_1.log)(`[createFeatureBranch] branchName: ${branchName}`);
         const config = vscode.workspace.getConfiguration("antigravity");
         const useAgentForGithubRepositoryManagement = config.get("useAgentForGithubRepositoryManagement") ?? true;
         if (!useAgentForGithubRepositoryManagement) {
@@ -1363,7 +1368,7 @@ function activate(context) {
             }
             (0, terminal_1.runInNewTerminal)("Create Feature Branch", [
                 `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                (0, utils_1.quoteShellArg)(scriptPath)
+                `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(branchName)}`
             ], {
                 iconPath: new vscode.ThemeIcon("git-branch")
             });
@@ -1374,11 +1379,6 @@ function activate(context) {
             void vscode.window.showErrorMessage("Create feature branch workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
             return;
         }
-        const dialogResult = await showCreateFeatureBranchDialog();
-        if (!dialogResult)
-            return;
-        const { branchType, branchName } = dialogResult;
-        (0, logger_1.log)(`[createFeatureBranch] branchName: ${branchName}`);
         (0, terminal_1.runInNewTerminal)("Claude Feature Branch", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
             `claude --dangerously-skip-permissions ${(0, utils_1.quoteShellArg)(`run this workflow ${workflowFile}. Use branch type ${branchType.label} and branch name ${branchName}. Do not ask for them again.`)}`

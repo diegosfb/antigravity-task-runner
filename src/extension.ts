@@ -1623,6 +1623,10 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
+      const dialogResult = await showCreateFeatureBranchDialog();
+      if (!dialogResult) return;
+      const { branchType, branchName } = dialogResult;
+      log(`[createFeatureBranch] branchName: ${branchName}`);
       const config = vscode.workspace.getConfiguration("antigravity");
       const useAgentForGithubRepositoryManagement =
         config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true;
@@ -1640,7 +1644,7 @@ export function activate(context: vscode.ExtensionContext) {
           "Create Feature Branch",
           [
             `cd ${quoteShellArg(repoRoot)}`,
-            quoteShellArg(scriptPath)
+            `${quoteShellArg(scriptPath)} ${quoteShellArg(branchName)}`
           ],
           {
             iconPath: new vscode.ThemeIcon("git-branch")
@@ -1656,10 +1660,6 @@ export function activate(context: vscode.ExtensionContext) {
         );
         return;
       }
-      const dialogResult = await showCreateFeatureBranchDialog();
-      if (!dialogResult) return;
-      const { branchType, branchName } = dialogResult;
-      log(`[createFeatureBranch] branchName: ${branchName}`);
       runInNewTerminal(
         "Claude Feature Branch",
         [
