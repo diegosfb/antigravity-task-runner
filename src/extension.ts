@@ -223,6 +223,11 @@ export function activate(context: vscode.ExtensionContext) {
         font-size: 12px;
         color: var(--vscode-descriptionForeground);
       }
+      .current-branch-title {
+        font-size: 18px;
+        font-weight: 600;
+        line-height: 1.3;
+      }
       .error {
         min-height: 18px;
         font-size: 12px;
@@ -699,7 +704,7 @@ export function activate(context: vscode.ExtensionContext) {
   </head>
   <body>
     <form id="checkout-branch-form">
-      <div class="hint">Current Branch: ${currentBranch}</div>
+      <div class="current-branch-title">Current Branch: ${currentBranch}</div>
       <label>
         Checkout Branch
         <select id="branch-select"></select>
