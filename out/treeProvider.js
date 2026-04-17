@@ -530,11 +530,11 @@ function getQuickActionItems() {
         title: "Create Pull Request"
     };
     items.push(createPullRequest);
-    const checkoutMain = new NodeItem({ kind: "action", label: "Checkout Main (Branch work done)" }, vscode.TreeItemCollapsibleState.None);
+    const checkoutMain = new NodeItem({ kind: "action", label: "Go To Branch" }, vscode.TreeItemCollapsibleState.None);
     checkoutMain.iconPath = new vscode.ThemeIcon("source-control", QUICK_ACTION_COLOR);
     checkoutMain.command = {
         command: "antigravity.checkoutMain",
-        title: "Checkout Main (Branch work done)"
+        title: "Go To Branch"
     };
     items.push(checkoutMain);
     const prReviewer = new NodeItem({ kind: "category", label: "PR Reviewer" }, vscode.TreeItemCollapsibleState.Collapsed);

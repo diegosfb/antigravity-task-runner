@@ -586,6 +586,7 @@ function activate(context) {
   </head>
   <body>
     <form id="checkout-branch-form">
+      <div class="hint">Current Branch: ${currentBranch}</div>
       <label>
         Checkout Branch
         <select id="branch-select"></select>
