@@ -603,7 +603,7 @@ function activate(context) {
     const renderCreateJiraItemHtml = (webview, projectKey) => {
         const nonce = getNonce();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-        const issueTypes = ["Epic", "Story", "Task", "Bug"];
+        const issueTypes = ["Epic", "Feature", "Task", "Bug"];
         return `<!DOCTYPE html>
 <html lang="en">
   <head>
