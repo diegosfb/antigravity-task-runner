@@ -46,15 +46,450 @@ function activate(context) {
         await (0, terminal_1.runCodexInitAndUpdateInNewTerminal)(repoRoot, prompt);
         (0, logger_1.log)(`[launchAgentInit] done`);
     };
-    const resolveCreateFeatureBranchWorkflow = () => {
-        const primaryPath = path.join(os.homedir(), ".gemini", "workflows", "create_feature_branch", "WORKFLOW.md");
+    const branchTypes = [
+        {
+            label: "Feature",
+            description: "Create feature/<short-name>",
+            prefix: "feature"
+        },
+        {
+            label: "Bug Fix",
+            description: "Create fix/<short-name>",
+            prefix: "fix"
+        },
+        {
+            label: "Jira Task",
+            description: "Create feature/JIRA-123-short-name",
+            prefix: "feature",
+            requiresJiraKey: true
+        },
+        {
+            label: "Hot Fix",
+            description: "Create hotfix/<short-name>",
+            prefix: "hotfix"
+        }
+    ];
+    const getNonce = () => {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        let nonce = "";
+        for (let i = 0; i < 32; i += 1) {
+            nonce += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return nonce;
+    };
+    const normalizeBranchSegment = (value) => value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .replace(/-{2,}/g, "-");
+    const buildStandardBranchName = (prefix, rawValue) => {
+        const withoutPrefix = rawValue.trim().replace(/^(feature|fix|hotfix)\//i, "");
+        const segment = normalizeBranchSegment(withoutPrefix);
+        return segment ? `${prefix}/${segment}` : undefined;
+    };
+    const buildJiraTaskBranchName = (rawValue) => {
+        const withoutPrefix = rawValue.trim().replace(/^feature\//i, "");
+        const match = withoutPrefix.match(/^([A-Za-z][A-Za-z0-9]+-\d+)[-\s/]+(.+)$/);
+        if (!match)
+            return undefined;
+        const issueKey = match[1].toUpperCase();
+        const description = normalizeBranchSegment(match[2]);
+        if (!description)
+            return undefined;
+        return `feature/${issueKey}-${description}`;
+    };
+    const resolveClaudeWorkflowFile = (workflowName) => {
+        const primaryPath = path.join(os.homedir(), ".gemini", "workflows", workflowName, "WORKFLOW.md");
         if (fs.existsSync(primaryPath))
             return primaryPath;
-        const bundledPath = path.join(extensionRoot, "Knowhow", "Antigravity workflows", "create_feature_branch", "WORKFLOW.md");
+        const bundledPath = path.join(extensionRoot, "Knowhow", "Antigravity workflows", workflowName, "WORKFLOW.md");
         if (fs.existsSync(bundledPath))
             return bundledPath;
         return undefined;
     };
+    const renderCreateFeatureBranchHtml = (webview) => {
+        const nonce = getNonce();
+        const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+        const branchTypeData = branchTypes.map((option) => ({
+            label: option.label,
+            description: option.description,
+            requiresJiraKey: option.requiresJiraKey ?? false
+        }));
+        return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Feature Branch</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: var(--vscode-font-family);
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+      }
+      form {
+        display: grid;
+        gap: 16px;
+      }
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+      }
+      select,
+      input,
+      button {
+        font: inherit;
+      }
+      select,
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 6px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+      }
+      .error {
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--vscode-errorForeground);
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      button {
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 14px;
+        cursor: pointer;
+      }
+      button[type="submit"] {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+      }
+      button[type="button"] {
+        color: var(--vscode-button-secondaryForeground);
+        background: var(--vscode-button-secondaryBackground);
+      }
+    </style>
+  </head>
+  <body>
+    <form id="feature-branch-form">
+      <label>
+        Branch type
+        <select id="branch-type"></select>
+        <span class="hint" id="branch-type-hint"></span>
+      </label>
+      <label>
+        Name
+        <input id="branch-name" type="text" autocomplete="off" />
+        <span class="hint" id="branch-name-hint"></span>
+      </label>
+      <div class="error" id="error-message"></div>
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit">Create</button>
+      </div>
+    </form>
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const branchTypes = ${JSON.stringify(branchTypeData)};
+      const branchTypeSelect = document.getElementById("branch-type");
+      const branchTypeHint = document.getElementById("branch-type-hint");
+      const branchNameInput = document.getElementById("branch-name");
+      const branchNameHint = document.getElementById("branch-name-hint");
+      const errorMessage = document.getElementById("error-message");
+      const form = document.getElementById("feature-branch-form");
+      const cancelButton = document.getElementById("cancel-button");
+
+      const updateHints = () => {
+        const selected = branchTypes.find((option) => option.label === branchTypeSelect.value) || branchTypes[0];
+        branchTypeHint.textContent = selected.description;
+        branchNameInput.placeholder = selected.requiresJiraKey ? "JIRA-123-short-name" : "short-descriptive-name";
+        branchNameHint.textContent = selected.requiresJiraKey
+          ? "Use the Jira key followed by a short kebab-case description."
+          : "Use a short kebab-case description.";
+        errorMessage.textContent = "";
+      };
+
+      for (const option of branchTypes) {
+        const element = document.createElement("option");
+        element.value = option.label;
+        element.textContent = option.label;
+        branchTypeSelect.appendChild(element);
+      }
+
+      branchTypeSelect.addEventListener("change", updateHints);
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelCreateFeatureBranch" });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const branchType = branchTypeSelect.value;
+        const branchNameInputValue = branchNameInput.value.trim();
+        if (!branchNameInputValue) {
+          errorMessage.textContent = "Enter a branch name.";
+          branchNameInput.focus();
+          return;
+        }
+        vscode.postMessage({
+          type: "submitCreateFeatureBranch",
+          payload: {
+            branchType,
+            branchNameInput: branchNameInputValue
+          }
+        });
+      });
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (!message) return;
+        if (message.type === "createFeatureBranchError") {
+          errorMessage.textContent = message.payload?.message || "Invalid branch name.";
+        }
+      });
+
+      branchTypeSelect.value = branchTypes[0].label;
+      updateHints();
+      branchNameInput.focus();
+    </script>
+  </body>
+</html>`;
+    };
+    const showCreateFeatureBranchDialog = async () => new Promise((resolve) => {
+        const panel = vscode.window.createWebviewPanel("createFeatureBranch", "Create Feature Branch", vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = renderCreateFeatureBranchHtml(panel.webview);
+        let settled = false;
+        const resolveOnce = (value) => {
+            if (settled)
+                return;
+            settled = true;
+            resolve(value);
+        };
+        panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelCreateFeatureBranch") {
+                panel.dispose();
+                return;
+            }
+            if (message.type !== "submitCreateFeatureBranch")
+                return;
+            const payload = message.payload || {};
+            const selectedBranchType = branchTypes.find((option) => option.label === payload.branchType);
+            const branchNameInput = typeof payload.branchNameInput === "string" ? payload.branchNameInput : "";
+            if (!selectedBranchType) {
+                void panel.webview.postMessage({
+                    type: "createFeatureBranchError",
+                    payload: { message: "Select a branch type." }
+                });
+                return;
+            }
+            const branchName = selectedBranchType.requiresJiraKey
+                ? buildJiraTaskBranchName(branchNameInput)
+                : buildStandardBranchName(selectedBranchType.prefix, branchNameInput);
+            if (!branchName) {
+                void panel.webview.postMessage({
+                    type: "createFeatureBranchError",
+                    payload: {
+                        message: selectedBranchType.requiresJiraKey
+                            ? "Use the format JIRA-123-short-name."
+                            : "Enter a short descriptive branch name."
+                    }
+                });
+                return;
+            }
+            resolveOnce({ branchType: selectedBranchType, branchName });
+            panel.dispose();
+        }, undefined, context.subscriptions);
+    });
+    const execInRepo = async (command, cwd) => new Promise((resolve, reject) => {
+        (0, child_process_1.exec)(command, { cwd }, (error, stdout, stderr) => {
+            if (error) {
+                reject(new Error(stderr.trim() || stdout.trim() || error.message));
+                return;
+            }
+            resolve(stdout);
+        });
+    });
+    const getAvailablePullRequestBranches = async (repoRoot) => {
+        const stdout = await execInRepo("git for-each-ref --format='%(refname:short)' refs/remotes/origin", repoRoot);
+        return stdout
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0)
+            .filter((line) => line !== "origin/HEAD")
+            .filter((line) => line !== "origin/main")
+            .map((line) => line.replace(/^origin\//, ""))
+            .sort((a, b) => a.localeCompare(b));
+    };
+    const renderReviewPullRequestHtml = (webview, branches) => {
+        const nonce = getNonce();
+        const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+        return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Review Pull Request</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: var(--vscode-font-family);
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+      }
+      form {
+        display: grid;
+        gap: 16px;
+      }
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+      }
+      select,
+      button {
+        font: inherit;
+      }
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 6px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+      }
+      .error {
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--vscode-errorForeground);
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      button {
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 14px;
+        cursor: pointer;
+      }
+      button[type="submit"] {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+      }
+      button[type="button"] {
+        color: var(--vscode-button-secondaryForeground);
+        background: var(--vscode-button-secondaryBackground);
+      }
+    </style>
+  </head>
+  <body>
+    <form id="review-pr-form">
+      <label>
+        Pull request branch
+        <select id="branch-select"></select>
+        <span class="hint">Choose the branch you want to check out for review.</span>
+      </label>
+      <div class="error" id="error-message"></div>
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit">Select</button>
+      </div>
+    </form>
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const branches = ${JSON.stringify(branches)};
+      const branchSelect = document.getElementById("branch-select");
+      const cancelButton = document.getElementById("cancel-button");
+      const errorMessage = document.getElementById("error-message");
+      const form = document.getElementById("review-pr-form");
+
+      for (const branch of branches) {
+        const option = document.createElement("option");
+        option.value = branch;
+        option.textContent = branch;
+        branchSelect.appendChild(option);
+      }
+
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelReviewPullRequest" });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!branchSelect.value) {
+          errorMessage.textContent = "Select a pull request branch.";
+          return;
+        }
+        vscode.postMessage({
+          type: "submitReviewPullRequest",
+          payload: { branchName: branchSelect.value }
+        });
+      });
+
+      branchSelect.focus();
+    </script>
+  </body>
+</html>`;
+    };
+    const showReviewPullRequestDialog = async (branches) => new Promise((resolve) => {
+        const panel = vscode.window.createWebviewPanel("reviewPullRequest", "Review a Pull Request", vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = renderReviewPullRequestHtml(panel.webview, branches);
+        let settled = false;
+        const resolveOnce = (value) => {
+            if (settled)
+                return;
+            settled = true;
+            resolve(value);
+        };
+        panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+        panel.webview.onDidReceiveMessage((message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelReviewPullRequest") {
+                panel.dispose();
+                return;
+            }
+            if (message.type !== "submitReviewPullRequest")
+                return;
+            const branchName = typeof message.payload?.branchName === "string" ? message.payload.branchName : "";
+            if (!branchName)
+                return;
+            resolveOnce(branchName);
+            panel.dispose();
+        }, undefined, context.subscriptions);
+    });
     context.subscriptions.push(vscode.window.registerTreeDataProvider("antigravityView", provider));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openSettings", async () => {
         const panel = vscode.window.createWebviewPanel("antigravitySettings", "Antigravity Settings", vscode.ViewColumn.Active, { enableScripts: true });
@@ -701,18 +1136,118 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        const workflowFile = resolveCreateFeatureBranchWorkflow();
+        const workflowFile = resolveClaudeWorkflowFile("create_feature_branch");
         if (!workflowFile) {
             void vscode.window.showErrorMessage("Create feature branch workflow not found in ~/.gemini or the bundled extension files.");
             return;
         }
+        const dialogResult = await showCreateFeatureBranchDialog();
+        if (!dialogResult)
+            return;
+        const { branchType, branchName } = dialogResult;
+        (0, logger_1.log)(`[createFeatureBranch] branchName: ${branchName}`);
         (0, terminal_1.runInNewTerminal)("Claude Feature Branch", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `bash ${(0, utils_1.quoteShellArg)(path.join(extensionRoot, "src", "run-claude-workflow.sh"))} ${(0, utils_1.quoteShellArg)(workflowFile)}`
+            `claude --dangerously-skip-permissions ${(0, utils_1.quoteShellArg)(`run this workflow ${workflowFile}. Use branch type ${branchType.label} and branch name ${branchName}. Do not ask for them again.`)}`
         ], {
             iconPath: new vscode.ThemeIcon("git-branch", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR
         });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.createPullRequest", async () => {
+        (0, logger_1.log)("[createPullRequest] triggered");
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const workflowFile = resolveClaudeWorkflowFile("create_pull_request");
+        if (!workflowFile) {
+            void vscode.window.showErrorMessage("Create pull request workflow not found in ~/.gemini or the bundled extension files.");
+            return;
+        }
+        (0, terminal_1.runInNewTerminal)("Claude Pull Request", [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            `claude --dangerously-skip-permissions ${(0, utils_1.quoteShellArg)(`run this workflow ${workflowFile}`)}`
+        ], {
+            iconPath: new vscode.ThemeIcon("git-pull-request", terminal_1.CLAUDE_ACTION_COLOR),
+            color: terminal_1.CLAUDE_ACTION_COLOR
+        });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.checkoutMain", async () => {
+        (0, logger_1.log)("[checkoutMain] triggered");
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        (0, terminal_1.runInNewTerminal)("Checkout Main", [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            "git checkout main",
+            "git pull origin main"
+        ], {
+            iconPath: new vscode.ThemeIcon("source-control")
+        });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.reviewPullRequest", async () => {
+        (0, logger_1.log)("[reviewPullRequest] triggered");
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        try {
+            const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+            if (statusOutput.trim().length > 0) {
+                void vscode.window.showWarningMessage("Commit or stash your local changes before reviewing a pull request so nothing gets lost.");
+                return;
+            }
+            const branches = await getAvailablePullRequestBranches(repoRoot);
+            if (branches.length === 0) {
+                void vscode.window.showInformationMessage("No pull request branches were found on origin.");
+                return;
+            }
+            const selectedBranch = await showReviewPullRequestDialog(branches);
+            if (!selectedBranch)
+                return;
+            (0, terminal_1.runInNewTerminal)("Review Pull Request", [
+                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+                `git rev-parse --verify ${(0, utils_1.quoteShellArg)(`refs/heads/${selectedBranch}`)} >/dev/null 2>&1 && git checkout ${(0, utils_1.quoteShellArg)(selectedBranch)} || git checkout --track ${(0, utils_1.quoteShellArg)(`origin/${selectedBranch}`)}`
+            ], {
+                iconPath: new vscode.ThemeIcon("git-pull-request")
+            });
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Review Pull Request failed: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.approvePullRequest", async () => {
+        (0, logger_1.log)("[approvePullRequest] triggered");
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const workflowFile = resolveClaudeWorkflowFile("approve_pull_request");
+        if (!workflowFile) {
+            void vscode.window.showErrorMessage("Approve pull request workflow not found in ~/.gemini or the bundled extension files.");
+            return;
+        }
+        (0, terminal_1.runInNewTerminal)("Claude Approve Pull Request", [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            `claude --dangerously-skip-permissions ${(0, utils_1.quoteShellArg)(`run this workflow ${workflowFile}`)}`
+        ], {
+            iconPath: new vscode.ThemeIcon("pass", terminal_1.CLAUDE_ACTION_COLOR),
+            color: terminal_1.CLAUDE_ACTION_COLOR
+        });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.feedbackOnPullRequest", async () => {
+        void vscode.window.showInformationMessage("Feedback on Pull Request is added to the sidebar. Detailed functionality will be wired in later.");
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepoTag", async () => {
         const rootPath = (0, utils_1.getRootPath)();
