@@ -456,6 +456,17 @@ export function activate(context: vscode.ExtensionContext) {
     return undefined;
   };
 
+  const buildJiraProjectKeyFromName = (name: string): string | undefined => {
+    const normalized = name
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "");
+
+    if (normalized.length < 2) return undefined;
+    const candidate = /^[A-Z]/.test(normalized) ? normalized : `P${normalized}`;
+    return candidate.slice(0, 10);
+  };
+
   const renderJiraProjectFormHtml = (webview: vscode.Webview): string => {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -496,12 +507,7 @@ export function activate(context: vscode.ExtensionContext) {
       <label>
         Project Name
         <input id="project-name" type="text" autocomplete="off" />
-        <span class="hint">This will be the Jira project name shown in Jira Cloud.</span>
-      </label>
-      <label>
-        Project ID
-        <input id="project-key" type="text" autocomplete="off" />
-        <span class="hint">Use a short Jira project key like APP or WEB42.</span>
+        <span class="hint">This will be the Jira project name shown in Jira Cloud. The project key will be generated automatically.</span>
       </label>
       <label>
         Description
@@ -517,7 +523,6 @@ export function activate(context: vscode.ExtensionContext) {
       const vscode = acquireVsCodeApi();
       const form = document.getElementById("jira-project-form");
       const projectNameInput = document.getElementById("project-name");
-      const projectKeyInput = document.getElementById("project-key");
       const projectDescriptionInput = document.getElementById("project-description");
       const errorMessage = document.getElementById("error-message");
       const cancelButton = document.getElementById("cancel-button");
@@ -526,8 +531,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.postMessage({ type: "cancelCreateJiraProject" });
       });
 
-      projectKeyInput.addEventListener("input", () => {
-        projectKeyInput.value = projectKeyInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      projectNameInput.addEventListener("input", () => {
         errorMessage.textContent = "";
       });
 
@@ -535,17 +539,11 @@ export function activate(context: vscode.ExtensionContext) {
         event.preventDefault();
         const payload = {
           projectName: projectNameInput.value.trim(),
-          projectKey: projectKeyInput.value.trim(),
           description: projectDescriptionInput.value.trim()
         };
         if (!payload.projectName) {
           errorMessage.textContent = "Enter a Jira project name.";
           projectNameInput.focus();
-          return;
-        }
-        if (!payload.projectKey) {
-          errorMessage.textContent = "Enter a Jira project ID.";
-          projectKeyInput.focus();
           return;
         }
         vscode.postMessage({ type: "submitCreateJiraProject", payload });
@@ -595,11 +593,10 @@ export function activate(context: vscode.ExtensionContext) {
 
           const payload = message.payload || {};
           const name = typeof payload.projectName === "string" ? payload.projectName.trim() : "";
-          const key = typeof payload.projectKey === "string" ? payload.projectKey.trim().toUpperCase() : "";
+          const key = buildJiraProjectKeyFromName(name);
           const description =
             typeof payload.description === "string" ? payload.description.trim() : "";
 
-          const keyError = validateJiraProjectKey(key);
           if (!name) {
             void panel.webview.postMessage({
               type: "createJiraProjectError",
@@ -607,10 +604,10 @@ export function activate(context: vscode.ExtensionContext) {
             });
             return;
           }
-          if (keyError) {
+          if (!key) {
             void panel.webview.postMessage({
               type: "createJiraProjectError",
-              payload: { message: keyError }
+              payload: { message: "Enter a project name that can produce a Jira project key." }
             });
             return;
           }

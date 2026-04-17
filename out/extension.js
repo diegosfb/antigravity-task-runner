@@ -369,6 +369,16 @@ function activate(context) {
         }
         return undefined;
     };
+    const buildJiraProjectKeyFromName = (name) => {
+        const normalized = name
+            .trim()
+            .toUpperCase()
+            .replace(/[^A-Z0-9]+/g, "");
+        if (normalized.length < 2)
+            return undefined;
+        const candidate = /^[A-Z]/.test(normalized) ? normalized : `P${normalized}`;
+        return candidate.slice(0, 10);
+    };
     const renderJiraProjectFormHtml = (webview) => {
         const nonce = getNonce();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -408,12 +418,7 @@ function activate(context) {
       <label>
         Project Name
         <input id="project-name" type="text" autocomplete="off" />
-        <span class="hint">This will be the Jira project name shown in Jira Cloud.</span>
-      </label>
-      <label>
-        Project ID
-        <input id="project-key" type="text" autocomplete="off" />
-        <span class="hint">Use a short Jira project key like APP or WEB42.</span>
+        <span class="hint">This will be the Jira project name shown in Jira Cloud. The project key will be generated automatically.</span>
       </label>
       <label>
         Description
@@ -429,7 +434,6 @@ function activate(context) {
       const vscode = acquireVsCodeApi();
       const form = document.getElementById("jira-project-form");
       const projectNameInput = document.getElementById("project-name");
-      const projectKeyInput = document.getElementById("project-key");
       const projectDescriptionInput = document.getElementById("project-description");
       const errorMessage = document.getElementById("error-message");
       const cancelButton = document.getElementById("cancel-button");
@@ -438,8 +442,7 @@ function activate(context) {
         vscode.postMessage({ type: "cancelCreateJiraProject" });
       });
 
-      projectKeyInput.addEventListener("input", () => {
-        projectKeyInput.value = projectKeyInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      projectNameInput.addEventListener("input", () => {
         errorMessage.textContent = "";
       });
 
@@ -447,17 +450,11 @@ function activate(context) {
         event.preventDefault();
         const payload = {
           projectName: projectNameInput.value.trim(),
-          projectKey: projectKeyInput.value.trim(),
           description: projectDescriptionInput.value.trim()
         };
         if (!payload.projectName) {
           errorMessage.textContent = "Enter a Jira project name.";
           projectNameInput.focus();
-          return;
-        }
-        if (!payload.projectKey) {
-          errorMessage.textContent = "Enter a Jira project ID.";
-          projectKeyInput.focus();
           return;
         }
         vscode.postMessage({ type: "submitCreateJiraProject", payload });
@@ -497,9 +494,8 @@ function activate(context) {
                 return;
             const payload = message.payload || {};
             const name = typeof payload.projectName === "string" ? payload.projectName.trim() : "";
-            const key = typeof payload.projectKey === "string" ? payload.projectKey.trim().toUpperCase() : "";
+            const key = buildJiraProjectKeyFromName(name);
             const description = typeof payload.description === "string" ? payload.description.trim() : "";
-            const keyError = validateJiraProjectKey(key);
             if (!name) {
                 void panel.webview.postMessage({
                     type: "createJiraProjectError",
@@ -507,10 +503,10 @@ function activate(context) {
                 });
                 return;
             }
-            if (keyError) {
+            if (!key) {
                 void panel.webview.postMessage({
                     type: "createJiraProjectError",
-                    payload: { message: keyError }
+                    payload: { message: "Enter a project name that can produce a Jira project key." }
                 });
                 return;
             }
