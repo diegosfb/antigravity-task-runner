@@ -797,12 +797,15 @@ export function activate(context: vscode.ExtensionContext) {
       );
     });
 
-  const prepareCommitBeforeCheckout = async (repoRoot: string): Promise<boolean> => {
+  const prepareCommitBeforeCheckout = async (
+    repoRoot: string,
+    targetBranch: string
+  ): Promise<boolean> => {
     const statusOutput = await execInRepo("git status --porcelain", repoRoot);
     if (statusOutput.trim().length === 0) return true;
 
     const selection = await vscode.window.showWarningMessage(
-      "This branch has uncommitted changes. Commit them with a message before checkout, or cancel the checkout.",
+      `You have uncommitted changes that could be overwritten when checking out ${targetBranch}. Commit them with a message or cancel the checkout.`,
       { modal: true },
       "Commit Changes",
       "Cancel"
@@ -1669,9 +1672,6 @@ export function activate(context: vscode.ExtensionContext) {
 
       try {
         const currentBranch = await getCurrentBranchName(repoRoot);
-        const canProceed = await prepareCommitBeforeCheckout(repoRoot);
-        if (!canProceed) return;
-
         const branches = await getAvailableCheckoutBranches(repoRoot);
         if (branches.length === 0) {
           void vscode.window.showInformationMessage("No branches were found for checkout.");
@@ -1680,6 +1680,9 @@ export function activate(context: vscode.ExtensionContext) {
 
         const selectedBranch = await showCheckoutBranchDialog(currentBranch, branches);
         if (!selectedBranch) return;
+
+        const canProceed = await prepareCommitBeforeCheckout(repoRoot, selectedBranch);
+        if (!canProceed) return;
 
         const commands = [
           `cd ${quoteShellArg(repoRoot)}`,

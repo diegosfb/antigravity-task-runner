@@ -670,11 +670,11 @@ function activate(context) {
             panel.dispose();
         }, undefined, context.subscriptions);
     });
-    const prepareCommitBeforeCheckout = async (repoRoot) => {
+    const prepareCommitBeforeCheckout = async (repoRoot, targetBranch) => {
         const statusOutput = await execInRepo("git status --porcelain", repoRoot);
         if (statusOutput.trim().length === 0)
             return true;
-        const selection = await vscode.window.showWarningMessage("This branch has uncommitted changes. Commit them with a message before checkout, or cancel the checkout.", { modal: true }, "Commit Changes", "Cancel");
+        const selection = await vscode.window.showWarningMessage(`You have uncommitted changes that could be overwritten when checking out ${targetBranch}. Commit them with a message or cancel the checkout.`, { modal: true }, "Commit Changes", "Cancel");
         if (selection !== "Commit Changes")
             return false;
         const commitMessage = await vscode.window.showInputBox({
@@ -1383,9 +1383,6 @@ function activate(context) {
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         try {
             const currentBranch = await getCurrentBranchName(repoRoot);
-            const canProceed = await prepareCommitBeforeCheckout(repoRoot);
-            if (!canProceed)
-                return;
             const branches = await getAvailableCheckoutBranches(repoRoot);
             if (branches.length === 0) {
                 void vscode.window.showInformationMessage("No branches were found for checkout.");
@@ -1393,6 +1390,9 @@ function activate(context) {
             }
             const selectedBranch = await showCheckoutBranchDialog(currentBranch, branches);
             if (!selectedBranch)
+                return;
+            const canProceed = await prepareCommitBeforeCheckout(repoRoot, selectedBranch);
+            if (!canProceed)
                 return;
             const commands = [
                 `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
