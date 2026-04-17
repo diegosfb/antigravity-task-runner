@@ -401,6 +401,198 @@ export function activate(context: vscode.ExtensionContext) {
       );
     });
 
+  const execInRepo = async (command: string, cwd: string): Promise<string> =>
+    new Promise((resolve, reject) => {
+      exec(command, { cwd }, (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(stderr.trim() || stdout.trim() || error.message));
+          return;
+        }
+        resolve(stdout);
+      });
+    });
+
+  const getAvailablePullRequestBranches = async (repoRoot: string): Promise<string[]> => {
+    const stdout = await execInRepo(
+      "git for-each-ref --format='%(refname:short)' refs/remotes/origin",
+      repoRoot
+    );
+    return stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .filter((line) => line !== "origin/HEAD")
+      .filter((line) => line !== "origin/main")
+      .map((line) => line.replace(/^origin\//, ""))
+      .sort((a, b) => a.localeCompare(b));
+  };
+
+  const renderReviewPullRequestHtml = (
+    webview: vscode.Webview,
+    branches: string[]
+  ): string => {
+    const nonce = getNonce();
+    const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+
+    return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Review Pull Request</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: var(--vscode-font-family);
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+      }
+      form {
+        display: grid;
+        gap: 16px;
+      }
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+      }
+      select,
+      button {
+        font: inherit;
+      }
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 6px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+      }
+      .error {
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--vscode-errorForeground);
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      button {
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 14px;
+        cursor: pointer;
+      }
+      button[type="submit"] {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+      }
+      button[type="button"] {
+        color: var(--vscode-button-secondaryForeground);
+        background: var(--vscode-button-secondaryBackground);
+      }
+    </style>
+  </head>
+  <body>
+    <form id="review-pr-form">
+      <label>
+        Pull request branch
+        <select id="branch-select"></select>
+        <span class="hint">Choose the branch you want to check out for review.</span>
+      </label>
+      <div class="error" id="error-message"></div>
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit">Select</button>
+      </div>
+    </form>
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const branches = ${JSON.stringify(branches)};
+      const branchSelect = document.getElementById("branch-select");
+      const cancelButton = document.getElementById("cancel-button");
+      const errorMessage = document.getElementById("error-message");
+      const form = document.getElementById("review-pr-form");
+
+      for (const branch of branches) {
+        const option = document.createElement("option");
+        option.value = branch;
+        option.textContent = branch;
+        branchSelect.appendChild(option);
+      }
+
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelReviewPullRequest" });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!branchSelect.value) {
+          errorMessage.textContent = "Select a pull request branch.";
+          return;
+        }
+        vscode.postMessage({
+          type: "submitReviewPullRequest",
+          payload: { branchName: branchSelect.value }
+        });
+      });
+
+      branchSelect.focus();
+    </script>
+  </body>
+</html>`;
+  };
+
+  const showReviewPullRequestDialog = async (
+    branches: string[]
+  ): Promise<string | undefined> =>
+    new Promise((resolve) => {
+      const panel = vscode.window.createWebviewPanel(
+        "reviewPullRequest",
+        "Review a Pull Request",
+        vscode.ViewColumn.Active,
+        { enableScripts: true }
+      );
+      panel.webview.html = renderReviewPullRequestHtml(panel.webview, branches);
+
+      let settled = false;
+      const resolveOnce = (value: string | undefined) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
+      panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+      panel.webview.onDidReceiveMessage(
+        (message) => {
+          if (!message) return;
+          if (message.type === "cancelReviewPullRequest") {
+            panel.dispose();
+            return;
+          }
+          if (message.type !== "submitReviewPullRequest") return;
+          const branchName =
+            typeof message.payload?.branchName === "string" ? message.payload.branchName : "";
+          if (!branchName) return;
+          resolveOnce(branchName);
+          panel.dispose();
+        },
+        undefined,
+        context.subscriptions
+      );
+    });
+
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("antigravityView", provider)
   );
@@ -1253,6 +1445,67 @@ export function activate(context: vscode.ExtensionContext) {
         {
           iconPath: new vscode.ThemeIcon("source-control")
         }
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.reviewPullRequest", async () => {
+      log("[reviewPullRequest] triggered");
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+
+      try {
+        const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+        if (statusOutput.trim().length > 0) {
+          void vscode.window.showWarningMessage(
+            "Commit or stash your local changes before reviewing a pull request so nothing gets lost."
+          );
+          return;
+        }
+
+        const branches = await getAvailablePullRequestBranches(repoRoot);
+        if (branches.length === 0) {
+          void vscode.window.showInformationMessage("No pull request branches were found on origin.");
+          return;
+        }
+
+        const selectedBranch = await showReviewPullRequestDialog(branches);
+        if (!selectedBranch) return;
+
+        runInNewTerminal(
+          "Review Pull Request",
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            `git rev-parse --verify ${quoteShellArg(`refs/heads/${selectedBranch}`)} >/dev/null 2>&1 && git checkout ${quoteShellArg(selectedBranch)} || git checkout --track ${quoteShellArg(`origin/${selectedBranch}`)}`
+          ],
+          {
+            iconPath: new vscode.ThemeIcon("git-pull-request")
+          }
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Review Pull Request failed: ${message}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.approvePullRequest", async () => {
+      void vscode.window.showInformationMessage(
+        "Approve a Pull Request is added to the sidebar. Detailed functionality will be wired in later."
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.feedbackOnPullRequest", async () => {
+      void vscode.window.showInformationMessage(
+        "Feedback on Pull Request is added to the sidebar. Detailed functionality will be wired in later."
       );
     })
   );

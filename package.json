@@ -26,6 +26,9 @@
     "onCommand:antigravity.createFeatureBranch",
     "onCommand:antigravity.createPullRequest",
     "onCommand:antigravity.checkoutMain",
+    "onCommand:antigravity.reviewPullRequest",
+    "onCommand:antigravity.approvePullRequest",
+    "onCommand:antigravity.feedbackOnPullRequest",
     "onCommand:antigravity.openClaudeTerminal",
     "onCommand:antigravity.openOpenClaudeTerminal"
   ],
@@ -128,6 +131,18 @@
       {
         "command": "antigravity.checkoutMain",
         "title": "Antigravity: Checkout Main (Branch work done)"
+      },
+      {
+        "command": "antigravity.reviewPullRequest",
+        "title": "Antigravity: Review a Pull Request"
+      },
+      {
+        "command": "antigravity.approvePullRequest",
+        "title": "Antigravity: Approve a Pull Request"
+      },
+      {
+        "command": "antigravity.feedbackOnPullRequest",
+        "title": "Antigravity: Feedback on Pull Request"
       },
       {
         "command": "antigravity.createRepoTag",
