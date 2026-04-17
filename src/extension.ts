@@ -1005,13 +1005,17 @@ export function activate(context: vscode.ExtensionContext) {
     repository: GitRepository
   ): Promise<string> => {
     const commandId = "github.copilot.git.generateCommitMessage";
-    const copilotExtensionIds = ["github.copilot-chat", "GitHub.copilot-chat"];
-    const copilotExtension = copilotExtensionIds
-      .map((id) => vscode.extensions.getExtension(id))
-      .find((extension): extension is vscode.Extension<unknown> => Boolean(extension));
+    const copilotExtension = vscode.extensions.all.find((extension) => {
+      const extensionId = extension.id.toLowerCase();
+      return (
+        extensionId === "github.copilot-chat" ||
+        extensionId.endsWith(".copilot-chat") ||
+        extensionId.includes("copilot-chat")
+      );
+    });
 
     if (!copilotExtension) {
-      logAlways("[commitChanges] Copilot Chat extension not installed");
+      logAlways("[commitChanges] Copilot Chat extension not installed in current VS Code profile");
       return "";
     }
 

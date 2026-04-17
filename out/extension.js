@@ -829,12 +829,14 @@ function activate(context) {
     };
     const generateCommitMessageWithCopilot = async (repoRoot, repository) => {
         const commandId = "github.copilot.git.generateCommitMessage";
-        const copilotExtensionIds = ["github.copilot-chat", "GitHub.copilot-chat"];
-        const copilotExtension = copilotExtensionIds
-            .map((id) => vscode.extensions.getExtension(id))
-            .find((extension) => Boolean(extension));
+        const copilotExtension = vscode.extensions.all.find((extension) => {
+            const extensionId = extension.id.toLowerCase();
+            return (extensionId === "github.copilot-chat" ||
+                extensionId.endsWith(".copilot-chat") ||
+                extensionId.includes("copilot-chat"));
+        });
         if (!copilotExtension) {
-            (0, logger_1.logAlways)("[commitChanges] Copilot Chat extension not installed");
+            (0, logger_1.logAlways)("[commitChanges] Copilot Chat extension not installed in current VS Code profile");
             return "";
         }
         if (!copilotExtension.isActive) {
