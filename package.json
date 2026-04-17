@@ -24,6 +24,7 @@
     "onCommand:antigravity.runAgent",
     "onCommand:antigravity.runWorkflow",
     "onCommand:antigravity.createFeatureBranch",
+    "onCommand:antigravity.createPullRequest",
     "onCommand:antigravity.openClaudeTerminal",
     "onCommand:antigravity.openOpenClaudeTerminal"
   ],
@@ -118,6 +119,10 @@
       {
         "command": "antigravity.createFeatureBranch",
         "title": "Antigravity: Create Feature Branch"
+      },
+      {
+        "command": "antigravity.createPullRequest",
+        "title": "Antigravity: Create Pull Request"
       },
       {
         "command": "antigravity.createRepoTag",

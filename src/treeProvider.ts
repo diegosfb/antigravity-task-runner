@@ -651,6 +651,17 @@ function getQuickActionItems(): NodeItem[] {
   };
   items.push(createFeatureBranch);
 
+  const createPullRequest = new NodeItem(
+    { kind: "action", label: "Create Pull Request" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", QUICK_ACTION_COLOR);
+  createPullRequest.command = {
+    command: "antigravity.createPullRequest",
+    title: "Create Pull Request"
+  };
+  items.push(createPullRequest);
+
   const autocommitCheckpoint = new NodeItem(
     { kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" },
     vscode.TreeItemCollapsibleState.None

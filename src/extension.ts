@@ -113,6 +113,28 @@ export function activate(context: vscode.ExtensionContext) {
     return `feature/${issueKey}-${description}`;
   };
 
+  const resolveClaudeWorkflowFile = (workflowName: string): string | undefined => {
+    const primaryPath = path.join(
+      os.homedir(),
+      ".gemini",
+      "workflows",
+      workflowName,
+      "WORKFLOW.md"
+    );
+    if (fs.existsSync(primaryPath)) return primaryPath;
+
+    const bundledPath = path.join(
+      extensionRoot,
+      "Knowhow",
+      "Antigravity workflows",
+      workflowName,
+      "WORKFLOW.md"
+    );
+    if (fs.existsSync(bundledPath)) return bundledPath;
+
+    return undefined;
+  };
+
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("antigravityView", provider)
   );
@@ -955,6 +977,36 @@ export function activate(context: vscode.ExtensionContext) {
         ],
         {
           iconPath: new vscode.ThemeIcon("git-branch")
+        }
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.createPullRequest", async () => {
+      log("[createPullRequest] triggered");
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      const workflowFile = resolveClaudeWorkflowFile("create_pull_request");
+      if (!workflowFile) {
+        void vscode.window.showErrorMessage(
+          "Create pull request workflow not found in ~/.gemini or the bundled extension files."
+        );
+        return;
+      }
+      runInNewTerminal(
+        "Claude Pull Request",
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          `bash ${quoteShellArg(path.join(extensionRoot, "src", "run-claude-workflow.sh"))} ${quoteShellArg(workflowFile)}`
+        ],
+        {
+          iconPath: new vscode.ThemeIcon("git-pull-request", CLAUDE_ACTION_COLOR),
+          color: CLAUDE_ACTION_COLOR
         }
       );
     })
