@@ -7,6 +7,15 @@ exports.getJiraCreateFieldMetadata = getJiraCreateFieldMetadata;
 exports.createJiraIssue = createJiraIssue;
 const http = require("http");
 const https = require("https");
+function normalizeFieldName(fieldKey, field) {
+    return (field?.name || fieldKey).trim().toLowerCase();
+}
+function isProvidedJiraField(fieldKey, field) {
+    const normalizedKey = fieldKey.trim().toLowerCase();
+    const normalizedName = normalizeFieldName(fieldKey, field);
+    return (["summary", "description", "project", "issuetype"].includes(normalizedKey) ||
+        ["summary", "description", "project", "issue type"].includes(normalizedName));
+}
 function normalizeBaseUrl(baseUrl) {
     return baseUrl.trim().replace(/\/+$/, "");
 }
@@ -146,26 +155,31 @@ async function createJiraIssue(credentials, details) {
         description: toAdfDocument(details.description)
     };
     const metadata = await getJiraCreateFieldMetadata(credentials, details.projectKey, issueType.id);
+    let currentUserAccountId;
+    for (const [fieldKey, field] of Object.entries(metadata)) {
+        if (!field.required)
+            continue;
+        const fieldName = normalizeFieldName(fieldKey, field);
+        if (fieldName === "epic name") {
+            fields[fieldKey] = details.summary.trim();
+            continue;
+        }
+        if (fieldName === "reporter") {
+            currentUserAccountId || (currentUserAccountId = await getJiraCurrentUserAccountId(credentials));
+            fields[fieldKey] = { accountId: currentUserAccountId };
+        }
+    }
     const unsupportedRequiredFields = Object.entries(metadata)
         .filter(([fieldKey, field]) => {
         if (!field.required)
             return false;
-        if (["summary", "description", "project", "issuetype"].includes(fieldKey))
+        if (isProvidedJiraField(fieldKey, field))
             return false;
-        const fieldName = (field.name ?? "").toLowerCase();
-        if (fieldName === "epic name")
-            return false;
-        return true;
+        return fields[fieldKey] === undefined;
     })
         .map(([, field]) => field.name || "Unknown field");
     if (unsupportedRequiredFields.length > 0) {
         throw new Error(`Jira requires additional fields for this issue type: ${unsupportedRequiredFields.join(", ")}.`);
-    }
-    for (const [fieldKey, field] of Object.entries(metadata)) {
-        const fieldName = (field.name ?? "").toLowerCase();
-        if (fieldName !== "epic name" || !field.required)
-            continue;
-        fields[fieldKey] = details.summary.trim();
     }
     return jiraRequest(credentials, {
         method: "POST",
