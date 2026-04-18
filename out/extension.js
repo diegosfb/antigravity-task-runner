@@ -343,9 +343,13 @@ function activate(context) {
     const getJiraCredentialsFromEnv = (repoRoot) => {
         const envPath = getRepoEnvPath(repoRoot);
         const env = (0, utils_1.parseEnvFile)(envPath);
-        const baseUrl = (env.jira_base_url || "").trim();
-        const email = (env.jira_email || "").trim();
-        const apiToken = (env.jira_api_token || "").trim();
+        const config = vscode.workspace.getConfiguration("antigravity");
+        const baseUrl = (config.get("jiraBaseUrl") || "").trim() ||
+            (env.jira_base_url || "").trim();
+        const email = (config.get("jiraEmail") || "").trim() ||
+            (env.jira_email || "").trim();
+        const apiToken = (config.get("jiraApiToken") || "").trim() ||
+            (env.jira_api_token || "").trim();
         const missing = [
             !baseUrl ? "JIRA_BASE_URL" : undefined,
             !email ? "JIRA_EMAIL" : undefined,

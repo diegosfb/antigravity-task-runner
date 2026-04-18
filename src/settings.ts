@@ -285,6 +285,27 @@ function getExtensionSettingsFields(): SettingsField[] {
       value: config.get<string>("configFallbackBaseUrl") || ""
     },
     {
+      key: "jiraBaseUrl",
+      label: "Jira Base URL",
+      description: "Jira base URL used for Jira actions when not provided by the repository .env.",
+      placeholder: "https://your-company.atlassian.net",
+      value: config.get<string>("jiraBaseUrl") || ""
+    },
+    {
+      key: "jiraEmail",
+      label: "Jira Email",
+      description: "Jira email used for Jira actions when not provided by the repository .env.",
+      placeholder: "name@example.com",
+      value: config.get<string>("jiraEmail") || ""
+    },
+    {
+      key: "jiraApiToken",
+      label: "Jira API Token",
+      description: "Jira API token used for Jira actions when not provided by the repository .env.",
+      placeholder: "jira-api-token",
+      value: config.get<string>("jiraApiToken") || ""
+    },
+    {
       key: "autoUpdateClaudeMd",
       label: "Auto-update CLAUDE.md on autocommit start",
       description: "When enabled, autocommit start will also run Claude to update CLAUDE.md.",

@@ -318,6 +318,21 @@
           "default": "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config",
           "description": "Base URL used to download missing config files (e.g. DEV-settings.yaml, .env)."
         },
+        "antigravity.jiraBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Jira base URL used for Jira actions when not provided by the repository .env."
+        },
+        "antigravity.jiraEmail": {
+          "type": "string",
+          "default": "",
+          "description": "Jira email used for Jira actions when not provided by the repository .env."
+        },
+        "antigravity.jiraApiToken": {
+          "type": "string",
+          "default": "",
+          "description": "Jira API token used for Jira actions when not provided by the repository .env."
+        },
         "antigravity.antigravityWorkspaceProject": {
           "type": "string",
           "default": "~/antigravity-workspace",

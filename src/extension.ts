@@ -453,9 +453,16 @@ export function activate(context: vscode.ExtensionContext) {
   const getJiraCredentialsFromEnv = (repoRoot: string): JiraCredentials => {
     const envPath = getRepoEnvPath(repoRoot);
     const env = parseEnvFile(envPath);
-    const baseUrl = (env.jira_base_url || "").trim();
-    const email = (env.jira_email || "").trim();
-    const apiToken = (env.jira_api_token || "").trim();
+    const config = vscode.workspace.getConfiguration("antigravity");
+    const baseUrl =
+      (config.get<string>("jiraBaseUrl") || "").trim() ||
+      (env.jira_base_url || "").trim();
+    const email =
+      (config.get<string>("jiraEmail") || "").trim() ||
+      (env.jira_email || "").trim();
+    const apiToken =
+      (config.get<string>("jiraApiToken") || "").trim() ||
+      (env.jira_api_token || "").trim();
 
     const missing = [
       !baseUrl ? "JIRA_BASE_URL" : undefined,
