@@ -228,7 +228,7 @@ export async function searchOpenUnassignedJiraIssues(
     }>;
   }>(credentials, {
     method: "POST",
-    apiPath: "/rest/api/3/search",
+    apiPath: "/rest/api/3/search/jql",
     body: {
       fields: ["summary", "issuetype", "project", "status"],
       jql: "assignee IS EMPTY AND statusCategory != Done ORDER BY updated DESC",
@@ -265,7 +265,7 @@ export async function searchOpenAssignedJiraIssuesForCurrentUser(
     }>;
   }>(credentials, {
     method: "POST",
-    apiPath: "/rest/api/3/search",
+    apiPath: "/rest/api/3/search/jql",
     body: {
       fields: ["summary", "issuetype", "project", "status"],
       jql: "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC",

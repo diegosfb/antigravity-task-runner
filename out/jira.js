@@ -143,7 +143,7 @@ async function getJiraProjects(credentials) {
 async function searchOpenUnassignedJiraIssues(credentials) {
     const response = await jiraRequest(credentials, {
         method: "POST",
-        apiPath: "/rest/api/3/search",
+        apiPath: "/rest/api/3/search/jql",
         body: {
             fields: ["summary", "issuetype", "project", "status"],
             jql: "assignee IS EMPTY AND statusCategory != Done ORDER BY updated DESC",
@@ -165,7 +165,7 @@ async function searchOpenUnassignedJiraIssues(credentials) {
 async function searchOpenAssignedJiraIssuesForCurrentUser(credentials) {
     const response = await jiraRequest(credentials, {
         method: "POST",
-        apiPath: "/rest/api/3/search",
+        apiPath: "/rest/api/3/search/jql",
         body: {
             fields: ["summary", "issuetype", "project", "status"],
             jql: "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC",
