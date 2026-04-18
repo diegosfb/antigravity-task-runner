@@ -2571,7 +2571,7 @@ export function activate(context: vscode.ExtensionContext) {
         issues = await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: "Loading your open Jira items",
+            title: "Loading your Jira items in To Do or In Progress",
             cancellable: false
           },
           async () => searchOpenAssignedJiraIssuesForCurrentUser(credentials)
@@ -2584,7 +2584,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (issues.length === 0) {
         void vscode.window.showInformationMessage(
-          "No open Jira tickets assigned to you were found."
+          "No Jira tickets assigned to you in To Do or In Progress were found."
         );
         return;
       }

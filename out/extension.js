@@ -2113,7 +2113,7 @@ function activate(context) {
         try {
             issues = await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: "Loading your open Jira items",
+                title: "Loading your Jira items in To Do or In Progress",
                 cancellable: false
             }, async () => (0, jira_1.searchOpenAssignedJiraIssuesForCurrentUser)(credentials));
         }
@@ -2123,7 +2123,7 @@ function activate(context) {
             return;
         }
         if (issues.length === 0) {
-            void vscode.window.showInformationMessage("No open Jira tickets assigned to you were found.");
+            void vscode.window.showInformationMessage("No Jira tickets assigned to you in To Do or In Progress were found.");
             return;
         }
         const selection = await vscode.window.showQuickPick(issues.map((issue) => ({
