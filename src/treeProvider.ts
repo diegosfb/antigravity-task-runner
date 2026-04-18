@@ -364,6 +364,7 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
 const QUICK_ACTION_COLOR = new vscode.ThemeColor("charts.green");
 const ORANGE_ACTION_COLOR = new vscode.ThemeColor("charts.orange");
 const CLAUDE_MODEL_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
+const JIRA_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 
@@ -687,7 +688,7 @@ function getQuickActionItems(): NodeItem[] {
       { kind: "action", label: "Select/Create Jira Project" },
       vscode.TreeItemCollapsibleState.None
     );
-    selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", QUICK_ACTION_COLOR);
+    selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", JIRA_ACTION_COLOR);
     selectOrCreateJiraProject.command = {
       command: "antigravity.selectOrCreateJiraProject",
       title: "Select/Create Jira Project"
@@ -698,7 +699,7 @@ function getQuickActionItems(): NodeItem[] {
       { kind: "action", label: "Add Jira Item" },
       vscode.TreeItemCollapsibleState.None
     );
-    addJiraItem.iconPath = new vscode.ThemeIcon("issues", QUICK_ACTION_COLOR);
+    addJiraItem.iconPath = new vscode.ThemeIcon("issues", JIRA_ACTION_COLOR);
     addJiraItem.command = {
       command: "antigravity.addJiraItem",
       title: "Add Jira Item"
@@ -709,7 +710,7 @@ function getQuickActionItems(): NodeItem[] {
       { kind: "action", label: "Take Jira Item (Assign)" },
       vscode.TreeItemCollapsibleState.None
     );
-    takeJiraItemAssign.iconPath = new vscode.ThemeIcon("person-add", QUICK_ACTION_COLOR);
+    takeJiraItemAssign.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
     takeJiraItemAssign.description = savedJiraProjectKey;
     takeJiraItemAssign.command = {
       command: "antigravity.takeJiraItemAssign",
@@ -721,7 +722,7 @@ function getQuickActionItems(): NodeItem[] {
       { kind: "action", label: "Jira Item Completed" },
       vscode.TreeItemCollapsibleState.None
     );
-    completeJiraItem.iconPath = new vscode.ThemeIcon("pass", QUICK_ACTION_COLOR);
+    completeJiraItem.iconPath = new vscode.ThemeIcon("pass", JIRA_ACTION_COLOR);
     completeJiraItem.description = savedJiraProjectKey;
     completeJiraItem.command = {
       command: "antigravity.completeJiraItem",
