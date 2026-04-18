@@ -2070,6 +2070,70 @@ function activate(context) {
             void vscode.window.showErrorMessage(`Failed to assign Jira item: ${message}`);
         }
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.completeJiraItem", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        let credentials;
+        try {
+            credentials = getJiraCredentialsFromEnv(repoRoot);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(message);
+            return;
+        }
+        let issues;
+        try {
+            issues = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "Loading your open Jira items",
+                cancellable: false
+            }, async () => (0, jira_1.searchOpenAssignedJiraIssuesForCurrentUser)(credentials));
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to load Jira items: ${message}`);
+            return;
+        }
+        if (issues.length === 0) {
+            void vscode.window.showInformationMessage("No open Jira tickets assigned to you were found.");
+            return;
+        }
+        const selection = await vscode.window.showQuickPick(issues.map((issue) => ({
+            label: issue.key,
+            description: issue.summary,
+            detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName]
+                .filter(Boolean)
+                .join(" • "),
+            issue
+        })), {
+            title: "Jira Item Completed",
+            placeHolder: "Select one of your open Jira tickets to move into In Review",
+            matchOnDescription: true,
+            matchOnDetail: true
+        });
+        if (!selection)
+            return;
+        const confirm = await vscode.window.showInformationMessage(`Move ${selection.issue.key} to In Review?`, { modal: true }, "Mark Completed");
+        if (confirm !== "Mark Completed")
+            return;
+        try {
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Moving ${selection.issue.key} to In Review`,
+                cancellable: false
+            }, async () => (0, jira_1.transitionJiraIssueToStatus)(credentials, selection.issue.key, "In Review"));
+            void vscode.window.showInformationMessage(`Moved Jira item ${selection.issue.key} to In Review.`);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to update Jira item: ${message}`);
+        }
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.incrementMajorVersion", async () => {
         await (0, scripts_1.runRepoScript)("bump-version", ["major"]);
     }));

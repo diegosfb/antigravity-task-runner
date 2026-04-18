@@ -249,6 +249,43 @@ export async function searchOpenUnassignedJiraIssues(
     .filter((issue) => issue.id && issue.key && issue.summary);
 }
 
+export async function searchOpenAssignedJiraIssuesForCurrentUser(
+  credentials: JiraCredentials
+): Promise<JiraIssueSummary[]> {
+  const response = await jiraRequest<{
+    issues?: Array<{
+      id?: string;
+      key?: string;
+      fields?: {
+        summary?: string;
+        issuetype?: { name?: string };
+        project?: { key?: string; name?: string };
+        status?: { name?: string };
+      };
+    }>;
+  }>(credentials, {
+    method: "POST",
+    apiPath: "/rest/api/3/search",
+    body: {
+      fields: ["summary", "issuetype", "project", "status"],
+      jql: "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC",
+      maxResults: 100
+    }
+  });
+
+  return (response.issues ?? [])
+    .map((issue) => ({
+      id: (issue.id ?? "").trim(),
+      key: (issue.key ?? "").trim(),
+      summary: (issue.fields?.summary ?? "").trim(),
+      projectKey: (issue.fields?.project?.key ?? "").trim(),
+      projectName: (issue.fields?.project?.name ?? "").trim(),
+      issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
+      statusName: (issue.fields?.status?.name ?? "").trim()
+    }))
+    .filter((issue) => issue.id && issue.key && issue.summary);
+}
+
 export async function assignJiraIssueToCurrentUser(
   credentials: JiraCredentials,
   issueKey: string
@@ -259,6 +296,47 @@ export async function assignJiraIssueToCurrentUser(
     apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/assignee`,
     body: {
       accountId
+    }
+  });
+}
+
+export async function transitionJiraIssueToStatus(
+  credentials: JiraCredentials,
+  issueKey: string,
+  targetStatusName: string
+): Promise<void> {
+  const response = await jiraRequest<{
+    transitions?: Array<{ id?: string; name?: string }>;
+  }>(credentials, {
+    method: "GET",
+    apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/transitions`
+  });
+
+  const transitions = response.transitions ?? [];
+  const transition = transitions.find(
+    (candidate) =>
+      (candidate.name ?? "").trim().toLowerCase() === targetStatusName.trim().toLowerCase()
+  );
+
+  if (!transition?.id) {
+    const available = transitions
+      .map((candidate) => (candidate.name ?? "").trim())
+      .filter(Boolean)
+      .join(", ");
+    throw new Error(
+      available
+        ? `Transition "${targetStatusName}" is not available. Available transitions: ${available}.`
+        : `Transition "${targetStatusName}" is not available for ${issueKey}.`
+    );
+  }
+
+  await jiraRequest(credentials, {
+    method: "POST",
+    apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/transitions`,
+    body: {
+      transition: {
+        id: transition.id
+      }
     }
   });
 }

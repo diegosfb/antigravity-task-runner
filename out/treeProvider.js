@@ -548,6 +548,13 @@ function getQuickActionItems() {
         title: "Take Jira Item (Assign)"
     };
     items.push(takeJiraItemAssign);
+    const completeJiraItem = new NodeItem({ kind: "action", label: "Jira Item Completed" }, vscode.TreeItemCollapsibleState.None);
+    completeJiraItem.iconPath = new vscode.ThemeIcon("pass", QUICK_ACTION_COLOR);
+    completeJiraItem.command = {
+        command: "antigravity.completeJiraItem",
+        title: "Jira Item Completed"
+    };
+    items.push(completeJiraItem);
     const incrementMajor = new NodeItem({ kind: "action", label: "Increment Major Version" }, vscode.TreeItemCollapsibleState.None);
     incrementMajor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
     incrementMajor.command = {
