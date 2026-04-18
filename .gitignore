@@ -4,6 +4,7 @@ dist/
 coverage/
 .DS_Store
 *.log
+*.vsix
 .env
 .env*
 !.env.example
