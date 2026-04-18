@@ -48,7 +48,10 @@ import {
   getJiraProjects,
   createJiraProject,
   JiraCredentials,
-  JiraProjectSummary
+  JiraProjectSummary,
+  JiraIssueSummary,
+  searchOpenUnassignedJiraIssues,
+  assignJiraIssueToCurrentUser
 } from "./jira";
 
 type GitInputBox = {
@@ -2414,6 +2417,94 @@ export function activate(context: vscode.ExtensionContext) {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(`Failed to create Jira item: ${message}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.takeJiraItemAssign", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+      let credentials: JiraCredentials;
+
+      try {
+        credentials = getJiraCredentialsFromEnv(repoRoot);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(message);
+        return;
+      }
+
+      let issues: JiraIssueSummary[];
+      try {
+        issues = await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: "Loading unassigned Jira items",
+            cancellable: false
+          },
+          async () => searchOpenUnassignedJiraIssues(credentials)
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Failed to load Jira items: ${message}`);
+        return;
+      }
+
+      if (issues.length === 0) {
+        void vscode.window.showInformationMessage(
+          "No open Jira tickets assigned to no one were found."
+        );
+        return;
+      }
+
+      const selection = await vscode.window.showQuickPick(
+        issues.map((issue) => ({
+          label: issue.key,
+          description: issue.summary,
+          detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName]
+            .filter(Boolean)
+            .join(" • "),
+          issue
+        })),
+        {
+          title: "Take Jira Item (Assign)",
+          placeHolder: "Select an open Jira ticket that is currently unassigned",
+          matchOnDescription: true,
+          matchOnDetail: true
+        }
+      );
+
+      if (!selection) return;
+
+      const confirm = await vscode.window.showInformationMessage(
+        `Assign ${selection.issue.key} to ${credentials.email}?`,
+        { modal: true },
+        "Assign To Me"
+      );
+      if (confirm !== "Assign To Me") return;
+
+      try {
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: `Assigning ${selection.issue.key} to you`,
+            cancellable: false
+          },
+          async () => assignJiraIssueToCurrentUser(credentials, selection.issue.key)
+        );
+
+        void vscode.window.showInformationMessage(
+          `Assigned Jira item ${selection.issue.key} to ${credentials.email}.`
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Failed to assign Jira item: ${message}`);
       }
     })
   );

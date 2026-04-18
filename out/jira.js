@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getJiraCurrentUserAccountId = getJiraCurrentUserAccountId;
 exports.createJiraProject = createJiraProject;
 exports.getJiraProjects = getJiraProjects;
+exports.searchOpenUnassignedJiraIssues = searchOpenUnassignedJiraIssues;
+exports.assignJiraIssueToCurrentUser = assignJiraIssueToCurrentUser;
 exports.getJiraIssueTypes = getJiraIssueTypes;
 exports.getJiraCreateFieldMetadata = getJiraCreateFieldMetadata;
 exports.createJiraIssue = createJiraIssue;
@@ -135,6 +137,38 @@ async function getJiraProjects(credentials) {
         apiPath: "/rest/api/3/project/search?maxResults=100&orderBy=name"
     });
     return (response.values ?? []).sort((a, b) => a.name.localeCompare(b.name));
+}
+async function searchOpenUnassignedJiraIssues(credentials) {
+    const response = await jiraRequest(credentials, {
+        method: "POST",
+        apiPath: "/rest/api/3/search",
+        body: {
+            fields: ["summary", "issuetype", "project", "status"],
+            jql: "assignee IS EMPTY AND statusCategory != Done ORDER BY updated DESC",
+            maxResults: 100
+        }
+    });
+    return (response.issues ?? [])
+        .map((issue) => ({
+        id: (issue.id ?? "").trim(),
+        key: (issue.key ?? "").trim(),
+        summary: (issue.fields?.summary ?? "").trim(),
+        projectKey: (issue.fields?.project?.key ?? "").trim(),
+        projectName: (issue.fields?.project?.name ?? "").trim(),
+        issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
+        statusName: (issue.fields?.status?.name ?? "").trim()
+    }))
+        .filter((issue) => issue.id && issue.key && issue.summary);
+}
+async function assignJiraIssueToCurrentUser(credentials, issueKey) {
+    const accountId = await getJiraCurrentUserAccountId(credentials);
+    await jiraRequest(credentials, {
+        method: "PUT",
+        apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/assignee`,
+        body: {
+            accountId
+        }
+    });
 }
 async function getJiraIssueTypes(credentials, projectKey) {
     const response = await jiraRequest(credentials, {

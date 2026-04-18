@@ -31,8 +31,18 @@ export interface JiraIssueDetails {
   description?: string;
 }
 
+export interface JiraIssueSummary {
+  id: string;
+  key: string;
+  summary: string;
+  projectKey: string;
+  projectName: string;
+  issueTypeName: string;
+  statusName: string;
+}
+
 interface JiraRequestOptions {
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "PUT";
   apiPath: string;
   body?: unknown;
 }
@@ -200,6 +210,57 @@ export async function getJiraProjects(
     apiPath: "/rest/api/3/project/search?maxResults=100&orderBy=name"
   });
   return (response.values ?? []).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function searchOpenUnassignedJiraIssues(
+  credentials: JiraCredentials
+): Promise<JiraIssueSummary[]> {
+  const response = await jiraRequest<{
+    issues?: Array<{
+      id?: string;
+      key?: string;
+      fields?: {
+        summary?: string;
+        issuetype?: { name?: string };
+        project?: { key?: string; name?: string };
+        status?: { name?: string };
+      };
+    }>;
+  }>(credentials, {
+    method: "POST",
+    apiPath: "/rest/api/3/search",
+    body: {
+      fields: ["summary", "issuetype", "project", "status"],
+      jql: "assignee IS EMPTY AND statusCategory != Done ORDER BY updated DESC",
+      maxResults: 100
+    }
+  });
+
+  return (response.issues ?? [])
+    .map((issue) => ({
+      id: (issue.id ?? "").trim(),
+      key: (issue.key ?? "").trim(),
+      summary: (issue.fields?.summary ?? "").trim(),
+      projectKey: (issue.fields?.project?.key ?? "").trim(),
+      projectName: (issue.fields?.project?.name ?? "").trim(),
+      issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
+      statusName: (issue.fields?.status?.name ?? "").trim()
+    }))
+    .filter((issue) => issue.id && issue.key && issue.summary);
+}
+
+export async function assignJiraIssueToCurrentUser(
+  credentials: JiraCredentials,
+  issueKey: string
+): Promise<void> {
+  const accountId = await getJiraCurrentUserAccountId(credentials);
+  await jiraRequest(credentials, {
+    method: "PUT",
+    apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/assignee`,
+    body: {
+      accountId
+    }
+  });
 }
 
 export async function getJiraIssueTypes(

@@ -30,6 +30,7 @@
     "onCommand:antigravity.approvePullRequest",
     "onCommand:antigravity.feedbackOnPullRequest",
     "onCommand:antigravity.addJiraItem",
+    "onCommand:antigravity.takeJiraItemAssign",
     "onCommand:antigravity.openSopManual",
     "onCommand:antigravity.openClaudeTerminal",
     "onCommand:antigravity.openOpenClaudeTerminal"
@@ -85,6 +86,10 @@
       {
         "command": "antigravity.commitChanges",
         "title": "Antigravity: Commit Changes"
+      },
+      {
+        "command": "antigravity.takeJiraItemAssign",
+        "title": "Antigravity: Take Jira Item (Assign)"
       },
       {
         "command": "antigravity.updateAgenticWorkspace",
