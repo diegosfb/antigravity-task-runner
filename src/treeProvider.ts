@@ -593,88 +593,75 @@ function getQuickActionItems(): NodeItem[] {
   };
   items.push(workspaceSetup);
 
-  const initRepo = new NodeItem(
-    { kind: "action", label: "Init Repository" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  initRepo.iconPath = new vscode.ThemeIcon("repo", ORANGE_ACTION_COLOR);
-  if (hasRepo) {
-    initRepo.label = "I̶n̶i̶t̶ ̶R̶e̶p̶o̶s̶i̶t̶o̶r̶y̶";
-    initRepo.iconPath = new vscode.ThemeIcon(
-      "repo",
-      new vscode.ThemeColor("disabledForeground")
+  if (!hasRepo) {
+    const initRepo = new NodeItem(
+      { kind: "action", label: "Init Repository" },
+      vscode.TreeItemCollapsibleState.None
     );
-    initRepo.tooltip = "Repository already exists in this project.";
-  } else {
+    initRepo.iconPath = new vscode.ThemeIcon("repo", ORANGE_ACTION_COLOR);
     initRepo.command = {
       command: "antigravity.initRepository",
       title: "Init Repository"
     };
+    items.push(initRepo);
   }
-  items.push(initRepo);
 
-  const commitChanges = new NodeItem(
-    { kind: "action", label: "Commit" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  if (!hasRepo) {
-    commitChanges.iconPath = new vscode.ThemeIcon(
-      "check",
-      new vscode.ThemeColor("disabledForeground")
+  if (hasRepo) {
+    const commitChanges = new NodeItem(
+      { kind: "action", label: "Commit" },
+      vscode.TreeItemCollapsibleState.None
     );
-    commitChanges.tooltip = "Initialize a repository before committing changes.";
-  } else {
     commitChanges.iconPath = new vscode.ThemeIcon("check", ORANGE_ACTION_COLOR);
     commitChanges.command = {
       command: "antigravity.commitChanges",
       title: "Commit"
     };
+    items.push(commitChanges);
+
+    const createRepoTagVersion = new NodeItem(
+      { kind: "action", label: "Create Repo Release" },
+      vscode.TreeItemCollapsibleState.None
+    );
+    createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", ORANGE_ACTION_COLOR);
+    createRepoTagVersion.command = {
+      command: "antigravity.createRepoTagVersion",
+      title: "Create Repo Release"
+    };
+    items.push(createRepoTagVersion);
+
+    const createFeatureBranch = new NodeItem(
+      { kind: "action", label: "Create Feature Branch" },
+      vscode.TreeItemCollapsibleState.None
+    );
+    createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", ORANGE_ACTION_COLOR);
+    createFeatureBranch.command = {
+      command: "antigravity.createFeatureBranch",
+      title: "Create Feature Branch"
+    };
+    items.push(createFeatureBranch);
+
+    const createPullRequest = new NodeItem(
+      { kind: "action", label: "Create Pull Request" },
+      vscode.TreeItemCollapsibleState.None
+    );
+    createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
+    createPullRequest.command = {
+      command: "antigravity.createPullRequest",
+      title: "Create Pull Request"
+    };
+    items.push(createPullRequest);
+
+    const checkoutMain = new NodeItem(
+      { kind: "action", label: "Go To Branch" },
+      vscode.TreeItemCollapsibleState.None
+    );
+    checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
+    checkoutMain.command = {
+      command: "antigravity.checkoutMain",
+      title: "Go To Branch"
+    };
+    items.push(checkoutMain);
   }
-  items.push(commitChanges);
-
-  const createRepoTagVersion = new NodeItem(
-    { kind: "action", label: "Create Repo Release" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", ORANGE_ACTION_COLOR);
-  createRepoTagVersion.command = {
-    command: "antigravity.createRepoTagVersion",
-    title: "Create Repo Release"
-  };
-  items.push(createRepoTagVersion);
-
-  const createFeatureBranch = new NodeItem(
-    { kind: "action", label: "Create Feature Branch" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", ORANGE_ACTION_COLOR);
-  createFeatureBranch.command = {
-    command: "antigravity.createFeatureBranch",
-    title: "Create Feature Branch"
-  };
-  items.push(createFeatureBranch);
-
-  const createPullRequest = new NodeItem(
-    { kind: "action", label: "Create Pull Request" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
-  createPullRequest.command = {
-    command: "antigravity.createPullRequest",
-    title: "Create Pull Request"
-  };
-  items.push(createPullRequest);
-
-  const checkoutMain = new NodeItem(
-    { kind: "action", label: "Go To Branch" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
-  checkoutMain.command = {
-    command: "antigravity.checkoutMain",
-    title: "Go To Branch"
-  };
-  items.push(checkoutMain);
 
   const prReviewer = new NodeItem(
     { kind: "category", label: "PR Reviewer" },
