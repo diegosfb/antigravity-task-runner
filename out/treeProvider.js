@@ -542,13 +542,6 @@ function getQuickActionItems() {
     const prReviewer = new NodeItem({ kind: "category", label: "PR Reviewer" }, vscode.TreeItemCollapsibleState.Collapsed);
     prReviewer.iconPath = new vscode.ThemeIcon("git-pull-request", QUICK_ACTION_COLOR);
     items.push(prReviewer);
-    const addJiraItem = new NodeItem({ kind: "action", label: "Add Jira Item" }, vscode.TreeItemCollapsibleState.None);
-    addJiraItem.iconPath = new vscode.ThemeIcon("issues", QUICK_ACTION_COLOR);
-    addJiraItem.command = {
-        command: "antigravity.addJiraItem",
-        title: "Add Jira Item"
-    };
-    items.push(addJiraItem);
     if (!savedJiraProjectKey) {
         const selectOrCreateJiraProject = new NodeItem({ kind: "action", label: "Select/Create Jira Project" }, vscode.TreeItemCollapsibleState.None);
         selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", QUICK_ACTION_COLOR);
@@ -558,6 +551,13 @@ function getQuickActionItems() {
         };
         items.push(selectOrCreateJiraProject);
     }
+    const addJiraItem = new NodeItem({ kind: "action", label: "Add Jira Item" }, vscode.TreeItemCollapsibleState.None);
+    addJiraItem.iconPath = new vscode.ThemeIcon("issues", QUICK_ACTION_COLOR);
+    addJiraItem.command = {
+        command: "antigravity.addJiraItem",
+        title: "Add Jira Item"
+    };
+    items.push(addJiraItem);
     const takeJiraItemAssign = new NodeItem({ kind: "action", label: "Take Jira Item (Assign)" }, vscode.TreeItemCollapsibleState.None);
     if (!savedJiraProjectKey) {
         takeJiraItemAssign.iconPath = new vscode.ThemeIcon("person-add", new vscode.ThemeColor("disabledForeground"));
