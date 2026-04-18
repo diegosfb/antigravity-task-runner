@@ -249,6 +249,52 @@ export async function searchOpenUnassignedJiraIssues(
     .filter((issue) => issue.id && issue.key && issue.summary);
 }
 
+export async function searchOpenUnassignedTodoJiraIssuesForProject(
+  credentials: JiraCredentials,
+  projectKey: string
+): Promise<JiraIssueSummary[]> {
+  const normalizedProjectKey = projectKey.trim().toUpperCase();
+  const response = await jiraRequest<{
+    issues?: Array<{
+      id?: string;
+      key?: string;
+      fields?: {
+        summary?: string;
+        issuetype?: { name?: string };
+        project?: { key?: string; name?: string };
+        status?: { name?: string };
+      };
+    }>;
+  }>(credentials, {
+    method: "POST",
+    apiPath: "/rest/api/3/search/jql",
+    body: {
+      fields: ["summary", "issuetype", "project", "status"],
+      jql:
+        `project = "${normalizedProjectKey}" AND assignee IS EMPTY AND statusCategory = "To Do" ORDER BY updated DESC`,
+      maxResults: 100
+    }
+  });
+
+  return (response.issues ?? [])
+    .map((issue) => ({
+      id: (issue.id ?? "").trim(),
+      key: (issue.key ?? "").trim(),
+      summary: (issue.fields?.summary ?? "").trim(),
+      projectKey: (issue.fields?.project?.key ?? "").trim(),
+      projectName: (issue.fields?.project?.name ?? "").trim(),
+      issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
+      statusName: (issue.fields?.status?.name ?? "").trim()
+    }))
+    .filter(
+      (issue) =>
+        issue.id &&
+        issue.key &&
+        issue.summary &&
+        issue.projectKey === normalizedProjectKey
+    );
+}
+
 export async function searchOpenAssignedJiraIssuesForCurrentUser(
   credentials: JiraCredentials,
   projectKey: string
@@ -311,6 +357,22 @@ export async function assignJiraIssueToCurrentUser(
     apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/assignee`,
     body: {
       accountId
+    }
+  });
+}
+
+export async function updateJiraIssueSummary(
+  credentials: JiraCredentials,
+  issueKey: string,
+  summary: string
+): Promise<void> {
+  await jiraRequest(credentials, {
+    method: "PUT",
+    apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}`,
+    body: {
+      fields: {
+        summary: summary.trim()
+      }
     }
   });
 }

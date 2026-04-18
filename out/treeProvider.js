@@ -485,6 +485,18 @@ function getQuickActionItems() {
         title: "Run Workspace Setup"
     };
     items.push(workspaceSetup);
+    const assignJiraItemToAgent = new NodeItem({ kind: "action", label: "Assign Jira Item to Agent" }, vscode.TreeItemCollapsibleState.None);
+    assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
+    if (!savedJiraProjectKey) {
+        assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", new vscode.ThemeColor("disabledForeground"));
+        assignJiraItemToAgent.tooltip =
+            "Set JIRA_PROJECT_KEY in this repository before assigning a Jira item to an agent.";
+    }
+    assignJiraItemToAgent.command = {
+        command: "antigravity.assignJiraItemToAgent",
+        title: "Assign Jira Item to Agent"
+    };
+    items.push(assignJiraItemToAgent);
     if (!hasRepo) {
         const initRepo = new NodeItem({ kind: "action", label: "Init Repository" }, vscode.TreeItemCollapsibleState.None);
         initRepo.iconPath = new vscode.ThemeIcon("repo", ORANGE_ACTION_COLOR);
