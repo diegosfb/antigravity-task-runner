@@ -2205,7 +2205,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         if (getUseAgentForGithubRepositoryManagement()) {
-          const prompt = "commit";
+          const prompt = "commit all changes";
           logAlways("[commitChanges] delegating commit to Agentic Harness");
           runInNewTerminal(
             "Agentic Harness Commit",
