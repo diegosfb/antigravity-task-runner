@@ -240,7 +240,7 @@ function getExtensionSettingsFields() {
             placeholder: "",
             value: "",
             type: "checkbox",
-            checked: config.get("useAgentForGithubRepositoryManagement") ?? true
+            checked: config.get("useAgentForGithubRepositoryManagement") ?? false
         },
         {
             key: "customAgenticPlatformAddons",

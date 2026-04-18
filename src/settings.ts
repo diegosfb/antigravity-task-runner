@@ -273,7 +273,7 @@ function getExtensionSettingsFields(): SettingsField[] {
       placeholder: "",
       value: "",
       type: "checkbox",
-      checked: config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true
+      checked: config.get<boolean>("useAgentForGithubRepositoryManagement") ?? false
     },
     {
       key: "customAgenticPlatformAddons",
