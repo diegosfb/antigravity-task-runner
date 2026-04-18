@@ -531,9 +531,6 @@ function getQuickActionItems() {
         };
         items.push(checkoutMain);
     }
-    const prReviewer = new NodeItem({ kind: "category", label: "PR Reviewer" }, vscode.TreeItemCollapsibleState.Collapsed);
-    prReviewer.iconPath = new vscode.ThemeIcon("git-pull-request", QUICK_ACTION_COLOR);
-    items.push(prReviewer);
     if (!savedJiraProjectKey) {
         const selectOrCreateJiraProject = new NodeItem({ kind: "action", label: "Select/Create Jira Project" }, vscode.TreeItemCollapsibleState.None);
         selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", JIRA_ACTION_COLOR);
