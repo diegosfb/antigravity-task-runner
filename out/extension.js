@@ -2060,10 +2060,13 @@ function activate(context) {
         try {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `Assigning ${selection.issue.key} to you`,
+                title: `Assigning ${selection.issue.key} to you and moving it to In Progress`,
                 cancellable: false
-            }, async () => (0, jira_1.assignJiraIssueToCurrentUser)(credentials, selection.issue.key));
-            void vscode.window.showInformationMessage(`Assigned Jira item ${selection.issue.key} to ${credentials.email}.`);
+            }, async () => {
+                await (0, jira_1.assignJiraIssueToCurrentUser)(credentials, selection.issue.key);
+                await (0, jira_1.transitionJiraIssueToStatus)(credentials, selection.issue.key, "In Progress");
+            });
+            void vscode.window.showInformationMessage(`Assigned Jira item ${selection.issue.key} to ${credentials.email} and moved it to In Progress.`);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);

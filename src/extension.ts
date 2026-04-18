@@ -2495,14 +2495,17 @@ export function activate(context: vscode.ExtensionContext) {
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: `Assigning ${selection.issue.key} to you`,
+            title: `Assigning ${selection.issue.key} to you and moving it to In Progress`,
             cancellable: false
           },
-          async () => assignJiraIssueToCurrentUser(credentials, selection.issue.key)
+          async () => {
+            await assignJiraIssueToCurrentUser(credentials, selection.issue.key);
+            await transitionJiraIssueToStatus(credentials, selection.issue.key, "In Progress");
+          }
         );
 
         void vscode.window.showInformationMessage(
-          `Assigned Jira item ${selection.issue.key} to ${credentials.email}.`
+          `Assigned Jira item ${selection.issue.key} to ${credentials.email} and moved it to In Progress.`
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
