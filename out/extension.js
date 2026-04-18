@@ -2048,32 +2048,19 @@ function activate(context) {
             return;
         const { branchType, branchName } = dialogResult;
         (0, logger_1.log)(`[createFeatureBranch] branchName: ${branchName}`);
-        const useAgentForGithubRepositoryManagement = (0, settings_1.getUseAgentForGithubRepositoryManagement)();
-        if (!useAgentForGithubRepositoryManagement) {
-            const scriptPath = path.join(extensionRoot, "src", "create_feature_branch.sh");
-            if (!fs.existsSync(scriptPath)) {
-                void vscode.window.showErrorMessage("Create feature branch script not found in the extension package.");
-                return;
-            }
-            (0, terminal_1.runInNewTerminal)("Create Feature Branch", [
-                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(branchName)}`
-            ], {
-                iconPath: new vscode.ThemeIcon("git-branch")
-            });
+        if (branchType.label) {
+            (0, logger_1.log)(`[createFeatureBranch] branchType: ${branchType.label}`);
+        }
+        const scriptPath = path.join(extensionRoot, "src", "create_feature_branch.sh");
+        if (!fs.existsSync(scriptPath)) {
+            void vscode.window.showErrorMessage("Create feature branch script not found in the extension package.");
             return;
         }
-        const workflowFile = resolveClaudeWorkflowFile("create_feature_branch");
-        if (!workflowFile) {
-            void vscode.window.showErrorMessage("Create feature branch workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
-            return;
-        }
-        (0, terminal_1.runInNewTerminal)("Agentic Harness Feature Branch", [
+        (0, terminal_1.runInNewTerminal)("Create Feature Branch", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            (0, terminal_1.buildAgenticHarnessPromptCommand)(`run this workflow ${workflowFile}. Use branch type ${branchType.label} and branch name ${branchName}. Do not ask for them again.`)
+            `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(branchName)}`
         ], {
-            iconPath: new vscode.ThemeIcon("git-branch", terminal_1.CLAUDE_ACTION_COLOR),
-            color: terminal_1.CLAUDE_ACTION_COLOR
+            iconPath: new vscode.ThemeIcon("git-branch")
         });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createPullRequest", async () => {
@@ -2084,32 +2071,16 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        const useAgentForGithubRepositoryManagement = (0, settings_1.getUseAgentForGithubRepositoryManagement)();
-        if (!useAgentForGithubRepositoryManagement) {
-            const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
-            if (!fs.existsSync(scriptPath)) {
-                void vscode.window.showErrorMessage("Create pull request script not found in the extension package.");
-                return;
-            }
-            (0, terminal_1.runInNewTerminal)("Create Pull Request", [
-                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                (0, utils_1.quoteShellArg)(scriptPath)
-            ], {
-                iconPath: new vscode.ThemeIcon("git-pull-request")
-            });
+        const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
+        if (!fs.existsSync(scriptPath)) {
+            void vscode.window.showErrorMessage("Create pull request script not found in the extension package.");
             return;
         }
-        const workflowFile = "/Users/diego.brihuega/.gemini/workflows/create_pull_request/WORKFLOW.md";
-        if (!fs.existsSync(workflowFile)) {
-            void vscode.window.showErrorMessage("Create pull request workflow not found at /Users/diego.brihuega/.gemini/workflows/create_pull_request/WORKFLOW.md.");
-            return;
-        }
-        (0, terminal_1.runInNewTerminal)("Agentic Harness Pull Request", [
+        (0, terminal_1.runInNewTerminal)("Create Pull Request", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            (0, terminal_1.buildAgenticHarnessPromptCommand)(`run this workflow ${workflowFile}. If eslint is available use that if not skip lint.`, "prompt")
+            (0, utils_1.quoteShellArg)(scriptPath)
         ], {
-            iconPath: new vscode.ThemeIcon("git-pull-request", terminal_1.CLAUDE_ACTION_COLOR),
-            color: terminal_1.CLAUDE_ACTION_COLOR
+            iconPath: new vscode.ThemeIcon("git-pull-request")
         });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.checkoutMain", async () => {
@@ -2133,14 +2104,15 @@ function activate(context) {
             const canProceed = await prepareCommitBeforeCheckout(repoRoot, selectedBranch);
             if (!canProceed)
                 return;
-            const commands = [
-                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                `git rev-parse --verify ${(0, utils_1.quoteShellArg)(`refs/heads/${selectedBranch}`)} >/dev/null 2>&1 && git checkout ${(0, utils_1.quoteShellArg)(selectedBranch)} || git checkout --track ${(0, utils_1.quoteShellArg)(`origin/${selectedBranch}`)}`
-            ];
-            if (selectedBranch === "main") {
-                commands.push("git pull origin main");
+            const scriptPath = path.join(extensionRoot, "src", "checkout_branch.sh");
+            if (!fs.existsSync(scriptPath)) {
+                void vscode.window.showErrorMessage("Checkout branch script not found in the extension package.");
+                return;
             }
-            (0, terminal_1.runInNewTerminal)("Checkout Branch", commands, {
+            (0, terminal_1.runInNewTerminal)("Checkout Branch", [
+                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+                `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(selectedBranch)}`
+            ], {
                 iconPath: new vscode.ThemeIcon("source-control")
             });
         }

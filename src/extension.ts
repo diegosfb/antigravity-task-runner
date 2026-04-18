@@ -2471,49 +2471,25 @@ export function activate(context: vscode.ExtensionContext) {
       if (!dialogResult) return;
       const { branchType, branchName } = dialogResult;
       log(`[createFeatureBranch] branchName: ${branchName}`);
-      const useAgentForGithubRepositoryManagement =
-        getUseAgentForGithubRepositoryManagement();
-
-      if (!useAgentForGithubRepositoryManagement) {
-        const scriptPath = path.join(extensionRoot, "src", "create_feature_branch.sh");
-        if (!fs.existsSync(scriptPath)) {
-          void vscode.window.showErrorMessage(
-            "Create feature branch script not found in the extension package."
-          );
-          return;
-        }
-
-        runInNewTerminal(
-          "Create Feature Branch",
-          [
-            `cd ${quoteShellArg(repoRoot)}`,
-            `${quoteShellArg(scriptPath)} ${quoteShellArg(branchName)}`
-          ],
-          {
-            iconPath: new vscode.ThemeIcon("git-branch")
-          }
-        );
-        return;
+      if (branchType.label) {
+        log(`[createFeatureBranch] branchType: ${branchType.label}`);
       }
-
-      const workflowFile = resolveClaudeWorkflowFile("create_feature_branch");
-      if (!workflowFile) {
+      const scriptPath = path.join(extensionRoot, "src", "create_feature_branch.sh");
+      if (!fs.existsSync(scriptPath)) {
         void vscode.window.showErrorMessage(
-          "Create feature branch workflow not found in the configured Antigravity Workflows Folder or the bundled extension files."
+          "Create feature branch script not found in the extension package."
         );
         return;
       }
+
       runInNewTerminal(
-        "Agentic Harness Feature Branch",
+        "Create Feature Branch",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          buildAgenticHarnessPromptCommand(
-            `run this workflow ${workflowFile}. Use branch type ${branchType.label} and branch name ${branchName}. Do not ask for them again.`
-          )
+          `${quoteShellArg(scriptPath)} ${quoteShellArg(branchName)}`
         ],
         {
-          iconPath: new vscode.ThemeIcon("git-branch", CLAUDE_ACTION_COLOR),
-          color: CLAUDE_ACTION_COLOR
+          iconPath: new vscode.ThemeIcon("git-branch")
         }
       );
     })
@@ -2528,51 +2504,22 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      const useAgentForGithubRepositoryManagement =
-        getUseAgentForGithubRepositoryManagement();
-
-      if (!useAgentForGithubRepositoryManagement) {
-        const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
-        if (!fs.existsSync(scriptPath)) {
-          void vscode.window.showErrorMessage(
-            "Create pull request script not found in the extension package."
-          );
-          return;
-        }
-
-        runInNewTerminal(
-          "Create Pull Request",
-          [
-            `cd ${quoteShellArg(repoRoot)}`,
-            quoteShellArg(scriptPath)
-          ],
-          {
-            iconPath: new vscode.ThemeIcon("git-pull-request")
-          }
-        );
-        return;
-      }
-
-      const workflowFile =
-        "/Users/diego.brihuega/.gemini/workflows/create_pull_request/WORKFLOW.md";
-      if (!fs.existsSync(workflowFile)) {
+      const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
+      if (!fs.existsSync(scriptPath)) {
         void vscode.window.showErrorMessage(
-          "Create pull request workflow not found at /Users/diego.brihuega/.gemini/workflows/create_pull_request/WORKFLOW.md."
+          "Create pull request script not found in the extension package."
         );
         return;
       }
+
       runInNewTerminal(
-        "Agentic Harness Pull Request",
+        "Create Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          buildAgenticHarnessPromptCommand(
-            `run this workflow ${workflowFile}. If eslint is available use that if not skip lint.`,
-            "prompt"
-          )
+          quoteShellArg(scriptPath)
         ],
         {
-          iconPath: new vscode.ThemeIcon("git-pull-request", CLAUDE_ACTION_COLOR),
-          color: CLAUDE_ACTION_COLOR
+          iconPath: new vscode.ThemeIcon("git-pull-request")
         }
       );
     })
@@ -2602,17 +2549,20 @@ export function activate(context: vscode.ExtensionContext) {
         const canProceed = await prepareCommitBeforeCheckout(repoRoot, selectedBranch);
         if (!canProceed) return;
 
-        const commands = [
-          `cd ${quoteShellArg(repoRoot)}`,
-          `git rev-parse --verify ${quoteShellArg(`refs/heads/${selectedBranch}`)} >/dev/null 2>&1 && git checkout ${quoteShellArg(selectedBranch)} || git checkout --track ${quoteShellArg(`origin/${selectedBranch}`)}`
-        ];
-        if (selectedBranch === "main") {
-          commands.push("git pull origin main");
+        const scriptPath = path.join(extensionRoot, "src", "checkout_branch.sh");
+        if (!fs.existsSync(scriptPath)) {
+          void vscode.window.showErrorMessage(
+            "Checkout branch script not found in the extension package."
+          );
+          return;
         }
 
         runInNewTerminal(
           "Checkout Branch",
-          commands,
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            `${quoteShellArg(scriptPath)} ${quoteShellArg(selectedBranch)}`
+          ],
           {
             iconPath: new vscode.ThemeIcon("source-control")
           }
