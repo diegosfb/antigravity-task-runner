@@ -759,6 +759,70 @@ export function activate(context: vscode.ExtensionContext) {
       );
     });
 
+  const ensureSavedJiraProjectKey = async (
+    repoRoot: string,
+    credentials: JiraCredentials
+  ): Promise<string | undefined> => {
+    let projectKey = getSavedJiraProjectKey(repoRoot);
+    if (projectKey) {
+      return projectKey;
+    }
+
+    let projects: JiraProjectSummary[] = [];
+    try {
+      projects = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Loading Jira projects",
+          cancellable: false
+        },
+        async () => getJiraProjects(credentials)
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Failed to load Jira projects: ${message}`);
+      return undefined;
+    }
+
+    const setupSelection = await showJiraProjectSetupDialog(projects);
+    if (!setupSelection) {
+      return undefined;
+    }
+
+    if (setupSelection.mode === "select") {
+      projectKey = setupSelection.projectKey;
+    } else {
+      try {
+        const createdProject = await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: "Creating Jira project",
+            cancellable: false
+          },
+          async () =>
+            createJiraProject(credentials, {
+              key: setupSelection.key,
+              name: setupSelection.name,
+              description: setupSelection.description
+            })
+        );
+
+        projectKey = createdProject.key.toUpperCase();
+        void vscode.window.showInformationMessage(
+          `Created Jira project ${projectKey} and saved it to this repository .env file.`
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Failed to create Jira project: ${message}`);
+        return undefined;
+      }
+    }
+
+    upsertEnvFileValue(getRepoEnvPath(repoRoot), "JIRA_PROJECT_KEY", projectKey);
+    provider.refresh();
+    return projectKey;
+  };
+
   const renderCreateJiraItemHtml = (
     webview: vscode.Webview,
     projectKey: string,
@@ -2331,6 +2395,34 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.selectOrCreateJiraProject", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+      let credentials: JiraCredentials;
+
+      try {
+        credentials = getJiraCredentialsFromEnv(repoRoot);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(message);
+        return;
+      }
+
+      const projectKey = await ensureSavedJiraProjectKey(repoRoot, credentials);
+      if (!projectKey) {
+        return;
+      }
+
+      void vscode.window.showInformationMessage(`Jira project ${projectKey} is now selected.`);
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.addJiraItem", async () => {
       const rootPath = getRootPath();
       if (!rootPath) {
@@ -2349,61 +2441,8 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const envPath = getRepoEnvPath(repoRoot);
-      let projectKey = getSavedJiraProjectKey(repoRoot);
-
-      if (!projectKey) {
-        let projects: JiraProjectSummary[] = [];
-        try {
-          projects = await vscode.window.withProgress(
-            {
-              location: vscode.ProgressLocation.Notification,
-              title: "Loading Jira projects",
-              cancellable: false
-            },
-            async () => getJiraProjects(credentials)
-          );
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          void vscode.window.showErrorMessage(`Failed to load Jira projects: ${message}`);
-          return;
-        }
-
-        const setupSelection = await showJiraProjectSetupDialog(projects);
-        if (!setupSelection) return;
-
-        if (setupSelection.mode === "select") {
-          projectKey = setupSelection.projectKey;
-        } else {
-          try {
-            const createdProject = await vscode.window.withProgress(
-              {
-                location: vscode.ProgressLocation.Notification,
-                title: "Creating Jira project",
-                cancellable: false
-              },
-              async () =>
-                createJiraProject(credentials, {
-                  key: setupSelection.key,
-                  name: setupSelection.name,
-                  description: setupSelection.description
-                })
-            );
-
-            projectKey = createdProject.key.toUpperCase();
-            void vscode.window.showInformationMessage(
-              `Created Jira project ${projectKey} and saved it to this repository .env file.`
-            );
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to create Jira project: ${message}`);
-            return;
-          }
-        }
-
-        upsertEnvFileValue(envPath, "JIRA_PROJECT_KEY", projectKey);
-        provider.refresh();
-      }
+      const projectKey = await ensureSavedJiraProjectKey(repoRoot, credentials);
+      if (!projectKey) return;
 
       let issueTypes: JiraIssueType[];
       try {

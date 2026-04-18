@@ -30,6 +30,7 @@
     "onCommand:antigravity.approvePullRequest",
     "onCommand:antigravity.feedbackOnPullRequest",
     "onCommand:antigravity.addJiraItem",
+    "onCommand:antigravity.selectOrCreateJiraProject",
     "onCommand:antigravity.takeJiraItemAssign",
     "onCommand:antigravity.completeJiraItem",
     "onCommand:antigravity.openSopManual",
@@ -91,6 +92,10 @@
       {
         "command": "antigravity.takeJiraItemAssign",
         "title": "Antigravity: Take Jira Item (Assign)"
+      },
+      {
+        "command": "antigravity.selectOrCreateJiraProject",
+        "title": "Antigravity: Select/Create Jira Project"
       },
       {
         "command": "antigravity.completeJiraItem",
