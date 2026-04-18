@@ -50,6 +50,8 @@ import {
   JiraCredentials,
   JiraProjectSummary,
   JiraIssueSummary,
+  JiraIssueType,
+  getJiraIssueTypes,
   searchOpenUnassignedJiraIssues,
   assignJiraIssueToCurrentUser,
   searchOpenAssignedJiraIssuesForCurrentUser,
@@ -759,11 +761,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   const renderCreateJiraItemHtml = (
     webview: vscode.Webview,
-    projectKey: string
+    projectKey: string,
+    issueTypes: JiraIssueType[]
   ): string => {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-    const issueTypes = ["Epic", "Feature", "Task", "Bug"];
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -822,7 +824,7 @@ export function activate(context: vscode.ExtensionContext) {
     </form>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
-      const issueTypes = ${JSON.stringify(issueTypes)};
+      const issueTypes = ${JSON.stringify(issueTypes.map((issueType) => issueType.name))};
       const issueTypeSelect = document.getElementById("issue-type");
       const issueNameInput = document.getElementById("issue-name");
       const issueDescriptionInput = document.getElementById("issue-description");
@@ -871,7 +873,8 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   const showCreateJiraItemDialog = async (
-    projectKey: string
+    projectKey: string,
+    issueTypes: JiraIssueType[]
   ): Promise<{ issueType: string; summary: string; description: string } | undefined> =>
     new Promise((resolve) => {
       const panel = vscode.window.createWebviewPanel(
@@ -880,7 +883,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.ViewColumn.Active,
         { enableScripts: true }
       );
-      panel.webview.html = renderCreateJiraItemHtml(panel.webview, projectKey);
+      panel.webview.html = renderCreateJiraItemHtml(panel.webview, projectKey, issueTypes);
 
       let settled = false;
       const resolveOnce = (
@@ -2401,7 +2404,30 @@ export function activate(context: vscode.ExtensionContext) {
         upsertEnvFileValue(envPath, "JIRA_PROJECT_KEY", projectKey);
       }
 
-      const jiraItem = await showCreateJiraItemDialog(projectKey);
+      let issueTypes: JiraIssueType[];
+      try {
+        issueTypes = await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: "Loading Jira item types",
+            cancellable: false
+          },
+          async () => getJiraIssueTypes(credentials, projectKey)
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Failed to load Jira item types: ${message}`);
+        return;
+      }
+
+      if (issueTypes.length === 0) {
+        void vscode.window.showErrorMessage(
+          `No Jira item types are available for project ${projectKey}.`
+        );
+        return;
+      }
+
+      const jiraItem = await showCreateJiraItemDialog(projectKey, issueTypes);
       if (!jiraItem) return;
 
       try {
