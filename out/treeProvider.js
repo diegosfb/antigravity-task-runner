@@ -551,44 +551,31 @@ function getQuickActionItems() {
         };
         items.push(selectOrCreateJiraProject);
     }
-    const addJiraItem = new NodeItem({ kind: "action", label: "Add Jira Item" }, vscode.TreeItemCollapsibleState.None);
-    addJiraItem.iconPath = new vscode.ThemeIcon("issues", QUICK_ACTION_COLOR);
-    addJiraItem.command = {
-        command: "antigravity.addJiraItem",
-        title: "Add Jira Item"
-    };
-    items.push(addJiraItem);
-    const takeJiraItemAssign = new NodeItem({ kind: "action", label: "Take Jira Item (Assign)" }, vscode.TreeItemCollapsibleState.None);
-    if (!savedJiraProjectKey) {
-        takeJiraItemAssign.iconPath = new vscode.ThemeIcon("person-add", new vscode.ThemeColor("disabledForeground"));
-        takeJiraItemAssign.tooltip =
-            "Set JIRA_PROJECT_KEY for this repository to enable Take Jira Item (Assign).";
-        takeJiraItemAssign.description = "disabled";
-    }
     else {
+        const addJiraItem = new NodeItem({ kind: "action", label: "Add Jira Item" }, vscode.TreeItemCollapsibleState.None);
+        addJiraItem.iconPath = new vscode.ThemeIcon("issues", QUICK_ACTION_COLOR);
+        addJiraItem.command = {
+            command: "antigravity.addJiraItem",
+            title: "Add Jira Item"
+        };
+        items.push(addJiraItem);
+        const takeJiraItemAssign = new NodeItem({ kind: "action", label: "Take Jira Item (Assign)" }, vscode.TreeItemCollapsibleState.None);
         takeJiraItemAssign.iconPath = new vscode.ThemeIcon("person-add", QUICK_ACTION_COLOR);
         takeJiraItemAssign.description = savedJiraProjectKey;
         takeJiraItemAssign.command = {
             command: "antigravity.takeJiraItemAssign",
             title: "Take Jira Item (Assign)"
         };
-    }
-    items.push(takeJiraItemAssign);
-    const completeJiraItem = new NodeItem({ kind: "action", label: "Jira Item Completed" }, vscode.TreeItemCollapsibleState.None);
-    if (!savedJiraProjectKey) {
-        completeJiraItem.iconPath = new vscode.ThemeIcon("pass", new vscode.ThemeColor("disabledForeground"));
-        completeJiraItem.tooltip = "Set JIRA_PROJECT_KEY for this repository to enable Jira Item Completed.";
-        completeJiraItem.description = "disabled";
-    }
-    else {
+        items.push(takeJiraItemAssign);
+        const completeJiraItem = new NodeItem({ kind: "action", label: "Jira Item Completed" }, vscode.TreeItemCollapsibleState.None);
         completeJiraItem.iconPath = new vscode.ThemeIcon("pass", QUICK_ACTION_COLOR);
         completeJiraItem.description = savedJiraProjectKey;
         completeJiraItem.command = {
             command: "antigravity.completeJiraItem",
             title: "Jira Item Completed"
         };
+        items.push(completeJiraItem);
     }
-    items.push(completeJiraItem);
     const incrementMajor = new NodeItem({ kind: "action", label: "Increment Major Version" }, vscode.TreeItemCollapsibleState.None);
     incrementMajor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
     incrementMajor.command = {
