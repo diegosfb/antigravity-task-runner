@@ -2205,7 +2205,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         if (getUseAgentForGithubRepositoryManagement()) {
-          const prompt = "commit. Never commit .env or config/.env.";
+          const prompt = "commit";
           logAlways("[commitChanges] delegating commit to Agentic Harness");
           runInNewTerminal(
             "Agentic Harness Commit",

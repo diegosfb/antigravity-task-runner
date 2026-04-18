@@ -1845,7 +1845,7 @@ function activate(context) {
                 return;
             }
             if ((0, settings_1.getUseAgentForGithubRepositoryManagement)()) {
-                const prompt = "commit. Never commit .env or config/.env.";
+                const prompt = "commit";
                 (0, logger_1.logAlways)("[commitChanges] delegating commit to Agentic Harness");
                 (0, terminal_1.runInNewTerminal)("Agentic Harness Commit", [
                     `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
