@@ -2035,12 +2035,18 @@ function activate(context) {
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         let credentials;
+        const projectKey = getSavedJiraProjectKey(repoRoot);
         try {
             credentials = getJiraCredentialsFromEnv(repoRoot);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             void vscode.window.showErrorMessage(message);
+            return;
+        }
+        if (!projectKey) {
+            void vscode.window.showErrorMessage("Take Jira Item (Assign) is disabled because JIRA_PROJECT_KEY is not set for this repository.");
+            provider.refresh();
             return;
         }
         let issues;

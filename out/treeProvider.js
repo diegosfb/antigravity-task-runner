@@ -550,11 +550,20 @@ function getQuickActionItems() {
     };
     items.push(addJiraItem);
     const takeJiraItemAssign = new NodeItem({ kind: "action", label: "Take Jira Item (Assign)" }, vscode.TreeItemCollapsibleState.None);
-    takeJiraItemAssign.iconPath = new vscode.ThemeIcon("person-add", QUICK_ACTION_COLOR);
-    takeJiraItemAssign.command = {
-        command: "antigravity.takeJiraItemAssign",
-        title: "Take Jira Item (Assign)"
-    };
+    if (!savedJiraProjectKey) {
+        takeJiraItemAssign.iconPath = new vscode.ThemeIcon("person-add", new vscode.ThemeColor("disabledForeground"));
+        takeJiraItemAssign.tooltip =
+            "Set JIRA_PROJECT_KEY for this repository to enable Take Jira Item (Assign).";
+        takeJiraItemAssign.description = "disabled";
+    }
+    else {
+        takeJiraItemAssign.iconPath = new vscode.ThemeIcon("person-add", QUICK_ACTION_COLOR);
+        takeJiraItemAssign.description = savedJiraProjectKey;
+        takeJiraItemAssign.command = {
+            command: "antigravity.takeJiraItemAssign",
+            title: "Take Jira Item (Assign)"
+        };
+    }
     items.push(takeJiraItemAssign);
     const completeJiraItem = new NodeItem({ kind: "action", label: "Jira Item Completed" }, vscode.TreeItemCollapsibleState.None);
     if (!savedJiraProjectKey) {
