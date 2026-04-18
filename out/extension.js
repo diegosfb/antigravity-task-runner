@@ -2099,14 +2099,14 @@ function activate(context) {
             });
             return;
         }
-        const workflowFile = resolveClaudeWorkflowFile("create_pull_request");
-        if (!workflowFile) {
-            void vscode.window.showErrorMessage("Create pull request workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
+        const workflowFile = "/Users/diego.brihuega/.gemini/workflows/create_pull_request/WORKFLOW.md";
+        if (!fs.existsSync(workflowFile)) {
+            void vscode.window.showErrorMessage("Create pull request workflow not found at /Users/diego.brihuega/.gemini/workflows/create_pull_request/WORKFLOW.md.");
             return;
         }
         (0, terminal_1.runInNewTerminal)("Agentic Harness Pull Request", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            (0, terminal_1.buildAgenticHarnessPromptCommand)(`run this workflow ${workflowFile}`)
+            (0, terminal_1.buildAgenticHarnessPromptCommand)(`run this workflow ${workflowFile}. If eslint is available use that if not skip lint.`, "prompt")
         ], {
             iconPath: new vscode.ThemeIcon("git-pull-request", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR

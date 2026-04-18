@@ -2553,10 +2553,11 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const workflowFile = resolveClaudeWorkflowFile("create_pull_request");
-      if (!workflowFile) {
+      const workflowFile =
+        "/Users/diego.brihuega/.gemini/workflows/create_pull_request/WORKFLOW.md";
+      if (!fs.existsSync(workflowFile)) {
         void vscode.window.showErrorMessage(
-          "Create pull request workflow not found in the configured Antigravity Workflows Folder or the bundled extension files."
+          "Create pull request workflow not found at /Users/diego.brihuega/.gemini/workflows/create_pull_request/WORKFLOW.md."
         );
         return;
       }
@@ -2564,7 +2565,10 @@ export function activate(context: vscode.ExtensionContext) {
         "Agentic Harness Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          buildAgenticHarnessPromptCommand(`run this workflow ${workflowFile}`)
+          buildAgenticHarnessPromptCommand(
+            `run this workflow ${workflowFile}. If eslint is available use that if not skip lint.`,
+            "prompt"
+          )
         ],
         {
           iconPath: new vscode.ThemeIcon("git-pull-request", CLAUDE_ACTION_COLOR),
