@@ -600,20 +600,17 @@ function getQuickActionItems() {
         };
     }
     items.push(autocommitCheckpoint);
-    const revertChanges = new NodeItem({ kind: "action", label: "Revert Changes" }, vscode.TreeItemCollapsibleState.None);
     if (autocommitRunning) {
+        const revertChanges = new NodeItem({ kind: "action", label: "Revert Changes" }, vscode.TreeItemCollapsibleState.None);
         revertChanges.iconPath = new vscode.ThemeIcon("discard", QUICK_ACTION_COLOR);
         revertChanges.command = {
             command: "antigravity.autocommitRevert",
             title: "Revert Changes"
         };
+        items.push(revertChanges);
     }
     else {
-        revertChanges.label = "R̶e̶v̶e̶r̶t̶ ̶C̶h̶a̶n̶g̶e̶s̶";
-        revertChanges.iconPath = new vscode.ThemeIcon("discard", new vscode.ThemeColor("disabledForeground"));
-        revertChanges.tooltip = "Autocommit is not running.";
     }
-    items.push(revertChanges);
     const environmentSwitch = new NodeItem({ kind: "action", label: "Environment Switch" }, vscode.TreeItemCollapsibleState.None);
     environmentSwitch.iconPath = new vscode.ThemeIcon("sync", QUICK_ACTION_COLOR);
     environmentSwitch.command = {
