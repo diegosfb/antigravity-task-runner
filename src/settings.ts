@@ -358,8 +358,9 @@ export function renderAntigravitySettingsHtml(webview: vscode.Webview): string {
       .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
       .field-checkbox { flex-direction: row; align-items: center; gap: 8px; }
       label { font-size: 12px; color: var(--vscode-descriptionForeground); }
-      input[type="text"] { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); font-size: 13px; }
+      input[type="text"], select { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); font-size: 13px; }
       .description { font-size: 11px; color: var(--vscode-descriptionForeground); }
+      .command-list-controls { display: flex; flex-direction: column; gap: 8px; }
       .actions { margin-top: 18px; display: flex; justify-content: flex-end; }
       button { padding: 8px 14px; border-radius: 6px; border: none; background: var(--vscode-button-background); color: var(--vscode-button-foreground); cursor: pointer; }
       button:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -403,26 +404,42 @@ export function renderAntigravitySettingsHtml(webview: vscode.Webview): string {
           const label = document.createElement("label");
           label.textContent = field.label;
           label.setAttribute("for", "field-" + field.key);
+          const controls = document.createElement("div");
+          controls.className = "command-list-controls";
+          const select = document.createElement("select");
+          select.id = "field-preset-" + field.key;
+          const customOption = document.createElement("option");
+          customOption.value = "__custom__";
+          customOption.textContent = "Custom value";
+          select.appendChild(customOption);
+          (field.options || []).forEach((optionValue) => {
+            const option = document.createElement("option");
+            option.value = optionValue;
+            option.textContent = optionValue;
+            select.appendChild(option);
+          });
           const input = document.createElement("input");
           input.id = "field-" + field.key;
           input.type = "text";
           input.value = field.value || "";
           if (field.placeholder) input.placeholder = field.placeholder;
-          const listId = "field-list-" + field.key;
-          input.setAttribute("list", listId);
-          const dataList = document.createElement("datalist");
-          dataList.id = listId;
-          (field.options || []).forEach((optionValue) => {
-            const option = document.createElement("option");
-            option.value = optionValue;
-            dataList.appendChild(option);
+          const syncPresetFromInput = () => {
+            const selectedPreset = (field.options || []).find((optionValue) => optionValue === input.value);
+            select.value = selectedPreset || "__custom__";
+          };
+          select.addEventListener("change", () => {
+            if (select.value !== "__custom__") input.value = select.value;
+            syncPresetFromInput();
           });
+          input.addEventListener("input", syncPresetFromInput);
+          syncPresetFromInput();
           const desc = document.createElement("div");
           desc.className = "description";
           desc.textContent = field.description || "";
           wrapper.appendChild(label);
-          wrapper.appendChild(input);
-          wrapper.appendChild(dataList);
+          controls.appendChild(select);
+          controls.appendChild(input);
+          wrapper.appendChild(controls);
           wrapper.appendChild(desc);
         } else {
           wrapper.className = "field";
