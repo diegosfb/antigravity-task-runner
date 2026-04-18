@@ -465,6 +465,7 @@ function getQuickActionItems() {
     const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
     const autocommitRunning = repoRoot ? (0, git_1.isAutocommitRunning)(repoRoot) : false;
     const hasAgentFolder = repoRoot ? fs.existsSync(path.join((0, utils_1.getWorkspaceProjectPath)(repoRoot), ".agent")) : false;
+    const hasGitHub = repoRoot ? (0, git_1.hasGitHubRemoteSync)(repoRoot) : false;
     const savedJiraProjectKey = repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
         ? (fs
             .readFileSync(path.join(repoRoot, ".env"), "utf8")
