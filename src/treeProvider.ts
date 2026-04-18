@@ -686,7 +686,7 @@ function getQuickActionItems(): NodeItem[] {
       { kind: "action", label: "Add Jira Item" },
       vscode.TreeItemCollapsibleState.None
     );
-    addJiraItem.iconPath = new vscode.ThemeIcon("issues", JIRA_ACTION_COLOR);
+    addJiraItem.iconPath = new vscode.ThemeIcon("add", JIRA_ACTION_COLOR);
     addJiraItem.command = {
       command: "antigravity.addJiraItem",
       title: "Add Jira Item"
