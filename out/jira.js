@@ -162,14 +162,15 @@ async function searchOpenUnassignedJiraIssues(credentials) {
     }))
         .filter((issue) => issue.id && issue.key && issue.summary);
 }
-async function searchOpenAssignedJiraIssuesForCurrentUser(credentials) {
+async function searchOpenAssignedJiraIssuesForCurrentUser(credentials, projectKey) {
     const currentUserAccountId = await getJiraCurrentUserAccountId(credentials);
+    const normalizedProjectKey = projectKey.trim().toUpperCase();
     const response = await jiraRequest(credentials, {
         method: "POST",
         apiPath: "/rest/api/3/search/jql",
         body: {
             fields: ["summary", "issuetype", "project", "status", "assignee"],
-            jql: 'assignee = currentUser() AND assignee IS NOT EMPTY AND status in ("To Do", "In Progress") ORDER BY updated DESC',
+            jql: `project = "${normalizedProjectKey}" AND assignee = currentUser() AND assignee IS NOT EMPTY AND status in ("To Do", "In Progress") ORDER BY updated DESC`,
             maxResults: 100
         }
     });
@@ -187,6 +188,7 @@ async function searchOpenAssignedJiraIssuesForCurrentUser(credentials) {
         .filter((issue) => issue.id &&
         issue.key &&
         issue.summary &&
+        issue.projectKey === normalizedProjectKey &&
         issue.assigneeAccountId === currentUserAccountId &&
         ["To Do", "In Progress"].includes(issue.statusName))
         .map(({ assigneeAccountId, ...issue }) => issue);

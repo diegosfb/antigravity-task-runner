@@ -465,6 +465,14 @@ function getQuickActionItems() {
     const autocommitRunning = repoRoot ? (0, git_1.isAutocommitRunning)(repoRoot) : false;
     const hasAgentFolder = repoRoot ? fs.existsSync(path.join((0, utils_1.getWorkspaceProjectPath)(repoRoot), ".agent")) : false;
     const hasGitHub = repoRoot ? (0, git_1.hasGitHubRemoteSync)(repoRoot) : false;
+    const savedJiraProjectKey = repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
+        ? (fs
+            .readFileSync(path.join(repoRoot, ".env"), "utf8")
+            .match(/^\s*JIRA_PROJECT_KEY\s*=\s*([^\r\n#]+)/m)?.[1] ?? "")
+            .trim()
+            .replace(/^['"]|['"]$/g, "")
+            .toUpperCase()
+        : "";
     const workspaceSetup = new NodeItem({ kind: "action", label: "Workspace Setup" }, vscode.TreeItemCollapsibleState.None);
     workspaceSetup.iconPath = new vscode.ThemeIcon("run-all", QUICK_ACTION_COLOR);
     if (hasAgentFolder) {
@@ -549,11 +557,19 @@ function getQuickActionItems() {
     };
     items.push(takeJiraItemAssign);
     const completeJiraItem = new NodeItem({ kind: "action", label: "Jira Item Completed" }, vscode.TreeItemCollapsibleState.None);
-    completeJiraItem.iconPath = new vscode.ThemeIcon("pass", QUICK_ACTION_COLOR);
-    completeJiraItem.command = {
-        command: "antigravity.completeJiraItem",
-        title: "Jira Item Completed"
-    };
+    if (!savedJiraProjectKey) {
+        completeJiraItem.iconPath = new vscode.ThemeIcon("pass", new vscode.ThemeColor("disabledForeground"));
+        completeJiraItem.tooltip = "Set JIRA_PROJECT_KEY for this repository to enable Jira Item Completed.";
+        completeJiraItem.description = "disabled";
+    }
+    else {
+        completeJiraItem.iconPath = new vscode.ThemeIcon("pass", QUICK_ACTION_COLOR);
+        completeJiraItem.description = savedJiraProjectKey;
+        completeJiraItem.command = {
+            command: "antigravity.completeJiraItem",
+            title: "Jira Item Completed"
+        };
+    }
     items.push(completeJiraItem);
     const incrementMajor = new NodeItem({ kind: "action", label: "Increment Major Version" }, vscode.TreeItemCollapsibleState.None);
     incrementMajor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);

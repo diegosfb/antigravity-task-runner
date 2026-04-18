@@ -1987,6 +1987,7 @@ function activate(context) {
                 }
             }
             (0, utils_1.upsertEnvFileValue)(envPath, "JIRA_PROJECT_KEY", projectKey);
+            provider.refresh();
         }
         let issueTypes;
         try {
@@ -2101,6 +2102,7 @@ function activate(context) {
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         let credentials;
+        const projectKey = getSavedJiraProjectKey(repoRoot);
         try {
             credentials = getJiraCredentialsFromEnv(repoRoot);
         }
@@ -2109,13 +2111,18 @@ function activate(context) {
             void vscode.window.showErrorMessage(message);
             return;
         }
+        if (!projectKey) {
+            void vscode.window.showErrorMessage("Jira Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository.");
+            provider.refresh();
+            return;
+        }
         let issues;
         try {
             issues = await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: "Loading your Jira items in To Do or In Progress",
+                title: `Loading your Jira items in ${projectKey}`,
                 cancellable: false
-            }, async () => (0, jira_1.searchOpenAssignedJiraIssuesForCurrentUser)(credentials));
+            }, async () => (0, jira_1.searchOpenAssignedJiraIssuesForCurrentUser)(credentials, projectKey));
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -2123,7 +2130,7 @@ function activate(context) {
             return;
         }
         if (issues.length === 0) {
-            void vscode.window.showInformationMessage("No Jira tickets assigned to you in To Do or In Progress were found.");
+            void vscode.window.showInformationMessage(`No Jira tickets assigned to you in To Do or In Progress were found for project ${projectKey}.`);
             return;
         }
         const selection = await vscode.window.showQuickPick(issues.map((issue) => ({
@@ -2135,7 +2142,7 @@ function activate(context) {
             issue
         })), {
             title: "Jira Item Completed",
-            placeHolder: "Select one of your open Jira tickets to move into In Review",
+            placeHolder: `Select one of your Jira tickets in ${projectKey} to move into In Review`,
             matchOnDescription: true,
             matchOnDetail: true
         });

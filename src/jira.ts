@@ -250,9 +250,11 @@ export async function searchOpenUnassignedJiraIssues(
 }
 
 export async function searchOpenAssignedJiraIssuesForCurrentUser(
-  credentials: JiraCredentials
+  credentials: JiraCredentials,
+  projectKey: string
 ): Promise<JiraIssueSummary[]> {
   const currentUserAccountId = await getJiraCurrentUserAccountId(credentials);
+  const normalizedProjectKey = projectKey.trim().toUpperCase();
   const response = await jiraRequest<{
     issues?: Array<{
       id?: string;
@@ -271,7 +273,7 @@ export async function searchOpenAssignedJiraIssuesForCurrentUser(
     body: {
       fields: ["summary", "issuetype", "project", "status", "assignee"],
       jql:
-        'assignee = currentUser() AND assignee IS NOT EMPTY AND status in ("To Do", "In Progress") ORDER BY updated DESC',
+        `project = "${normalizedProjectKey}" AND assignee = currentUser() AND assignee IS NOT EMPTY AND status in ("To Do", "In Progress") ORDER BY updated DESC`,
       maxResults: 100
     }
   });
@@ -292,6 +294,7 @@ export async function searchOpenAssignedJiraIssuesForCurrentUser(
         issue.id &&
         issue.key &&
         issue.summary &&
+        issue.projectKey === normalizedProjectKey &&
         issue.assigneeAccountId === currentUserAccountId &&
         ["To Do", "In Progress"].includes(issue.statusName)
     )

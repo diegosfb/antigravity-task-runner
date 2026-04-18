@@ -2402,6 +2402,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         upsertEnvFileValue(envPath, "JIRA_PROJECT_KEY", projectKey);
+        provider.refresh();
       }
 
       let issueTypes: JiraIssueType[];
@@ -2557,6 +2558,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       const repoRoot = getRepoRoot(rootPath);
       let credentials: JiraCredentials;
+      const projectKey = getSavedJiraProjectKey(repoRoot);
 
       try {
         credentials = getJiraCredentialsFromEnv(repoRoot);
@@ -2566,15 +2568,23 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      if (!projectKey) {
+        void vscode.window.showErrorMessage(
+          "Jira Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository."
+        );
+        provider.refresh();
+        return;
+      }
+
       let issues: JiraIssueSummary[];
       try {
         issues = await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: "Loading your Jira items in To Do or In Progress",
+            title: `Loading your Jira items in ${projectKey}`,
             cancellable: false
           },
-          async () => searchOpenAssignedJiraIssuesForCurrentUser(credentials)
+          async () => searchOpenAssignedJiraIssuesForCurrentUser(credentials, projectKey)
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -2584,7 +2594,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (issues.length === 0) {
         void vscode.window.showInformationMessage(
-          "No Jira tickets assigned to you in To Do or In Progress were found."
+          `No Jira tickets assigned to you in To Do or In Progress were found for project ${projectKey}.`
         );
         return;
       }
@@ -2600,7 +2610,7 @@ export function activate(context: vscode.ExtensionContext) {
         })),
         {
           title: "Jira Item Completed",
-          placeHolder: "Select one of your open Jira tickets to move into In Review",
+          placeHolder: `Select one of your Jira tickets in ${projectKey} to move into In Review`,
           matchOnDescription: true,
           matchOnDetail: true
         }
