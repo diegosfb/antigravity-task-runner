@@ -234,7 +234,7 @@ async function getJiraIssueTypes(credentials, projectKey) {
         method: "GET",
         apiPath: `/rest/api/3/issue/createmeta/${encodeURIComponent(projectKey)}/issuetypes`
     });
-    return response.issueTypes ?? [];
+    return (response.issueTypes ?? []).filter((issueType) => issueType.name.trim().toLowerCase() !== "sub-task");
 }
 async function getJiraCreateFieldMetadata(credentials, projectKey, issueTypeId) {
     const response = await jiraRequest(credentials, {
