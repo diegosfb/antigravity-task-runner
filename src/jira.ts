@@ -270,7 +270,8 @@ export async function searchOpenAssignedJiraIssuesForCurrentUser(
     apiPath: "/rest/api/3/search/jql",
     body: {
       fields: ["summary", "issuetype", "project", "status", "assignee"],
-      jql: 'assignee = currentUser() AND status in ("To Do", "In Progress") ORDER BY updated DESC',
+      jql:
+        'assignee = currentUser() AND assignee IS NOT EMPTY AND status in ("To Do", "In Progress") ORDER BY updated DESC',
       maxResults: 100
     }
   });
