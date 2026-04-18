@@ -1002,79 +1002,6 @@ export function activate(context: vscode.ExtensionContext) {
     return `Update ${entries.length} files`;
   };
 
-  const generateCommitMessageWithCopilot = async (
-    repoRoot: string,
-    repository: GitRepository
-  ): Promise<string> => {
-    const commandId = "github.copilot.git.generateCommitMessage";
-    const copilotExtension = vscode.extensions.all.find((extension) => {
-      const extensionId = extension.id.toLowerCase();
-      return (
-        extensionId === "github.copilot-chat" ||
-        extensionId.endsWith(".copilot-chat") ||
-        extensionId.includes("copilot-chat")
-      );
-    });
-
-    if (!copilotExtension) {
-      logAlways("[commitChanges] Copilot Chat extension not installed in current VS Code profile");
-      return "";
-    }
-
-    if (!copilotExtension.isActive) {
-      try {
-        await copilotExtension.activate();
-      } catch (error) {
-        logAlways(
-          `[commitChanges] Copilot Chat activation failed: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-        return "";
-      }
-    }
-
-    const availableCommands = await vscode.commands.getCommands(true);
-    if (!availableCommands.includes(commandId)) {
-      logAlways("[commitChanges] Copilot commit message command unavailable after activation");
-      return "";
-    }
-
-    const previousInputValue = repository.inputBox.value;
-    repository.inputBox.value = "";
-
-    try {
-      const cancellation = new vscode.CancellationTokenSource();
-      try {
-        await vscode.commands.executeCommand(
-          commandId,
-          vscode.Uri.file(repoRoot),
-          undefined,
-          cancellation.token
-        );
-      } finally {
-        cancellation.dispose();
-      }
-    } catch (error) {
-      repository.inputBox.value = previousInputValue;
-      logAlways(
-        `[commitChanges] Copilot commit message generation failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-      return "";
-    }
-
-    const generatedMessage = repository.inputBox.value.trim();
-    if (!generatedMessage) {
-      repository.inputBox.value = previousInputValue;
-      logAlways("[commitChanges] Copilot commit message generation returned no message");
-      return "";
-    }
-
-    return generatedMessage;
-  };
-
   const getGitApi = async (): Promise<GitApi> => {
     const gitExtension = vscode.extensions.getExtension<GitExtensionExports>("vscode.git");
     if (!gitExtension) {
@@ -2249,9 +2176,7 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
 
-        const commitMessage =
-          (await generateCommitMessageWithCopilot(repoRoot, repository)) ||
-          (await buildGeneratedCommitMessage(repoRoot));
+        const commitMessage = await buildGeneratedCommitMessage(repoRoot);
         if (!commitMessage.trim()) {
           logAlways("[commitChanges] no commit message generated");
           void vscode.window.showWarningMessage("Nothing commitable was staged.");
