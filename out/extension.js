@@ -1285,6 +1285,14 @@ function activate(context) {
                     await config.update(key, rawValue, target);
                     continue;
                 }
+                if (Array.isArray(rawValue)) {
+                    const normalized = rawValue
+                        .filter((item) => typeof item === "string")
+                        .map((item) => item.trim())
+                        .filter((item) => item.length > 0);
+                    await config.update(key, normalized, target);
+                    continue;
+                }
                 const normalized = typeof rawValue === "string" ? rawValue.trim() : "";
                 if (normalized === "") {
                     await config.update(key, undefined, target);

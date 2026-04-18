@@ -345,8 +345,29 @@
         },
         "antigravity.useAgentForGithubRepositoryManagement": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "When enabled, agent-driven flows are preferred for GitHub repository management tasks."
+        },
+        "antigravity.agenticHarnessExecutionCommand": {
+          "type": "string",
+          "default": "claude",
+          "description": "Selected Agentic Harness execution command."
+        },
+        "antigravity.agenticHarnessExecutionCommands": {
+          "type": "array",
+          "default": [
+            "claude",
+            "claude --model claude-haiku-4-5-20251001",
+            "codex",
+            "opencode run",
+            "opencode run -m ollama/qwen3-coder:30b",
+            "opencode run -m ollama/qwen3-coder:480b-cloud",
+            "opencode run -m ollama/gpt-oss:20-cloud"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Saved Agentic Harness execution commands offered on the Settings page."
         },
         "antigravity.claudeSetupGithub": {
           "type": "string",

@@ -62,6 +62,18 @@ function normalizeStringArray(value) {
         return [];
     return value.filter((item) => typeof item === "string" && item.trim().length > 0);
 }
+function mergeUniqueStrings(...groups) {
+    const merged = [];
+    for (const group of groups) {
+        for (const value of normalizeStringArray(group)) {
+            const normalized = value.trim();
+            if (normalized.length === 0 || merged.includes(normalized))
+                continue;
+            merged.push(normalized);
+        }
+    }
+    return merged;
+}
 function getToolRunCommand(config, name) {
     const raw = config["tool-run"];
     if (!raw || typeof raw !== "object")
@@ -133,8 +145,21 @@ function getNonce() {
     }
     return nonce;
 }
+const DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS = [
+    "claude",
+    "claude --model claude-haiku-4-5-20251001",
+    "codex",
+    "opencode run",
+    "opencode run -m ollama/qwen3-coder:30b",
+    "opencode run -m ollama/qwen3-coder:480b-cloud",
+    "opencode run -m ollama/gpt-oss:20-cloud"
+];
 function getExtensionSettingsFields() {
     const config = vscode.workspace.getConfiguration("antigravity");
+    const savedAgenticHarnessExecutionCommands = mergeUniqueStrings(DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS, config.get("agenticHarnessExecutionCommands"));
+    const selectedAgenticHarnessExecutionCommand = (config.get("agenticHarnessExecutionCommand") || "").trim() ||
+        DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0];
+    const agenticHarnessExecutionCommands = mergeUniqueStrings(savedAgenticHarnessExecutionCommands, [selectedAgenticHarnessExecutionCommand]);
     return [
         {
             key: "rootPath",
@@ -243,6 +268,16 @@ function getExtensionSettingsFields() {
             checked: config.get("useAgentForGithubRepositoryManagement") ?? false
         },
         {
+            key: "agenticHarnessExecutionCommand",
+            label: "Agentic Harnes execution commads",
+            description: "Pick a saved command or type your own. Applying settings saves custom values into the list for next time.",
+            placeholder: "claude",
+            value: selectedAgenticHarnessExecutionCommand,
+            type: "command-list",
+            options: agenticHarnessExecutionCommands,
+            optionsKey: "agenticHarnessExecutionCommands"
+        },
+        {
             key: "customAgenticPlatformAddons",
             label: "Custom Agentic Platform Addons",
             description: "Path to a custom agentic platform addons directory shown in the folder section.",
@@ -316,6 +351,32 @@ function renderAntigravitySettingsHtml(webview) {
           label.setAttribute("for", "field-" + field.key);
           wrapper.appendChild(cb);
           wrapper.appendChild(label);
+        } else if (field.type === "command-list") {
+          wrapper.className = "field";
+          const label = document.createElement("label");
+          label.textContent = field.label;
+          label.setAttribute("for", "field-" + field.key);
+          const input = document.createElement("input");
+          input.id = "field-" + field.key;
+          input.type = "text";
+          input.value = field.value || "";
+          if (field.placeholder) input.placeholder = field.placeholder;
+          const listId = "field-list-" + field.key;
+          input.setAttribute("list", listId);
+          const dataList = document.createElement("datalist");
+          dataList.id = listId;
+          (field.options || []).forEach((optionValue) => {
+            const option = document.createElement("option");
+            option.value = optionValue;
+            dataList.appendChild(option);
+          });
+          const desc = document.createElement("div");
+          desc.className = "description";
+          desc.textContent = field.description || "";
+          wrapper.appendChild(label);
+          wrapper.appendChild(input);
+          wrapper.appendChild(dataList);
+          wrapper.appendChild(desc);
         } else {
           wrapper.className = "field";
           const label = document.createElement("label");
@@ -355,6 +416,11 @@ function renderAntigravitySettingsHtml(webview) {
           if (!el) return;
           if (field.type === "checkbox") {
             values[field.key] = el.checked;
+          } else if (field.type === "command-list") {
+            const selected = (el.value || "").trim();
+            const nextOptions = Array.from(new Set([...(field.options || []), selected].map((item) => (item || "").trim()).filter(Boolean)));
+            values[field.key] = selected;
+            if (field.optionsKey) values[field.optionsKey] = nextOptions;
           } else {
             values[field.key] = el.value;
           }
