@@ -82,8 +82,8 @@ optional_value() {
 }
 
 main() {
-  local feature_branch linter_command test_command why_answer how_answer issue_link docs_and_screenshots reviewer pr_title
-  local lint_warning="" test_warning=""
+  local feature_branch test_command why_answer how_answer issue_link docs_and_screenshots reviewer pr_title
+  local test_warning=""
 
   ensure_git_repo
   ensure_remote_origin
@@ -100,13 +100,6 @@ main() {
   run_and_echo git checkout "$feature_branch"
   run_and_echo git merge main
   run_and_echo git push origin "$feature_branch"
-
-  linter_command="$(optional_value "What linter or code style check does your project use? (type 'skip' to skip)")"
-  if [[ -n "$linter_command" && "${linter_command,,}" != "skip" ]]; then
-    run_shell_command "$linter_command"
-  else
-    lint_warning="WARNING: Linter was skipped."
-  fi
 
   test_command="$(optional_value "What command runs your project's test suite? (type 'skip' to skip)")"
   if [[ -n "$test_command" && "${test_command,,}" != "skip" ]]; then
@@ -149,9 +142,8 @@ $how_answer
 **Reviewer:** \`$reviewer\`
 EOF
 
-  if [[ -n "$lint_warning" || -n "$test_warning" ]]; then
+  if [[ -n "$test_warning" ]]; then
     echo
-    [[ -n "$lint_warning" ]] && echo "$lint_warning"
     [[ -n "$test_warning" ]] && echo "$test_warning"
   fi
 
