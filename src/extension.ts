@@ -11,6 +11,7 @@ import {
 import {
   runInSecondaryTerminal,
   runInNewTerminal,
+  buildAgenticHarnessPromptCommand,
   runClaudeInitAndUpdateInNewTerminal,
   runCodexInitAndUpdateInNewTerminal,
   CLAUDE_ACTION_COLOR
@@ -2533,12 +2534,12 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       runInNewTerminal(
-        "Claude Feature Branch",
+        "Agentic Harness Feature Branch",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          `claude --dangerously-skip-permissions ${quoteShellArg(
+          buildAgenticHarnessPromptCommand(
             `run this workflow ${workflowFile}. Use branch type ${branchType.label} and branch name ${branchName}. Do not ask for them again.`
-          )}`
+          )
         ],
         {
           iconPath: new vscode.ThemeIcon("git-branch", CLAUDE_ACTION_COLOR),
@@ -2591,10 +2592,10 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       runInNewTerminal(
-        "Claude Pull Request",
+        "Agentic Harness Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          `claude --dangerously-skip-permissions ${quoteShellArg(`run this workflow ${workflowFile}`)}`
+          buildAgenticHarnessPromptCommand(`run this workflow ${workflowFile}`)
         ],
         {
           iconPath: new vscode.ThemeIcon("git-pull-request", CLAUDE_ACTION_COLOR),
@@ -2712,10 +2713,10 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       runInNewTerminal(
-        "Claude Approve Pull Request",
+        "Agentic Harness Approve Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          `claude --dangerously-skip-permissions ${quoteShellArg(`run this workflow ${workflowFile}`)}`
+          buildAgenticHarnessPromptCommand(`run this workflow ${workflowFile}`)
         ],
         {
           iconPath: new vscode.ThemeIcon("pass", CLAUDE_ACTION_COLOR),

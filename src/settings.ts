@@ -185,15 +185,21 @@ const DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS = [
   "opencode run -m ollama/gpt-oss:20-cloud"
 ];
 
+export function getAgenticHarnessExecutionCommand(): string {
+  const config = vscode.workspace.getConfiguration("antigravity");
+  return (
+    (config.get<string>("agenticHarnessExecutionCommand") || "").trim() ||
+    DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0]
+  );
+}
+
 function getExtensionSettingsFields(): SettingsField[] {
   const config = vscode.workspace.getConfiguration("antigravity");
   const savedAgenticHarnessExecutionCommands = mergeUniqueStrings(
     DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS,
     config.get<string[]>("agenticHarnessExecutionCommands")
   );
-  const selectedAgenticHarnessExecutionCommand =
-    (config.get<string>("agenticHarnessExecutionCommand") || "").trim() ||
-    DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0];
+  const selectedAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand();
   const agenticHarnessExecutionCommands = mergeUniqueStrings(
     savedAgenticHarnessExecutionCommands,
     [selectedAgenticHarnessExecutionCommand]

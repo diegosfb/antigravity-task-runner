@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { getAgenticHarnessExecutionCommand } from "./settings";
 import { quoteShellArg } from "./utils";
 
 export const CLAUDE_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
@@ -37,15 +38,27 @@ export function runInNewTerminal(
   }
 }
 
+export function buildAgenticHarnessPromptCommand(
+  prompt: string,
+  mode: "dangerous" | "prompt" = "dangerous"
+): string {
+  const command = getAgenticHarnessExecutionCommand();
+  if (command.startsWith("claude")) {
+    const flag = mode === "prompt" ? "-p" : "--dangerously-skip-permissions";
+    return `${command} ${flag} ${quoteShellArg(prompt)}`;
+  }
+  return `${command} ${quoteShellArg(prompt)}`;
+}
+
 export async function runClaudeInitAndUpdateInNewTerminal(
   repoRoot: string,
   prompt: string
 ): Promise<void> {
   const commands = [
-    `cd "${repoRoot}"`,
-    `claude --dangerously-skip-permissions "${prompt.replace(/"/g, '\\"')}"`
+    `cd ${quoteShellArg(repoRoot)}`,
+    buildAgenticHarnessPromptCommand(prompt, "dangerous")
   ];
-  runInNewTerminal("Claude Init", commands, {
+  runInNewTerminal("Agentic Harness Init", commands, {
     iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
     color: CLAUDE_ACTION_COLOR
   });
@@ -71,8 +84,8 @@ export async function runCodexInitAndUpdateInNewTerminal(
 
 export function runClaudePromptInNewTerminal(repoRoot: string, prompt: string): void {
   runInNewTerminal(
-    "Claude",
-    [`cd "${repoRoot}"`, `claude -p "${prompt.replace(/"/g, '\\"')}"`],
+    "Agentic Harness",
+    [`cd ${quoteShellArg(repoRoot)}`, buildAgenticHarnessPromptCommand(prompt, "prompt")],
     {
       iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
       color: CLAUDE_ACTION_COLOR

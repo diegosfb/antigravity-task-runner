@@ -2078,9 +2078,9 @@ function activate(context) {
             void vscode.window.showErrorMessage("Create feature branch workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
             return;
         }
-        (0, terminal_1.runInNewTerminal)("Claude Feature Branch", [
+        (0, terminal_1.runInNewTerminal)("Agentic Harness Feature Branch", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `claude --dangerously-skip-permissions ${(0, utils_1.quoteShellArg)(`run this workflow ${workflowFile}. Use branch type ${branchType.label} and branch name ${branchName}. Do not ask for them again.`)}`
+            (0, terminal_1.buildAgenticHarnessPromptCommand)(`run this workflow ${workflowFile}. Use branch type ${branchType.label} and branch name ${branchName}. Do not ask for them again.`)
         ], {
             iconPath: new vscode.ThemeIcon("git-branch", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR
@@ -2115,9 +2115,9 @@ function activate(context) {
             void vscode.window.showErrorMessage("Create pull request workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
             return;
         }
-        (0, terminal_1.runInNewTerminal)("Claude Pull Request", [
+        (0, terminal_1.runInNewTerminal)("Agentic Harness Pull Request", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `claude --dangerously-skip-permissions ${(0, utils_1.quoteShellArg)(`run this workflow ${workflowFile}`)}`
+            (0, terminal_1.buildAgenticHarnessPromptCommand)(`run this workflow ${workflowFile}`)
         ], {
             iconPath: new vscode.ThemeIcon("git-pull-request", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR
@@ -2207,9 +2207,9 @@ function activate(context) {
             void vscode.window.showErrorMessage("Approve pull request workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
             return;
         }
-        (0, terminal_1.runInNewTerminal)("Claude Approve Pull Request", [
+        (0, terminal_1.runInNewTerminal)("Agentic Harness Approve Pull Request", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `claude --dangerously-skip-permissions ${(0, utils_1.quoteShellArg)(`run this workflow ${workflowFile}`)}`
+            (0, terminal_1.buildAgenticHarnessPromptCommand)(`run this workflow ${workflowFile}`)
         ], {
             iconPath: new vscode.ThemeIcon("pass", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR

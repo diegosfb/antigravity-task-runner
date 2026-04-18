@@ -8,6 +8,7 @@ exports.getToolRunCommand = getToolRunCommand;
 exports.getRouterSettings = getRouterSettings;
 exports.loadOpenRouterConfig = loadOpenRouterConfig;
 exports.loadClaudeSettings = loadClaudeSettings;
+exports.getAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand;
 exports.renderAntigravitySettingsHtml = renderAntigravitySettingsHtml;
 exports.renderAgenticSetupHtml = renderAgenticSetupHtml;
 exports.renderClaudeModelConfigHtml = renderClaudeModelConfigHtml;
@@ -154,11 +155,15 @@ const DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS = [
     "opencode run -m ollama/qwen3-coder:480b-cloud",
     "opencode run -m ollama/gpt-oss:20-cloud"
 ];
+function getAgenticHarnessExecutionCommand() {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    return ((config.get("agenticHarnessExecutionCommand") || "").trim() ||
+        DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0]);
+}
 function getExtensionSettingsFields() {
     const config = vscode.workspace.getConfiguration("antigravity");
     const savedAgenticHarnessExecutionCommands = mergeUniqueStrings(DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS, config.get("agenticHarnessExecutionCommands"));
-    const selectedAgenticHarnessExecutionCommand = (config.get("agenticHarnessExecutionCommand") || "").trim() ||
-        DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0];
+    const selectedAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand();
     const agenticHarnessExecutionCommands = mergeUniqueStrings(savedAgenticHarnessExecutionCommands, [selectedAgenticHarnessExecutionCommand]);
     return [
         {
