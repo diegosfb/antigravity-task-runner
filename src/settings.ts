@@ -193,6 +193,11 @@ export function getAgenticHarnessExecutionCommand(): string {
   );
 }
 
+export function getUseAgentForGithubRepositoryManagement(): boolean {
+  const config = vscode.workspace.getConfiguration("antigravity");
+  return config.get<boolean>("useAgentForGithubRepositoryManagement") ?? false;
+}
+
 function getExtensionSettingsFields(): SettingsField[] {
   const config = vscode.workspace.getConfiguration("antigravity");
   const savedAgenticHarnessExecutionCommands = mergeUniqueStrings(

@@ -9,6 +9,7 @@ exports.getRouterSettings = getRouterSettings;
 exports.loadOpenRouterConfig = loadOpenRouterConfig;
 exports.loadClaudeSettings = loadClaudeSettings;
 exports.getAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand;
+exports.getUseAgentForGithubRepositoryManagement = getUseAgentForGithubRepositoryManagement;
 exports.renderAntigravitySettingsHtml = renderAntigravitySettingsHtml;
 exports.renderAgenticSetupHtml = renderAgenticSetupHtml;
 exports.renderClaudeModelConfigHtml = renderClaudeModelConfigHtml;
@@ -159,6 +160,10 @@ function getAgenticHarnessExecutionCommand() {
     const config = vscode.workspace.getConfiguration("antigravity");
     return ((config.get("agenticHarnessExecutionCommand") || "").trim() ||
         DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0]);
+}
+function getUseAgentForGithubRepositoryManagement() {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    return config.get("useAgentForGithubRepositoryManagement") ?? false;
 }
 function getExtensionSettingsFields() {
     const config = vscode.workspace.getConfiguration("antigravity");

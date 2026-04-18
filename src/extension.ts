@@ -24,6 +24,7 @@ import {
   loadClaudeSettings,
   getRouterSettings,
   getToolRunCommand,
+  getUseAgentForGithubRepositoryManagement,
   normalizeStringArray,
   readClaudeAnthropicBaseUrl,
   isLocalLiteLLMBaseUrl,
@@ -2203,6 +2204,26 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
 
+        if (getUseAgentForGithubRepositoryManagement()) {
+          const prompt = "commit. Never commit .env or config/.env.";
+          logAlways("[commitChanges] delegating commit to Agentic Harness");
+          runInNewTerminal(
+            "Agentic Harness Commit",
+            [
+              `cd ${quoteShellArg(repoRoot)}`,
+              buildAgenticHarnessPromptCommand(prompt)
+            ],
+            {
+              iconPath: new vscode.ThemeIcon("git-commit", CLAUDE_ACTION_COLOR),
+              color: CLAUDE_ACTION_COLOR
+            }
+          );
+          void vscode.window.showInformationMessage(
+            "Opened Agentic Harness Commit terminal."
+          );
+          return;
+        }
+
         const secretCandidateOutput = await execInRepo(
           "git status --porcelain -- .env config/.env",
           repoRoot
@@ -2525,9 +2546,8 @@ export function activate(context: vscode.ExtensionContext) {
       if (!dialogResult) return;
       const { branchType, branchName } = dialogResult;
       log(`[createFeatureBranch] branchName: ${branchName}`);
-      const config = vscode.workspace.getConfiguration("antigravity");
       const useAgentForGithubRepositoryManagement =
-        config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true;
+        getUseAgentForGithubRepositoryManagement();
 
       if (!useAgentForGithubRepositoryManagement) {
         const scriptPath = path.join(extensionRoot, "src", "create_feature_branch.sh");
@@ -2583,9 +2603,8 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      const config = vscode.workspace.getConfiguration("antigravity");
       const useAgentForGithubRepositoryManagement =
-        config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true;
+        getUseAgentForGithubRepositoryManagement();
 
       if (!useAgentForGithubRepositoryManagement) {
         const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
