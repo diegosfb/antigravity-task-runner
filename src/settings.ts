@@ -237,7 +237,8 @@ function getExtensionSettingsFields(): SettingsField[] {
     {
       key: "sopManualLink",
       label: "SOP Manual Link",
-      description: "Editable markdown URL used by the SOP Manual quick action.",
+      description:
+        "Editable markdown URL used by the SOP Manual quick action. If SOP_MANUAL_LINK is set in the repository .env file, it overrides this setting.",
       placeholder: "https://example.com/sop-manual.md",
       value: config.get<string>("sopManualLink") || DEFAULT_SOP_MANUAL_LINK
     },

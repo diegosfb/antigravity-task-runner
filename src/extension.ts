@@ -503,6 +503,14 @@ export function activate(context: vscode.ExtensionContext) {
     return (env.jira_project_key || "").trim().toUpperCase();
   };
 
+  const getSopManualLink = (repoRoot?: string): string => {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    const repoOverride = repoRoot
+      ? (parseEnvFile(getRepoEnvPath(repoRoot)).sop_manual_link || "").trim()
+      : "";
+    return repoOverride || (config.get<string>("sopManualLink") || "").trim();
+  };
+
   const validateJiraProjectKey = (value: string): string | undefined => {
     const normalized = value.trim().toUpperCase();
     if (!normalized) return "Enter a Jira project key.";
@@ -3071,10 +3079,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.openSopManual", async () => {
-      const config = vscode.workspace.getConfiguration("antigravity");
-      const sopManualLink = (config.get<string>("sopManualLink") || "").trim();
+      const rootPath = getRootPath();
+      const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
+      const sopManualLink = getSopManualLink(repoRoot);
       if (!sopManualLink) {
-        void vscode.window.showErrorMessage("SOP Manual Link is not set in Antigravity settings.");
+        void vscode.window.showErrorMessage(
+          "SOP Manual Link is not set in Antigravity settings or the repository .env file."
+        );
         return;
       }
 
