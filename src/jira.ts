@@ -300,6 +300,19 @@ export async function assignJiraIssueToCurrentUser(
   });
 }
 
+async function clearJiraIssueAssignee(
+  credentials: JiraCredentials,
+  issueKey: string
+): Promise<void> {
+  await jiraRequest(credentials, {
+    method: "PUT",
+    apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/assignee`,
+    body: {
+      accountId: null
+    }
+  });
+}
+
 export async function transitionJiraIssueToStatus(
   credentials: JiraCredentials,
   issueKey: string,
@@ -429,7 +442,9 @@ export async function createJiraIssue(
     });
 
   try {
-    return await createIssueRequest();
+    const createdIssue = await createIssueRequest();
+    await clearJiraIssueAssignee(credentials, createdIssue.key);
+    return createdIssue;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const unsupportedFieldKeys = Array.from(
@@ -449,6 +464,8 @@ export async function createJiraIssue(
       delete fields[fieldKey];
     }
 
-    return createIssueRequest();
+    const createdIssue = await createIssueRequest();
+    await clearJiraIssueAssignee(credentials, createdIssue.key);
+    return createdIssue;
   }
 }

@@ -194,6 +194,15 @@ async function assignJiraIssueToCurrentUser(credentials, issueKey) {
         }
     });
 }
+async function clearJiraIssueAssignee(credentials, issueKey) {
+    await jiraRequest(credentials, {
+        method: "PUT",
+        apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/assignee`,
+        body: {
+            accountId: null
+        }
+    });
+}
 async function transitionJiraIssueToStatus(credentials, issueKey, targetStatusName) {
     const response = await jiraRequest(credentials, {
         method: "GET",
@@ -282,7 +291,9 @@ async function createJiraIssue(credentials, details) {
         body: { fields }
     });
     try {
-        return await createIssueRequest();
+        const createdIssue = await createIssueRequest();
+        await clearJiraIssueAssignee(credentials, createdIssue.key);
+        return createdIssue;
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -294,7 +305,9 @@ async function createJiraIssue(credentials, details) {
         for (const fieldKey of retryableFieldKeys) {
             delete fields[fieldKey];
         }
-        return createIssueRequest();
+        const createdIssue = await createIssueRequest();
+        await clearJiraIssueAssignee(credentials, createdIssue.key);
+        return createdIssue;
     }
 }
 //# sourceMappingURL=jira.js.map
