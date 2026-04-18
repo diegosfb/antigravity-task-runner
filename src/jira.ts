@@ -252,6 +252,7 @@ export async function searchOpenUnassignedJiraIssues(
 export async function searchOpenAssignedJiraIssuesForCurrentUser(
   credentials: JiraCredentials
 ): Promise<JiraIssueSummary[]> {
+  const currentUserAccountId = await getJiraCurrentUserAccountId(credentials);
   const response = await jiraRequest<{
     issues?: Array<{
       id?: string;
@@ -261,15 +262,15 @@ export async function searchOpenAssignedJiraIssuesForCurrentUser(
         issuetype?: { name?: string };
         project?: { key?: string; name?: string };
         status?: { name?: string };
+        assignee?: { accountId?: string };
       };
     }>;
   }>(credentials, {
     method: "POST",
     apiPath: "/rest/api/3/search/jql",
     body: {
-      fields: ["summary", "issuetype", "project", "status"],
-      jql:
-        'assignee = currentUser() AND statusCategory in ("To Do", "In Progress") ORDER BY updated DESC',
+      fields: ["summary", "issuetype", "project", "status", "assignee"],
+      jql: 'assignee = currentUser() AND status in ("To Do", "In Progress") ORDER BY updated DESC',
       maxResults: 100
     }
   });
@@ -282,9 +283,18 @@ export async function searchOpenAssignedJiraIssuesForCurrentUser(
       projectKey: (issue.fields?.project?.key ?? "").trim(),
       projectName: (issue.fields?.project?.name ?? "").trim(),
       issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
-      statusName: (issue.fields?.status?.name ?? "").trim()
+      statusName: (issue.fields?.status?.name ?? "").trim(),
+      assigneeAccountId: (issue.fields?.assignee?.accountId ?? "").trim()
     }))
-    .filter((issue) => issue.id && issue.key && issue.summary);
+    .filter(
+      (issue) =>
+        issue.id &&
+        issue.key &&
+        issue.summary &&
+        issue.assigneeAccountId === currentUserAccountId &&
+        ["To Do", "In Progress"].includes(issue.statusName)
+    )
+    .map(({ assigneeAccountId, ...issue }) => issue);
 }
 
 export async function assignJiraIssueToCurrentUser(
