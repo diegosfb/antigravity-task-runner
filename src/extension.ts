@@ -2211,7 +2211,7 @@ export function activate(context: vscode.ExtensionContext) {
             "Agentic Harness Commit",
             [
               `cd ${quoteShellArg(repoRoot)}`,
-              buildAgenticHarnessPromptCommand(prompt)
+              buildAgenticHarnessPromptCommand(prompt, "prompt")
             ],
             {
               iconPath: new vscode.ThemeIcon("git-commit", CLAUDE_ACTION_COLOR),

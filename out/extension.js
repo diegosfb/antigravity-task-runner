@@ -1849,7 +1849,7 @@ function activate(context) {
                 (0, logger_1.logAlways)("[commitChanges] delegating commit to Agentic Harness");
                 (0, terminal_1.runInNewTerminal)("Agentic Harness Commit", [
                     `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                    (0, terminal_1.buildAgenticHarnessPromptCommand)(prompt)
+                    (0, terminal_1.buildAgenticHarnessPromptCommand)(prompt, "prompt")
                 ], {
                     iconPath: new vscode.ThemeIcon("git-commit", terminal_1.CLAUDE_ACTION_COLOR),
                     color: terminal_1.CLAUDE_ACTION_COLOR
