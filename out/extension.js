@@ -896,7 +896,26 @@ function activate(context) {
         const fromApi = api.getRepository?.(repoUri);
         if (fromApi)
             return fromApi;
-        return api.repositories.find((repository) => repository.rootUri.fsPath === repoUri.fsPath);
+        const normalizedRepoRoot = path.normalize(repoUri.fsPath);
+        const resolvedRepoRoot = (() => {
+            try {
+                return fs.realpathSync.native(repoUri.fsPath);
+            }
+            catch {
+                return normalizedRepoRoot;
+            }
+        })();
+        return api.repositories.find((repository) => {
+            const candidatePath = path.normalize(repository.rootUri.fsPath);
+            if (candidatePath === normalizedRepoRoot)
+                return true;
+            try {
+                return fs.realpathSync.native(repository.rootUri.fsPath) === resolvedRepoRoot;
+            }
+            catch {
+                return false;
+            }
+        });
     };
     const focusSourceControlChanges = async () => {
         await vscode.commands.executeCommand("workbench.view.scm");
@@ -1800,52 +1819,60 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.commitChanges", async () => {
         (0, logger_1.showOutputChannel)();
         (0, logger_1.logAlways)("[commitChanges] triggered");
-        const rootPath = (0, utils_1.getRootPath)();
-        if (!rootPath) {
-            (0, logger_1.logAlways)("[commitChanges] ERROR: rootPath not set");
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-            return;
+        let repoRoot = "";
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                (0, logger_1.logAlways)("[commitChanges] ERROR: rootPath not set");
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.logAlways)(`[commitChanges] repoRoot: ${repoRoot}`);
+            if (!fs.existsSync(path.join(repoRoot, ".git"))) {
+                (0, logger_1.logAlways)("[commitChanges] ERROR: repository not initialized");
+                void vscode.window.showWarningMessage("Initialize a Git repository before using Commit.");
+                return;
+            }
+            await focusSourceControlChanges();
+            await vscode.workspace.saveAll(false);
+            const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+            if (statusOutput.trim().length === 0) {
+                (0, logger_1.logAlways)("[commitChanges] no changes detected");
+                void vscode.window.showInformationMessage("No changes to commit.");
+                return;
+            }
+            const secretCandidateOutput = await execInRepo("git status --porcelain -- .env config/.env", repoRoot);
+            if (secretCandidateOutput.trim().length > 0) {
+                (0, logger_1.logAlways)("[commitChanges] excluding .env/config/.env from automated commit");
+                void vscode.window.showWarningMessage("Excluded .env and config/.env from this automated commit for safety.");
+            }
+            await execInRepo("git add -A -- . ':(exclude).env' ':(exclude)config/.env'", repoRoot);
+            const repository = await getGitRepository(repoRoot);
+            if (!repository) {
+                (0, logger_1.logAlways)("[commitChanges] ERROR: VS Code Git repository not found");
+                void vscode.window.showErrorMessage("VS Code Git integration could not find the current repository.");
+                return;
+            }
+            const commitMessage = (await generateCommitMessageWithCopilot(repoRoot, repository)) ||
+                (await buildGeneratedCommitMessage(repoRoot));
+            if (!commitMessage.trim()) {
+                (0, logger_1.logAlways)("[commitChanges] no commit message generated");
+                void vscode.window.showWarningMessage("Nothing commitable was staged.");
+                return;
+            }
+            (0, logger_1.logAlways)(`[commitChanges] generated message: ${commitMessage}`);
+            repository.inputBox.value = commitMessage;
+            await repository.commit(commitMessage, { all: false });
+            provider.refresh();
+            (0, logger_1.logAlways)("[commitChanges] commit completed");
+            void vscode.window.showInformationMessage(`Committed changes: ${commitMessage}`);
         }
-        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        (0, logger_1.logAlways)(`[commitChanges] repoRoot: ${repoRoot}`);
-        if (!fs.existsSync(path.join(repoRoot, ".git"))) {
-            (0, logger_1.logAlways)("[commitChanges] ERROR: repository not initialized");
-            void vscode.window.showWarningMessage("Initialize a Git repository before using Commit.");
-            return;
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.logAlways)(`[commitChanges] ERROR${repoRoot ? ` (${repoRoot})` : ""}: ${message}`);
+            void vscode.window.showErrorMessage(`Commit failed: ${message}`);
         }
-        await focusSourceControlChanges();
-        await vscode.workspace.saveAll(false);
-        const statusOutput = await execInRepo("git status --porcelain", repoRoot);
-        if (statusOutput.trim().length === 0) {
-            (0, logger_1.logAlways)("[commitChanges] no changes detected");
-            void vscode.window.showInformationMessage("No changes to commit.");
-            return;
-        }
-        const secretCandidateOutput = await execInRepo("git status --porcelain -- .env config/.env", repoRoot);
-        if (secretCandidateOutput.trim().length > 0) {
-            (0, logger_1.logAlways)("[commitChanges] excluding .env/config/.env from automated commit");
-            void vscode.window.showWarningMessage("Excluded .env and config/.env from this automated commit for safety.");
-        }
-        await execInRepo("git add -A -- . ':(exclude).env' ':(exclude)config/.env'", repoRoot);
-        const repository = await getGitRepository(repoRoot);
-        if (!repository) {
-            (0, logger_1.logAlways)("[commitChanges] ERROR: VS Code Git repository not found");
-            void vscode.window.showErrorMessage("VS Code Git integration could not find the current repository.");
-            return;
-        }
-        const commitMessage = (await generateCommitMessageWithCopilot(repoRoot, repository)) ||
-            (await buildGeneratedCommitMessage(repoRoot));
-        if (!commitMessage.trim()) {
-            (0, logger_1.logAlways)("[commitChanges] no commit message generated");
-            void vscode.window.showWarningMessage("Nothing commitable was staged.");
-            return;
-        }
-        (0, logger_1.logAlways)(`[commitChanges] generated message: ${commitMessage}`);
-        repository.inputBox.value = commitMessage;
-        await repository.commit(commitMessage, { all: false });
-        provider.refresh();
-        (0, logger_1.logAlways)("[commitChanges] commit completed");
-        void vscode.window.showInformationMessage(`Committed changes: ${commitMessage}`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.buildVersion", async () => {
         await (0, scripts_1.runRepoScript)("build-version");
