@@ -1847,7 +1847,7 @@ function activate(context) {
                 (0, logger_1.logAlways)("[commitChanges] excluding .env/config/.env from automated commit");
                 void vscode.window.showWarningMessage("Excluded .env and config/.env from this automated commit for safety.");
             }
-            await execInRepo("git add -A -- . ':(exclude).env' ':(exclude)config/.env'", repoRoot);
+            await execInRepo("git add -A -- . && git rm -q --cached --ignore-unmatch .env config/.env", repoRoot);
             const repository = await getGitRepository(repoRoot);
             if (!repository) {
                 (0, logger_1.logAlways)("[commitChanges] ERROR: VS Code Git repository not found");

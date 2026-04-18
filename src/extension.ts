@@ -2213,7 +2213,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         await execInRepo(
-          "git add -A -- . ':(exclude).env' ':(exclude)config/.env'",
+          "git add -A -- . && git rm -q --cached --ignore-unmatch .env config/.env",
           repoRoot
         );
 
