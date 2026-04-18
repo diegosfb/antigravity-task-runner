@@ -40,7 +40,7 @@ function runInNewTerminal(name, lines, options = {}) {
 function buildAgenticHarnessPromptCommand(prompt, mode = "dangerous") {
     const command = (0, settings_1.getAgenticHarnessExecutionCommand)();
     const runString = command.startsWith("claude")
-        ? `${command} ${mode === "prompt" ? "-p" : "--dangerously-skip-permissions"} ${(0, utils_1.quoteShellArg)(prompt)}`
+        ? `${command}${mode === "dangerous" ? " --dangerously-skip-permissions" : ""} ${(0, utils_1.quoteShellArg)(prompt)}`
         : `${command} ${(0, utils_1.quoteShellArg)(prompt)}`;
     (0, logger_1.logAlways)(`[agenticHarness] runString: ${runString}`);
     if (command.startsWith("claude")) {

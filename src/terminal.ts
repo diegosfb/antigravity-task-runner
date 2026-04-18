@@ -45,7 +45,7 @@ export function buildAgenticHarnessPromptCommand(
 ): string {
   const command = getAgenticHarnessExecutionCommand();
   const runString = command.startsWith("claude")
-    ? `${command} ${mode === "prompt" ? "-p" : "--dangerously-skip-permissions"} ${quoteShellArg(prompt)}`
+    ? `${command}${mode === "dangerous" ? " --dangerously-skip-permissions" : ""} ${quoteShellArg(prompt)}`
     : `${command} ${quoteShellArg(prompt)}`;
   logAlways(`[agenticHarness] runString: ${runString}`);
   if (command.startsWith("claude")) {
