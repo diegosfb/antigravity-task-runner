@@ -4,6 +4,8 @@ import * as path from "path";
 import * as os from "os";
 
 export const LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
+export const DEFAULT_SOP_MANUAL_LINK =
+  "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7";
 
 export function isLocalLiteLLMBaseUrl(baseUrl: string | undefined): boolean {
   if (!baseUrl) return false;
@@ -237,7 +239,7 @@ function getExtensionSettingsFields(): SettingsField[] {
       label: "SOP Manual Link",
       description: "Editable markdown URL used by the SOP Manual quick action.",
       placeholder: "https://example.com/sop-manual.md",
-      value: config.get<string>("sopManualLink") || ""
+      value: config.get<string>("sopManualLink") || DEFAULT_SOP_MANUAL_LINK
     },
     {
       key: "terminalName",

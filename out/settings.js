@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LOCAL_LITELLM_READY_URL = void 0;
+exports.DEFAULT_SOP_MANUAL_LINK = exports.LOCAL_LITELLM_READY_URL = void 0;
 exports.isLocalLiteLLMBaseUrl = isLocalLiteLLMBaseUrl;
 exports.readClaudeAnthropicBaseUrl = readClaudeAnthropicBaseUrl;
 exports.normalizeStringArray = normalizeStringArray;
@@ -18,6 +18,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 exports.LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
+exports.DEFAULT_SOP_MANUAL_LINK = "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7";
 function isLocalLiteLLMBaseUrl(baseUrl) {
     if (!baseUrl)
         return false;
@@ -197,7 +198,7 @@ function getExtensionSettingsFields() {
             label: "SOP Manual Link",
             description: "Editable markdown URL used by the SOP Manual quick action.",
             placeholder: "https://example.com/sop-manual.md",
-            value: config.get("sopManualLink") || ""
+            value: config.get("sopManualLink") || exports.DEFAULT_SOP_MANUAL_LINK
         },
         {
             key: "terminalName",

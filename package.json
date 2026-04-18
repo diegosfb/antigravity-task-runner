@@ -355,7 +355,7 @@
         },
         "antigravity.sopManualLink": {
           "type": "string",
-          "default": "",
+          "default": "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7",
           "description": "Markdown URL used by the SOP Manual quick action."
         },
         "antigravity.autoUpdateClaudeMd": {
