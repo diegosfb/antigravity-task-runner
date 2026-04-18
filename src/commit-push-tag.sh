@@ -128,8 +128,10 @@ echo "Build succeeded."
 # ─── 3. Resolve artifact(s) ──────────────────────────────────────────────────
 ARTIFACT_ARGS=()
 if [[ -n "${ARTIFACT:-}" ]]; then
+  shopt -s nullglob
   # shellcheck disable=SC2206
-  mapfile -t ARTIFACT_ARGS < <(ls ${ARTIFACT} 2>/dev/null || true)
+  ARTIFACT_ARGS=( ${ARTIFACT} )
+  shopt -u nullglob
   if [[ ${#ARTIFACT_ARGS[@]} -eq 0 ]]; then
     echo "Warning: ARTIFACT pattern '${ARTIFACT}' matched no files — release will have no attachment."
   else
