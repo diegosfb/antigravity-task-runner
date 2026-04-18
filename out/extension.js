@@ -47,6 +47,15 @@ function activate(context) {
         await (0, terminal_1.runCodexInitAndUpdateInNewTerminal)(repoRoot, prompt);
         (0, logger_1.log)(`[launchAgentInit] done`);
     };
+    const refreshAutocommitUiWhenStateChanges = (repoRoot, expectedRunningState, attemptsRemaining = 20) => {
+        provider.refresh();
+        if ((0, git_1.isAutocommitRunning)(repoRoot) === expectedRunningState || attemptsRemaining <= 0) {
+            return;
+        }
+        setTimeout(() => {
+            refreshAutocommitUiWhenStateChanges(repoRoot, expectedRunningState, attemptsRemaining - 1);
+        }, 500);
+    };
     const branchTypes = [
         {
             label: "Feature",
@@ -2423,10 +2432,7 @@ function activate(context) {
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
             `${(0, utils_1.quoteShellArg)(scriptPath)} ${action}`
         ]);
-        provider.refresh();
-        setTimeout(() => {
-            provider.refresh();
-        }, 1000);
+        refreshAutocommitUiWhenStateChanges(repoRoot, action === "start");
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.autocommitRevert", async () => {
         const rootPath = (0, utils_1.getRootPath)();

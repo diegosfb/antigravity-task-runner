@@ -119,6 +119,25 @@ export function activate(context: vscode.ExtensionContext) {
     log(`[launchAgentInit] done`);
   };
 
+  const refreshAutocommitUiWhenStateChanges = (
+    repoRoot: string,
+    expectedRunningState: boolean,
+    attemptsRemaining = 20
+  ): void => {
+    provider.refresh();
+    if (isAutocommitRunning(repoRoot) === expectedRunningState || attemptsRemaining <= 0) {
+      return;
+    }
+
+    setTimeout(() => {
+      refreshAutocommitUiWhenStateChanges(
+        repoRoot,
+        expectedRunningState,
+        attemptsRemaining - 1
+      );
+    }, 500);
+  };
+
   type BranchTypeOption = {
     label: string;
     description: string;
@@ -2987,10 +3006,7 @@ export function activate(context: vscode.ExtensionContext) {
         `cd ${quoteShellArg(repoRoot)}`,
         `${quoteShellArg(scriptPath)} ${action}`
       ]);
-      provider.refresh();
-      setTimeout(() => {
-        provider.refresh();
-      }, 1000);
+      refreshAutocommitUiWhenStateChanges(repoRoot, action === "start");
     })
   );
 
