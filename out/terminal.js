@@ -8,6 +8,7 @@ exports.runClaudeInitAndUpdateInNewTerminal = runClaudeInitAndUpdateInNewTermina
 exports.runCodexInitAndUpdateInNewTerminal = runCodexInitAndUpdateInNewTerminal;
 exports.runClaudePromptInNewTerminal = runClaudePromptInNewTerminal;
 const vscode = require("vscode");
+const logger_1 = require("./logger");
 const settings_1 = require("./settings");
 const utils_1 = require("./utils");
 exports.CLAUDE_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
@@ -38,11 +39,14 @@ function runInNewTerminal(name, lines, options = {}) {
 }
 function buildAgenticHarnessPromptCommand(prompt, mode = "dangerous") {
     const command = (0, settings_1.getAgenticHarnessExecutionCommand)();
+    const runString = command.startsWith("claude")
+        ? `${command} ${mode === "prompt" ? "-p" : "--dangerously-skip-permissions"} ${(0, utils_1.quoteShellArg)(prompt)}`
+        : `${command} ${(0, utils_1.quoteShellArg)(prompt)}`;
+    (0, logger_1.logAlways)(`[agenticHarness] runString: ${runString}`);
     if (command.startsWith("claude")) {
-        const flag = mode === "prompt" ? "-p" : "--dangerously-skip-permissions";
-        return `${command} ${flag} ${(0, utils_1.quoteShellArg)(prompt)}`;
+        return runString;
     }
-    return `${command} ${(0, utils_1.quoteShellArg)(prompt)}`;
+    return runString;
 }
 async function runClaudeInitAndUpdateInNewTerminal(repoRoot, prompt) {
     const commands = [

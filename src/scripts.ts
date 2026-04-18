@@ -335,8 +335,10 @@ export async function runAgent(agentName: string, agentFile: string): Promise<vo
     safeAgentName,
     safeAgentFile
   ).trim();
+  const runString = args ? `${command} ${args}` : command;
+  logAlways(`[runAgent] runString: ${runString}`);
   await runInSecondaryTerminal([
     `cd "${repoRoot}"`,
-    args ? `${command} ${args}` : command
+    runString
   ]);
 }

@@ -1334,9 +1334,11 @@ function activate(context) {
         const rootPath = (0, utils_1.getRootPath)();
         const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : process.cwd();
         (0, logger_1.log)(`[runClaudeAgent] repoRoot: ${repoRoot}`);
+        const runString = `claude --agent ${(0, utils_1.quoteShellArg)(agentName)}`;
+        (0, logger_1.logAlways)(`[runClaudeAgent] runString: ${runString}`);
         (0, terminal_1.runInNewTerminal)(`Agent: ${agentName}`, [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `claude --agent ${(0, utils_1.quoteShellArg)(agentName)}`
+            runString
         ], {
             iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR

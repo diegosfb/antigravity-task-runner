@@ -1611,9 +1611,11 @@ export function activate(context: vscode.ExtensionContext) {
       const rootPath = getRootPath();
       const repoRoot = rootPath ? getRepoRoot(rootPath) : process.cwd();
       log(`[runClaudeAgent] repoRoot: ${repoRoot}`);
+      const runString = `claude --agent ${quoteShellArg(agentName)}`;
+      logAlways(`[runClaudeAgent] runString: ${runString}`);
       runInNewTerminal(`Agent: ${agentName}`, [
         `cd ${quoteShellArg(repoRoot)}`,
-        `claude --agent ${quoteShellArg(agentName)}`
+        runString
       ], {
         iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
         color: CLAUDE_ACTION_COLOR

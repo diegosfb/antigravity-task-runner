@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { logAlways } from "./logger";
 import { getAgenticHarnessExecutionCommand } from "./settings";
 import { quoteShellArg } from "./utils";
 
@@ -43,11 +44,14 @@ export function buildAgenticHarnessPromptCommand(
   mode: "dangerous" | "prompt" = "dangerous"
 ): string {
   const command = getAgenticHarnessExecutionCommand();
+  const runString = command.startsWith("claude")
+    ? `${command} ${mode === "prompt" ? "-p" : "--dangerously-skip-permissions"} ${quoteShellArg(prompt)}`
+    : `${command} ${quoteShellArg(prompt)}`;
+  logAlways(`[agenticHarness] runString: ${runString}`);
   if (command.startsWith("claude")) {
-    const flag = mode === "prompt" ? "-p" : "--dangerously-skip-permissions";
-    return `${command} ${flag} ${quoteShellArg(prompt)}`;
+    return runString;
   }
-  return `${command} ${quoteShellArg(prompt)}`;
+  return runString;
 }
 
 export async function runClaudeInitAndUpdateInNewTerminal(
