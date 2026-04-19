@@ -1253,7 +1253,8 @@ export function activate(context: vscode.ExtensionContext) {
   const buildJiraAgentPrompt = (
     issueKey: string,
     summary: string
-  ): string => `work on Jira Item ${issueKey} - ${summary}`;
+  ): string =>
+    `work on Jira Item ${issueKey} - ${summary}. Keep the branch as-is (I'll handle it later); do not merge.`;
 
   const buildAgentRunCommand = (
     repoRoot: string,

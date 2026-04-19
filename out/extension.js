@@ -1005,7 +1005,7 @@ function activate(context) {
         return `${baseSummary} - By Agent ${agentLabel}`;
     };
     const buildAgentJiraLabel = (agentLabel) => `developed-by-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
-    const buildJiraAgentPrompt = (issueKey, summary) => `work on Jira Item ${issueKey} - ${summary}`;
+    const buildJiraAgentPrompt = (issueKey, summary) => `work on Jira Item ${issueKey} - ${summary}. Keep the branch as-is (I'll handle it later); do not merge.`;
     const buildAgentRunCommand = (repoRoot, agentLabel, prompt) => {
         if (agentLabel === "Claude Code") {
             return `claude --permission-mode auto ${(0, utils_1.quoteShellArg)(prompt)}`;
