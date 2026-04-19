@@ -278,8 +278,12 @@ function getAntigravityExecutable() {
         "antigravity");
 }
 function getAntigravityArgsTemplate() {
-    return (vscode.workspace.getConfiguration("antigravity").get("antigravityArgs") ||
-        '--agent "{agent}"');
+    const configured = vscode.workspace.getConfiguration("antigravity").get("antigravityArgs") || "";
+    const trimmed = configured.trim();
+    if (!trimmed || trimmed === '--agent "{agent}"') {
+        return '"{agentFile}"';
+    }
+    return trimmed;
 }
 function interpolateAgentArgs(template, agentName, agentFile) {
     return template.replace(/\{agent\}/g, agentName).replace(/\{agentFile\}/g, agentFile);

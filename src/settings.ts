@@ -268,7 +268,7 @@ function getExtensionSettingsFields(): SettingsField[] {
       label: "Antigravity Arguments",
       description:
         'Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders.',
-      placeholder: '--agent "{agent}"',
+      placeholder: '"{agentFile}"',
       value: config.get<string>("antigravityArgs") || ""
     },
     {

@@ -315,7 +315,7 @@
         },
         "antigravity.antigravityArgs": {
           "type": "string",
-          "default": "--agent \"{agent}\"",
+          "default": "\"{agentFile}\"",
           "description": "Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders."
         },
         "antigravity.scriptFallbackBaseUrl": {

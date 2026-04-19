@@ -310,10 +310,13 @@ function getAntigravityExecutable(): string {
 }
 
 function getAntigravityArgsTemplate(): string {
-  return (
-    vscode.workspace.getConfiguration("antigravity").get<string>("antigravityArgs") ||
-    '--agent "{agent}"'
-  );
+  const configured =
+    vscode.workspace.getConfiguration("antigravity").get<string>("antigravityArgs") || "";
+  const trimmed = configured.trim();
+  if (!trimmed || trimmed === '--agent "{agent}"') {
+    return '"{agentFile}"';
+  }
+  return trimmed;
 }
 
 function interpolateAgentArgs(template: string, agentName: string, agentFile: string): string {

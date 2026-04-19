@@ -1285,10 +1285,17 @@ export function activate(context: vscode.ExtensionContext) {
   ): void => {
     const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
     if (agentLabel === "Antigravity") {
-      void runInSecondaryTerminal([
-        `cd ${quoteShellArg(repoRoot)}`,
-        buildAgenticHarnessPromptCommand(prompt, "prompt")
-      ]);
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const generatedAgentName = "assigned-jira-item-agent";
+      const generatedAgentDir = path.join(rootPath, generatedAgentName);
+      const generatedAgentFile = path.join(generatedAgentDir, "AGENT.md");
+      fs.mkdirSync(generatedAgentDir, { recursive: true });
+      fs.writeFileSync(generatedAgentFile, `${prompt}\n`, "utf8");
+      void runAgent(generatedAgentName, generatedAgentFile);
       return;
     }
 

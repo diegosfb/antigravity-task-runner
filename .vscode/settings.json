@@ -8,7 +8,7 @@
   "antigravity.terminalName": "Antigravity Workflow",
   "antigravity.agentTerminalName": "Antigravity Agent",
   "antigravity.antigravityPath": "antigravity",
-  "antigravity.antigravityArgs": "--agent \"{agent}\"",
+  "antigravity.antigravityArgs": "\"{agentFile}\"",
   "antigravity.scriptFallbackBaseUrl": "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts",
   "antigravity.configFallbackBaseUrl": "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config",
   "antigravity.autoUpdateClaudeMd": false,
