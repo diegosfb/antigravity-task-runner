@@ -1277,25 +1277,26 @@ export function activate(context: vscode.ExtensionContext) {
     return scriptPath;
   };
 
-  const launchAgentForJiraItem = (
+  const launchAgentForJiraItem = async (
     repoRoot: string,
     agentLabel: AssignableAgentOption["label"],
     issueKey: string,
     issueSummary: string
-  ): void => {
+  ): Promise<void> => {
     const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
     if (agentLabel === "Antigravity") {
-      const rootPath = getRootPath();
-      if (!rootPath) {
-        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-        return;
+      try {
+        await vscode.commands.executeCommand("workbench.action.chat.openAgent");
+        await vscode.commands.executeCommand("workbench.action.chat.open", {
+          query: prompt,
+          isPartialQuery: false
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(
+          `Failed to send Jira item to VS Code Agent mode: ${message}`
+        );
       }
-      const generatedAgentName = "assigned-jira-item-agent";
-      const generatedAgentDir = path.join(rootPath, generatedAgentName);
-      const generatedAgentFile = path.join(generatedAgentDir, "AGENT.md");
-      fs.mkdirSync(generatedAgentDir, { recursive: true });
-      fs.writeFileSync(generatedAgentFile, `${prompt}\n`, "utf8");
-      void runAgent(generatedAgentName, generatedAgentFile);
       return;
     }
 
@@ -3010,7 +3011,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      launchAgentForJiraItem(repoRoot, selection.agentLabel, issue.key, issue.summary);
+      await launchAgentForJiraItem(repoRoot, selection.agentLabel, issue.key, issue.summary);
       void vscode.window.showInformationMessage(
         `${issue.key} was assigned to ${credentials.email}, moved to In Progress, and sent to ${selection.agentLabel}.`
       );

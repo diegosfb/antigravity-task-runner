@@ -1023,20 +1023,20 @@ function activate(context) {
         });
         return scriptPath;
     };
-    const launchAgentForJiraItem = (repoRoot, agentLabel, issueKey, issueSummary) => {
+    const launchAgentForJiraItem = async (repoRoot, agentLabel, issueKey, issueSummary) => {
         const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
         if (agentLabel === "Antigravity") {
-            const rootPath = (0, utils_1.getRootPath)();
-            if (!rootPath) {
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-                return;
+            try {
+                await vscode.commands.executeCommand("workbench.action.chat.openAgent");
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: prompt,
+                    isPartialQuery: false
+                });
             }
-            const generatedAgentName = "assigned-jira-item-agent";
-            const generatedAgentDir = path.join(rootPath, generatedAgentName);
-            const generatedAgentFile = path.join(generatedAgentDir, "AGENT.md");
-            fs.mkdirSync(generatedAgentDir, { recursive: true });
-            fs.writeFileSync(generatedAgentFile, `${prompt}\n`, "utf8");
-            void (0, scripts_1.runAgent)(generatedAgentName, generatedAgentFile);
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Failed to send Jira item to VS Code Agent mode: ${message}`);
+            }
             return;
         }
         const command = (0, agentRunCommand_1.buildAgentRunCommand)(repoRoot, agentLabel, prompt);
@@ -2441,7 +2441,7 @@ function activate(context) {
             void vscode.window.showErrorMessage(`Failed to assign Jira item to agent: ${message}`);
             return;
         }
-        launchAgentForJiraItem(repoRoot, selection.agentLabel, issue.key, issue.summary);
+        await launchAgentForJiraItem(repoRoot, selection.agentLabel, issue.key, issue.summary);
         void vscode.window.showInformationMessage(`${issue.key} was assigned to ${credentials.email}, moved to In Progress, and sent to ${selection.agentLabel}.`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.completeJiraItem", async () => {
