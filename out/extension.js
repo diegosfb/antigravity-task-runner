@@ -24,6 +24,7 @@ function activate(context) {
     const extensionRoot = context.extensionPath;
     (0, logger_1.log)(`[activate] Extension root: ${extensionRoot}`);
     const assignableAgentOptions = [
+        { label: "Antigravity" },
         { label: "Claude Code" },
         { label: "Codex" },
         { label: "OpenCode" },
@@ -1024,6 +1025,20 @@ function activate(context) {
     };
     const launchAgentForJiraItem = (repoRoot, agentLabel, issueKey, issueSummary) => {
         const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
+        if (agentLabel === "Antigravity") {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const generatedAgentName = "assigned-jira-item-agent";
+            const generatedAgentDir = path.join(rootPath, generatedAgentName);
+            const generatedAgentFile = path.join(generatedAgentDir, "AGENT.md");
+            fs.mkdirSync(generatedAgentDir, { recursive: true });
+            fs.writeFileSync(generatedAgentFile, `${prompt}\n`, "utf8");
+            void (0, scripts_1.runAgent)(generatedAgentName, generatedAgentFile);
+            return;
+        }
         const command = (0, agentRunCommand_1.buildAgentRunCommand)(repoRoot, agentLabel, prompt);
         const lines = agentLabel === "Codex"
             ? [

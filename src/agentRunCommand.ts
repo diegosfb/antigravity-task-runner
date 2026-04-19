@@ -1,4 +1,4 @@
-export type AssignableAgentLabel = "Claude Code" | "Codex" | "OpenCode" | "Qwen Code";
+export type AssignableAgentLabel = "Antigravity" | "Claude Code" | "Codex" | "OpenCode" | "Qwen Code";
 
 function quoteShellArg(value: string): string {
   return `"${value.replace(/"/g, '\\"')}"`;
