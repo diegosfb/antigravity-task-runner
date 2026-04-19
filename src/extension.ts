@@ -1254,7 +1254,7 @@ export function activate(context: vscode.ExtensionContext) {
     issueKey: string,
     summary: string
   ): string =>
-    `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with assuming . If you finish the work successfully, commit your changes, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review. Keep the branch as-is (I'll handle it later); do not merge.`;
+    `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with assuming . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent <selected agent>, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review. Keep the branch as-is (I'll handle it later); do not merge.`;
 
   const buildAgentRunCommand = (
     repoRoot: string,
