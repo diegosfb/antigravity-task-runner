@@ -16,6 +16,9 @@ function buildAgentRunCommand(repoRoot, agentLabel, prompt) {
     if (agentLabel === "OpenCode") {
         return `opencode run ${quoteShellArg(prompt)}`;
     }
-    return `opencode run -m ollama/qwen3-coder:30b ${quoteShellArg(prompt)}`;
+    if (agentLabel === "Qwen Code") {
+        return `opencode run -m ollama/qwen3-coder:30b ${quoteShellArg(prompt)}`;
+    }
+    return `opencode run ${quoteShellArg(prompt)}`;
 }
 //# sourceMappingURL=agentRunCommand.js.map
