@@ -8,6 +8,7 @@ exports.searchOpenUnassignedTodoJiraIssuesForProject = searchOpenUnassignedTodoJ
 exports.searchOpenAssignedJiraIssuesForCurrentUser = searchOpenAssignedJiraIssuesForCurrentUser;
 exports.assignJiraIssueToCurrentUser = assignJiraIssueToCurrentUser;
 exports.updateJiraIssueSummary = updateJiraIssueSummary;
+exports.updateJiraIssueSummaryAndLabels = updateJiraIssueSummaryAndLabels;
 exports.transitionJiraIssueToStatus = transitionJiraIssueToStatus;
 exports.getJiraIssueTypes = getJiraIssueTypes;
 exports.getJiraCreateFieldMetadata = getJiraCreateFieldMetadata;
@@ -232,12 +233,16 @@ async function assignJiraIssueToCurrentUser(credentials, issueKey) {
     });
 }
 async function updateJiraIssueSummary(credentials, issueKey, summary) {
+    await updateJiraIssueSummaryAndLabels(credentials, issueKey, summary);
+}
+async function updateJiraIssueSummaryAndLabels(credentials, issueKey, summary, labels) {
     await jiraRequest(credentials, {
         method: "PUT",
         apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}`,
         body: {
             fields: {
-                summary: summary.trim()
+                summary: summary.trim(),
+                ...(labels ? { labels } : {})
             }
         }
     });

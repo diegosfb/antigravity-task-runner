@@ -366,12 +366,22 @@ export async function updateJiraIssueSummary(
   issueKey: string,
   summary: string
 ): Promise<void> {
+  await updateJiraIssueSummaryAndLabels(credentials, issueKey, summary);
+}
+
+export async function updateJiraIssueSummaryAndLabels(
+  credentials: JiraCredentials,
+  issueKey: string,
+  summary: string,
+  labels?: string[]
+): Promise<void> {
   await jiraRequest(credentials, {
     method: "PUT",
     apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}`,
     body: {
       fields: {
-        summary: summary.trim()
+        summary: summary.trim(),
+        ...(labels ? { labels } : {})
       }
     }
   });

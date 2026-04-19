@@ -1004,6 +1004,7 @@ function activate(context) {
         const baseSummary = originalSummary.replace(/\s+- By Agent .+$/i, "").trim();
         return `${baseSummary} - By Agent ${agentLabel}`;
     };
+    const buildAgentJiraLabel = (agentLabel) => `developed-by-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
     const buildJiraAgentPrompt = (issueKey, summary) => `work on Jira Item ${issueKey} - ${summary}`;
     const buildAgentRunCommand = (repoRoot, agentLabel, prompt) => {
         if (agentLabel === "Claude Code") {
@@ -2407,7 +2408,7 @@ function activate(context) {
                 title: `Assigning ${issue.key} to ${selection.agentLabel}`,
                 cancellable: false
             }, async () => {
-                await (0, jira_1.updateJiraIssueSummary)(credentials, issue.key, updatedSummary);
+                await (0, jira_1.updateJiraIssueSummaryAndLabels)(credentials, issue.key, updatedSummary, [buildAgentJiraLabel(selection.agentLabel)]);
                 await (0, jira_1.assignJiraIssueToCurrentUser)(credentials, issue.key);
                 await (0, jira_1.transitionJiraIssueToStatus)(credentials, issue.key, "In Progress");
             });

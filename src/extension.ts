@@ -57,7 +57,7 @@ import {
   assignJiraIssueToCurrentUser,
   searchOpenAssignedJiraIssuesForCurrentUser,
   transitionJiraIssueToStatus,
-  updateJiraIssueSummary
+  updateJiraIssueSummaryAndLabels
 } from "./jira";
 
 type GitInputBox = {
@@ -1246,6 +1246,9 @@ export function activate(context: vscode.ExtensionContext) {
     const baseSummary = originalSummary.replace(/\s+- By Agent .+$/i, "").trim();
     return `${baseSummary} - By Agent ${agentLabel}`;
   };
+
+  const buildAgentJiraLabel = (agentLabel: AssignableAgentOption["label"]): string =>
+    `developed-by-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
 
   const buildJiraAgentPrompt = (
     issueKey: string,
@@ -2961,7 +2964,12 @@ export function activate(context: vscode.ExtensionContext) {
             cancellable: false
           },
           async () => {
-            await updateJiraIssueSummary(credentials, issue.key, updatedSummary);
+            await updateJiraIssueSummaryAndLabels(
+              credentials,
+              issue.key,
+              updatedSummary,
+              [buildAgentJiraLabel(selection.agentLabel)]
+            );
             await assignJiraIssueToCurrentUser(credentials, issue.key);
             await transitionJiraIssueToStatus(credentials, issue.key, "In Progress");
           }
