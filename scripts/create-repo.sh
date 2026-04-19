@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_NAME="$(basename "${REPO_ROOT}")"
-GIT_EMAIL="diegosfbf@gmail.com"
+GIT_EMAIL="diegosfb@gmail.com"
 VISIBILITY="${REPO_VISIBILITY:-private}" # "private" or "public"
 USE_HTTPS="${USE_HTTPS:-1}"
 DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
