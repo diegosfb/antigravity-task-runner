@@ -1254,7 +1254,7 @@ export function activate(context: vscode.ExtensionContext) {
     issueKey: string,
     summary: string
   ): string =>
-    `work on Jira Item ${issueKey} - ${summary}. Keep the branch as-is (I'll handle it later); do not merge.`;
+    `work on Jira Item ${issueKey} - ${summary}. If you finish the work successfully, commit your changes and transition Jira item ${issueKey} to In Review. Keep the branch as-is (I'll handle it later); do not merge.`;
 
   const buildAgentRunCommand = (
     repoRoot: string,
