@@ -31,6 +31,7 @@ import {
   LOCAL_LITELLM_READY_URL
 } from "./settings";
 import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing, downloadMarkdownToTempFile } from "./scripts";
+import { buildAgentRunCommand, type AssignableAgentLabel } from "./agentRunCommand";
 import {
   getRootPath,
   getRepoRoot,
@@ -80,7 +81,7 @@ type GitExtensionExports = {
 };
 
 type AssignableAgentOption = {
-  label: "Claude Code" | "Codex" | "OpenCode" | "Qwen Code";
+  label: AssignableAgentLabel;
 };
 
 export function activate(context: vscode.ExtensionContext) {
@@ -1261,25 +1262,6 @@ export function activate(context: vscode.ExtensionContext) {
         : "";
 
     return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
-  };
-
-  const buildAgentRunCommand = (
-    repoRoot: string,
-    agentLabel: AssignableAgentOption["label"],
-    prompt: string
-  ): string => {
-    if (agentLabel === "Claude Code") {
-      return `claude --permission-mode auto ${quoteShellArg(prompt)}`;
-    }
-    if (agentLabel === "Codex") {
-      const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
-      const heredocMarker = "ANTIGRAVITY_JIRA_PROMPT_EOF";
-      return `codex exec --full-auto -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} - <<'${heredocMarker}'\n${prompt}\n${heredocMarker}`;
-    }
-    if (agentLabel === "OpenCode") {
-      return `opencode run ${quoteShellArg(prompt)}`;
-    }
-    return `opencode run -m ollama/qwen3-coder:30b ${quoteShellArg(prompt)}`;
   };
 
   const writeAgentLaunchScript = (scriptPrefix: string, command: string): string => {
