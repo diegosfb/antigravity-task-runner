@@ -1005,14 +1005,15 @@ function activate(context) {
         return `${baseSummary} - By Agent ${agentLabel}`;
     };
     const buildAgentJiraLabel = (agentLabel) => `developed-by-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
-    const buildJiraAgentPrompt = (issueKey, summary) => `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with assuming . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent <selected agent>, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review. Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+    const buildJiraAgentPrompt = (issueKey, summary, agentLabel) => `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with assuming . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review. Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
     const buildAgentRunCommand = (repoRoot, agentLabel, prompt) => {
         if (agentLabel === "Claude Code") {
             return `claude --permission-mode auto ${(0, utils_1.quoteShellArg)(prompt)}`;
         }
         if (agentLabel === "Codex") {
             const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
-            return `codex exec --full-auto -C ${(0, utils_1.quoteShellArg)(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${(0, utils_1.quoteShellArg)(trustOverride)} ${(0, utils_1.quoteShellArg)(prompt)}`;
+            const heredocMarker = "ANTIGRAVITY_JIRA_PROMPT_EOF";
+            return `codex exec --full-auto -C ${(0, utils_1.quoteShellArg)(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${(0, utils_1.quoteShellArg)(trustOverride)} - <<'${heredocMarker}'\n${prompt}\n${heredocMarker}`;
         }
         if (agentLabel === "OpenCode") {
             return `opencode run ${(0, utils_1.quoteShellArg)(prompt)}`;
@@ -1020,7 +1021,7 @@ function activate(context) {
         return `opencode run -m ollama/qwen3-coder:30b ${(0, utils_1.quoteShellArg)(prompt)}`;
     };
     const launchAgentForJiraItem = (repoRoot, agentLabel, issueKey, issueSummary) => {
-        const prompt = buildJiraAgentPrompt(issueKey, issueSummary);
+        const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
         const command = buildAgentRunCommand(repoRoot, agentLabel, prompt);
         (0, terminal_1.runInNewTerminal)(`${agentLabel}: ${issueKey}`, [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, command], {
             iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
