@@ -1254,8 +1254,14 @@ export function activate(context: vscode.ExtensionContext) {
     issueKey: string,
     summary: string,
     agentLabel: AssignableAgentOption["label"]
-  ): string =>
-    `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with assuming . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review. Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+  ): string => {
+    const jiraAccessInstructions =
+      agentLabel === "Codex"
+        ? ` Jira access for this environment is available through the Atlassian CLI, not a built-in Jira plugin. Do not conclude that Jira is unavailable before checking the CLI. Use \`acli jira workitem view ${issueKey}\` to inspect the ticket, \`acli jira workitem comment create --key ${issueKey} --body "assuming ..."\` for each assumption, \`acli jira workitem comment create --key ${issueKey} --body "AGENT SOLUTION: ..."\` when the work is complete, and \`acli jira workitem transition --key ${issueKey} --status "In Review" --yes\` to move it to In Review. If the CLI is not authenticated, use \`acli jira auth login --web\` before giving up.`
+        : "";
+
+    return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with assuming . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+  };
 
   const buildAgentRunCommand = (
     repoRoot: string,
