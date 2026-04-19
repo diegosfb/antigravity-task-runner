@@ -1276,18 +1276,6 @@ export function activate(context: vscode.ExtensionContext) {
     return `opencode run -m ollama/qwen3-coder:30b ${quoteShellArg(prompt)}`;
   };
 
-  const writeAgentLaunchScript = (scriptPrefix: string, command: string): string => {
-    const sanitizedPrefix =
-      scriptPrefix.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "agent-launch";
-    const scriptDirectory = fs.mkdtempSync(path.join(os.tmpdir(), `${sanitizedPrefix}-`));
-    const scriptPath = path.join(scriptDirectory, "launch.sh");
-    fs.writeFileSync(scriptPath, `#!/bin/zsh\nset -e\n${command}\n`, {
-      encoding: "utf8",
-      mode: 0o700
-    });
-    return scriptPath;
-  };
-
   const launchAgentForJiraItem = (
     repoRoot: string,
     agentLabel: AssignableAgentOption["label"],
@@ -1296,13 +1284,9 @@ export function activate(context: vscode.ExtensionContext) {
   ): void => {
     const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
     const command = buildAgentRunCommand(repoRoot, agentLabel, prompt);
-    const lines =
-      agentLabel === "Codex"
-        ? [ `zsh ${quoteShellArg(writeAgentLaunchScript("antigravity-codex-jira", `cd ${quoteShellArg(repoRoot)}\n${command}`))}` ]
-        : [`cd ${quoteShellArg(repoRoot)}`, command];
     runInNewTerminal(
       `${agentLabel}: ${issueKey}`,
-      lines,
+      [`cd ${quoteShellArg(repoRoot)}`, command],
       {
         iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
         color: CLAUDE_ACTION_COLOR
