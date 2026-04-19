@@ -1258,11 +1258,11 @@ export function activate(context: vscode.ExtensionContext) {
     prompt: string
   ): string => {
     if (agentLabel === "Claude Code") {
-      return `claude ${quoteShellArg(prompt)}`;
+      return `claude --permission-mode auto ${quoteShellArg(prompt)}`;
     }
     if (agentLabel === "Codex") {
       const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
-      return `codex -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} ${quoteShellArg(prompt)}`;
+      return `codex --full-auto -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} ${quoteShellArg(prompt)}`;
     }
     if (agentLabel === "OpenCode") {
       return `opencode run ${quoteShellArg(prompt)}`;

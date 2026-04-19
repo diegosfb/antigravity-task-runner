@@ -1007,11 +1007,11 @@ function activate(context) {
     const buildJiraAgentPrompt = (issueKey, summary) => `work on Jira Item ${issueKey} - ${summary}`;
     const buildAgentRunCommand = (repoRoot, agentLabel, prompt) => {
         if (agentLabel === "Claude Code") {
-            return `claude ${(0, utils_1.quoteShellArg)(prompt)}`;
+            return `claude --permission-mode auto ${(0, utils_1.quoteShellArg)(prompt)}`;
         }
         if (agentLabel === "Codex") {
             const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
-            return `codex -C ${(0, utils_1.quoteShellArg)(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${(0, utils_1.quoteShellArg)(trustOverride)} ${(0, utils_1.quoteShellArg)(prompt)}`;
+            return `codex --full-auto -C ${(0, utils_1.quoteShellArg)(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${(0, utils_1.quoteShellArg)(trustOverride)} ${(0, utils_1.quoteShellArg)(prompt)}`;
         }
         if (agentLabel === "OpenCode") {
             return `opencode run ${(0, utils_1.quoteShellArg)(prompt)}`;
