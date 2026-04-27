@@ -17,7 +17,7 @@ VS Code extension that lists Antigravity agents and workflows from the configure
 - `antigravity.agentTerminalName`: Terminal name used when running agents.
 - `antigravity.agenticPlatform`: Agentic platform used when running agents (`antigravity`, `openclaude`, `codex`, or `ollama`).
 - `antigravity.antigravityPath`: Path to the Antigravity executable for running agents.
-- `antigravity.antigravityArgs`: Arguments template for Antigravity (supports `{agent}` and `{agentFile}`).
+- `antigravity.antigravityArgs`: Arguments template for Antigravity (supports `{agent}` and `{agentFile}`; defaults to opening `{agentFile}`).
 - `antigravity.openClaudePath`: Path to the OpenClaude executable for running agents.
 - `antigravity.codexPath`: Path to the OpenAI Codex executable for running agents.
 - `antigravity.codexArgs`: Arguments template for Codex (supports `{agent}` and `{agentFile}`).

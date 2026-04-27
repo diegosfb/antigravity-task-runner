@@ -12,6 +12,7 @@ const git_1 = require("./git");
 const terminal_1 = require("./terminal");
 const settings_1 = require("./settings");
 const scripts_1 = require("./scripts");
+const agentRunCommand_1 = require("./agentRunCommand");
 const utils_1 = require("./utils");
 const logger_1 = require("./logger");
 const jira_1 = require("./jira");
@@ -22,6 +23,13 @@ function activate(context) {
     const provider = new treeProvider_1.AntigravityViewProvider();
     const extensionRoot = context.extensionPath;
     (0, logger_1.log)(`[activate] Extension root: ${extensionRoot}`);
+    const assignableAgentOptions = [
+        { label: "Antigravity" },
+        { label: "Claude Code" },
+        { label: "Codex" },
+        { label: "OpenCode" },
+        { label: "Qwen Code" }
+    ];
     const launchClaudeInit = async (repoRoot, guidelinesFileName = "Project Level CLAUDE.md Guidelines.txt") => {
         (0, logger_1.log)(`[launchClaudeInit] repoRoot: ${repoRoot}`);
         const guidelineCandidates = [
@@ -46,6 +54,15 @@ function activate(context) {
         (0, logger_1.log)(`[launchAgentInit] launching Codex init terminal`);
         await (0, terminal_1.runCodexInitAndUpdateInNewTerminal)(repoRoot, prompt);
         (0, logger_1.log)(`[launchAgentInit] done`);
+    };
+    const refreshAutocommitUiWhenStateChanges = (repoRoot, expectedRunningState, attemptsRemaining = 20) => {
+        provider.refresh();
+        if ((0, git_1.isAutocommitRunning)(repoRoot) === expectedRunningState || attemptsRemaining <= 0) {
+            return;
+        }
+        setTimeout(() => {
+            refreshAutocommitUiWhenStateChanges(repoRoot, expectedRunningState, attemptsRemaining - 1);
+        }, 500);
     };
     const branchTypes = [
         {
@@ -349,9 +366,13 @@ function activate(context) {
     const getJiraCredentialsFromEnv = (repoRoot) => {
         const envPath = getRepoEnvPath(repoRoot);
         const env = (0, utils_1.parseEnvFile)(envPath);
-        const baseUrl = (env.jira_base_url || "").trim();
-        const email = (env.jira_email || "").trim();
-        const apiToken = (env.jira_api_token || "").trim();
+        const config = vscode.workspace.getConfiguration("antigravity");
+        const baseUrl = (config.get("jiraBaseUrl") || "").trim() ||
+            (env.jira_base_url || "").trim();
+        const email = (config.get("jiraEmail") || "").trim() ||
+            (env.jira_email || "").trim();
+        const apiToken = (config.get("jiraApiToken") || "").trim() ||
+            (env.jira_api_token || "").trim();
         const missing = [
             !baseUrl ? "JIRA_BASE_URL" : undefined,
             !email ? "JIRA_EMAIL" : undefined,
@@ -365,6 +386,13 @@ function activate(context) {
     const getSavedJiraProjectKey = (repoRoot) => {
         const env = (0, utils_1.parseEnvFile)(getRepoEnvPath(repoRoot));
         return (env.jira_project_key || "").trim().toUpperCase();
+    };
+    const getSopManualLink = (repoRoot) => {
+        const config = vscode.workspace.getConfiguration("antigravity");
+        const repoOverride = repoRoot
+            ? ((0, utils_1.parseEnvFile)(getRepoEnvPath(repoRoot)).sop_manual_link || "").trim()
+            : "";
+        return repoOverride || (config.get("sopManualLink") || "").trim();
     };
     const validateJiraProjectKey = (value) => {
         const normalized = value.trim().toUpperCase();
@@ -606,10 +634,58 @@ function activate(context) {
             panel.dispose();
         }, undefined, context.subscriptions);
     });
-    const renderCreateJiraItemHtml = (webview, projectKey) => {
+    const ensureSavedJiraProjectKey = async (repoRoot, credentials) => {
+        let projectKey = getSavedJiraProjectKey(repoRoot);
+        if (projectKey) {
+            return projectKey;
+        }
+        let projects = [];
+        try {
+            projects = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "Loading Jira projects",
+                cancellable: false
+            }, async () => (0, jira_1.getJiraProjects)(credentials));
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to load Jira projects: ${message}`);
+            return undefined;
+        }
+        const setupSelection = await showJiraProjectSetupDialog(projects);
+        if (!setupSelection) {
+            return undefined;
+        }
+        if (setupSelection.mode === "select") {
+            projectKey = setupSelection.projectKey;
+        }
+        else {
+            try {
+                const createdProject = await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: "Creating Jira project",
+                    cancellable: false
+                }, async () => (0, jira_1.createJiraProject)(credentials, {
+                    key: setupSelection.key,
+                    name: setupSelection.name,
+                    description: setupSelection.description
+                }));
+                projectKey = createdProject.key.toUpperCase();
+                void vscode.window.showInformationMessage(`Created Jira project ${projectKey} and saved it to this repository .env file.`);
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Failed to create Jira project: ${message}`);
+                return undefined;
+            }
+        }
+        (0, utils_1.upsertEnvFileValue)(getRepoEnvPath(repoRoot), "JIRA_PROJECT_KEY", projectKey);
+        provider.refresh();
+        return projectKey;
+    };
+    const renderCreateJiraItemHtml = (webview, projectKey, issueTypes) => {
         const nonce = getNonce();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-        const issueTypes = ["Epic", "Feature", "Task", "Bug"];
         return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -667,7 +743,7 @@ function activate(context) {
     </form>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
-      const issueTypes = ${JSON.stringify(issueTypes)};
+      const issueTypes = ${JSON.stringify(issueTypes.map((issueType) => issueType.name))};
       const issueTypeSelect = document.getElementById("issue-type");
       const issueNameInput = document.getElementById("issue-name");
       const issueDescriptionInput = document.getElementById("issue-description");
@@ -714,9 +790,9 @@ function activate(context) {
   </body>
 </html>`;
     };
-    const showCreateJiraItemDialog = async (projectKey) => new Promise((resolve) => {
+    const showCreateJiraItemDialog = async (projectKey, issueTypes) => new Promise((resolve) => {
         const panel = vscode.window.createWebviewPanel("createJiraItem", "Add Jira Item", vscode.ViewColumn.Active, { enableScripts: true });
-        panel.webview.html = renderCreateJiraItemHtml(panel.webview, projectKey);
+        panel.webview.html = renderCreateJiraItemHtml(panel.webview, projectKey, issueTypes);
         let settled = false;
         const resolveOnce = (value) => {
             if (settled)
@@ -756,6 +832,230 @@ function activate(context) {
             panel.dispose();
         }, undefined, context.subscriptions);
     });
+    const renderAssignJiraItemToAgentHtml = (webview, projectKey, agents, issues) => {
+        const nonce = getNonce();
+        const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+        const agentOptions = agents.map((agent) => agent.label);
+        const issueOptions = issues.map((issue) => ({
+            key: issue.key,
+            summary: issue.summary,
+            detail: [issue.issueTypeName, issue.statusName].filter(Boolean).join(" • ")
+        }));
+        return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assign Jira Item to Agent</title>
+    <style>
+      :root { color-scheme: light dark; font-family: var(--vscode-font-family); }
+      body { margin: 0; padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
+      form { display: grid; gap: 16px; }
+      label { display: grid; gap: 6px; font-size: 13px; }
+      select, button { font: inherit; }
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 6px;
+      }
+      .current-branch-title { font-size: 18px; font-weight: 600; }
+      .current-branch-value { color: #7cc7ff; }
+      .hint { font-size: 12px; color: var(--vscode-descriptionForeground); }
+      .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
+      .actions { display: flex; justify-content: flex-end; gap: 8px; }
+      button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
+      button[type="submit"] { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+      button[type="button"] { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
+    </style>
+  </head>
+  <body>
+    <form id="assign-jira-item-to-agent-form">
+      <div class="current-branch-title">Jira Project: <span class="current-branch-value">${projectKey}</span></div>
+      <label>
+        Agent
+        <select id="agent-select"></select>
+        <span class="hint">Choose which coding agent should receive the work prompt.</span>
+      </label>
+      <label>
+        Jira Item
+        <select id="issue-select"></select>
+        <span class="hint" id="issue-hint"></span>
+      </label>
+      <div class="error" id="error-message"></div>
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit">Assign</button>
+      </div>
+    </form>
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const agents = ${JSON.stringify(agentOptions)};
+      const issues = ${JSON.stringify(issueOptions)};
+      const form = document.getElementById("assign-jira-item-to-agent-form");
+      const agentSelect = document.getElementById("agent-select");
+      const issueSelect = document.getElementById("issue-select");
+      const issueHint = document.getElementById("issue-hint");
+      const cancelButton = document.getElementById("cancel-button");
+      const errorMessage = document.getElementById("error-message");
+
+      const updateIssueHint = () => {
+        const selected = issues.find((issue) => issue.key === issueSelect.value);
+        issueHint.textContent = selected
+          ? [selected.summary, selected.detail].filter(Boolean).join(" • ")
+          : "Choose an unassigned Jira item that is currently in To Do.";
+      };
+
+      for (const agent of agents) {
+        const option = document.createElement("option");
+        option.value = agent;
+        option.textContent = agent;
+        agentSelect.appendChild(option);
+      }
+
+      for (const issue of issues) {
+        const option = document.createElement("option");
+        option.value = issue.key;
+        option.textContent = issue.key;
+        issueSelect.appendChild(option);
+      }
+
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelAssignJiraItemToAgent" });
+      });
+
+      issueSelect.addEventListener("change", updateIssueHint);
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!agentSelect.value) {
+          errorMessage.textContent = "Select an agent.";
+          agentSelect.focus();
+          return;
+        }
+        if (!issueSelect.value) {
+          errorMessage.textContent = "Select a Jira item.";
+          issueSelect.focus();
+          return;
+        }
+        vscode.postMessage({
+          type: "submitAssignJiraItemToAgent",
+          payload: {
+            agentLabel: agentSelect.value,
+            issueKey: issueSelect.value
+          }
+        });
+      });
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (message?.type === "assignJiraItemToAgentError") {
+          errorMessage.textContent = message.payload?.message || "Unable to assign the Jira item.";
+        }
+      });
+
+      agentSelect.value = agents[0];
+      issueSelect.value = issues[0]?.key || "";
+      updateIssueHint();
+      agentSelect.focus();
+    </script>
+  </body>
+</html>`;
+    };
+    const showAssignJiraItemToAgentDialog = async (projectKey, agents, issues) => new Promise((resolve) => {
+        const panel = vscode.window.createWebviewPanel("assignJiraItemToAgent", "Assign Jira Item to Agent", vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = renderAssignJiraItemToAgentHtml(panel.webview, projectKey, agents, issues);
+        let settled = false;
+        const resolveOnce = (value) => {
+            if (settled)
+                return;
+            settled = true;
+            resolve(value);
+        };
+        panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelAssignJiraItemToAgent") {
+                panel.dispose();
+                return;
+            }
+            if (message.type !== "submitAssignJiraItemToAgent")
+                return;
+            const payload = message.payload || {};
+            const agentLabel = typeof payload.agentLabel === "string" ? payload.agentLabel.trim() : "";
+            const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
+            const selectedAgent = agents.find((agent) => agent.label === agentLabel);
+            if (!selectedAgent) {
+                void panel.webview.postMessage({
+                    type: "assignJiraItemToAgentError",
+                    payload: { message: "Select an agent." }
+                });
+                return;
+            }
+            if (!issueKey || !issues.some((issue) => issue.key === issueKey)) {
+                void panel.webview.postMessage({
+                    type: "assignJiraItemToAgentError",
+                    payload: { message: "Select a Jira item." }
+                });
+                return;
+            }
+            resolveOnce({ agentLabel: selectedAgent.label, issueKey });
+            panel.dispose();
+        }, undefined, context.subscriptions);
+    });
+    const buildIssueSummaryForAgent = (originalSummary, agentLabel) => {
+        const baseSummary = originalSummary.replace(/\s+- By Agent .+$/i, "").trim();
+        return `${baseSummary} - By Agent ${agentLabel}`;
+    };
+    const buildAgentJiraLabel = (agentLabel) => `developed-by-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
+    const buildJiraAgentPrompt = (issueKey, summary, agentLabel) => {
+        const jiraAccessInstructions = agentLabel === "Codex"
+            ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as diegosfb@gmail.com, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using diegosfb@gmail.com. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as diegosfb@gmail.com, then continue with the MCP-backed Jira actions. Inspect Jira item ${issueKey}, add each assumption as a Jira comment line beginning with "AGENT ASSUMTION:", add a final Jira comment beginning with "AGENT SOLUTION:", and transition Jira item ${issueKey} to In Review by using Jira MCP actions.`
+            : "";
+        return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+    };
+    const writeAgentLaunchScript = (scriptPrefix, command) => {
+        const sanitizedPrefix = scriptPrefix.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "agent-launch";
+        const scriptDirectory = fs.mkdtempSync(path.join(os.tmpdir(), `${sanitizedPrefix}-`));
+        const scriptPath = path.join(scriptDirectory, "launch.sh");
+        fs.writeFileSync(scriptPath, `#!/bin/zsh\nset -e\n${command}\n`, {
+            encoding: "utf8",
+            mode: 0o700
+        });
+        return scriptPath;
+    };
+    const launchAgentForJiraItem = async (repoRoot, agentLabel, issueKey, issueSummary) => {
+        const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
+        if (agentLabel === "Antigravity") {
+            try {
+                await vscode.commands.executeCommand("workbench.action.chat.openAgent");
+                await vscode.commands.executeCommand("workbench.action.chat.open", {
+                    query: prompt,
+                    isPartialQuery: false
+                });
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Failed to send Jira item to VS Code Agent mode: ${message}`);
+            }
+            return;
+        }
+        const command = (0, agentRunCommand_1.buildAgentRunCommand)(repoRoot, agentLabel, prompt);
+        const lines = agentLabel === "Codex"
+            ? [
+                `zsh ${(0, utils_1.quoteShellArg)(writeAgentLaunchScript("antigravity-codex-jira", `cd ${(0, utils_1.quoteShellArg)(repoRoot)}\n${command}`))}`
+            ]
+            : [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, command];
+        (0, terminal_1.runInNewTerminal)(`${agentLabel}: ${issueKey}`, lines, {
+            iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
+            color: terminal_1.CLAUDE_ACTION_COLOR
+        });
+    };
     const execInRepo = async (command, cwd) => new Promise((resolve, reject) => {
         (0, child_process_1.exec)(command, { cwd }, (error, stdout, stderr) => {
             if (error) {
@@ -833,56 +1133,6 @@ function activate(context) {
             return `Remove ${entries.length} files`;
         return `Update ${entries.length} files`;
     };
-    const generateCommitMessageWithCopilot = async (repoRoot, repository) => {
-        const commandId = "github.copilot.git.generateCommitMessage";
-        const copilotExtension = vscode.extensions.all.find((extension) => {
-            const extensionId = extension.id.toLowerCase();
-            return (extensionId === "github.copilot-chat" ||
-                extensionId.endsWith(".copilot-chat") ||
-                extensionId.includes("copilot-chat"));
-        });
-        if (!copilotExtension) {
-            (0, logger_1.logAlways)("[commitChanges] Copilot Chat extension not installed in current VS Code profile");
-            return "";
-        }
-        if (!copilotExtension.isActive) {
-            try {
-                await copilotExtension.activate();
-            }
-            catch (error) {
-                (0, logger_1.logAlways)(`[commitChanges] Copilot Chat activation failed: ${error instanceof Error ? error.message : String(error)}`);
-                return "";
-            }
-        }
-        const availableCommands = await vscode.commands.getCommands(true);
-        if (!availableCommands.includes(commandId)) {
-            (0, logger_1.logAlways)("[commitChanges] Copilot commit message command unavailable after activation");
-            return "";
-        }
-        const previousInputValue = repository.inputBox.value;
-        repository.inputBox.value = "";
-        try {
-            const cancellation = new vscode.CancellationTokenSource();
-            try {
-                await vscode.commands.executeCommand(commandId, vscode.Uri.file(repoRoot), undefined, cancellation.token);
-            }
-            finally {
-                cancellation.dispose();
-            }
-        }
-        catch (error) {
-            repository.inputBox.value = previousInputValue;
-            (0, logger_1.logAlways)(`[commitChanges] Copilot commit message generation failed: ${error instanceof Error ? error.message : String(error)}`);
-            return "";
-        }
-        const generatedMessage = repository.inputBox.value.trim();
-        if (!generatedMessage) {
-            repository.inputBox.value = previousInputValue;
-            (0, logger_1.logAlways)("[commitChanges] Copilot commit message generation returned no message");
-            return "";
-        }
-        return generatedMessage;
-    };
     const getGitApi = async () => {
         const gitExtension = vscode.extensions.getExtension("vscode.git");
         if (!gitExtension) {
@@ -902,7 +1152,26 @@ function activate(context) {
         const fromApi = api.getRepository?.(repoUri);
         if (fromApi)
             return fromApi;
-        return api.repositories.find((repository) => repository.rootUri.fsPath === repoUri.fsPath);
+        const normalizedRepoRoot = path.normalize(repoUri.fsPath);
+        const resolvedRepoRoot = (() => {
+            try {
+                return fs.realpathSync.native(repoUri.fsPath);
+            }
+            catch {
+                return normalizedRepoRoot;
+            }
+        })();
+        return api.repositories.find((repository) => {
+            const candidatePath = path.normalize(repository.rootUri.fsPath);
+            if (candidatePath === normalizedRepoRoot)
+                return true;
+            try {
+                return fs.realpathSync.native(repository.rootUri.fsPath) === resolvedRepoRoot;
+            }
+            catch {
+                return false;
+            }
+        });
     };
     const focusSourceControlChanges = async () => {
         await vscode.commands.executeCommand("workbench.view.scm");
@@ -1321,9 +1590,11 @@ function activate(context) {
         const rootPath = (0, utils_1.getRootPath)();
         const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : process.cwd();
         (0, logger_1.log)(`[runClaudeAgent] repoRoot: ${repoRoot}`);
+        const runString = `claude --agent ${(0, utils_1.quoteShellArg)(agentName)}`;
+        (0, logger_1.logAlways)(`[runClaudeAgent] runString: ${runString}`);
         (0, terminal_1.runInNewTerminal)(`Agent: ${agentName}`, [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `claude --agent ${(0, utils_1.quoteShellArg)(agentName)}`
+            runString
         ], {
             iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR
@@ -1806,52 +2077,72 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.commitChanges", async () => {
         (0, logger_1.showOutputChannel)();
         (0, logger_1.logAlways)("[commitChanges] triggered");
-        const rootPath = (0, utils_1.getRootPath)();
-        if (!rootPath) {
-            (0, logger_1.logAlways)("[commitChanges] ERROR: rootPath not set");
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-            return;
+        let repoRoot = "";
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                (0, logger_1.logAlways)("[commitChanges] ERROR: rootPath not set");
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.logAlways)(`[commitChanges] repoRoot: ${repoRoot}`);
+            if (!fs.existsSync(path.join(repoRoot, ".git"))) {
+                (0, logger_1.logAlways)("[commitChanges] ERROR: repository not initialized");
+                void vscode.window.showWarningMessage("Initialize a Git repository before using Commit.");
+                return;
+            }
+            await focusSourceControlChanges();
+            await vscode.workspace.saveAll(false);
+            const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+            if (statusOutput.trim().length === 0) {
+                (0, logger_1.logAlways)("[commitChanges] no changes detected");
+                void vscode.window.showInformationMessage("No changes to commit.");
+                return;
+            }
+            if ((0, settings_1.getUseAgentForGithubRepositoryManagement)()) {
+                const prompt = "commit all changes and automatically generate the commit message";
+                (0, logger_1.logAlways)("[commitChanges] delegating commit to Agentic Harness");
+                (0, terminal_1.runInNewTerminal)("Agentic Harness Commit", [
+                    `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+                    (0, terminal_1.buildAgenticHarnessPromptCommand)(prompt, "prompt")
+                ], {
+                    iconPath: new vscode.ThemeIcon("git-commit", terminal_1.CLAUDE_ACTION_COLOR),
+                    color: terminal_1.CLAUDE_ACTION_COLOR
+                });
+                void vscode.window.showInformationMessage("Opened Agentic Harness Commit terminal.");
+                return;
+            }
+            const secretCandidateOutput = await execInRepo("git status --porcelain -- .env config/.env", repoRoot);
+            if (secretCandidateOutput.trim().length > 0) {
+                (0, logger_1.logAlways)("[commitChanges] excluding .env/config/.env from automated commit");
+                void vscode.window.showWarningMessage("Excluded .env and config/.env from this automated commit for safety.");
+            }
+            await execInRepo("git add -A -- . && git rm -q --cached --ignore-unmatch .env config/.env", repoRoot);
+            const repository = await getGitRepository(repoRoot);
+            if (!repository) {
+                (0, logger_1.logAlways)("[commitChanges] ERROR: VS Code Git repository not found");
+                void vscode.window.showErrorMessage("VS Code Git integration could not find the current repository.");
+                return;
+            }
+            const commitMessage = await buildGeneratedCommitMessage(repoRoot);
+            if (!commitMessage.trim()) {
+                (0, logger_1.logAlways)("[commitChanges] no commit message generated");
+                void vscode.window.showWarningMessage("Nothing commitable was staged.");
+                return;
+            }
+            (0, logger_1.logAlways)(`[commitChanges] generated message: ${commitMessage}`);
+            repository.inputBox.value = commitMessage;
+            await repository.commit(commitMessage, { all: false });
+            provider.refresh();
+            (0, logger_1.logAlways)("[commitChanges] commit completed");
+            void vscode.window.showInformationMessage(`Committed changes: ${commitMessage}`);
         }
-        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        (0, logger_1.logAlways)(`[commitChanges] repoRoot: ${repoRoot}`);
-        if (!fs.existsSync(path.join(repoRoot, ".git"))) {
-            (0, logger_1.logAlways)("[commitChanges] ERROR: repository not initialized");
-            void vscode.window.showWarningMessage("Initialize a Git repository before using Commit.");
-            return;
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.logAlways)(`[commitChanges] ERROR${repoRoot ? ` (${repoRoot})` : ""}: ${message}`);
+            void vscode.window.showErrorMessage(`Commit failed: ${message}`);
         }
-        await focusSourceControlChanges();
-        await vscode.workspace.saveAll(false);
-        const statusOutput = await execInRepo("git status --porcelain", repoRoot);
-        if (statusOutput.trim().length === 0) {
-            (0, logger_1.logAlways)("[commitChanges] no changes detected");
-            void vscode.window.showInformationMessage("No changes to commit.");
-            return;
-        }
-        const secretCandidateOutput = await execInRepo("git status --porcelain -- .env config/.env", repoRoot);
-        if (secretCandidateOutput.trim().length > 0) {
-            (0, logger_1.logAlways)("[commitChanges] excluding .env/config/.env from automated commit");
-            void vscode.window.showWarningMessage("Excluded .env and config/.env from this automated commit for safety.");
-        }
-        await execInRepo("git add -A -- . ':(exclude).env' ':(exclude)config/.env'", repoRoot);
-        const repository = await getGitRepository(repoRoot);
-        if (!repository) {
-            (0, logger_1.logAlways)("[commitChanges] ERROR: VS Code Git repository not found");
-            void vscode.window.showErrorMessage("VS Code Git integration could not find the current repository.");
-            return;
-        }
-        const commitMessage = (await generateCommitMessageWithCopilot(repoRoot, repository)) ||
-            (await buildGeneratedCommitMessage(repoRoot));
-        if (!commitMessage.trim()) {
-            (0, logger_1.logAlways)("[commitChanges] no commit message generated");
-            void vscode.window.showWarningMessage("Nothing commitable was staged.");
-            return;
-        }
-        (0, logger_1.logAlways)(`[commitChanges] generated message: ${commitMessage}`);
-        repository.inputBox.value = commitMessage;
-        await repository.commit(commitMessage, { all: false });
-        provider.refresh();
-        (0, logger_1.logAlways)("[commitChanges] commit completed");
-        void vscode.window.showInformationMessage(`Committed changes: ${commitMessage}`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.buildVersion", async () => {
         await (0, scripts_1.runRepoScript)("build-version");
@@ -1940,6 +2231,28 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.deploy", async () => {
         await (0, scripts_1.runRepoScript)("deploy");
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.selectOrCreateJiraProject", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        let credentials;
+        try {
+            credentials = getJiraCredentialsFromEnv(repoRoot);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(message);
+            return;
+        }
+        const projectKey = await ensureSavedJiraProjectKey(repoRoot, credentials);
+        if (!projectKey) {
+            return;
+        }
+        void vscode.window.showInformationMessage(`Jira project ${projectKey} is now selected.`);
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.addJiraItem", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
@@ -1956,51 +2269,27 @@ function activate(context) {
             void vscode.window.showErrorMessage(message);
             return;
         }
-        const envPath = getRepoEnvPath(repoRoot);
-        let projectKey = getSavedJiraProjectKey(repoRoot);
-        if (!projectKey) {
-            let projects = [];
-            try {
-                projects = await vscode.window.withProgress({
-                    location: vscode.ProgressLocation.Notification,
-                    title: "Loading Jira projects",
-                    cancellable: false
-                }, async () => (0, jira_1.getJiraProjects)(credentials));
-            }
-            catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                void vscode.window.showErrorMessage(`Failed to load Jira projects: ${message}`);
-                return;
-            }
-            const setupSelection = await showJiraProjectSetupDialog(projects);
-            if (!setupSelection)
-                return;
-            if (setupSelection.mode === "select") {
-                projectKey = setupSelection.projectKey;
-            }
-            else {
-                try {
-                    const createdProject = await vscode.window.withProgress({
-                        location: vscode.ProgressLocation.Notification,
-                        title: "Creating Jira project",
-                        cancellable: false
-                    }, async () => (0, jira_1.createJiraProject)(credentials, {
-                        key: setupSelection.key,
-                        name: setupSelection.name,
-                        description: setupSelection.description
-                    }));
-                    projectKey = createdProject.key.toUpperCase();
-                    void vscode.window.showInformationMessage(`Created Jira project ${projectKey} and saved it to this repository .env file.`);
-                }
-                catch (error) {
-                    const message = error instanceof Error ? error.message : String(error);
-                    void vscode.window.showErrorMessage(`Failed to create Jira project: ${message}`);
-                    return;
-                }
-            }
-            (0, utils_1.upsertEnvFileValue)(envPath, "JIRA_PROJECT_KEY", projectKey);
+        const projectKey = await ensureSavedJiraProjectKey(repoRoot, credentials);
+        if (!projectKey)
+            return;
+        let issueTypes;
+        try {
+            issueTypes = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "Loading Jira item types",
+                cancellable: false
+            }, async () => (0, jira_1.getJiraIssueTypes)(credentials, projectKey));
         }
-        const jiraItem = await showCreateJiraItemDialog(projectKey);
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to load Jira item types: ${message}`);
+            return;
+        }
+        if (issueTypes.length === 0) {
+            void vscode.window.showErrorMessage(`No Jira item types are available for project ${projectKey}.`);
+            return;
+        }
+        const jiraItem = await showCreateJiraItemDialog(projectKey, issueTypes);
         if (!jiraItem)
             return;
         try {
@@ -2019,6 +2308,216 @@ function activate(context) {
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             void vscode.window.showErrorMessage(`Failed to create Jira item: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.takeJiraItemAssign", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        let credentials;
+        const projectKey = getSavedJiraProjectKey(repoRoot);
+        try {
+            credentials = getJiraCredentialsFromEnv(repoRoot);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(message);
+            return;
+        }
+        if (!projectKey) {
+            void vscode.window.showErrorMessage("Take Jira Item (Assign) is disabled because JIRA_PROJECT_KEY is not set for this repository.");
+            provider.refresh();
+            return;
+        }
+        let issues;
+        try {
+            issues = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: "Loading unassigned Jira items",
+                cancellable: false
+            }, async () => (0, jira_1.searchOpenUnassignedJiraIssues)(credentials));
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to load Jira items: ${message}`);
+            return;
+        }
+        if (issues.length === 0) {
+            void vscode.window.showInformationMessage("No open Jira tickets assigned to no one were found.");
+            return;
+        }
+        const selection = await vscode.window.showQuickPick(issues.map((issue) => ({
+            label: issue.key,
+            description: issue.summary,
+            detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName]
+                .filter(Boolean)
+                .join(" • "),
+            issue
+        })), {
+            title: "Take Jira Item (Assign)",
+            placeHolder: "Select an open Jira ticket that is currently unassigned",
+            matchOnDescription: true,
+            matchOnDetail: true
+        });
+        if (!selection)
+            return;
+        const confirm = await vscode.window.showInformationMessage(`Assign ${selection.issue.key} to ${credentials.email}?`, { modal: true }, "Assign To Me");
+        if (confirm !== "Assign To Me")
+            return;
+        try {
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Assigning ${selection.issue.key} to you and moving it to In Progress`,
+                cancellable: false
+            }, async () => {
+                await (0, jira_1.assignJiraIssueToCurrentUser)(credentials, selection.issue.key);
+                await (0, jira_1.transitionJiraIssueToStatus)(credentials, selection.issue.key, "In Progress");
+            });
+            void vscode.window.showInformationMessage(`Assigned Jira item ${selection.issue.key} to ${credentials.email} and moved it to In Progress.`);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to assign Jira item: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.assignJiraItemToAgent", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        let credentials;
+        const projectKey = getSavedJiraProjectKey(repoRoot);
+        try {
+            credentials = getJiraCredentialsFromEnv(repoRoot);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(message);
+            return;
+        }
+        if (!projectKey) {
+            void vscode.window.showErrorMessage("Assign Jira Item to Agent is disabled because JIRA_PROJECT_KEY is not set for this repository.");
+            provider.refresh();
+            return;
+        }
+        let issues;
+        try {
+            issues = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Loading unassigned Jira items in ${projectKey}`,
+                cancellable: false
+            }, async () => (0, jira_1.searchOpenUnassignedTodoJiraIssuesForProject)(credentials, projectKey));
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to load Jira items: ${message}`);
+            return;
+        }
+        if (issues.length === 0) {
+            void vscode.window.showInformationMessage(`No unassigned Jira tickets in To Do were found for project ${projectKey}.`);
+            return;
+        }
+        const selection = await showAssignJiraItemToAgentDialog(projectKey, assignableAgentOptions, issues);
+        if (!selection)
+            return;
+        const issue = issues.find((candidate) => candidate.key === selection.issueKey);
+        if (!issue) {
+            void vscode.window.showErrorMessage("The selected Jira item is no longer available.");
+            return;
+        }
+        const updatedSummary = buildIssueSummaryForAgent(issue.summary, selection.agentLabel);
+        try {
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Assigning ${issue.key} to ${selection.agentLabel}`,
+                cancellable: false
+            }, async () => {
+                await (0, jira_1.updateJiraIssueSummaryAndLabels)(credentials, issue.key, updatedSummary, [buildAgentJiraLabel(selection.agentLabel)]);
+                await (0, jira_1.assignJiraIssueToCurrentUser)(credentials, issue.key);
+                await (0, jira_1.transitionJiraIssueToStatus)(credentials, issue.key, "In Progress");
+            });
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to assign Jira item to agent: ${message}`);
+            return;
+        }
+        await launchAgentForJiraItem(repoRoot, selection.agentLabel, issue.key, issue.summary);
+        void vscode.window.showInformationMessage(`${issue.key} was assigned to ${credentials.email}, moved to In Progress, and sent to ${selection.agentLabel}.`);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.completeJiraItem", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        let credentials;
+        const projectKey = getSavedJiraProjectKey(repoRoot);
+        try {
+            credentials = getJiraCredentialsFromEnv(repoRoot);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(message);
+            return;
+        }
+        if (!projectKey) {
+            void vscode.window.showErrorMessage("Jira Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository.");
+            provider.refresh();
+            return;
+        }
+        let issues;
+        try {
+            issues = await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Loading your Jira items in ${projectKey}`,
+                cancellable: false
+            }, async () => (0, jira_1.searchOpenAssignedJiraIssuesForCurrentUser)(credentials, projectKey));
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to load Jira items: ${message}`);
+            return;
+        }
+        if (issues.length === 0) {
+            void vscode.window.showInformationMessage(`No Jira tickets assigned to you in To Do or In Progress were found for project ${projectKey}.`);
+            return;
+        }
+        const selection = await vscode.window.showQuickPick(issues.map((issue) => ({
+            label: issue.key,
+            description: issue.summary,
+            detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName]
+                .filter(Boolean)
+                .join(" • "),
+            issue
+        })), {
+            title: "Jira Item Completed",
+            placeHolder: `Select one of your Jira tickets in ${projectKey} to move into In Review`,
+            matchOnDescription: true,
+            matchOnDetail: true
+        });
+        if (!selection)
+            return;
+        const confirm = await vscode.window.showInformationMessage(`Move ${selection.issue.key} to In Review?`, { modal: true }, "Mark Completed");
+        if (confirm !== "Mark Completed")
+            return;
+        try {
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Moving ${selection.issue.key} to In Review`,
+                cancellable: false
+            }, async () => (0, jira_1.transitionJiraIssueToStatus)(credentials, selection.issue.key, "In Review"));
+            void vscode.window.showInformationMessage(`Moved Jira item ${selection.issue.key} to In Review.`);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to update Jira item: ${message}`);
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.incrementMajorVersion", async () => {
@@ -2063,6 +2562,8 @@ function activate(context) {
             return;
         const { branchType, branchName } = dialogResult;
         (0, logger_1.log)(`[createFeatureBranch] branchName: ${branchName}`);
+        if (branchType.label) {
+            (0, logger_1.log)(`[createFeatureBranch] branchType: ${branchType.label}`);
         const config = vscode.workspace.getConfiguration("antigravity");
         const useAgentForGithubRepositoryManagement = config.get("useAgentForGithubRepositoryManagement") ?? true;
         if (!useAgentForGithubRepositoryManagement) {
@@ -2080,17 +2581,16 @@ function activate(context) {
             scheduleProviderRefresh();
             return;
         }
-        const workflowFile = resolveClaudeWorkflowFile("create_feature_branch");
-        if (!workflowFile) {
-            void vscode.window.showErrorMessage("Create feature branch workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
+        const scriptPath = path.join(extensionRoot, "src", "create_feature_branch.sh");
+        if (!fs.existsSync(scriptPath)) {
+            void vscode.window.showErrorMessage("Create feature branch script not found in the extension package.");
             return;
         }
-        (0, terminal_1.runInNewTerminal)("Claude Feature Branch", [
+        (0, terminal_1.runInNewTerminal)("Create Feature Branch", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `claude --dangerously-skip-permissions ${(0, utils_1.quoteShellArg)(`run this workflow ${workflowFile}. Use branch type ${branchType.label} and branch name ${branchName}. Do not ask for them again.`)}`
+            `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(branchName)}`
         ], {
-            iconPath: new vscode.ThemeIcon("git-branch", terminal_1.CLAUDE_ACTION_COLOR),
-            color: terminal_1.CLAUDE_ACTION_COLOR
+            iconPath: new vscode.ThemeIcon("git-branch")
         });
         scheduleProviderRefresh();
     }));
@@ -2136,33 +2636,16 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        const config = vscode.workspace.getConfiguration("antigravity");
-        const useAgentForGithubRepositoryManagement = config.get("useAgentForGithubRepositoryManagement") ?? true;
-        if (!useAgentForGithubRepositoryManagement) {
-            const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
-            if (!fs.existsSync(scriptPath)) {
-                void vscode.window.showErrorMessage("Create pull request script not found in the extension package.");
-                return;
-            }
-            (0, terminal_1.runInNewTerminal)("Create Pull Request", [
-                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                (0, utils_1.quoteShellArg)(scriptPath)
-            ], {
-                iconPath: new vscode.ThemeIcon("git-pull-request")
-            });
+        const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
+        if (!fs.existsSync(scriptPath)) {
+            void vscode.window.showErrorMessage("Create pull request script not found in the extension package.");
             return;
         }
-        const workflowFile = resolveClaudeWorkflowFile("create_pull_request");
-        if (!workflowFile) {
-            void vscode.window.showErrorMessage("Create pull request workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
-            return;
-        }
-        (0, terminal_1.runInNewTerminal)("Claude Pull Request", [
+        (0, terminal_1.runInNewTerminal)("Create Pull Request", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `claude --dangerously-skip-permissions ${(0, utils_1.quoteShellArg)(`run this workflow ${workflowFile}`)}`
+            (0, utils_1.quoteShellArg)(scriptPath)
         ], {
-            iconPath: new vscode.ThemeIcon("git-pull-request", terminal_1.CLAUDE_ACTION_COLOR),
-            color: terminal_1.CLAUDE_ACTION_COLOR
+            iconPath: new vscode.ThemeIcon("git-pull-request")
         });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.checkoutMain", async () => {
@@ -2186,14 +2669,15 @@ function activate(context) {
             const canProceed = await prepareCommitBeforeCheckout(repoRoot, selectedBranch);
             if (!canProceed)
                 return;
-            const commands = [
-                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                `git rev-parse --verify ${(0, utils_1.quoteShellArg)(`refs/heads/${selectedBranch}`)} >/dev/null 2>&1 && git checkout ${(0, utils_1.quoteShellArg)(selectedBranch)} || git checkout --track ${(0, utils_1.quoteShellArg)(`origin/${selectedBranch}`)}`
-            ];
-            if (selectedBranch === "main") {
-                commands.push("git pull origin main");
+            const scriptPath = path.join(extensionRoot, "src", "checkout_branch.sh");
+            if (!fs.existsSync(scriptPath)) {
+                void vscode.window.showErrorMessage("Checkout branch script not found in the extension package.");
+                return;
             }
-            (0, terminal_1.runInNewTerminal)("Checkout Branch", commands, {
+            (0, terminal_1.runInNewTerminal)("Checkout Branch", [
+                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+                `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(selectedBranch)}`
+            ], {
                 iconPath: new vscode.ThemeIcon("source-control")
             });
             scheduleProviderRefresh();
@@ -2251,9 +2735,9 @@ function activate(context) {
             void vscode.window.showErrorMessage("Approve pull request workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
             return;
         }
-        (0, terminal_1.runInNewTerminal)("Claude Approve Pull Request", [
+        (0, terminal_1.runInNewTerminal)("Agentic Harness Approve Pull Request", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `claude --dangerously-skip-permissions ${(0, utils_1.quoteShellArg)(`run this workflow ${workflowFile}`)}`
+            (0, terminal_1.buildAgenticHarnessPromptCommand)(`run this workflow ${workflowFile}`)
         ], {
             iconPath: new vscode.ThemeIcon("pass", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR
@@ -2313,10 +2797,7 @@ function activate(context) {
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
             `${(0, utils_1.quoteShellArg)(scriptPath)} ${action}`
         ]);
-        provider.refresh();
-        setTimeout(() => {
-            provider.refresh();
-        }, 1000);
+        refreshAutocommitUiWhenStateChanges(repoRoot, action === "start");
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.autocommitRevert", async () => {
         const rootPath = (0, utils_1.getRootPath)();
@@ -2368,10 +2849,11 @@ function activate(context) {
         ]);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openSopManual", async () => {
-        const config = vscode.workspace.getConfiguration("antigravity");
-        const sopManualLink = (config.get("sopManualLink") || "").trim();
+        const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : undefined;
+        const sopManualLink = getSopManualLink(repoRoot);
         if (!sopManualLink) {
-            void vscode.window.showErrorMessage("SOP Manual Link is not set in Antigravity settings.");
+            void vscode.window.showErrorMessage("SOP Manual Link is not set in Antigravity settings or the repository .env file.");
             return;
         }
         try {

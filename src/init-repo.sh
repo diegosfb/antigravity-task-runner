@@ -11,7 +11,7 @@ if [[ -z "${REPO_NAME}" ]]; then
   exit 1
 fi
 
-GIT_EMAIL="diegosfbf@gmail.com"
+GIT_EMAIL="diegosfb@gmail.com"
 VISIBILITY="${REPO_VISIBILITY:-private}"
 USE_HTTPS="${USE_HTTPS:-1}"
 DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"

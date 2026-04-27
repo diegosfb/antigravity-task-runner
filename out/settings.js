@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LOCAL_LITELLM_READY_URL = void 0;
+exports.DEFAULT_SOP_MANUAL_LINK = exports.LOCAL_LITELLM_READY_URL = void 0;
 exports.isLocalLiteLLMBaseUrl = isLocalLiteLLMBaseUrl;
 exports.readClaudeAnthropicBaseUrl = readClaudeAnthropicBaseUrl;
 exports.normalizeStringArray = normalizeStringArray;
@@ -8,6 +8,8 @@ exports.getToolRunCommand = getToolRunCommand;
 exports.getRouterSettings = getRouterSettings;
 exports.loadOpenRouterConfig = loadOpenRouterConfig;
 exports.loadClaudeSettings = loadClaudeSettings;
+exports.getAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand;
+exports.getUseAgentForGithubRepositoryManagement = getUseAgentForGithubRepositoryManagement;
 exports.renderAntigravitySettingsHtml = renderAntigravitySettingsHtml;
 exports.renderAgenticSetupHtml = renderAgenticSetupHtml;
 exports.renderClaudeModelConfigHtml = renderClaudeModelConfigHtml;
@@ -16,6 +18,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 exports.LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
+exports.DEFAULT_SOP_MANUAL_LINK = "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7";
 function isLocalLiteLLMBaseUrl(baseUrl) {
     if (!baseUrl)
         return false;
@@ -154,11 +157,19 @@ const DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS = [
     "opencode run -m ollama/qwen3-coder:480b-cloud",
     "opencode run -m ollama/gpt-oss:20-cloud"
 ];
+function getAgenticHarnessExecutionCommand() {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    return ((config.get("agenticHarnessExecutionCommand") || "").trim() ||
+        DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0]);
+}
+function getUseAgentForGithubRepositoryManagement() {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    return config.get("useAgentForGithubRepositoryManagement") ?? false;
+}
 function getExtensionSettingsFields() {
     const config = vscode.workspace.getConfiguration("antigravity");
     const savedAgenticHarnessExecutionCommands = mergeUniqueStrings(DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS, config.get("agenticHarnessExecutionCommands"));
-    const selectedAgenticHarnessExecutionCommand = (config.get("agenticHarnessExecutionCommand") || "").trim() ||
-        DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0];
+    const selectedAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand();
     const agenticHarnessExecutionCommands = mergeUniqueStrings(savedAgenticHarnessExecutionCommands, [selectedAgenticHarnessExecutionCommand]);
     return [
         {
@@ -185,9 +196,9 @@ function getExtensionSettingsFields() {
         {
             key: "sopManualLink",
             label: "SOP Manual Link",
-            description: "Editable markdown URL used by the SOP Manual quick action.",
+            description: "Editable markdown URL used by the SOP Manual quick action. If SOP_MANUAL_LINK is set in the repository .env file, it overrides this setting.",
             placeholder: "https://example.com/sop-manual.md",
-            value: config.get("sopManualLink") || ""
+            value: config.get("sopManualLink") || exports.DEFAULT_SOP_MANUAL_LINK
         },
         {
             key: "terminalName",
@@ -214,7 +225,7 @@ function getExtensionSettingsFields() {
             key: "antigravityArgs",
             label: "Antigravity Arguments",
             description: 'Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders.',
-            placeholder: '--agent "{agent}"',
+            placeholder: '"{agentFile}"',
             value: config.get("antigravityArgs") || ""
         },
         {
@@ -230,6 +241,27 @@ function getExtensionSettingsFields() {
             description: "Base URL used to download missing config files (e.g. DEV-settings.yaml, .env).",
             placeholder: "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config",
             value: config.get("configFallbackBaseUrl") || ""
+        },
+        {
+            key: "jiraBaseUrl",
+            label: "Jira Base URL",
+            description: "Jira base URL used for Jira actions when not provided by the repository .env.",
+            placeholder: "https://your-company.atlassian.net",
+            value: config.get("jiraBaseUrl") || ""
+        },
+        {
+            key: "jiraEmail",
+            label: "Jira Email",
+            description: "Jira email used for Jira actions when not provided by the repository .env.",
+            placeholder: "name@example.com",
+            value: config.get("jiraEmail") || ""
+        },
+        {
+            key: "jiraApiToken",
+            label: "Jira API Token",
+            description: "Jira API token used for Jira actions when not provided by the repository .env.",
+            placeholder: "jira-api-token",
+            value: config.get("jiraApiToken") || ""
         },
         {
             key: "autoUpdateClaudeMd",

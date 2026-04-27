@@ -57,8 +57,20 @@ _npm_build_script() {
   echo "npm pack"
 }
 
+_is_vscode_extension() {
+  node -e "const p=require('./package.json');process.exit(p.publisher&&p.engines&&p.engines.vscode?0:1)" 2>/dev/null
+}
+
+_npm_package_name() {
+  node -p "require('./package.json').name" 2>/dev/null
+}
+
 if [[ -f "package.json" ]]; then
-  BUILD_CMD="${BUILD_CMD:-$(_npm_build_script)}"
+  if _is_vscode_extension; then
+    BUILD_CMD="${BUILD_CMD:-npm run compile && vsce package}"
+  else
+    BUILD_CMD="${BUILD_CMD:-$(_npm_build_script)}"
+  fi
   VERSION_BUMP="${VERSION_BUMP:-npm version patch --no-git-tag-version}"
   VERSION_CMD="${VERSION_CMD:-node -p \"require('./package.json').version\"}"
 elif [[ -f "pom.xml" ]]; then
@@ -97,6 +109,13 @@ if [[ -n "${VERSION_CMD:-}" ]]; then
   echo "Version: ${VERSION}"
 fi
 
+if [[ -z "${ARTIFACT:-}" ]] && [[ -n "${VERSION}" ]] && [[ -f "package.json" ]] && _is_vscode_extension; then
+  PACKAGE_NAME="$(_npm_package_name)"
+  if [[ -n "${PACKAGE_NAME}" ]]; then
+    ARTIFACT="${PACKAGE_NAME}-${VERSION}.vsix"
+  fi
+fi
+
 # ─── 2. Build ────────────────────────────────────────────────────────────────
 echo "Building:  ${BUILD_CMD}"
 if ! eval "${BUILD_CMD}"; then
@@ -109,8 +128,10 @@ echo "Build succeeded."
 # ─── 3. Resolve artifact(s) ──────────────────────────────────────────────────
 ARTIFACT_ARGS=()
 if [[ -n "${ARTIFACT:-}" ]]; then
+  shopt -s nullglob
   # shellcheck disable=SC2206
-  mapfile -t ARTIFACT_ARGS < <(ls ${ARTIFACT} 2>/dev/null || true)
+  ARTIFACT_ARGS=( ${ARTIFACT} )
+  shopt -u nullglob
   if [[ ${#ARTIFACT_ARGS[@]} -eq 0 ]]; then
     echo "Warning: ARTIFACT pattern '${ARTIFACT}' matched no files — release will have no attachment."
   else
@@ -121,6 +142,14 @@ fi
 # ─── 4. Commit and push ───────────────────────────────────────────────────────
 echo "Committing..."
 git add -A
+if [[ -f "package.json" ]] && _is_vscode_extension; then
+  shopt -s nullglob
+  VSIX_FILES=(./*.vsix)
+  shopt -u nullglob
+  if [[ ${#VSIX_FILES[@]} -gt 0 ]]; then
+    git rm -q --cached --ignore-unmatch -- "${VSIX_FILES[@]}" || true
+  fi
+fi
 git commit -m "${MSG}"
 
 if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then

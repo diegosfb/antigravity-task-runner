@@ -3,6 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getJiraCurrentUserAccountId = getJiraCurrentUserAccountId;
 exports.createJiraProject = createJiraProject;
 exports.getJiraProjects = getJiraProjects;
+exports.searchOpenUnassignedJiraIssues = searchOpenUnassignedJiraIssues;
+exports.searchOpenUnassignedTodoJiraIssuesForProject = searchOpenUnassignedTodoJiraIssuesForProject;
+exports.searchOpenAssignedJiraIssuesForCurrentUser = searchOpenAssignedJiraIssuesForCurrentUser;
+exports.assignJiraIssueToCurrentUser = assignJiraIssueToCurrentUser;
+exports.updateJiraIssueSummary = updateJiraIssueSummary;
+exports.updateJiraIssueSummaryAndLabels = updateJiraIssueSummaryAndLabels;
+exports.transitionJiraIssueToStatus = transitionJiraIssueToStatus;
 exports.getJiraIssueTypes = getJiraIssueTypes;
 exports.getJiraCreateFieldMetadata = getJiraCreateFieldMetadata;
 exports.createJiraIssue = createJiraIssue;
@@ -136,12 +143,151 @@ async function getJiraProjects(credentials) {
     });
     return (response.values ?? []).sort((a, b) => a.name.localeCompare(b.name));
 }
+async function searchOpenUnassignedJiraIssues(credentials) {
+    const response = await jiraRequest(credentials, {
+        method: "POST",
+        apiPath: "/rest/api/3/search/jql",
+        body: {
+            fields: ["summary", "issuetype", "project", "status"],
+            jql: "assignee IS EMPTY AND statusCategory != Done ORDER BY updated DESC",
+            maxResults: 100
+        }
+    });
+    return (response.issues ?? [])
+        .map((issue) => ({
+        id: (issue.id ?? "").trim(),
+        key: (issue.key ?? "").trim(),
+        summary: (issue.fields?.summary ?? "").trim(),
+        projectKey: (issue.fields?.project?.key ?? "").trim(),
+        projectName: (issue.fields?.project?.name ?? "").trim(),
+        issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
+        statusName: (issue.fields?.status?.name ?? "").trim()
+    }))
+        .filter((issue) => issue.id && issue.key && issue.summary);
+}
+async function searchOpenUnassignedTodoJiraIssuesForProject(credentials, projectKey) {
+    const normalizedProjectKey = projectKey.trim().toUpperCase();
+    const response = await jiraRequest(credentials, {
+        method: "POST",
+        apiPath: "/rest/api/3/search/jql",
+        body: {
+            fields: ["summary", "issuetype", "project", "status"],
+            jql: `project = "${normalizedProjectKey}" AND assignee IS EMPTY AND statusCategory = "To Do" ORDER BY updated DESC`,
+            maxResults: 100
+        }
+    });
+    return (response.issues ?? [])
+        .map((issue) => ({
+        id: (issue.id ?? "").trim(),
+        key: (issue.key ?? "").trim(),
+        summary: (issue.fields?.summary ?? "").trim(),
+        projectKey: (issue.fields?.project?.key ?? "").trim(),
+        projectName: (issue.fields?.project?.name ?? "").trim(),
+        issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
+        statusName: (issue.fields?.status?.name ?? "").trim()
+    }))
+        .filter((issue) => issue.id &&
+        issue.key &&
+        issue.summary &&
+        issue.projectKey === normalizedProjectKey);
+}
+async function searchOpenAssignedJiraIssuesForCurrentUser(credentials, projectKey) {
+    const currentUserAccountId = await getJiraCurrentUserAccountId(credentials);
+    const normalizedProjectKey = projectKey.trim().toUpperCase();
+    const response = await jiraRequest(credentials, {
+        method: "POST",
+        apiPath: "/rest/api/3/search/jql",
+        body: {
+            fields: ["summary", "issuetype", "project", "status", "assignee"],
+            jql: `project = "${normalizedProjectKey}" AND assignee = currentUser() AND assignee IS NOT EMPTY AND status in ("To Do", "In Progress") ORDER BY updated DESC`,
+            maxResults: 100
+        }
+    });
+    return (response.issues ?? [])
+        .map((issue) => ({
+        id: (issue.id ?? "").trim(),
+        key: (issue.key ?? "").trim(),
+        summary: (issue.fields?.summary ?? "").trim(),
+        projectKey: (issue.fields?.project?.key ?? "").trim(),
+        projectName: (issue.fields?.project?.name ?? "").trim(),
+        issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
+        statusName: (issue.fields?.status?.name ?? "").trim(),
+        assigneeAccountId: (issue.fields?.assignee?.accountId ?? "").trim()
+    }))
+        .filter((issue) => issue.id &&
+        issue.key &&
+        issue.summary &&
+        issue.projectKey === normalizedProjectKey &&
+        issue.assigneeAccountId === currentUserAccountId &&
+        ["To Do", "In Progress"].includes(issue.statusName))
+        .map(({ assigneeAccountId, ...issue }) => issue);
+}
+async function assignJiraIssueToCurrentUser(credentials, issueKey) {
+    const accountId = await getJiraCurrentUserAccountId(credentials);
+    await jiraRequest(credentials, {
+        method: "PUT",
+        apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/assignee`,
+        body: {
+            accountId
+        }
+    });
+}
+async function updateJiraIssueSummary(credentials, issueKey, summary) {
+    await updateJiraIssueSummaryAndLabels(credentials, issueKey, summary);
+}
+async function updateJiraIssueSummaryAndLabels(credentials, issueKey, summary, labels) {
+    await jiraRequest(credentials, {
+        method: "PUT",
+        apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}`,
+        body: {
+            fields: {
+                summary: summary.trim(),
+                ...(labels ? { labels } : {})
+            }
+        }
+    });
+}
+async function clearJiraIssueAssignee(credentials, issueKey) {
+    await jiraRequest(credentials, {
+        method: "PUT",
+        apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/assignee`,
+        body: {
+            accountId: null
+        }
+    });
+}
+async function transitionJiraIssueToStatus(credentials, issueKey, targetStatusName) {
+    const response = await jiraRequest(credentials, {
+        method: "GET",
+        apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/transitions`
+    });
+    const transitions = response.transitions ?? [];
+    const transition = transitions.find((candidate) => (candidate.name ?? "").trim().toLowerCase() === targetStatusName.trim().toLowerCase());
+    if (!transition?.id) {
+        const available = transitions
+            .map((candidate) => (candidate.name ?? "").trim())
+            .filter(Boolean)
+            .join(", ");
+        throw new Error(available
+            ? `Transition "${targetStatusName}" is not available. Available transitions: ${available}.`
+            : `Transition "${targetStatusName}" is not available for ${issueKey}.`);
+    }
+    await jiraRequest(credentials, {
+        method: "POST",
+        apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/transitions`,
+        body: {
+            transition: {
+                id: transition.id
+            }
+        }
+    });
+}
 async function getJiraIssueTypes(credentials, projectKey) {
     const response = await jiraRequest(credentials, {
         method: "GET",
         apiPath: `/rest/api/3/issue/createmeta/${encodeURIComponent(projectKey)}/issuetypes`
     });
-    return response.issueTypes ?? [];
+    return (response.issueTypes ?? []).filter((issueType) => issueType.name.trim().toLowerCase() !== "sub-task");
 }
 async function getJiraCreateFieldMetadata(credentials, projectKey, issueTypeId) {
     const response = await jiraRequest(credentials, {
@@ -198,7 +344,9 @@ async function createJiraIssue(credentials, details) {
         body: { fields }
     });
     try {
-        return await createIssueRequest();
+        const createdIssue = await createIssueRequest();
+        await clearJiraIssueAssignee(credentials, createdIssue.key);
+        return createdIssue;
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -210,7 +358,9 @@ async function createJiraIssue(credentials, details) {
         for (const fieldKey of retryableFieldKeys) {
             delete fields[fieldKey];
         }
-        return createIssueRequest();
+        const createdIssue = await createIssueRequest();
+        await clearJiraIssueAssignee(credentials, createdIssue.key);
+        return createdIssue;
     }
 }
 //# sourceMappingURL=jira.js.map

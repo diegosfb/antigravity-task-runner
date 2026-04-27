@@ -278,6 +278,7 @@ exports.AntigravityViewProvider = AntigravityViewProvider;
 const QUICK_ACTION_COLOR = new vscode.ThemeColor("charts.green");
 const ORANGE_ACTION_COLOR = new vscode.ThemeColor("charts.orange");
 const CLAUDE_MODEL_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
+const JIRA_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const TOP_LEVEL_LINKED_FOLDERS = [
@@ -465,6 +466,14 @@ function getQuickActionItems() {
     const autocommitRunning = repoRoot ? (0, git_1.isAutocommitRunning)(repoRoot) : false;
     const hasAgentFolder = repoRoot ? fs.existsSync(path.join((0, utils_1.getWorkspaceProjectPath)(repoRoot), ".agent")) : false;
     const hasGitHub = repoRoot ? (0, git_1.hasGitHubRemoteSync)(repoRoot) : false;
+    const savedJiraProjectKey = repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
+        ? (fs
+            .readFileSync(path.join(repoRoot, ".env"), "utf8")
+            .match(/^\s*JIRA_PROJECT_KEY\s*=\s*([^\r\n#]+)/m)?.[1] ?? "")
+            .trim()
+            .replace(/^['"]|['"]$/g, "")
+            .toUpperCase()
+        : "";
     const currentBranch = repoRoot && hasRepo ? (0, git_1.getCurrentBranchNameSync)(repoRoot) : undefined;
     const workspaceSetup = new NodeItem({ kind: "action", label: "Workspace Setup" }, vscode.TreeItemCollapsibleState.None);
     workspaceSetup.iconPath = new vscode.ThemeIcon("run-all", QUICK_ACTION_COLOR);
@@ -477,31 +486,95 @@ function getQuickActionItems() {
         title: "Run Workspace Setup"
     };
     items.push(workspaceSetup);
-    const initRepo = new NodeItem({ kind: "action", label: "Init Repository" }, vscode.TreeItemCollapsibleState.None);
-    initRepo.iconPath = new vscode.ThemeIcon("repo", ORANGE_ACTION_COLOR);
-    if (hasRepo) {
-        initRepo.label = "I̶n̶i̶t̶ ̶R̶e̶p̶o̶s̶i̶t̶o̶r̶y̶";
-        initRepo.iconPath = new vscode.ThemeIcon("repo", new vscode.ThemeColor("disabledForeground"));
-        initRepo.tooltip = "Repository already exists in this project.";
+    const assignJiraItemToAgent = new NodeItem({ kind: "action", label: "Assign Jira Item to Agent" }, vscode.TreeItemCollapsibleState.None);
+    assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
+    if (!savedJiraProjectKey) {
+        assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", new vscode.ThemeColor("disabledForeground"));
+        assignJiraItemToAgent.tooltip =
+            "Set JIRA_PROJECT_KEY in this repository before assigning a Jira item to an agent.";
     }
-    else {
+    assignJiraItemToAgent.command = {
+        command: "antigravity.assignJiraItemToAgent",
+        title: "Assign Jira Item to Agent"
+    };
+    items.push(assignJiraItemToAgent);
+    if (!hasRepo) {
+        const initRepo = new NodeItem({ kind: "action", label: "Init Repository" }, vscode.TreeItemCollapsibleState.None);
+        initRepo.iconPath = new vscode.ThemeIcon("repo", ORANGE_ACTION_COLOR);
         initRepo.command = {
             command: "antigravity.initRepository",
             title: "Init Repository"
         };
+        items.push(initRepo);
     }
-    items.push(initRepo);
-    const commitChanges = new NodeItem({ kind: "action", label: "Commit" }, vscode.TreeItemCollapsibleState.None);
-    if (!hasRepo) {
-        commitChanges.iconPath = new vscode.ThemeIcon("check", new vscode.ThemeColor("disabledForeground"));
-        commitChanges.tooltip = "Initialize a repository before committing changes.";
-    }
-    else {
+    if (hasRepo) {
+        const commitChanges = new NodeItem({ kind: "action", label: "Commit" }, vscode.TreeItemCollapsibleState.None);
         commitChanges.iconPath = new vscode.ThemeIcon("check", ORANGE_ACTION_COLOR);
         commitChanges.command = {
             command: "antigravity.commitChanges",
             title: "Commit"
         };
+        items.push(commitChanges);
+        const createRepoTagVersion = new NodeItem({ kind: "action", label: "Create Repo Release" }, vscode.TreeItemCollapsibleState.None);
+        createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", ORANGE_ACTION_COLOR);
+        createRepoTagVersion.command = {
+            command: "antigravity.createRepoTagVersion",
+            title: "Create Repo Release"
+        };
+        items.push(createRepoTagVersion);
+        const createFeatureBranch = new NodeItem({ kind: "action", label: "Create Feature Branch" }, vscode.TreeItemCollapsibleState.None);
+        createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", ORANGE_ACTION_COLOR);
+        createFeatureBranch.command = {
+            command: "antigravity.createFeatureBranch",
+            title: "Create Feature Branch"
+        };
+        items.push(createFeatureBranch);
+        const createPullRequest = new NodeItem({ kind: "action", label: "Create Pull Request" }, vscode.TreeItemCollapsibleState.None);
+        createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
+        createPullRequest.command = {
+            command: "antigravity.createPullRequest",
+            title: "Create Pull Request"
+        };
+        items.push(createPullRequest);
+        const checkoutMain = new NodeItem({ kind: "action", label: "Go To Branch" }, vscode.TreeItemCollapsibleState.None);
+        checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
+        checkoutMain.command = {
+            command: "antigravity.checkoutMain",
+            title: "Go To Branch"
+        };
+        items.push(checkoutMain);
+    }
+    if (!savedJiraProjectKey) {
+        const selectOrCreateJiraProject = new NodeItem({ kind: "action", label: "Select/Create Jira Project" }, vscode.TreeItemCollapsibleState.None);
+        selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", JIRA_ACTION_COLOR);
+        selectOrCreateJiraProject.command = {
+            command: "antigravity.selectOrCreateJiraProject",
+            title: "Select/Create Jira Project"
+        };
+        items.push(selectOrCreateJiraProject);
+    }
+    else {
+        const addJiraItem = new NodeItem({ kind: "action", label: "Add Jira Item" }, vscode.TreeItemCollapsibleState.None);
+        addJiraItem.iconPath = new vscode.ThemeIcon("add", JIRA_ACTION_COLOR);
+        addJiraItem.command = {
+            command: "antigravity.addJiraItem",
+            title: "Add Jira Item"
+        };
+        items.push(addJiraItem);
+        const takeJiraItemAssign = new NodeItem({ kind: "action", label: "Take Jira Item (Assign)" }, vscode.TreeItemCollapsibleState.None);
+        takeJiraItemAssign.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
+        takeJiraItemAssign.command = {
+            command: "antigravity.takeJiraItemAssign",
+            title: "Take Jira Item (Assign)"
+        };
+        items.push(takeJiraItemAssign);
+        const completeJiraItem = new NodeItem({ kind: "action", label: "Jira Item Completed" }, vscode.TreeItemCollapsibleState.None);
+        completeJiraItem.iconPath = new vscode.ThemeIcon("pass", JIRA_ACTION_COLOR);
+        completeJiraItem.command = {
+            command: "antigravity.completeJiraItem",
+            title: "Jira Item Completed"
+        };
+        items.push(completeJiraItem);
     }
     items.push(commitChanges);
     const createRepoTagVersion = new NodeItem({ kind: "action", label: "Create Repo Release" }, vscode.TreeItemCollapsibleState.None);
@@ -586,20 +659,15 @@ function getQuickActionItems() {
         };
     }
     items.push(autocommitCheckpoint);
-    const revertChanges = new NodeItem({ kind: "action", label: "Revert Changes" }, vscode.TreeItemCollapsibleState.None);
     if (autocommitRunning) {
+        const revertChanges = new NodeItem({ kind: "action", label: "Revert Changes" }, vscode.TreeItemCollapsibleState.None);
         revertChanges.iconPath = new vscode.ThemeIcon("discard", QUICK_ACTION_COLOR);
         revertChanges.command = {
             command: "antigravity.autocommitRevert",
             title: "Revert Changes"
         };
+        items.push(revertChanges);
     }
-    else {
-        revertChanges.label = "R̶e̶v̶e̶r̶t̶ ̶C̶h̶a̶n̶g̶e̶s̶";
-        revertChanges.iconPath = new vscode.ThemeIcon("discard", new vscode.ThemeColor("disabledForeground"));
-        revertChanges.tooltip = "Autocommit is not running.";
-    }
-    items.push(revertChanges);
     const environmentSwitch = new NodeItem({ kind: "action", label: "Environment Switch" }, vscode.TreeItemCollapsibleState.None);
     environmentSwitch.iconPath = new vscode.ThemeIcon("sync", QUICK_ACTION_COLOR);
     environmentSwitch.command = {

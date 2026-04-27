@@ -278,8 +278,12 @@ function getAntigravityExecutable() {
         "antigravity");
 }
 function getAntigravityArgsTemplate() {
-    return (vscode.workspace.getConfiguration("antigravity").get("antigravityArgs") ||
-        '--agent "{agent}"');
+    const configured = vscode.workspace.getConfiguration("antigravity").get("antigravityArgs") || "";
+    const trimmed = configured.trim();
+    if (!trimmed || trimmed === '--agent "{agent}"') {
+        return '"{agentFile}"';
+    }
+    return trimmed;
 }
 function interpolateAgentArgs(template, agentName, agentFile) {
     return template.replace(/\{agent\}/g, agentName).replace(/\{agentFile\}/g, agentFile);
@@ -295,9 +299,11 @@ async function runAgent(agentName, agentFile) {
     const safeAgentFile = agentFile.replace(/"/g, '\\"');
     const command = getAntigravityExecutable();
     const args = interpolateAgentArgs(getAntigravityArgsTemplate(), safeAgentName, safeAgentFile).trim();
+    const runString = args ? `${command} ${args}` : command;
+    (0, logger_1.logAlways)(`[runAgent] runString: ${runString}`);
     await (0, terminal_1.runInSecondaryTerminal)([
         `cd "${repoRoot}"`,
-        args ? `${command} ${args}` : command
+        runString
     ]);
 }
 //# sourceMappingURL=scripts.js.map

@@ -30,6 +30,10 @@
     "onCommand:antigravity.approvePullRequest",
     "onCommand:antigravity.feedbackOnPullRequest",
     "onCommand:antigravity.addJiraItem",
+    "onCommand:antigravity.selectOrCreateJiraProject",
+    "onCommand:antigravity.assignJiraItemToAgent",
+    "onCommand:antigravity.takeJiraItemAssign",
+    "onCommand:antigravity.completeJiraItem",
     "onCommand:antigravity.openSopManual",
     "onCommand:antigravity.openClaudeTerminal",
     "onCommand:antigravity.openOpenClaudeTerminal"
@@ -85,6 +89,22 @@
       {
         "command": "antigravity.commitChanges",
         "title": "Antigravity: Commit Changes"
+      },
+      {
+        "command": "antigravity.takeJiraItemAssign",
+        "title": "Antigravity: Take Jira Item (Assign)"
+      },
+      {
+        "command": "antigravity.assignJiraItemToAgent",
+        "title": "Antigravity: Assign Jira Item to Agent"
+      },
+      {
+        "command": "antigravity.selectOrCreateJiraProject",
+        "title": "Antigravity: Select/Create Jira Project"
+      },
+      {
+        "command": "antigravity.completeJiraItem",
+        "title": "Antigravity: Jira Item Completed"
       },
       {
         "command": "antigravity.updateAgenticWorkspace",
@@ -299,7 +319,7 @@
         },
         "antigravity.antigravityArgs": {
           "type": "string",
-          "default": "--agent \"{agent}\"",
+          "default": "\"{agentFile}\"",
           "description": "Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders."
         },
         "antigravity.scriptFallbackBaseUrl": {
@@ -311,6 +331,21 @@
           "type": "string",
           "default": "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config",
           "description": "Base URL used to download missing config files (e.g. DEV-settings.yaml, .env)."
+        },
+        "antigravity.jiraBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Jira base URL used for Jira actions when not provided by the repository .env."
+        },
+        "antigravity.jiraEmail": {
+          "type": "string",
+          "default": "",
+          "description": "Jira email used for Jira actions when not provided by the repository .env."
+        },
+        "antigravity.jiraApiToken": {
+          "type": "string",
+          "default": "",
+          "description": "Jira API token used for Jira actions when not provided by the repository .env."
         },
         "antigravity.antigravityWorkspaceProject": {
           "type": "string",
@@ -329,7 +364,7 @@
         },
         "antigravity.sopManualLink": {
           "type": "string",
-          "default": "",
+          "default": "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7",
           "description": "Markdown URL used by the SOP Manual quick action."
         },
         "antigravity.autoUpdateClaudeMd": {
@@ -411,6 +446,7 @@
     "src/init-repo.sh",
     "src/create_feature_branch.sh",
     "src/create_pull_requrest.sh",
+    "src/checkout_branch.sh",
     "src/update-agent-setup.sh",
     "src/update-agentic-workspace.sh",
     "src/workspace-setup.sh",
@@ -419,6 +455,7 @@
   ],
   "scripts": {
     "compile": "node node_modules/typescript/lib/tsc.js -p ./",
+    "test": "npm run compile && node --test tests/agentRunCommand.test.js",
     "create-release": "bash scripts/create-release.sh",
     "sync-view-name": "node src/sync-view-name.js",
     "version": "node src/sync-view-name.js",

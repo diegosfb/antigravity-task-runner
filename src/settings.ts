@@ -4,6 +4,8 @@ import * as path from "path";
 import * as os from "os";
 
 export const LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
+export const DEFAULT_SOP_MANUAL_LINK =
+  "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7";
 
 export function isLocalLiteLLMBaseUrl(baseUrl: string | undefined): boolean {
   if (!baseUrl) return false;
@@ -185,15 +187,26 @@ const DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS = [
   "opencode run -m ollama/gpt-oss:20-cloud"
 ];
 
+export function getAgenticHarnessExecutionCommand(): string {
+  const config = vscode.workspace.getConfiguration("antigravity");
+  return (
+    (config.get<string>("agenticHarnessExecutionCommand") || "").trim() ||
+    DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0]
+  );
+}
+
+export function getUseAgentForGithubRepositoryManagement(): boolean {
+  const config = vscode.workspace.getConfiguration("antigravity");
+  return config.get<boolean>("useAgentForGithubRepositoryManagement") ?? false;
+}
+
 function getExtensionSettingsFields(): SettingsField[] {
   const config = vscode.workspace.getConfiguration("antigravity");
   const savedAgenticHarnessExecutionCommands = mergeUniqueStrings(
     DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS,
     config.get<string[]>("agenticHarnessExecutionCommands")
   );
-  const selectedAgenticHarnessExecutionCommand =
-    (config.get<string>("agenticHarnessExecutionCommand") || "").trim() ||
-    DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0];
+  const selectedAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand();
   const agenticHarnessExecutionCommands = mergeUniqueStrings(
     savedAgenticHarnessExecutionCommands,
     [selectedAgenticHarnessExecutionCommand]
@@ -224,9 +237,10 @@ function getExtensionSettingsFields(): SettingsField[] {
     {
       key: "sopManualLink",
       label: "SOP Manual Link",
-      description: "Editable markdown URL used by the SOP Manual quick action.",
+      description:
+        "Editable markdown URL used by the SOP Manual quick action. If SOP_MANUAL_LINK is set in the repository .env file, it overrides this setting.",
       placeholder: "https://example.com/sop-manual.md",
-      value: config.get<string>("sopManualLink") || ""
+      value: config.get<string>("sopManualLink") || DEFAULT_SOP_MANUAL_LINK
     },
     {
       key: "terminalName",
@@ -254,7 +268,7 @@ function getExtensionSettingsFields(): SettingsField[] {
       label: "Antigravity Arguments",
       description:
         'Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders.',
-      placeholder: '--agent "{agent}"',
+      placeholder: '"{agentFile}"',
       value: config.get<string>("antigravityArgs") || ""
     },
     {
@@ -272,6 +286,27 @@ function getExtensionSettingsFields(): SettingsField[] {
         "Base URL used to download missing config files (e.g. DEV-settings.yaml, .env).",
       placeholder: "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config",
       value: config.get<string>("configFallbackBaseUrl") || ""
+    },
+    {
+      key: "jiraBaseUrl",
+      label: "Jira Base URL",
+      description: "Jira base URL used for Jira actions when not provided by the repository .env.",
+      placeholder: "https://your-company.atlassian.net",
+      value: config.get<string>("jiraBaseUrl") || ""
+    },
+    {
+      key: "jiraEmail",
+      label: "Jira Email",
+      description: "Jira email used for Jira actions when not provided by the repository .env.",
+      placeholder: "name@example.com",
+      value: config.get<string>("jiraEmail") || ""
+    },
+    {
+      key: "jiraApiToken",
+      label: "Jira API Token",
+      description: "Jira API token used for Jira actions when not provided by the repository .env.",
+      placeholder: "jira-api-token",
+      value: config.get<string>("jiraApiToken") || ""
     },
     {
       key: "autoUpdateClaudeMd",

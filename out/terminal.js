@@ -3,10 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CLAUDE_ACTION_COLOR = void 0;
 exports.runInSecondaryTerminal = runInSecondaryTerminal;
 exports.runInNewTerminal = runInNewTerminal;
+exports.buildAgenticHarnessPromptCommand = buildAgenticHarnessPromptCommand;
 exports.runClaudeInitAndUpdateInNewTerminal = runClaudeInitAndUpdateInNewTerminal;
 exports.runCodexInitAndUpdateInNewTerminal = runCodexInitAndUpdateInNewTerminal;
 exports.runClaudePromptInNewTerminal = runClaudePromptInNewTerminal;
 const vscode = require("vscode");
+const logger_1 = require("./logger");
+const settings_1 = require("./settings");
 const utils_1 = require("./utils");
 exports.CLAUDE_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
 function getOrCreateTerminal(name) {
@@ -34,12 +37,23 @@ function runInNewTerminal(name, lines, options = {}) {
         terminal.sendText(line, true);
     }
 }
+function buildAgenticHarnessPromptCommand(prompt, mode = "dangerous") {
+    const command = (0, settings_1.getAgenticHarnessExecutionCommand)();
+    const runString = command.startsWith("claude")
+        ? `${command}${mode === "dangerous" ? " --dangerously-skip-permissions" : ""} ${(0, utils_1.quoteShellArg)(prompt)}`
+        : `${command} ${(0, utils_1.quoteShellArg)(prompt)}`;
+    (0, logger_1.logAlways)(`[agenticHarness] runString: ${runString}`);
+    if (command.startsWith("claude")) {
+        return runString;
+    }
+    return runString;
+}
 async function runClaudeInitAndUpdateInNewTerminal(repoRoot, prompt) {
     const commands = [
-        `cd "${repoRoot}"`,
-        `claude --dangerously-skip-permissions "${prompt.replace(/"/g, '\\"')}"`
+        `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+        buildAgenticHarnessPromptCommand(prompt, "dangerous")
     ];
-    runInNewTerminal("Claude Init", commands, {
+    runInNewTerminal("Agentic Harness Init", commands, {
         iconPath: new vscode.ThemeIcon("robot", exports.CLAUDE_ACTION_COLOR),
         color: exports.CLAUDE_ACTION_COLOR
     });
@@ -55,7 +69,7 @@ async function runCodexInitAndUpdateInNewTerminal(repoRoot, prompt) {
     });
 }
 function runClaudePromptInNewTerminal(repoRoot, prompt) {
-    runInNewTerminal("Claude", [`cd "${repoRoot}"`, `claude -p "${prompt.replace(/"/g, '\\"')}"`], {
+    runInNewTerminal("Agentic Harness", [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, buildAgenticHarnessPromptCommand(prompt, "prompt")], {
         iconPath: new vscode.ThemeIcon("robot", exports.CLAUDE_ACTION_COLOR),
         color: exports.CLAUDE_ACTION_COLOR
     });
