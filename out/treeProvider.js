@@ -474,7 +474,6 @@ function getQuickActionItems() {
             .replace(/^['"]|['"]$/g, "")
             .toUpperCase()
         : "";
-    const currentBranch = repoRoot && hasRepo ? (0, git_1.getCurrentBranchNameSync)(repoRoot) : undefined;
     const workspaceSetup = new NodeItem({ kind: "action", label: "Workspace Setup" }, vscode.TreeItemCollapsibleState.None);
     workspaceSetup.iconPath = new vscode.ThemeIcon("run-all", QUICK_ACTION_COLOR);
     if (hasAgentFolder) {
@@ -576,55 +575,6 @@ function getQuickActionItems() {
         };
         items.push(completeJiraItem);
     }
-    items.push(commitChanges);
-    const createRepoTagVersion = new NodeItem({ kind: "action", label: "Create Repo Release" }, vscode.TreeItemCollapsibleState.None);
-    createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", ORANGE_ACTION_COLOR);
-    createRepoTagVersion.command = {
-        command: "antigravity.createRepoTagVersion",
-        title: "Create Repo Release"
-    };
-    items.push(createRepoTagVersion);
-    const createFeatureBranch = new NodeItem({ kind: "action", label: "Create Feature Branch" }, vscode.TreeItemCollapsibleState.None);
-    createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", ORANGE_ACTION_COLOR);
-    createFeatureBranch.command = {
-        command: "antigravity.createFeatureBranch",
-        title: "Create Feature Branch"
-    };
-    items.push(createFeatureBranch);
-    const createPullRequest = new NodeItem({ kind: "action", label: "Create Pull Request" }, vscode.TreeItemCollapsibleState.None);
-    createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
-    createPullRequest.command = {
-        command: "antigravity.createPullRequest",
-        title: "Create Pull Request"
-    };
-    items.push(createPullRequest);
-    if (currentBranch && currentBranch !== "main") {
-        const mergeBranch = new NodeItem({ kind: "action", label: "Merge Branch" }, vscode.TreeItemCollapsibleState.None);
-        mergeBranch.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
-        mergeBranch.tooltip = `Merge ${currentBranch} into main.`;
-        mergeBranch.command = {
-            command: "antigravity.mergeBranch",
-            title: "Merge Branch"
-        };
-        items.push(mergeBranch);
-    }
-    const checkoutMain = new NodeItem({ kind: "action", label: "Go To Branch" }, vscode.TreeItemCollapsibleState.None);
-    checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
-    checkoutMain.command = {
-        command: "antigravity.checkoutMain",
-        title: "Go To Branch"
-    };
-    items.push(checkoutMain);
-    const prReviewer = new NodeItem({ kind: "category", label: "PR Reviewer" }, vscode.TreeItemCollapsibleState.Collapsed);
-    prReviewer.iconPath = new vscode.ThemeIcon("git-pull-request", QUICK_ACTION_COLOR);
-    items.push(prReviewer);
-    const addJiraItem = new NodeItem({ kind: "action", label: "Add Jira Item" }, vscode.TreeItemCollapsibleState.None);
-    addJiraItem.iconPath = new vscode.ThemeIcon("issues", QUICK_ACTION_COLOR);
-    addJiraItem.command = {
-        command: "antigravity.addJiraItem",
-        title: "Add Jira Item"
-    };
-    items.push(addJiraItem);
     const incrementMajor = new NodeItem({ kind: "action", label: "Increment Major Version" }, vscode.TreeItemCollapsibleState.None);
     incrementMajor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
     incrementMajor.command = {

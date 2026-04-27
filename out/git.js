@@ -5,7 +5,6 @@ exports.startAutocommit = startAutocommit;
 exports.stopAutocommit = stopAutocommit;
 exports.hasGitHubRemote = hasGitHubRemote;
 exports.hasGitHubRemoteSync = hasGitHubRemoteSync;
-exports.getCurrentBranchNameSync = getCurrentBranchNameSync;
 const path = require("path");
 const child_process_1 = require("child_process");
 const utils_1 = require("./utils");
@@ -87,16 +86,6 @@ function hasGitHubRemoteSync(repoRoot) {
     }
     catch {
         return false;
-    }
-}
-function getCurrentBranchNameSync(repoRoot) {
-    try {
-        const stdout = (0, child_process_1.execSync)(`git -C "${repoRoot}" branch --show-current`, { encoding: "utf8" });
-        const branchName = stdout.trim();
-        return branchName || undefined;
-    }
-    catch {
-        return undefined;
     }
 }
 //# sourceMappingURL=git.js.map

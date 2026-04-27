@@ -85,13 +85,3 @@ export function hasGitHubRemoteSync(repoRoot: string): boolean {
     return false;
   }
 }
-
-export function getCurrentBranchNameSync(repoRoot: string): string | undefined {
-  try {
-    const stdout = execSync(`git -C "${repoRoot}" branch --show-current`, { encoding: "utf8" });
-    const branchName = stdout.trim();
-    return branchName || undefined;
-  } catch {
-    return undefined;
-  }
-}
