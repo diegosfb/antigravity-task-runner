@@ -242,6 +242,13 @@ export function activate(context: vscode.ExtensionContext) {
     return undefined;
   };
 
+  const scheduleProviderRefresh = (delaysMs: number[] = [1500, 5000, 15000]): void => {
+    provider.refresh();
+    for (const delayMs of delaysMs) {
+      setTimeout(() => provider.refresh(), delayMs);
+    }
+  };
+
   const renderCreateFeatureBranchHtml = (webview: vscode.Webview): string => {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -3170,6 +3177,31 @@ export function activate(context: vscode.ExtensionContext) {
       log(`[createFeatureBranch] branchName: ${branchName}`);
       if (branchType.label) {
         log(`[createFeatureBranch] branchType: ${branchType.label}`);
+      const config = vscode.workspace.getConfiguration("antigravity");
+      const useAgentForGithubRepositoryManagement =
+        config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true;
+
+      if (!useAgentForGithubRepositoryManagement) {
+        const scriptPath = path.join(extensionRoot, "src", "create_feature_branch.sh");
+        if (!fs.existsSync(scriptPath)) {
+          void vscode.window.showErrorMessage(
+            "Create feature branch script not found in the extension package."
+          );
+          return;
+        }
+
+        runInNewTerminal(
+          "Create Feature Branch",
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            `${quoteShellArg(scriptPath)} ${quoteShellArg(branchName)}`
+          ],
+          {
+            iconPath: new vscode.ThemeIcon("git-branch")
+          }
+        );
+        scheduleProviderRefresh();
+        return;
       }
       const scriptPath = path.join(extensionRoot, "src", "create_feature_branch.sh");
       if (!fs.existsSync(scriptPath)) {
@@ -3189,6 +3221,54 @@ export function activate(context: vscode.ExtensionContext) {
           iconPath: new vscode.ThemeIcon("git-branch")
         }
       );
+      scheduleProviderRefresh();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.mergeBranch", async () => {
+      log("[mergeBranch] triggered");
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+
+      try {
+        const currentBranch = await getCurrentBranchName(repoRoot);
+        if (!currentBranch || currentBranch === "main" || currentBranch === "detached HEAD") {
+          void vscode.window.showInformationMessage(
+            "Merge Branch is only available when you are working on a non-main branch."
+          );
+          return;
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Merge Branch failed: ${message}`);
+        return;
+      }
+
+      const workflowFile = resolveClaudeWorkflowFile("approve_pull_request");
+      if (!workflowFile) {
+        void vscode.window.showErrorMessage(
+          "Merge branch workflow not found in the configured Antigravity Workflows Folder or the bundled extension files."
+        );
+        return;
+      }
+
+      runInNewTerminal(
+        "Claude Merge Branch",
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          `claude --dangerously-skip-permissions ${quoteShellArg(`run this workflow ${workflowFile}`)}`
+        ],
+        {
+          iconPath: new vscode.ThemeIcon("git-pull-request", CLAUDE_ACTION_COLOR),
+          color: CLAUDE_ACTION_COLOR
+        }
+      );
+      scheduleProviderRefresh();
     })
   );
 
@@ -3264,6 +3344,7 @@ export function activate(context: vscode.ExtensionContext) {
             iconPath: new vscode.ThemeIcon("source-control")
           }
         );
+        scheduleProviderRefresh();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(`Checkout branch failed: ${message}`);
@@ -3309,6 +3390,7 @@ export function activate(context: vscode.ExtensionContext) {
             iconPath: new vscode.ThemeIcon("git-pull-request")
           }
         );
+        scheduleProviderRefresh();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(`Review Pull Request failed: ${message}`);

@@ -5,7 +5,7 @@ import * as os from "os";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { getRootPath, getRepoRoot, getWorkspaceProjectPath, getAntigravityHomePath, safeReadDir } from "./utils";
-import { isAutocommitRunning, hasGitHubRemoteSync } from "./git";
+import { isAutocommitRunning, hasGitHubRemoteSync, getCurrentBranchNameSync } from "./git";
 import { CLAUDE_ACTION_COLOR } from "./terminal";
 
 const execAsync = promisify(exec);
@@ -574,6 +574,7 @@ function getQuickActionItems(): NodeItem[] {
           .replace(/^['"]|['"]$/g, "")
           .toUpperCase()
       : "";
+  const currentBranch = repoRoot && hasRepo ? getCurrentBranchNameSync(repoRoot) : undefined;
 
   const workspaceSetup = new NodeItem(
     { kind: "action", label: "Workspace Setup" },
@@ -681,6 +682,30 @@ function getQuickActionItems(): NodeItem[] {
     };
     items.push(checkoutMain);
   }
+  if (currentBranch && currentBranch !== "main") {
+    const mergeBranch = new NodeItem(
+      { kind: "action", label: "Merge Branch" },
+      vscode.TreeItemCollapsibleState.None
+    );
+    mergeBranch.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
+    mergeBranch.tooltip = `Merge ${currentBranch} into main.`;
+    mergeBranch.command = {
+      command: "antigravity.mergeBranch",
+      title: "Merge Branch"
+    };
+    items.push(mergeBranch);
+  }
+
+  const checkoutMain = new NodeItem(
+    { kind: "action", label: "Go To Branch" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
+  checkoutMain.command = {
+    command: "antigravity.checkoutMain",
+    title: "Go To Branch"
+  };
+  items.push(checkoutMain);
 
   if (!savedJiraProjectKey) {
     const selectOrCreateJiraProject = new NodeItem(

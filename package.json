@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.6.17",
+  "version": "4.7.0",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -155,6 +155,10 @@
         "title": "Antigravity: Create Pull Request"
       },
       {
+        "command": "antigravity.mergeBranch",
+        "title": "Antigravity: Merge Branch"
+      },
+      {
         "command": "antigravity.checkoutMain",
         "title": "Antigravity: Checkout Main (Branch work done)"
       },
@@ -208,7 +212,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.6.17",
+          "name": "Tasky Runner v4.7.0",
           "icon": "Resources/taskrunner.svg"
         }
       ]
