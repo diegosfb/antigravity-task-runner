@@ -135,6 +135,10 @@
         "title": "Antigravity: Create Pull Request"
       },
       {
+        "command": "antigravity.mergeBranch",
+        "title": "Antigravity: Merge Branch"
+      },
+      {
         "command": "antigravity.checkoutMain",
         "title": "Antigravity: Checkout Main (Branch work done)"
       },
