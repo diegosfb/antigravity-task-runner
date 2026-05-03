@@ -471,7 +471,7 @@ function activate(context) {
         </div>
       </div>
       <div class="section">
-        <div class="section-title">Create New Scrum Software Project</div>
+        <div class="section-title">Create New Team-Managed Scrum Project</div>
         <label>
           Project Name
           <input id="project-name" type="text" autocomplete="off" />
@@ -480,7 +480,7 @@ function activate(context) {
         <label>
           Description
           <textarea id="project-description"></textarea>
-          <span class="hint">Projects created here use Jira's Scrum software template with backlog and board views.</span>
+          <span class="hint">Projects created here use Jira's team-managed Scrum template, and the extension will try to set up To Do, In Progress, In Review, and Done plus the default diegosfb project actors.</span>
         </label>
         <div class="actions">
           <button type="button" class="primary" id="create-project-button">Create Project</button>
@@ -667,6 +667,9 @@ function activate(context) {
                 }));
                 projectKey = createdProject.key.toUpperCase();
                 void vscode.window.showInformationMessage(`Created Jira project ${projectKey} and saved it to this repository .env file.`);
+                if (createdProject.warnings.length > 0) {
+                    void vscode.window.showWarningMessage(`Jira project ${projectKey} was created, but Jira still needs follow-up: ${createdProject.warnings.join(" ")}`);
+                }
             }
             catch (error) {
                 const message = error instanceof Error ? error.message : String(error);

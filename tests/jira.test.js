@@ -2,12 +2,29 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
 
-const { createJiraProject } = require("../out/jira.js");
+const { createJiraProject, transitionJiraIssueToStatus } = require("../out/jira.js");
 
-test("createJiraProject creates a Jira software project", async (t) => {
+function readJsonBody(request) {
+  return new Promise((resolve) => {
+    let body = "";
+    request.setEncoding("utf8");
+    request.on("data", (chunk) => {
+      body += chunk;
+    });
+    request.on("end", () => {
+      resolve(body ? JSON.parse(body) : null);
+    });
+  });
+}
+
+test("createJiraProject creates and configures a team-managed scrum Jira software project", async (t) => {
   let capturedCreateRequest = null;
+  let capturedWorkflowReadRequest = null;
+  let capturedWorkflowUpdateRequest = null;
+  const capturedRoleActorPosts = [];
+  const capturedRoleActorDeletes = [];
 
-  const server = http.createServer((request, response) => {
+  const server = http.createServer(async (request, response) => {
     if (request.url === "/rest/api/3/myself" && request.method === "GET") {
       response.writeHead(200, { "Content-Type": "application/json" });
       response.end(JSON.stringify({ accountId: "lead-account-id" }));
@@ -15,19 +32,262 @@ test("createJiraProject creates a Jira software project", async (t) => {
     }
 
     if (request.url === "/rest/api/3/project" && request.method === "POST") {
-      let body = "";
-      request.setEncoding("utf8");
-      request.on("data", (chunk) => {
-        body += chunk;
+      capturedCreateRequest = {
+        headers: request.headers,
+        body: await readJsonBody(request)
+      };
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ id: "10000", key: "TASK" }));
+      return;
+    }
+
+    if (
+      request.url ===
+        "/rest/api/3/project/TASK/roledetails?excludeConnectAddons=true&excludeOtherServiceRoles=true" &&
+      request.method === "GET"
+    ) {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify([
+          {
+            admin: true,
+            id: 1001,
+            name: "Administrators",
+            roleConfigurable: true,
+            translatedName: "Administrators"
+          },
+          {
+            admin: false,
+            default: true,
+            id: 1002,
+            name: "Members",
+            roleConfigurable: true,
+            translatedName: "Members"
+          },
+          {
+            admin: false,
+            id: 1003,
+            name: "Viewers",
+            roleConfigurable: true,
+            translatedName: "Viewers"
+          }
+        ])
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/project/TASK/role/1001" && request.method === "GET") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          actors: [
+            {
+              actorGroup: {
+                groupId: "legacy-admin-group-id",
+                name: "legacy-admins"
+              },
+              name: "legacy-admins",
+              type: "atlassian-group-role-actor"
+            }
+          ],
+          id: 1001,
+          name: "Administrators"
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/project/TASK/role/1002" && request.method === "GET") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          actors: [],
+          id: 1002,
+          name: "Members"
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/project/TASK/role/1003" && request.method === "GET") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          actors: [
+            {
+              actorGroup: {
+                groupId: "all-users-group-id",
+                name: "all-users"
+              },
+              name: "all-users",
+              type: "atlassian-group-role-actor"
+            }
+          ],
+          id: 1003,
+          name: "Viewers"
+        })
+      );
+      return;
+    }
+
+    if (request.url.startsWith("/rest/api/3/project/TASK/role/") && request.method === "DELETE") {
+      capturedRoleActorDeletes.push(request.url);
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+
+    if (request.url.startsWith("/rest/api/3/project/TASK/role/") && request.method === "POST") {
+      capturedRoleActorPosts.push({
+        path: request.url,
+        body: await readJsonBody(request)
       });
-      request.on("end", () => {
-        capturedCreateRequest = {
-          headers: request.headers,
-          body: JSON.parse(body)
-        };
-        response.writeHead(200, { "Content-Type": "application/json" });
-        response.end(JSON.stringify({ id: "10000", key: "TASK" }));
-      });
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (
+      request.url === "/rest/api/3/issue/createmeta/TASK/issuetypes" &&
+      request.method === "GET"
+    ) {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          issueTypes: [
+            { id: "10001", name: "Task" },
+            { id: "10002", name: "Story" },
+            { id: "10003", name: "Sub-task" }
+          ]
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/workflows" && request.method === "POST") {
+      capturedWorkflowReadRequest = {
+        body: await readJsonBody(request)
+      };
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          statuses: [
+            {
+              description: "Initial work state",
+              id: "1",
+              name: "To Do",
+              statusCategory: "TODO",
+              statusReference: "todo-status"
+            },
+            {
+              description: "Work is happening",
+              id: "2",
+              name: "In Progress",
+              statusCategory: "IN_PROGRESS",
+              statusReference: "in-progress-status"
+            },
+            {
+              description: "Work is complete",
+              id: "3",
+              name: "Done",
+              statusCategory: "DONE",
+              statusReference: "done-status"
+            }
+          ],
+          workflows: [
+            {
+              description: "Project workflow",
+              id: "workflow-1",
+              name: "Project workflow",
+              scope: {
+                project: { id: "10000" },
+                type: "PROJECT"
+              },
+              startPointLayout: { x: 0, y: 0 },
+              statuses: [
+                {
+                  layout: { x: 100, y: 200 },
+                  properties: {},
+                  statusReference: "todo-status"
+                },
+                {
+                  layout: { x: 300, y: 200 },
+                  properties: {},
+                  statusReference: "in-progress-status"
+                },
+                {
+                  layout: { x: 500, y: 200 },
+                  properties: {},
+                  statusReference: "done-status"
+                }
+              ],
+              transitions: [
+                {
+                  actions: [],
+                  description: "Create the issue",
+                  id: "1",
+                  links: [],
+                  name: "Create",
+                  properties: {},
+                  toStatusReference: "todo-status",
+                  triggers: [],
+                  type: "INITIAL",
+                  validators: []
+                },
+                {
+                  actions: [],
+                  description: "Start work",
+                  id: "21",
+                  links: [
+                    {
+                      fromPort: 0,
+                      fromStatusReference: "todo-status",
+                      toPort: 0
+                    }
+                  ],
+                  name: "Start Progress",
+                  properties: {},
+                  toStatusReference: "in-progress-status",
+                  triggers: [],
+                  type: "DIRECTED",
+                  validators: []
+                },
+                {
+                  actions: [],
+                  description: "Finish work",
+                  id: "31",
+                  links: [
+                    {
+                      fromPort: 0,
+                      fromStatusReference: "in-progress-status",
+                      toPort: 0
+                    }
+                  ],
+                  name: "Done",
+                  properties: {},
+                  toStatusReference: "done-status",
+                  triggers: [],
+                  type: "DIRECTED",
+                  validators: []
+                }
+              ],
+              version: {
+                id: "workflow-version-1",
+                versionNumber: 1
+              }
+            }
+          ]
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/workflows/update" && request.method === "POST") {
+      capturedWorkflowUpdateRequest = {
+        body: await readJsonBody(request)
+      };
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ workflows: [] }));
       return;
     }
 
@@ -52,7 +312,20 @@ test("createJiraProject creates a Jira software project", async (t) => {
     }
   );
 
-  assert.deepEqual(createdProject, { id: "10000", key: "TASK" });
+  assert.equal(createdProject.id, "10000");
+  assert.equal(createdProject.key, "TASK");
+  assert.equal(createdProject.warnings.length, 2);
+  assert.ok(
+    createdProject.warnings.includes(
+      "Jira still requires a manual access-level check so the project is limited to jira-users-diegosfb, Diego Fernandez, and site-admins."
+    )
+  );
+  assert.ok(
+    createdProject.warnings.includes(
+      'Jira may still need a manual board-columns update so "In Review" appears as a visible board column.'
+    )
+  );
+
   assert.ok(capturedCreateRequest, "expected the project creation request to be captured");
   assert.match(
     capturedCreateRequest.headers.authorization ?? "",
@@ -66,4 +339,128 @@ test("createJiraProject creates a Jira software project", async (t) => {
     capturedCreateRequest.body.projectTemplateKey,
     "com.pyxis.greenhopper.jira:gh-simplified-agility-scrum"
   );
+
+  assert.deepEqual(
+    capturedRoleActorDeletes.sort(),
+    [
+      "/rest/api/3/project/TASK/role/1001?groupId=legacy-admin-group-id",
+      "/rest/api/3/project/TASK/role/1003?groupId=all-users-group-id"
+    ].sort()
+  );
+  assert.deepEqual(capturedRoleActorPosts, [
+    {
+      path: "/rest/api/3/project/TASK/role/1001",
+      body: { group: ["site-admins"] }
+    },
+    {
+      path: "/rest/api/3/project/TASK/role/1001",
+      body: { user: ["lead-account-id"] }
+    },
+    {
+      path: "/rest/api/3/project/TASK/role/1002",
+      body: { group: ["jira-users-diegosfb"] }
+    }
+  ]);
+
+  assert.ok(capturedWorkflowReadRequest, "expected the workflow read request to be captured");
+  assert.deepEqual(capturedWorkflowReadRequest.body.projectAndIssueTypes, [
+    { projectId: "10000", issueTypeId: "10001" },
+    { projectId: "10000", issueTypeId: "10002" }
+  ]);
+
+  assert.ok(capturedWorkflowUpdateRequest, "expected the workflow update request to be captured");
+  const inReviewStatus = capturedWorkflowUpdateRequest.body.statuses.find(
+    (status) => status.name === "In Review"
+  );
+  assert.ok(inReviewStatus, "expected the workflow update to add the In Review status");
+  assert.match(
+    inReviewStatus.statusReference,
+    /^[0-9a-f-]{36}$/i,
+    "expected In Review to use a stable UUID status reference"
+  );
+
+  const updatedWorkflow = capturedWorkflowUpdateRequest.body.workflows[0];
+  assert.ok(
+    updatedWorkflow.statuses.some(
+      (status) => status.statusReference === inReviewStatus.statusReference
+    ),
+    "expected the updated workflow to reference In Review"
+  );
+  assert.ok(
+    updatedWorkflow.transitions.some(
+      (transition) =>
+        transition.name === "In Review" &&
+        transition.type === "GLOBAL" &&
+        transition.toStatusReference === inReviewStatus.statusReference
+    ),
+    "expected a global transition into In Review"
+  );
+  assert.ok(
+    updatedWorkflow.transitions.some(
+      (transition) =>
+        transition.type === "DIRECTED" &&
+        transition.toStatusReference === "done-status" &&
+        transition.links.some(
+          (link) => link.fromStatusReference === inReviewStatus.statusReference
+        )
+    ),
+    "expected a path from In Review to Done"
+  );
+});
+
+test("transitionJiraIssueToStatus matches the target status when Jira names the transition differently", async (t) => {
+  let capturedTransitionRequest = null;
+
+  const server = http.createServer(async (request, response) => {
+    if (request.url === "/rest/api/3/issue/TASK-1/transitions" && request.method === "GET") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          transitions: [
+            {
+              id: "21",
+              name: "Start Progress",
+              to: { name: "In Progress" }
+            },
+            {
+              id: "31",
+              name: "Done",
+              to: { name: "Done" }
+            }
+          ]
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/issue/TASK-1/transitions" && request.method === "POST") {
+      capturedTransitionRequest = await readJsonBody(request);
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Not found" }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  await transitionJiraIssueToStatus(
+    {
+      baseUrl: `http://127.0.0.1:${port}`,
+      email: "person@example.com",
+      apiToken: "secret-token"
+    },
+    "TASK-1",
+    "In Progress"
+  );
+
+  assert.deepEqual(capturedTransitionRequest, {
+    transition: {
+      id: "21"
+    }
+  });
 });

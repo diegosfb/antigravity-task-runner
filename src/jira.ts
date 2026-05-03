@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import * as http from "http";
 import * as https from "https";
 
@@ -13,9 +14,25 @@ export interface JiraProjectDetails {
   description?: string;
 }
 
+export interface JiraProjectCreationResult {
+  id: string;
+  key: string;
+  warnings: string[];
+}
+
 const JIRA_SOFTWARE_PROJECT_TEMPLATE_KEY =
   "com.pyxis.greenhopper.jira:gh-simplified-agility-scrum";
 const JIRA_SOFTWARE_PROJECT_TYPE_KEY = "software";
+const JIRA_STATUS_TO_DO = "To Do";
+const JIRA_STATUS_IN_PROGRESS = "In Progress";
+const JIRA_STATUS_IN_REVIEW = "In Review";
+const JIRA_STATUS_DONE = "Done";
+const TEAM_MANAGED_MEMBER_GROUPS = ["jira-users-diegosfb"];
+const TEAM_MANAGED_ADMIN_GROUPS = ["site-admins"];
+const TEAM_MANAGED_ACCESS_WARNING =
+  "Jira still requires a manual access-level check so the project is limited to jira-users-diegosfb, Diego Fernandez, and site-admins.";
+const TEAM_MANAGED_BOARD_WARNING =
+  'Jira may still need a manual board-columns update so "In Review" appears as a visible board column.';
 
 export interface JiraIssueType {
   id: string;
@@ -46,7 +63,7 @@ export interface JiraIssueSummary {
 }
 
 interface JiraRequestOptions {
-  method: "GET" | "POST" | "PUT";
+  method: "DELETE" | "GET" | "POST" | "PUT";
   apiPath: string;
   body?: unknown;
 }
@@ -60,8 +77,139 @@ type JiraFieldMetadata = {
   };
 };
 
+type JiraProjectRoleDetails = {
+  id?: number | string;
+  name?: string;
+  translatedName?: string;
+  admin?: boolean;
+  default?: boolean;
+  roleConfigurable?: boolean;
+};
+
+type JiraProjectRoleActor = {
+  type?: string;
+  name?: string;
+  actorGroup?: {
+    name?: string;
+    groupId?: string;
+  };
+  actorUser?: {
+    accountId?: string;
+  };
+};
+
+type JiraProjectRole = {
+  id?: number | string;
+  name?: string;
+  actors?: JiraProjectRoleActor[];
+};
+
+type JiraWorkflowScope = {
+  type?: string;
+  project?: {
+    id?: string;
+  };
+};
+
+type JiraWorkflowStatusDocument = {
+  description?: string;
+  id?: string;
+  name?: string;
+  rawName?: string;
+  scope?: JiraWorkflowScope;
+  statusCategory?: string;
+  statusReference?: string;
+};
+
+type JiraWorkflowStatusLayout = {
+  deprecated?: boolean;
+  layout?: {
+    x?: number;
+    y?: number;
+  } | null;
+  properties?: Record<string, string>;
+  statusReference?: string;
+};
+
+type JiraWorkflowTransitionLink = {
+  fromPort?: number | null;
+  fromStatusReference?: string | null;
+  toPort?: number | null;
+};
+
+type JiraWorkflowTransitionDocument = {
+  actions?: unknown[];
+  description?: string;
+  id?: string;
+  links?: JiraWorkflowTransitionLink[] | null;
+  name?: string;
+  properties?: Record<string, string>;
+  toStatusReference?: string;
+  triggers?: unknown[];
+  type?: "INITIAL" | "GLOBAL" | "DIRECTED" | string;
+  validators?: unknown[];
+};
+
+type JiraWorkflowVersion = {
+  id?: string;
+  versionNumber?: number;
+};
+
+type JiraWorkflowDocument = {
+  description?: string;
+  id?: string;
+  isEditable?: boolean;
+  loopedTransitionContainerLayout?: {
+    x?: number;
+    y?: number;
+  };
+  name?: string;
+  queryContext?: Array<{
+    issueTypes?: string[];
+    project?: string;
+  }>;
+  scope?: JiraWorkflowScope;
+  startPointLayout?: {
+    x?: number;
+    y?: number;
+  };
+  statuses?: JiraWorkflowStatusLayout[];
+  transitions?: JiraWorkflowTransitionDocument[];
+  version?: JiraWorkflowVersion;
+};
+
+type JiraWorkflowReadResponse = {
+  statuses?: JiraWorkflowStatusDocument[];
+  workflows?: JiraWorkflowDocument[];
+};
+
 function normalizeFieldName(fieldKey: string, field?: JiraFieldMetadata): string {
   return (field?.name || fieldKey).trim().toLowerCase();
+}
+
+function normalizeJiraText(value: string | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function matchesJiraName(
+  value: { name?: string; rawName?: string } | undefined,
+  target: string
+): boolean {
+  const normalizedTarget = normalizeJiraText(target);
+  if (!value || !normalizedTarget) return false;
+  return [value.name, value.rawName].some(
+    (candidate) => normalizeJiraText(candidate) === normalizedTarget
+  );
+}
+
+function uniqueWarnings(warnings: string[]): string[] {
+  return Array.from(
+    new Set(
+      warnings
+        .map((warning) => warning.trim())
+        .filter(Boolean)
+    )
+  );
 }
 
 function isProvidedJiraField(fieldKey: string, field?: JiraFieldMetadata): boolean {
@@ -189,9 +337,9 @@ export async function getJiraCurrentUserAccountId(
 export async function createJiraProject(
   credentials: JiraCredentials,
   details: JiraProjectDetails
-): Promise<{ id: string; key: string }> {
+): Promise<JiraProjectCreationResult> {
   const leadAccountId = await getJiraCurrentUserAccountId(credentials);
-  return jiraRequest<{ id: string; key: string }>(credentials, {
+  const createdProject = await jiraRequest<{ id: string; key: string }>(credentials, {
     method: "POST",
     apiPath: "/rest/api/3/project",
     body: {
@@ -204,6 +352,22 @@ export async function createJiraProject(
       projectTypeKey: JIRA_SOFTWARE_PROJECT_TYPE_KEY
     }
   });
+
+  const warnings = [
+    ...(await syncTeamManagedProjectActors(credentials, createdProject.key, leadAccountId)),
+    ...(await ensureTeamManagedProjectWorkflow(
+      credentials,
+      createdProject.id,
+      createdProject.key
+    )),
+    TEAM_MANAGED_ACCESS_WARNING,
+    TEAM_MANAGED_BOARD_WARNING
+  ];
+
+  return {
+    ...createdProject,
+    warnings: uniqueWarnings(warnings)
+  };
 }
 
 export async function getJiraProjects(
@@ -410,21 +574,30 @@ export async function transitionJiraIssueToStatus(
   targetStatusName: string
 ): Promise<void> {
   const response = await jiraRequest<{
-    transitions?: Array<{ id?: string; name?: string }>;
+    transitions?: Array<{ id?: string; name?: string; to?: { name?: string; rawName?: string } }>;
   }>(credentials, {
     method: "GET",
     apiPath: `/rest/api/3/issue/${encodeURIComponent(issueKey)}/transitions`
   });
 
   const transitions = response.transitions ?? [];
+  const normalizedTargetStatusName = normalizeJiraText(targetStatusName);
   const transition = transitions.find(
     (candidate) =>
-      (candidate.name ?? "").trim().toLowerCase() === targetStatusName.trim().toLowerCase()
+      normalizeJiraText(candidate.name) === normalizedTargetStatusName ||
+      matchesJiraName(candidate.to, targetStatusName)
   );
 
   if (!transition?.id) {
     const available = transitions
-      .map((candidate) => (candidate.name ?? "").trim())
+      .map((candidate) => {
+        const transitionName = (candidate.name ?? "").trim();
+        const targetName = (candidate.to?.name ?? candidate.to?.rawName ?? "").trim();
+        if (transitionName && targetName && normalizeJiraText(transitionName) !== normalizeJiraText(targetName)) {
+          return `${transitionName} -> ${targetName}`;
+        }
+        return transitionName || targetName;
+      })
       .filter(Boolean)
       .join(", ");
     throw new Error(
@@ -443,6 +616,541 @@ export async function transitionJiraIssueToStatus(
       }
     }
   });
+}
+
+async function syncTeamManagedProjectActors(
+  credentials: JiraCredentials,
+  projectKey: string,
+  currentUserAccountId: string
+): Promise<string[]> {
+  try {
+    const roles = await jiraRequest<JiraProjectRoleDetails[]>(credentials, {
+      method: "GET",
+      apiPath:
+        `/rest/api/3/project/${encodeURIComponent(projectKey)}/roledetails?excludeConnectAddons=true&excludeOtherServiceRoles=true`
+    });
+    const configurableRoles = roles.filter((role) => role.roleConfigurable !== false);
+
+    if (configurableRoles.length === 0) {
+      return [
+        "Jira did not return any configurable team-managed roles, so the extension could not fully limit project actors automatically."
+      ];
+    }
+
+    const adminRole =
+      configurableRoles.find((role) => role.admin) ||
+      configurableRoles.find((role) => {
+        const label = normalizeJiraText(role.translatedName || role.name);
+        return label.includes("administrator") || label.includes("admin");
+      });
+
+    const memberRoleCandidates = configurableRoles.filter(
+      (role) => String(role.id ?? "") !== String(adminRole?.id ?? "")
+    );
+    const memberRole =
+      memberRoleCandidates.find((role) =>
+        normalizeJiraText(role.translatedName || role.name).includes("member")
+      ) ||
+      memberRoleCandidates.find((role) => role.default) ||
+      memberRoleCandidates[0];
+
+    const warnings: string[] = [];
+    if (!adminRole) {
+      warnings.push(
+        "Jira did not expose an administrator role for the new project, so Diego Fernandez and site-admins could not be pinned to the expected admin role automatically."
+      );
+    }
+    if (!memberRole) {
+      warnings.push(
+        "Jira did not expose a member role for the new project, so jira-users-diegosfb could not be pinned to the expected member role automatically."
+      );
+    }
+    const shouldClearUnmatchedRoles = Boolean(adminRole && memberRole);
+
+    for (const role of configurableRoles) {
+      const roleId = String(role.id ?? "").trim();
+      if (!roleId) continue;
+
+      const isAdminRole = adminRole && roleId === String(adminRole.id ?? "");
+      const isMemberRole = memberRole && roleId === String(memberRole.id ?? "");
+      if (!isAdminRole && !isMemberRole && !shouldClearUnmatchedRoles) {
+        continue;
+      }
+
+      const desiredGroups = isAdminRole
+        ? TEAM_MANAGED_ADMIN_GROUPS
+        : isMemberRole
+          ? TEAM_MANAGED_MEMBER_GROUPS
+          : [];
+      const desiredUsers = isAdminRole ? [currentUserAccountId] : [];
+
+      await replaceProjectRoleActors(credentials, projectKey, roleId, desiredGroups, desiredUsers);
+    }
+
+    return warnings;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return [
+      `The Jira project was created, but the extension could not fully sync the team-managed project actors automatically: ${message}`
+    ];
+  }
+}
+
+async function replaceProjectRoleActors(
+  credentials: JiraCredentials,
+  projectKey: string,
+  roleId: string,
+  desiredGroups: string[],
+  desiredUsers: string[]
+): Promise<void> {
+  const role = await jiraRequest<JiraProjectRole>(credentials, {
+    method: "GET",
+    apiPath: `/rest/api/3/project/${encodeURIComponent(projectKey)}/role/${encodeURIComponent(roleId)}`
+  });
+  const actors = role.actors ?? [];
+  const groupActors = actors
+    .map((actor) => ({
+      groupId: (actor.actorGroup?.groupId ?? "").trim(),
+      groupName: (actor.actorGroup?.name ?? actor.name ?? "").trim()
+    }))
+    .filter((actor) => actor.groupId || actor.groupName);
+  const userActors = actors
+    .map((actor) => (actor.actorUser?.accountId ?? "").trim())
+    .filter(Boolean);
+
+  const desiredGroupSet = new Set(desiredGroups.map((group) => group.trim()).filter(Boolean));
+  const desiredUserSet = new Set(desiredUsers.map((user) => user.trim()).filter(Boolean));
+  const desiredGroupNames = new Set(desiredGroupSet);
+  const desiredGroupIds = new Set(
+    Array.from(desiredGroupSet).filter((group) => /^[0-9a-f-]{36}$/i.test(group))
+  );
+
+  for (const actor of groupActors) {
+    const isDesired =
+      (actor.groupId && desiredGroupIds.has(actor.groupId)) ||
+      (actor.groupName && desiredGroupNames.has(actor.groupName));
+    if (isDesired) continue;
+
+    const params = new URLSearchParams();
+    if (actor.groupId) {
+      params.set("groupId", actor.groupId);
+    } else if (actor.groupName) {
+      params.set("group", actor.groupName);
+    } else {
+      continue;
+    }
+
+    await jiraRequest<void>(credentials, {
+      method: "DELETE",
+      apiPath:
+        `/rest/api/3/project/${encodeURIComponent(projectKey)}/role/${encodeURIComponent(roleId)}?${params.toString()}`
+    });
+  }
+
+  for (const accountId of userActors) {
+    if (desiredUserSet.has(accountId)) continue;
+    const params = new URLSearchParams({ user: accountId });
+    await jiraRequest<void>(credentials, {
+      method: "DELETE",
+      apiPath:
+        `/rest/api/3/project/${encodeURIComponent(projectKey)}/role/${encodeURIComponent(roleId)}?${params.toString()}`
+    });
+  }
+
+  const existingGroupNames = new Set(groupActors.map((actor) => actor.groupName).filter(Boolean));
+  const existingGroupIds = new Set(groupActors.map((actor) => actor.groupId).filter(Boolean));
+  const groupsToAdd = Array.from(desiredGroupSet).filter(
+    (group) => !existingGroupNames.has(group) && !existingGroupIds.has(group)
+  );
+  if (groupsToAdd.length > 0) {
+    await jiraRequest(credentials, {
+      method: "POST",
+      apiPath: `/rest/api/3/project/${encodeURIComponent(projectKey)}/role/${encodeURIComponent(roleId)}`,
+      body: {
+        group: groupsToAdd
+      }
+    });
+  }
+
+  const existingUserIds = new Set(userActors);
+  const usersToAdd = Array.from(desiredUserSet).filter((user) => !existingUserIds.has(user));
+  if (usersToAdd.length > 0) {
+    await jiraRequest(credentials, {
+      method: "POST",
+      apiPath: `/rest/api/3/project/${encodeURIComponent(projectKey)}/role/${encodeURIComponent(roleId)}`,
+      body: {
+        user: usersToAdd
+      }
+    });
+  }
+}
+
+async function ensureTeamManagedProjectWorkflow(
+  credentials: JiraCredentials,
+  projectId: string,
+  projectKey: string
+): Promise<string[]> {
+  try {
+    const issueTypes = await getJiraIssueTypes(credentials, projectKey);
+    if (issueTypes.length === 0) {
+      return [
+        "The Jira project was created, but Jira did not return any issue types for the new scrum board workflow setup."
+      ];
+    }
+
+    const workflowResponse = await jiraRequest<JiraWorkflowReadResponse>(credentials, {
+      method: "POST",
+      apiPath: "/rest/api/3/workflows",
+      body: {
+        projectAndIssueTypes: issueTypes.map((issueType) => ({
+          projectId,
+          issueTypeId: issueType.id
+        })),
+        workflowIds: [],
+        workflowNames: []
+      }
+    });
+
+    const responseStatuses = workflowResponse.statuses ?? [];
+    const responseWorkflows = workflowResponse.workflows ?? [];
+    if (responseWorkflows.length === 0) {
+      return [
+        "The Jira project was created, but Jira did not return any editable workflows for the new scrum board setup."
+      ];
+    }
+
+    const matchingWorkflows = responseWorkflows.filter((workflow) => isWorkflowForProject(workflow, projectId));
+    const workflowsToInspect = matchingWorkflows.length > 0 ? matchingWorkflows : responseWorkflows;
+    const statusByReference = new Map<string, JiraWorkflowStatusDocument>();
+    for (const status of responseStatuses) {
+      const reference = (status.statusReference ?? "").trim();
+      if (!reference) continue;
+      statusByReference.set(reference, { ...status });
+    }
+
+    const workflowsToUpdate: Array<{
+      description: string;
+      id: string;
+      loopedTransitionContainerLayout?: { x?: number; y?: number };
+      startPointLayout?: { x?: number; y?: number };
+      statuses: JiraWorkflowStatusLayout[];
+      transitions: JiraWorkflowTransitionDocument[];
+      version: JiraWorkflowVersion;
+    }> = [];
+    const warnings: string[] = [];
+
+    for (const workflow of workflowsToInspect) {
+      const workflowId = (workflow.id ?? "").trim();
+      const versionId = (workflow.version?.id ?? "").trim();
+      if (!workflowId || !versionId) {
+        warnings.push(
+          `Jira skipped one of the project workflows because it did not include a stable workflow ID/version for updates.`
+        );
+        continue;
+      }
+      if (workflow.isEditable === false) {
+        warnings.push(
+          `Jira skipped workflow "${workflow.name ?? workflowId}" because Jira marked it as read-only.`
+        );
+        continue;
+      }
+
+      const workflowStatuses: JiraWorkflowStatusLayout[] = [...(workflow.statuses ?? [])];
+      const workflowTransitions: JiraWorkflowTransitionDocument[] = (
+        workflow.transitions ?? []
+      ).map((transition) => ({
+        actions: transition.actions ?? [],
+        description: transition.description ?? "",
+        id: transition.id ?? "",
+        links: transition.links ?? [],
+        name: transition.name ?? "",
+        properties: transition.properties ?? {},
+        toStatusReference: transition.toStatusReference,
+        triggers: transition.triggers ?? [],
+        type: transition.type ?? "DIRECTED",
+        validators: transition.validators ?? []
+      }));
+
+      const toDoReference = findWorkflowStatusReference(
+        workflowStatuses,
+        statusByReference,
+        JIRA_STATUS_TO_DO
+      );
+      const inProgressReference = findWorkflowStatusReference(
+        workflowStatuses,
+        statusByReference,
+        JIRA_STATUS_IN_PROGRESS
+      );
+      const doneReference = findWorkflowStatusReference(
+        workflowStatuses,
+        statusByReference,
+        JIRA_STATUS_DONE
+      );
+
+      if (!toDoReference || !inProgressReference || !doneReference) {
+        warnings.push(
+          `Jira skipped workflow "${workflow.name ?? workflowId}" because it did not expose the expected To Do, In Progress, and Done statuses.`
+        );
+        continue;
+      }
+
+      let changed = false;
+      let inReviewReference = findWorkflowStatusReference(
+        workflowStatuses,
+        statusByReference,
+        JIRA_STATUS_IN_REVIEW
+      );
+
+      if (!inReviewReference) {
+        inReviewReference = randomUUID();
+        statusByReference.set(inReviewReference, {
+          description: "Work is ready for review.",
+          name: JIRA_STATUS_IN_REVIEW,
+          statusCategory: "IN_PROGRESS",
+          statusReference: inReviewReference
+        });
+        workflowStatuses.push({
+          layout: buildInReviewLayout(workflowStatuses, inProgressReference, doneReference),
+          properties: {},
+          statusReference: inReviewReference
+        });
+        changed = true;
+      }
+
+      if (!hasGlobalTransitionToStatus(workflowTransitions, inReviewReference)) {
+        workflowTransitions.push(
+          createGlobalTransition(
+            nextTransitionId(workflowTransitions),
+            JIRA_STATUS_IN_REVIEW,
+            "Move a work item into review.",
+            inReviewReference
+          )
+        );
+        changed = true;
+      }
+
+      if (
+        !hasGlobalTransitionToStatus(workflowTransitions, doneReference) &&
+        !hasDirectedTransition(workflowTransitions, inReviewReference, doneReference)
+      ) {
+        workflowTransitions.push(
+          createDirectedTransition(
+            nextTransitionId(workflowTransitions),
+            JIRA_STATUS_DONE,
+            "Move a work item from review to done.",
+            inReviewReference,
+            doneReference,
+            findToPortForStatus(workflowTransitions, doneReference)
+          )
+        );
+        changed = true;
+      }
+
+      if (!changed) {
+        continue;
+      }
+
+      workflowsToUpdate.push({
+        description: workflow.description ?? "",
+        id: workflowId,
+        ...(workflow.loopedTransitionContainerLayout
+          ? { loopedTransitionContainerLayout: workflow.loopedTransitionContainerLayout }
+          : {}),
+        ...(workflow.startPointLayout ? { startPointLayout: workflow.startPointLayout } : {}),
+        statuses: workflowStatuses,
+        transitions: workflowTransitions,
+        version: workflow.version ?? { id: versionId }
+      });
+    }
+
+    if (workflowsToUpdate.length === 0) {
+      return uniqueWarnings(warnings);
+    }
+
+    const referencedStatusIds = new Set<string>();
+    for (const workflow of workflowsToUpdate) {
+      for (const status of workflow.statuses) {
+        const reference = (status.statusReference ?? "").trim();
+        if (reference) {
+          referencedStatusIds.add(reference);
+        }
+      }
+    }
+
+    await jiraRequest(credentials, {
+      method: "POST",
+      apiPath: "/rest/api/3/workflows/update",
+      body: {
+        statuses: Array.from(referencedStatusIds)
+          .map((reference) => statusByReference.get(reference))
+          .filter((status): status is JiraWorkflowStatusDocument => Boolean(status))
+          .map((status) => ({
+            ...(status.id ? { id: status.id } : {}),
+            description: status.description ?? "",
+            name: status.name ?? "",
+            statusCategory: status.statusCategory ?? "IN_PROGRESS",
+            statusReference: status.statusReference ?? ""
+          })),
+        workflows: workflowsToUpdate
+      }
+    });
+
+    return uniqueWarnings(warnings);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return [
+      `The Jira project was created, but the extension could not fully add the team-managed In Review workflow state automatically: ${message}`
+    ];
+  }
+}
+
+function isWorkflowForProject(workflow: JiraWorkflowDocument, projectId: string): boolean {
+  const normalizedProjectId = projectId.trim();
+  if (!normalizedProjectId) return false;
+  if ((workflow.scope?.type ?? "").trim().toUpperCase() === "PROJECT") {
+    const scopedProjectId = (workflow.scope?.project?.id ?? "").trim();
+    if (!scopedProjectId || scopedProjectId === normalizedProjectId) {
+      return true;
+    }
+  }
+
+  return (workflow.queryContext ?? []).some(
+    (queryContext) => (queryContext.project ?? "").trim() === normalizedProjectId
+  );
+}
+
+function findWorkflowStatusReference(
+  workflowStatuses: JiraWorkflowStatusLayout[],
+  statusByReference: Map<string, JiraWorkflowStatusDocument>,
+  targetStatusName: string
+): string | undefined {
+  for (const workflowStatus of workflowStatuses) {
+    const reference = (workflowStatus.statusReference ?? "").trim();
+    if (!reference) continue;
+    if (matchesJiraName(statusByReference.get(reference), targetStatusName)) {
+      return reference;
+    }
+  }
+  return undefined;
+}
+
+function buildInReviewLayout(
+  workflowStatuses: JiraWorkflowStatusLayout[],
+  inProgressReference: string,
+  doneReference: string
+): { x: number; y: number } {
+  const inProgressLayout = workflowStatuses.find(
+    (status) => (status.statusReference ?? "").trim() === inProgressReference
+  )?.layout;
+  const doneLayout = workflowStatuses.find(
+    (status) => (status.statusReference ?? "").trim() === doneReference
+  )?.layout;
+  const inProgressX = inProgressLayout?.x ?? 300;
+  const doneX = doneLayout?.x ?? inProgressX + 200;
+  const inProgressY = inProgressLayout?.y ?? doneLayout?.y ?? 0;
+
+  return {
+    x: Math.round((inProgressX + doneX) / 2),
+    y: inProgressY
+  };
+}
+
+function hasGlobalTransitionToStatus(
+  transitions: JiraWorkflowTransitionDocument[],
+  toStatusReference: string
+): boolean {
+  return transitions.some(
+    (transition) =>
+      normalizeJiraText(transition.type) === "global" &&
+      (transition.toStatusReference ?? "").trim() === toStatusReference
+  );
+}
+
+function hasDirectedTransition(
+  transitions: JiraWorkflowTransitionDocument[],
+  fromStatusReference: string,
+  toStatusReference: string
+): boolean {
+  return transitions.some((transition) => {
+    if (normalizeJiraText(transition.type) !== "directed") return false;
+    if ((transition.toStatusReference ?? "").trim() !== toStatusReference) return false;
+    return (transition.links ?? []).some(
+      (link) => (link.fromStatusReference ?? "").trim() === fromStatusReference
+    );
+  });
+}
+
+function findToPortForStatus(
+  transitions: JiraWorkflowTransitionDocument[],
+  toStatusReference: string
+): number {
+  for (const transition of transitions) {
+    if ((transition.toStatusReference ?? "").trim() !== toStatusReference) continue;
+    for (const link of transition.links ?? []) {
+      if (typeof link.toPort === "number") {
+        return link.toPort;
+      }
+    }
+  }
+  return 0;
+}
+
+function nextTransitionId(transitions: JiraWorkflowTransitionDocument[]): string {
+  const nextNumericId =
+    transitions.reduce((maxId, transition) => {
+      const parsedId = Number.parseInt((transition.id ?? "").trim(), 10);
+      return Number.isFinite(parsedId) ? Math.max(maxId, parsedId) : maxId;
+    }, 0) + 10;
+
+  return String(nextNumericId);
+}
+
+function createGlobalTransition(
+  id: string,
+  name: string,
+  description: string,
+  toStatusReference: string
+): JiraWorkflowTransitionDocument {
+  return {
+    actions: [],
+    description,
+    id,
+    links: [],
+    name,
+    properties: {},
+    toStatusReference,
+    triggers: [],
+    type: "GLOBAL",
+    validators: []
+  };
+}
+
+function createDirectedTransition(
+  id: string,
+  name: string,
+  description: string,
+  fromStatusReference: string,
+  toStatusReference: string,
+  toPort: number
+): JiraWorkflowTransitionDocument {
+  return {
+    actions: [],
+    description,
+    id,
+    links: [
+      {
+        fromPort: 0,
+        fromStatusReference,
+        toPort
+      }
+    ],
+    name,
+    properties: {},
+    toStatusReference,
+    triggers: [],
+    type: "DIRECTED",
+    validators: []
+  };
 }
 
 export async function getJiraIssueTypes(
