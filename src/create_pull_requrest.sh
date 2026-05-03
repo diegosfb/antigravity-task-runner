@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./git_remote_fallback.sh
+source "${SCRIPT_DIR}/git_remote_fallback.sh"
+
 PR_BODY_FILE=""
 
 prompt() {
@@ -150,10 +154,10 @@ main() {
 
   echo "Syncing your feature branch with the latest main so reviewers see a clean PR."
   run_and_echo git checkout main
-  run_and_echo git pull origin main
+  run_remote_git_and_echo pull origin main
   run_and_echo git checkout "$feature_branch"
   run_and_echo git merge main
-  run_and_echo git push origin "$feature_branch"
+  run_remote_git_and_echo push origin "$feature_branch"
 
   test_command="$(optional_value "What command runs your project's test suite? (type 'skip' to skip)")"
   if [[ -n "$test_command" && "$(to_lower "$test_command")" != "skip" ]]; then

@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./git_remote_fallback.sh
+source "${SCRIPT_DIR}/git_remote_fallback.sh"
+
 prompt() {
   local message="$1"
   local response
@@ -71,9 +75,9 @@ main() {
 
   echo "Merging '$feature_branch' into main."
   run_and_echo git checkout main
-  run_and_echo git pull origin main
+  run_remote_git_and_echo pull origin main
   run_and_echo git merge "$feature_branch"
-  run_and_echo git push origin main
+  run_remote_git_and_echo push origin main
 
   echo
   echo "Merged '$feature_branch' into main and pushed origin/main."

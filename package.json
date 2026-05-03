@@ -445,6 +445,7 @@
     "src/autocommit_changes.sh",
     "src/autocommit_revert.sh",
     "src/init-repo.sh",
+    "src/git_remote_fallback.sh",
     "src/create_feature_branch.sh",
     "src/create_pull_requrest.sh",
     "src/merge_branch_to_main.sh",

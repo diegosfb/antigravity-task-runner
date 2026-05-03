@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./git_remote_fallback.sh
+source "${SCRIPT_DIR}/git_remote_fallback.sh"
+
 prompt() {
   local message="$1"
   local response
@@ -121,7 +125,7 @@ run_and_echo() {
 
 verify_remote_branch_exists() {
   local branch_name="$1"
-  git ls-remote --exit-code --heads origin "$branch_name" >/dev/null 2>&1
+  run_remote_git ls-remote --exit-code --heads origin "$branch_name" >/dev/null 2>&1
 }
 
 main() {
@@ -141,12 +145,12 @@ main() {
 
   echo "This ensures your new branch starts from the latest version of the codebase."
   run_and_echo git checkout main
-  run_and_echo git pull origin main
+  run_remote_git_and_echo pull origin main
 
   run_and_echo git checkout -b "$branch_name"
 
   echo "The -u flag links your local branch to the remote. After this, you can just type git push."
-  run_and_echo git push -u origin "$branch_name"
+  run_remote_git_and_echo push -u origin "$branch_name"
 
   if ! verify_remote_branch_exists "$branch_name"; then
     echo "The branch was pushed locally, but the remote branch could not be verified on origin." >&2

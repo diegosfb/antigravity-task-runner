@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./git_remote_fallback.sh
+source "${SCRIPT_DIR}/git_remote_fallback.sh"
+
 run_and_echo() {
   echo "+ $*"
   "$@"
@@ -39,7 +43,7 @@ main() {
   fi
 
   if [[ "$target_branch" == "main" ]]; then
-    run_and_echo git pull origin main
+    run_remote_git_and_echo pull origin main
   fi
 }
 
