@@ -65,15 +65,22 @@ type GitInputBox = {
   value: string;
 };
 
+type GitRepositoryState = {
+  onDidChange: vscode.Event<void>;
+};
+
 type GitRepository = {
   rootUri: vscode.Uri;
   inputBox: GitInputBox;
   commit(message: string, options?: { all?: boolean; noVerify?: boolean }): Thenable<void>;
+  state?: GitRepositoryState;
 };
 
 type GitApi = {
   repositories: GitRepository[];
   getRepository?(uri: vscode.Uri): GitRepository | null | undefined;
+  onDidOpenRepository?: vscode.Event<GitRepository>;
+  onDidCloseRepository?: vscode.Event<GitRepository>;
 };
 
 type GitExtensionExports = {
@@ -1449,6 +1456,49 @@ export function activate(context: vscode.ExtensionContext) {
     });
   };
 
+  const watchGitRepositoriesForTreeRefresh = async (): Promise<void> => {
+    try {
+      const api = await getGitApi();
+      const watchedRepoRoots = new Set<string>();
+
+      const watchRepository = (repository: GitRepository): void => {
+        if (!repository.state) return;
+        const repoKey = path.normalize(repository.rootUri.fsPath);
+        if (watchedRepoRoots.has(repoKey)) return;
+        watchedRepoRoots.add(repoKey);
+        context.subscriptions.push(
+          repository.state.onDidChange(() => {
+            provider.refresh();
+          })
+        );
+      };
+
+      for (const repository of api.repositories) {
+        watchRepository(repository);
+      }
+
+      if (api.onDidOpenRepository) {
+        context.subscriptions.push(
+          api.onDidOpenRepository((repository) => {
+            watchRepository(repository);
+            provider.refresh();
+          })
+        );
+      }
+
+      if (api.onDidCloseRepository) {
+        context.subscriptions.push(
+          api.onDidCloseRepository(() => {
+            provider.refresh();
+          })
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log(`[activate] Git tree refresh watcher unavailable: ${message}`);
+    }
+  };
+
   const focusSourceControlChanges = async (): Promise<void> => {
     await vscode.commands.executeCommand("workbench.view.scm");
     try {
@@ -1884,6 +1934,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("antigravityView", provider)
   );
+  void watchGitRepositoriesForTreeRefresh();
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.openSettings", async () => {
@@ -3220,6 +3271,59 @@ export function activate(context: vscode.ExtensionContext) {
           iconPath: new vscode.ThemeIcon("git-pull-request")
         }
       );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.mergeBranchToMain", async () => {
+      log("[mergeBranchToMain] triggered");
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+
+      try {
+        const currentBranch = await getCurrentBranchName(repoRoot);
+        if (currentBranch === "main") {
+          void vscode.window.showInformationMessage(
+            "Merge branch to main is only available when you are on a branch other than main."
+          );
+          return;
+        }
+        if (currentBranch === "detached HEAD") {
+          void vscode.window.showErrorMessage(
+            "Merge branch to main is unavailable while Git is in a detached HEAD state."
+          );
+          return;
+        }
+
+        const canProceed = await prepareCommitBeforeCheckout(repoRoot, "main");
+        if (!canProceed) return;
+
+        const scriptPath = path.join(extensionRoot, "src", "merge_branch_to_main.sh");
+        if (!fs.existsSync(scriptPath)) {
+          void vscode.window.showErrorMessage(
+            "Merge branch to main script not found in the extension package."
+          );
+          return;
+        }
+
+        runInNewTerminal(
+          "Merge Branch to Main",
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            `${quoteShellArg(scriptPath)} ${quoteShellArg(currentBranch)}`
+          ],
+          {
+            iconPath: new vscode.ThemeIcon("git-merge")
+          }
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Merge branch to main failed: ${message}`);
+      }
     })
   );
 

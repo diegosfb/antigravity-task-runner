@@ -5,7 +5,7 @@ import * as os from "os";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { getRootPath, getRepoRoot, getWorkspaceProjectPath, getAntigravityHomePath, safeReadDir } from "./utils";
-import { isAutocommitRunning, hasGitHubRemoteSync } from "./git";
+import { isAutocommitRunning, hasGitHubRemoteSync, getCurrentBranchNameSync } from "./git";
 import { CLAUDE_ACTION_COLOR } from "./terminal";
 
 const execAsync = promisify(exec);
@@ -560,6 +560,7 @@ function getQuickActionItems(): NodeItem[] {
   const rootPath = getRootPath();
   const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
   const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
+  const currentBranch = hasRepo && repoRoot ? getCurrentBranchNameSync(repoRoot) : undefined;
   const autocommitRunning = repoRoot ? isAutocommitRunning(repoRoot) : false;
   const hasAgentFolder = repoRoot ? fs.existsSync(path.join(getWorkspaceProjectPath(repoRoot), ".agent")) : false;
   const hasGitHub = repoRoot ? hasGitHubRemoteSync(repoRoot) : false;
@@ -669,6 +670,19 @@ function getQuickActionItems(): NodeItem[] {
       title: "Create Pull Request"
     };
     items.push(createPullRequest);
+
+    if (currentBranch && currentBranch !== "main") {
+      const mergeBranchToMain = new NodeItem(
+        { kind: "action", label: "Merge branch to main" },
+        vscode.TreeItemCollapsibleState.None
+      );
+      mergeBranchToMain.iconPath = new vscode.ThemeIcon("git-merge", ORANGE_ACTION_COLOR);
+      mergeBranchToMain.command = {
+        command: "antigravity.mergeBranchToMain",
+        title: "Merge branch to main"
+      };
+      items.push(mergeBranchToMain);
+    }
 
     const checkoutMain = new NodeItem(
       { kind: "action", label: "Go To Branch" },

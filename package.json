@@ -25,6 +25,7 @@
     "onCommand:antigravity.runWorkflow",
     "onCommand:antigravity.createFeatureBranch",
     "onCommand:antigravity.createPullRequest",
+    "onCommand:antigravity.mergeBranchToMain",
     "onCommand:antigravity.checkoutMain",
     "onCommand:antigravity.reviewPullRequest",
     "onCommand:antigravity.approvePullRequest",
@@ -153,6 +154,10 @@
       {
         "command": "antigravity.createPullRequest",
         "title": "Antigravity: Create Pull Request"
+      },
+      {
+        "command": "antigravity.mergeBranchToMain",
+        "title": "Antigravity: Merge Branch to Main"
       },
       {
         "command": "antigravity.checkoutMain",
@@ -442,6 +447,7 @@
     "src/init-repo.sh",
     "src/create_feature_branch.sh",
     "src/create_pull_requrest.sh",
+    "src/merge_branch_to_main.sh",
     "src/checkout_branch.sh",
     "src/update-agent-setup.sh",
     "src/update-agentic-workspace.sh",

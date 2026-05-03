@@ -1168,6 +1168,41 @@ function activate(context) {
             }
         });
     };
+    const watchGitRepositoriesForTreeRefresh = async () => {
+        try {
+            const api = await getGitApi();
+            const watchedRepoRoots = new Set();
+            const watchRepository = (repository) => {
+                if (!repository.state)
+                    return;
+                const repoKey = path.normalize(repository.rootUri.fsPath);
+                if (watchedRepoRoots.has(repoKey))
+                    return;
+                watchedRepoRoots.add(repoKey);
+                context.subscriptions.push(repository.state.onDidChange(() => {
+                    provider.refresh();
+                }));
+            };
+            for (const repository of api.repositories) {
+                watchRepository(repository);
+            }
+            if (api.onDidOpenRepository) {
+                context.subscriptions.push(api.onDidOpenRepository((repository) => {
+                    watchRepository(repository);
+                    provider.refresh();
+                }));
+            }
+            if (api.onDidCloseRepository) {
+                context.subscriptions.push(api.onDidCloseRepository(() => {
+                    provider.refresh();
+                }));
+            }
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.log)(`[activate] Git tree refresh watcher unavailable: ${message}`);
+        }
+    };
     const focusSourceControlChanges = async () => {
         await vscode.commands.executeCommand("workbench.view.scm");
         try {
@@ -1538,6 +1573,7 @@ function activate(context) {
         return true;
     };
     context.subscriptions.push(vscode.window.registerTreeDataProvider("antigravityView", provider));
+    void watchGitRepositoriesForTreeRefresh();
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openSettings", async () => {
         const panel = vscode.window.createWebviewPanel("antigravitySettings", "Antigravity Settings", vscode.ViewColumn.Active, { enableScripts: true });
         panel.webview.html = (0, settings_1.renderAntigravitySettingsHtml)(panel.webview);
@@ -2591,6 +2627,44 @@ function activate(context) {
         ], {
             iconPath: new vscode.ThemeIcon("git-pull-request")
         });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.mergeBranchToMain", async () => {
+        (0, logger_1.log)("[mergeBranchToMain] triggered");
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        try {
+            const currentBranch = await getCurrentBranchName(repoRoot);
+            if (currentBranch === "main") {
+                void vscode.window.showInformationMessage("Merge branch to main is only available when you are on a branch other than main.");
+                return;
+            }
+            if (currentBranch === "detached HEAD") {
+                void vscode.window.showErrorMessage("Merge branch to main is unavailable while Git is in a detached HEAD state.");
+                return;
+            }
+            const canProceed = await prepareCommitBeforeCheckout(repoRoot, "main");
+            if (!canProceed)
+                return;
+            const scriptPath = path.join(extensionRoot, "src", "merge_branch_to_main.sh");
+            if (!fs.existsSync(scriptPath)) {
+                void vscode.window.showErrorMessage("Merge branch to main script not found in the extension package.");
+                return;
+            }
+            (0, terminal_1.runInNewTerminal)("Merge Branch to Main", [
+                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+                `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(currentBranch)}`
+            ], {
+                iconPath: new vscode.ThemeIcon("git-merge")
+            });
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Merge branch to main failed: ${message}`);
+        }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.checkoutMain", async () => {
         (0, logger_1.log)("[checkoutMain] triggered");

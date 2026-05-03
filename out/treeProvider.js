@@ -463,6 +463,7 @@ function getQuickActionItems() {
     const rootPath = (0, utils_1.getRootPath)();
     const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : undefined;
     const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
+    const currentBranch = hasRepo && repoRoot ? (0, git_1.getCurrentBranchNameSync)(repoRoot) : undefined;
     const autocommitRunning = repoRoot ? (0, git_1.isAutocommitRunning)(repoRoot) : false;
     const hasAgentFolder = repoRoot ? fs.existsSync(path.join((0, utils_1.getWorkspaceProjectPath)(repoRoot), ".agent")) : false;
     const hasGitHub = repoRoot ? (0, git_1.hasGitHubRemoteSync)(repoRoot) : false;
@@ -535,6 +536,15 @@ function getQuickActionItems() {
             title: "Create Pull Request"
         };
         items.push(createPullRequest);
+        if (currentBranch && currentBranch !== "main") {
+            const mergeBranchToMain = new NodeItem({ kind: "action", label: "Merge branch to main" }, vscode.TreeItemCollapsibleState.None);
+            mergeBranchToMain.iconPath = new vscode.ThemeIcon("git-merge", ORANGE_ACTION_COLOR);
+            mergeBranchToMain.command = {
+                command: "antigravity.mergeBranchToMain",
+                title: "Merge branch to main"
+            };
+            items.push(mergeBranchToMain);
+        }
         const checkoutMain = new NodeItem({ kind: "action", label: "Go To Branch" }, vscode.TreeItemCollapsibleState.None);
         checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
         checkoutMain.command = {
