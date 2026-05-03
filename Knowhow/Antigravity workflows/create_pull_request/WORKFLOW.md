@@ -1,6 +1,6 @@
 ---
 name: create_pull_request
-description: Guides the user through pre-PR checks (sync, lint, tests), gathers a structured PR description, and captures the designated code reviewer before opening a Pull Request.
+description: Guides the user through pre-PR checks (sync, lint, tests), gathers a structured PR description, captures the designated code reviewer, and creates the Pull Request.
 metadata:
   priority: 10
 retrieval:
@@ -138,13 +138,16 @@ If the project has multiple reviewers or a review policy (e.g. 2 approvals requi
 
 ---
 
-## Step 6 — Summary & Next Steps
+## Step 6 — Create the PR & Next Steps
 
-Compile all gathered information and present a ready-to-paste PR summary:
+Compile all gathered information, create the PR, and present the final summary:
 
-> ✅ **Your PR is ready to open!**
+> ✅ **Your PR has been created successfully!**
 >
 > ---
+>
+> ### PR URL
+> `<created-pr-url>`
 >
 > ### PR Title
 > `<branch-name>: <one-line summary from the "Why">`
@@ -173,7 +176,7 @@ Remind the user:
 
 ## Important Behavior
 
-- **Do not open the PR** until Steps 1–3 are clean (synced, linted, and tests passing).
+- **Do not create the PR** until Steps 1–3 are clean (synced, linted, and tests passing).
 - **Do not skip** the linter or tests unless the user explicitly types `skip` — and if they do, add a visible warning in the summary.
 - **Replace all placeholders** (e.g. `<your-feature-branch>`) with the actual values the user provides.
 - If the user doesn't know their linter or test command, help them identify it by checking common config files (`package.json`, `pyproject.toml`, `.eslintrc`, etc.).
