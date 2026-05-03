@@ -119,6 +119,11 @@ run_and_echo() {
   "$@"
 }
 
+verify_remote_branch_exists() {
+  local branch_name="$1"
+  git ls-remote --exit-code --heads origin "$branch_name" >/dev/null 2>&1
+}
+
 main() {
   local branch_name="${1:-}"
 
@@ -143,18 +148,26 @@ main() {
   echo "The -u flag links your local branch to the remote. After this, you can just type git push."
   run_and_echo git push -u origin "$branch_name"
 
+  if ! verify_remote_branch_exists "$branch_name"; then
+    echo "The branch was pushed locally, but the remote branch could not be verified on origin." >&2
+    exit 1
+  fi
+
   cat <<EOF
 
 ✅ Branch created successfully!
 
-| Field        | Value         |
-|--------------|---------------|
-| Branch name  | ${branch_name} |
-| Based on     | main          |
-| Remote       | origin        |
-| Upstream set | Yes           |
+| Field           | Value         |
+|-----------------|---------------|
+| Branch name     | ${branch_name} |
+| Based on        | main          |
+| Remote          | origin        |
+| Upstream set    | Yes           |
+| Remote verified | Yes           |
 
 You're ready to start coding. When you're done, use the create_pull_request workflow to open a PR.
+
+If GitHub shows a green "Compare & pull request" button after this, the branch is already fully created. That button is only GitHub's shortcut for opening a pull request.
 EOF
 }
 
