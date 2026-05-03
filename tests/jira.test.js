@@ -64,6 +64,6 @@ test("createJiraProject creates a Jira software project", async (t) => {
   assert.equal(capturedCreateRequest.body.projectTypeKey, "software");
   assert.equal(
     capturedCreateRequest.body.projectTemplateKey,
-    "com.pyxis.greenhopper.jira:gh-simplified-basic"
+    "com.pyxis.greenhopper.jira:gh-simplified-agility-scrum"
   );
 });

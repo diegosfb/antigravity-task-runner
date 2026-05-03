@@ -15,7 +15,7 @@ exports.getJiraCreateFieldMetadata = getJiraCreateFieldMetadata;
 exports.createJiraIssue = createJiraIssue;
 const http = require("http");
 const https = require("https");
-const JIRA_SOFTWARE_PROJECT_TEMPLATE_KEY = "com.pyxis.greenhopper.jira:gh-simplified-basic";
+const JIRA_SOFTWARE_PROJECT_TEMPLATE_KEY = "com.pyxis.greenhopper.jira:gh-simplified-agility-scrum";
 const JIRA_SOFTWARE_PROJECT_TYPE_KEY = "software";
 function normalizeFieldName(fieldKey, field) {
     return (field?.name || fieldKey).trim().toLowerCase();

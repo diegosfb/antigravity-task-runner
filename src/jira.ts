@@ -13,7 +13,8 @@ export interface JiraProjectDetails {
   description?: string;
 }
 
-const JIRA_SOFTWARE_PROJECT_TEMPLATE_KEY = "com.pyxis.greenhopper.jira:gh-simplified-basic";
+const JIRA_SOFTWARE_PROJECT_TEMPLATE_KEY =
+  "com.pyxis.greenhopper.jira:gh-simplified-agility-scrum";
 const JIRA_SOFTWARE_PROJECT_TYPE_KEY = "software";
 
 export interface JiraIssueType {

@@ -621,7 +621,7 @@ export function activate(context: vscode.ExtensionContext) {
         </div>
       </div>
       <div class="section">
-        <div class="section-title">Create New Software Development Project</div>
+        <div class="section-title">Create New Scrum Software Project</div>
         <label>
           Project Name
           <input id="project-name" type="text" autocomplete="off" />
@@ -630,7 +630,7 @@ export function activate(context: vscode.ExtensionContext) {
         <label>
           Description
           <textarea id="project-description"></textarea>
-          <span class="hint">Projects created here use Jira's Software Development project type.</span>
+          <span class="hint">Projects created here use Jira's Scrum software template with backlog and board views.</span>
         </label>
         <div class="actions">
           <button type="button" class="primary" id="create-project-button">Create Project</button>
