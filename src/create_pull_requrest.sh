@@ -16,11 +16,15 @@ trim() {
   printf '%s' "$value"
 }
 
+to_lower() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
 confirm_yes_no() {
   local message="$1"
   local answer
   while true; do
-    answer="$(printf '%s' "$(prompt "$message")" | tr '[:upper:]' '[:lower:]')"
+    answer="$(to_lower "$(prompt "$message")")"
     case "$(trim "$answer")" in
       yes|y) return 0 ;;
       no|n) return 1 ;;
@@ -102,7 +106,7 @@ main() {
   run_and_echo git push origin "$feature_branch"
 
   test_command="$(optional_value "What command runs your project's test suite? (type 'skip' to skip)")"
-  if [[ -n "$test_command" && "${test_command,,}" != "skip" ]]; then
+  if [[ -n "$test_command" && "$(to_lower "$test_command")" != "skip" ]]; then
     run_shell_command "$test_command"
   else
     test_warning="WARNING: Tests were skipped."
