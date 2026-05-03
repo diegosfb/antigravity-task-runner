@@ -21,7 +21,7 @@ export interface JiraProjectCreationResult {
 }
 
 const JIRA_SOFTWARE_PROJECT_TEMPLATE_KEY =
-  "com.pyxis.greenhopper.jira:gh-simplified-agility-scrum";
+  "com.pyxis.greenhopper.jira:gh-simplified-agility-kanban";
 const JIRA_SOFTWARE_PROJECT_TYPE_KEY = "software";
 const JIRA_STATUS_TO_DO = "To Do";
 const JIRA_STATUS_IN_PROGRESS = "In Progress";
@@ -794,7 +794,7 @@ async function ensureTeamManagedProjectWorkflow(
     const issueTypes = await getJiraIssueTypes(credentials, projectKey);
     if (issueTypes.length === 0) {
       return [
-        "The Jira project was created, but Jira did not return any issue types for the new scrum board workflow setup."
+        "The Jira project was created, but Jira did not return any issue types for the new kanban board workflow setup."
       ];
     }
 
@@ -815,7 +815,7 @@ async function ensureTeamManagedProjectWorkflow(
     const responseWorkflows = workflowResponse.workflows ?? [];
     if (responseWorkflows.length === 0) {
       return [
-        "The Jira project was created, but Jira did not return any editable workflows for the new scrum board setup."
+        "The Jira project was created, but Jira did not return any editable workflows for the new kanban board setup."
       ];
     }
 

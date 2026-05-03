@@ -17,7 +17,7 @@ function readJsonBody(request) {
   });
 }
 
-test("createJiraProject creates and configures a team-managed scrum Jira software project", async (t) => {
+test("createJiraProject creates and configures a team-managed kanban Jira software project", async (t) => {
   let capturedCreateRequest = null;
   let capturedWorkflowReadRequest = null;
   let capturedWorkflowUpdateRequest = null;
@@ -337,7 +337,7 @@ test("createJiraProject creates and configures a team-managed scrum Jira softwar
   assert.equal(capturedCreateRequest.body.projectTypeKey, "software");
   assert.equal(
     capturedCreateRequest.body.projectTemplateKey,
-    "com.pyxis.greenhopper.jira:gh-simplified-agility-scrum"
+    "com.pyxis.greenhopper.jira:gh-simplified-agility-kanban"
   );
 
   assert.deepEqual(
@@ -385,6 +385,14 @@ test("createJiraProject creates and configures a team-managed scrum Jira softwar
       (status) => status.statusReference === inReviewStatus.statusReference
     ),
     "expected the updated workflow to reference In Review"
+  );
+  const inReviewLayout = updatedWorkflow.statuses.find(
+    (status) => status.statusReference === inReviewStatus.statusReference
+  )?.layout;
+  assert.deepEqual(
+    inReviewLayout,
+    { x: 400, y: 200 },
+    "expected In Review to be laid out between In Progress and Done"
   );
   assert.ok(
     updatedWorkflow.transitions.some(
