@@ -13,6 +13,9 @@ export interface JiraProjectDetails {
   description?: string;
 }
 
+const JIRA_SOFTWARE_PROJECT_TEMPLATE_KEY = "com.pyxis.greenhopper.jira:gh-simplified-basic";
+const JIRA_SOFTWARE_PROJECT_TYPE_KEY = "software";
+
 export interface JiraIssueType {
   id: string;
   name: string;
@@ -196,8 +199,8 @@ export async function createJiraProject(
       key: details.key,
       leadAccountId,
       name: details.name,
-      projectTemplateKey: "com.pyxis.greenhopper.jira:gh-simplified-basic",
-      projectTypeKey: "software"
+      projectTemplateKey: JIRA_SOFTWARE_PROJECT_TEMPLATE_KEY,
+      projectTypeKey: JIRA_SOFTWARE_PROJECT_TYPE_KEY
     }
   });
 }
