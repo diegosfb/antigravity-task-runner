@@ -6,6 +6,7 @@ import * as os from "os";
 export const LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
 export const DEFAULT_SOP_MANUAL_LINK =
   "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7";
+export const DEFAULT_GITHUB_CODE_REVIEWER = "@diegosfb";
 
 export function isLocalLiteLLMBaseUrl(baseUrl: string | undefined): boolean {
   if (!baseUrl) return false;
@@ -195,6 +196,14 @@ export function getAgenticHarnessExecutionCommand(): string {
   );
 }
 
+export function getDefaultGithubCodeReviewer(): string {
+  const config = vscode.workspace.getConfiguration("antigravity");
+  return (
+    (config.get<string>("defaultGithubCodeReviewer") || "").trim() ||
+    DEFAULT_GITHUB_CODE_REVIEWER
+  );
+}
+
 export function getUseAgentForGithubRepositoryManagement(): boolean {
   const config = vscode.workspace.getConfiguration("antigravity");
   return config.get<boolean>("useAgentForGithubRepositoryManagement") ?? false;
@@ -255,6 +264,13 @@ function getExtensionSettingsFields(): SettingsField[] {
       description: "Terminal name used when running agents.",
       placeholder: "Antigravity Agent",
       value: config.get<string>("agentTerminalName") || ""
+    },
+    {
+      key: "defaultGithubCodeReviewer",
+      label: "Default GitHub Code Reviewer",
+      description: "Suggested reviewer when creating a pull request. You can still override it per PR.",
+      placeholder: "@diegosfb",
+      value: getDefaultGithubCodeReviewer()
     },
     {
       key: "antigravityPath",

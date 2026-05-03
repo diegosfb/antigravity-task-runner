@@ -313,6 +313,11 @@
           "default": "Antigravity Agent",
           "description": "Terminal name used when running agents."
         },
+        "antigravity.defaultGithubCodeReviewer": {
+          "type": "string",
+          "default": "@diegosfb",
+          "description": "GitHub username suggested by default when creating a pull request."
+        },
         "antigravity.antigravityPath": {
           "type": "string",
           "default": "antigravity",

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_SOP_MANUAL_LINK = exports.LOCAL_LITELLM_READY_URL = void 0;
+exports.DEFAULT_GITHUB_CODE_REVIEWER = exports.DEFAULT_SOP_MANUAL_LINK = exports.LOCAL_LITELLM_READY_URL = void 0;
 exports.isLocalLiteLLMBaseUrl = isLocalLiteLLMBaseUrl;
 exports.readClaudeAnthropicBaseUrl = readClaudeAnthropicBaseUrl;
 exports.normalizeStringArray = normalizeStringArray;
@@ -9,6 +9,7 @@ exports.getRouterSettings = getRouterSettings;
 exports.loadOpenRouterConfig = loadOpenRouterConfig;
 exports.loadClaudeSettings = loadClaudeSettings;
 exports.getAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand;
+exports.getDefaultGithubCodeReviewer = getDefaultGithubCodeReviewer;
 exports.getUseAgentForGithubRepositoryManagement = getUseAgentForGithubRepositoryManagement;
 exports.renderAntigravitySettingsHtml = renderAntigravitySettingsHtml;
 exports.renderAgenticSetupHtml = renderAgenticSetupHtml;
@@ -19,6 +20,7 @@ const path = require("path");
 const os = require("os");
 exports.LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
 exports.DEFAULT_SOP_MANUAL_LINK = "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7";
+exports.DEFAULT_GITHUB_CODE_REVIEWER = "@diegosfb";
 function isLocalLiteLLMBaseUrl(baseUrl) {
     if (!baseUrl)
         return false;
@@ -162,6 +164,11 @@ function getAgenticHarnessExecutionCommand() {
     return ((config.get("agenticHarnessExecutionCommand") || "").trim() ||
         DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0]);
 }
+function getDefaultGithubCodeReviewer() {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    return ((config.get("defaultGithubCodeReviewer") || "").trim() ||
+        exports.DEFAULT_GITHUB_CODE_REVIEWER);
+}
 function getUseAgentForGithubRepositoryManagement() {
     const config = vscode.workspace.getConfiguration("antigravity");
     return config.get("useAgentForGithubRepositoryManagement") ?? false;
@@ -213,6 +220,13 @@ function getExtensionSettingsFields() {
             description: "Terminal name used when running agents.",
             placeholder: "Antigravity Agent",
             value: config.get("agentTerminalName") || ""
+        },
+        {
+            key: "defaultGithubCodeReviewer",
+            label: "Default GitHub Code Reviewer",
+            description: "Suggested reviewer when creating a pull request. You can still override it per PR.",
+            placeholder: "@diegosfb",
+            value: getDefaultGithubCodeReviewer()
         },
         {
             key: "antigravityPath",

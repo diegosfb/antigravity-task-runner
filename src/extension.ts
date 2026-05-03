@@ -25,6 +25,7 @@ import {
   getRouterSettings,
   getToolRunCommand,
   getUseAgentForGithubRepositoryManagement,
+  getDefaultGithubCodeReviewer,
   normalizeStringArray,
   readClaudeAnthropicBaseUrl,
   isLocalLiteLLMBaseUrl,
@@ -3253,6 +3254,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
+      const defaultGithubCodeReviewer = getDefaultGithubCodeReviewer();
       const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
       if (!fs.existsSync(scriptPath)) {
         void vscode.window.showErrorMessage(
@@ -3265,7 +3267,7 @@ export function activate(context: vscode.ExtensionContext) {
         "Create Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          quoteShellArg(scriptPath)
+          `ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER=${quoteShellArg(defaultGithubCodeReviewer)} ${quoteShellArg(scriptPath)}`
         ],
         {
           iconPath: new vscode.ThemeIcon("git-pull-request")
