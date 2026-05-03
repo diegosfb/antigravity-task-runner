@@ -2,6 +2,10 @@ get_origin_remote_url() {
   git remote get-url origin
 }
 
+get_origin_push_url() {
+  git remote get-url --push origin
+}
+
 origin_uses_github_ssh() {
   local origin_url="${1:-}"
 
@@ -43,24 +47,40 @@ gh_is_authenticated() {
 }
 
 run_git_with_https_origin() {
-  local https_url="$1"
-  shift
+  local origin_url="$1"
+  local https_url="$2"
+  shift 2
 
-  if gh_is_authenticated; then
-    GIT_CONFIG_GLOBAL=/dev/null \
-      GIT_CONFIG_NOSYSTEM=1 \
-      git \
-        -c credential.helper='!gh auth git-credential' \
-        -c remote.origin.url="$https_url" \
-        -c remote.origin.pushurl="$https_url" \
-        "$@"
-    return $?
+  local origin_push_url=""
+  local origin_push_https_url=""
+  local use_gh_credentials=0
+  local git_status=0
+  local git_args=()
+
+  origin_push_url="$(get_origin_push_url 2>/dev/null || true)"
+  git_args=(-c "url.${https_url}.insteadOf=${origin_url}")
+
+  if [[ -n "$origin_push_url" ]] && [[ "$origin_push_url" != "$origin_url" ]]; then
+    origin_push_https_url="$(github_https_remote_from_origin_url "$origin_push_url" 2>/dev/null || true)"
+    if [[ -n "$origin_push_https_url" ]]; then
+      git_args+=(-c "url.${origin_push_https_url}.insteadOf=${origin_push_url}")
+    fi
   fi
 
-  git \
-    -c remote.origin.url="$https_url" \
-    -c remote.origin.pushurl="$https_url" \
-    "$@"
+  if gh_is_authenticated; then
+    use_gh_credentials=1
+    git_args=(-c "credential.helper=!gh auth git-credential" "${git_args[@]}")
+  fi
+
+  if [[ "$use_gh_credentials" -eq 1 ]]; then
+    GIT_CONFIG_GLOBAL=/dev/null \
+      GIT_CONFIG_NOSYSTEM=1 \
+      git "${git_args[@]}" "$@"
+    git_status=$?
+    return "$git_status"
+  fi
+
+  git "${git_args[@]}" "$@"
 }
 
 print_github_ssh_access_hint() {
@@ -120,7 +140,7 @@ run_remote_git() {
 
   if [[ -n "$https_url" ]] && gh_is_authenticated; then
     used_github_https_override=1
-    if run_git_with_https_origin "$https_url" "$@"; then
+    if run_git_with_https_origin "$origin_url" "$https_url" "$@"; then
       return 0
     else
       status=$?
@@ -135,7 +155,7 @@ run_remote_git() {
 
   if [[ -n "$https_url" ]] && [[ "$used_github_https_override" -eq 0 ]]; then
     echo "SSH access to GitHub failed. Retrying with a temporary HTTPS remote." >&2
-    if run_git_with_https_origin "$https_url" "$@"; then
+    if run_git_with_https_origin "$origin_url" "$https_url" "$@"; then
       return 0
     else
       status=$?

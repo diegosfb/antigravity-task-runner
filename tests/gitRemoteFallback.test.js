@@ -9,7 +9,13 @@ function writeExecutable(filePath, content) {
   fs.writeFileSync(filePath, content, { encoding: "utf8", mode: 0o755 });
 }
 
-function createStubEnvironment({ ghAuthOk, buildGitScriptBody, gitScriptBody }) {
+function createStubEnvironment({
+  ghAuthOk,
+  buildGitScriptBody,
+  gitScriptBody,
+  originUrl = "git@github.com:octo-org/octo-repo.git",
+  originPushUrl = originUrl
+}) {
   const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-git-fallback-"));
   const binDir = path.join(rootDir, "bin");
   const logPath = path.join(rootDir, "git.log");
@@ -23,8 +29,13 @@ function createStubEnvironment({ ghAuthOk, buildGitScriptBody, gitScriptBody }) 
     path.join(binDir, "git"),
     `#!/usr/bin/env bash
 set -euo pipefail
+if [[ "$#" -ge 4 && "$1" == "remote" && "$2" == "get-url" && "$3" == "--push" && "$4" == "origin" ]]; then
+  printf '%s\\n' '${originPushUrl}'
+  exit 0
+fi
+
 if [[ "$#" -ge 3 && "$1" == "remote" && "$2" == "get-url" && "$3" == "origin" ]]; then
-  printf '%s\\n' 'git@github.com:octo-org/octo-repo.git'
+  printf '%s\\n' '${originUrl}'
   exit 0
 fi
 
@@ -47,7 +58,7 @@ printf '%s\\n' "$*" >> "${logPath}"
   return { rootDir, binDir, logPath };
 }
 
-test("run_remote_git uses an HTTPS override plus gh credentials for GitHub SSH remotes", (t) => {
+test("run_remote_git rewrites GitHub SSH remotes to HTTPS and adds gh credentials", (t) => {
   const { rootDir, binDir, logPath } = createStubEnvironment({ ghAuthOk: true });
   t.after(() => {
     fs.rmSync(rootDir, { recursive: true, force: true });
@@ -68,8 +79,8 @@ test("run_remote_git uses an HTTPS override plus gh credentials for GitHub SSH r
 
   const loggedCommand = fs.readFileSync(logPath, "utf8").trim();
   assert.match(loggedCommand, /-c credential\.helper=!gh auth git-credential/);
-  assert.match(loggedCommand, /-c remote\.origin\.url=https:\/\/github\.com\/octo-org\/octo-repo\.git/);
-  assert.match(loggedCommand, /-c remote\.origin\.pushurl=https:\/\/github\.com\/octo-org\/octo-repo\.git/);
+  assert.match(loggedCommand, /-c url\.https:\/\/github\.com\/octo-org\/octo-repo\.git\.insteadOf=git@github\.com:octo-org\/octo-repo\.git/);
+  assert.doesNotMatch(loggedCommand, /remote\.origin\.(url|pushurl)=/);
   assert.match(loggedCommand, /pull origin main$/);
 });
 
@@ -127,9 +138,46 @@ fi
 
   const loggedCommands = fs.readFileSync(logPath, "utf8").trim().split("\n");
   assert.equal(loggedCommands[0], "pull origin main");
-  assert.match(loggedCommands[1], /-c remote\.origin\.url=https:\/\/github\.com\/octo-org\/octo-repo\.git/);
-  assert.match(loggedCommands[1], /-c remote\.origin\.pushurl=https:\/\/github\.com\/octo-org\/octo-repo\.git/);
+  assert.match(loggedCommands[1], /-c url\.https:\/\/github\.com\/octo-org\/octo-repo\.git\.insteadOf=git@github\.com:octo-org\/octo-repo\.git/);
+  assert.doesNotMatch(loggedCommands[1], /remote\.origin\.(url|pushurl)=/);
   assert.match(loggedCommands[1], /pull origin main$/);
+});
+
+test("run_remote_git also rewrites a distinct GitHub SSH pushurl to HTTPS", (t) => {
+  const { rootDir, binDir, logPath } = createStubEnvironment({
+    ghAuthOk: false,
+    originUrl: "git@github.com:octo-org/octo-repo.git",
+    originPushUrl: "ssh://git@github.com/octo-org/octo-repo.git",
+    buildGitScriptBody: ({ logPath: tempLogPath }) => `
+printf '%s\\n' "$*" >> "${tempLogPath}"
+if [[ "$*" == "push origin main" ]]; then
+  printf '%s\\n' 'git@github.com: Permission denied (publickey).' >&2
+  printf '%s\\n' 'fatal: Could not read from remote repository.' >&2
+  exit 1
+fi
+`
+  });
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  const helperPath = path.join(__dirname, "..", "src", "git_remote_fallback.sh");
+  execFileSync(
+    "bash",
+    ["-c", `source ${JSON.stringify(helperPath)}; run_remote_git push origin main`],
+    {
+      env: {
+        ...process.env,
+        PATH: `${binDir}:${process.env.PATH}`
+      },
+      stdio: "ignore"
+    }
+  );
+
+  const loggedCommand = fs.readFileSync(logPath, "utf8").trim();
+  assert.match(loggedCommand, /-c url\.https:\/\/github\.com\/octo-org\/octo-repo\.git\.insteadOf=git@github\.com:octo-org\/octo-repo\.git/);
+  assert.match(loggedCommand, /-c url\.https:\/\/github\.com\/octo-org\/octo-repo\.git\.insteadOf=ssh:\/\/git@github\.com\/octo-org\/octo-repo\.git/);
+  assert.match(loggedCommand, /push origin main$/);
 });
 
 test("run_remote_git preserves failure status and prints a recovery hint when GitHub access still fails", (t) => {
@@ -172,6 +220,6 @@ exit 1
   const loggedCommands = fs.readFileSync(logPath, "utf8").trim().split("\n");
   assert.equal(loggedCommands.length, 2);
   assert.equal(loggedCommands[0], "pull origin main");
-  assert.match(loggedCommands[1], /-c remote\.origin\.url=https:\/\/github\.com\/octo-org\/octo-repo\.git/);
+  assert.match(loggedCommands[1], /-c url\.https:\/\/github\.com\/octo-org\/octo-repo\.git\.insteadOf=git@github\.com:octo-org\/octo-repo\.git/);
   assert.match(loggedCommands[1], /pull origin main$/);
 });
