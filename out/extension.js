@@ -641,7 +641,7 @@ function activate(context) {
                     localSkillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation"),
                     taskPrompt: jiraPrompt
                 });
-                (0, terminal_1.runInNewTerminal)("Agentic Harness Create Jira Project", [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, (0, terminal_1.buildAgenticHarnessPromptCommand)(prompt, "prompt")], {
+                (0, terminal_1.runInNewTerminal)("Agentic Harness Create Jira Project", [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt")], {
                     env: (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessEnvironment)(credentials),
                     iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
                     color: terminal_1.CLAUDE_ACTION_COLOR
@@ -2172,7 +2172,7 @@ function activate(context) {
                 (0, logger_1.logAlways)("[commitChanges] delegating commit to Agentic Harness");
                 (0, terminal_1.runInNewTerminal)("Agentic Harness Commit", [
                     `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                    (0, terminal_1.buildAgenticHarnessPromptCommand)(prompt, "prompt")
+                    (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt")
                 ], {
                     iconPath: new vscode.ThemeIcon("git-commit", terminal_1.CLAUDE_ACTION_COLOR),
                     color: terminal_1.CLAUDE_ACTION_COLOR
@@ -2795,7 +2795,7 @@ function activate(context) {
         }
         (0, terminal_1.runInNewTerminal)("Agentic Harness Approve Pull Request", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            (0, terminal_1.buildAgenticHarnessPromptCommand)(`run this workflow ${workflowFile}`)
+            (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, `run this workflow ${workflowFile}`)
         ], {
             iconPath: new vscode.ThemeIcon("pass", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR

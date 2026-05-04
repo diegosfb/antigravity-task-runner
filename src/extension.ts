@@ -827,7 +827,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
             runInNewTerminal(
               "Agentic Harness Create Jira Project",
-              [`cd ${quoteShellArg(repoRoot)}`, buildAgenticHarnessPromptCommand(prompt, "prompt")],
+              [`cd ${quoteShellArg(repoRoot)}`, buildAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")],
               {
                 env: buildCreateJiraProjectAgenticHarnessEnvironment(credentials),
                 iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
@@ -2648,7 +2648,7 @@ export function activate(context: vscode.ExtensionContext) {
             "Agentic Harness Commit",
             [
               `cd ${quoteShellArg(repoRoot)}`,
-              buildAgenticHarnessPromptCommand(prompt, "prompt")
+              buildAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")
             ],
             {
               iconPath: new vscode.ThemeIcon("git-commit", CLAUDE_ACTION_COLOR),
@@ -3506,7 +3506,7 @@ export function activate(context: vscode.ExtensionContext) {
         "Agentic Harness Approve Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          buildAgenticHarnessPromptCommand(`run this workflow ${workflowFile}`)
+          buildAgenticHarnessPromptCommand(repoRoot, `run this workflow ${workflowFile}`)
         ],
         {
           iconPath: new vscode.ThemeIcon("pass", CLAUDE_ACTION_COLOR),
