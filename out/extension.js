@@ -1013,9 +1013,9 @@ function activate(context) {
     const buildAgentJiraLabel = (agentLabel) => `developed-by-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
     const buildJiraAgentPrompt = (issueKey, summary, agentLabel) => {
         const jiraAccessInstructions = agentLabel === "Codex"
-            ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as diegosfb@gmail.com, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using diegosfb@gmail.com. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as diegosfb@gmail.com, then continue with the MCP-backed Jira actions. Inspect Jira item ${issueKey}, add each assumption as a Jira comment line beginning with "AGENT ASSUMTION:", add a final Jira comment beginning with "AGENT SOLUTION:", and transition Jira item ${issueKey} to In Review by using Jira MCP actions.`
+            ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as diegosfb@gmail.com, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using diegosfb@gmail.com. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as diegosfb@gmail.com, then continue with the MCP-backed Jira actions. Inspect Jira item ${issueKey}, add each assumption as a Jira comment line beginning with "AGENT ASSUMTION:", add a final Jira comment beginning with "AGENT SOLUTION:", and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead by using Jira MCP actions.`
             : "";
-        return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+        return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
     };
     const writeAgentLaunchScript = (scriptPrefix, command) => {
         const sanitizedPrefix = scriptPrefix.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "agent-launch";
@@ -2532,22 +2532,27 @@ function activate(context) {
             issue
         })), {
             title: "Jira Item Completed",
-            placeHolder: `Select one of your Jira tickets in ${projectKey} to move into In Review`,
+            placeHolder: `Select one of your Jira tickets in ${projectKey} to move into In Review, or Done if review is unavailable`,
             matchOnDescription: true,
             matchOnDetail: true
         });
         if (!selection)
             return;
-        const confirm = await vscode.window.showInformationMessage(`Move ${selection.issue.key} to In Review?`, { modal: true }, "Mark Completed");
+        const confirm = await vscode.window.showInformationMessage(`Move ${selection.issue.key} to In Review, or Done if review is unavailable?`, { modal: true }, "Mark Completed");
         if (confirm !== "Mark Completed")
             return;
         try {
-            await vscode.window.withProgress({
+            const transitionResult = await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `Moving ${selection.issue.key} to In Review`,
+                title: `Completing ${selection.issue.key} in Jira`,
                 cancellable: false
-            }, async () => (0, jira_1.transitionJiraIssueToStatus)(credentials, selection.issue.key, "In Review"));
-            void vscode.window.showInformationMessage(`Moved Jira item ${selection.issue.key} to In Review.`);
+            }, async () => (0, jira_1.transitionJiraIssueToReviewOrDone)(credentials, projectKey, selection.issue.key));
+            const transitionMessage = transitionResult.statusName === "In Review"
+                ? `Moved Jira item ${selection.issue.key} to In Review.`
+                : transitionResult.fallbackReason
+                    ? `Moved Jira item ${selection.issue.key} to Done because ${transitionResult.fallbackReason}`
+                    : `Moved Jira item ${selection.issue.key} to Done.`;
+            void vscode.window.showInformationMessage(transitionMessage);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);

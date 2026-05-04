@@ -2,7 +2,11 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
 
-const { createJiraProject, transitionJiraIssueToStatus } = require("../out/jira.js");
+const {
+  createJiraProject,
+  transitionJiraIssueToReviewOrDone,
+  transitionJiraIssueToStatus
+} = require("../out/jira.js");
 
 function readJsonBody(request) {
   return new Promise((resolve) => {
@@ -848,6 +852,276 @@ test("createJiraProject warns when Jira rejects the board column update", async 
     createdProject.warnings.includes(
       'The Jira project was created, but the extension could not automatically configure the board columns so "In Review" appears between "In Progress" and "Done": Greenhopper rejected the board columns.'
     )
+  );
+});
+
+test("transitionJiraIssueToReviewOrDone moves to In Review when the board column is visible", async (t) => {
+  let capturedTransitionRequest = null;
+
+  const server = http.createServer(async (request, response) => {
+    const requestUrl = new URL(request.url, "http://127.0.0.1");
+
+    if (
+      requestUrl.pathname === "/rest/agile/1.0/board" &&
+      request.method === "GET" &&
+      requestUrl.searchParams.get("projectKeyOrId") === "TASK"
+    ) {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ values: [{ id: 176, type: "kanban" }] }));
+      return;
+    }
+
+    if (
+      request.url === "/rest/agile/1.0/board/176/configuration" &&
+      request.method === "GET"
+    ) {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          columnConfig: {
+            columns: [
+              { name: "To Do" },
+              { name: "In Progress" },
+              { name: "In Review" },
+              { name: "Done" }
+            ]
+          }
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/issue/TASK-1/transitions" && request.method === "GET") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          transitions: [
+            {
+              id: "41",
+              name: "Move to Review",
+              to: { name: "In Review" }
+            },
+            {
+              id: "31",
+              name: "Done",
+              to: { name: "Done" }
+            }
+          ]
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/issue/TASK-1/transitions" && request.method === "POST") {
+      capturedTransitionRequest = await readJsonBody(request);
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Not found" }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  const result = await transitionJiraIssueToReviewOrDone(
+    {
+      baseUrl: `http://127.0.0.1:${port}`,
+      email: "person@example.com",
+      apiToken: "secret-token"
+    },
+    "TASK",
+    "TASK-1"
+  );
+
+  assert.deepEqual(result, { statusName: "In Review" });
+  assert.deepEqual(capturedTransitionRequest, {
+    transition: {
+      id: "41"
+    }
+  });
+});
+
+test("transitionJiraIssueToReviewOrDone falls back to Done when In Review is not visible on the board", async (t) => {
+  let capturedTransitionRequest = null;
+
+  const server = http.createServer(async (request, response) => {
+    const requestUrl = new URL(request.url, "http://127.0.0.1");
+
+    if (
+      requestUrl.pathname === "/rest/agile/1.0/board" &&
+      request.method === "GET" &&
+      requestUrl.searchParams.get("projectKeyOrId") === "TASK"
+    ) {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ values: [{ id: 176, type: "kanban" }] }));
+      return;
+    }
+
+    if (
+      request.url === "/rest/agile/1.0/board/176/configuration" &&
+      request.method === "GET"
+    ) {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          columnConfig: {
+            columns: [{ name: "To Do" }, { name: "In Progress" }, { name: "Done" }]
+          }
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/issue/TASK-1/transitions" && request.method === "GET") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          transitions: [
+            {
+              id: "41",
+              name: "Move to Review",
+              to: { name: "In Review" }
+            },
+            {
+              id: "31",
+              name: "Done",
+              to: { name: "Done" }
+            }
+          ]
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/issue/TASK-1/transitions" && request.method === "POST") {
+      capturedTransitionRequest = await readJsonBody(request);
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Not found" }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  const result = await transitionJiraIssueToReviewOrDone(
+    {
+      baseUrl: `http://127.0.0.1:${port}`,
+      email: "person@example.com",
+      apiToken: "secret-token"
+    },
+    "TASK",
+    "TASK-1"
+  );
+
+  assert.deepEqual(result, {
+    fallbackReason: '"In Review" is not visible on the Jira board.',
+    statusName: "Done"
+  });
+  assert.deepEqual(capturedTransitionRequest, {
+    transition: {
+      id: "31"
+    }
+  });
+});
+
+test("transitionJiraIssueToReviewOrDone falls back to Done when moving to In Review fails", async (t) => {
+  let capturedTransitionRequest = null;
+  let transitionReads = 0;
+
+  const server = http.createServer(async (request, response) => {
+    const requestUrl = new URL(request.url, "http://127.0.0.1");
+
+    if (
+      requestUrl.pathname === "/rest/agile/1.0/board" &&
+      request.method === "GET" &&
+      requestUrl.searchParams.get("projectKeyOrId") === "TASK"
+    ) {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ values: [{ id: 176, type: "kanban" }] }));
+      return;
+    }
+
+    if (
+      request.url === "/rest/agile/1.0/board/176/configuration" &&
+      request.method === "GET"
+    ) {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          columnConfig: {
+            columns: [
+              { name: "To Do" },
+              { name: "In Progress" },
+              { name: "In Review" },
+              { name: "Done" }
+            ]
+          }
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/issue/TASK-1/transitions" && request.method === "GET") {
+      transitionReads += 1;
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          transitions: [
+            {
+              id: "31",
+              name: "Done",
+              to: { name: "Done" }
+            }
+          ]
+        })
+      );
+      return;
+    }
+
+    if (request.url === "/rest/api/3/issue/TASK-1/transitions" && request.method === "POST") {
+      capturedTransitionRequest = await readJsonBody(request);
+      response.writeHead(204);
+      response.end();
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Not found" }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  const result = await transitionJiraIssueToReviewOrDone(
+    {
+      baseUrl: `http://127.0.0.1:${port}`,
+      email: "person@example.com",
+      apiToken: "secret-token"
+    },
+    "TASK",
+    "TASK-1"
+  );
+
+  assert.equal(transitionReads, 2);
+  assert.deepEqual(capturedTransitionRequest, {
+    transition: {
+      id: "31"
+    }
+  });
+  assert.equal(result.statusName, "Done");
+  assert.match(
+    result.fallbackReason ?? "",
+    /^moving to "In Review" failed: Transition "In Review" is not available\./
   );
 });
 

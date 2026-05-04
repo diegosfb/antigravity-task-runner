@@ -62,6 +62,11 @@ export interface JiraIssueSummary {
   statusName: string;
 }
 
+export interface JiraCompletionTransitionResult {
+  statusName: typeof JIRA_STATUS_DONE | typeof JIRA_STATUS_IN_REVIEW;
+  fallbackReason?: string;
+}
+
 interface JiraRequestOptions {
   method: "DELETE" | "GET" | "POST" | "PUT";
   apiPath: string;
@@ -687,6 +692,55 @@ export async function transitionJiraIssueToStatus(
   });
 }
 
+export async function transitionJiraIssueToReviewOrDone(
+  credentials: JiraCredentials,
+  projectKey: string,
+  issueKey: string
+): Promise<JiraCompletionTransitionResult> {
+  const isInReviewVisibleOnBoard = await isJiraBoardColumnVisible(
+    credentials,
+    projectKey,
+    JIRA_STATUS_IN_REVIEW
+  );
+
+  if (isInReviewVisibleOnBoard === false) {
+    try {
+      await transitionJiraIssueToStatus(credentials, issueKey, JIRA_STATUS_DONE);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `"${JIRA_STATUS_IN_REVIEW}" is not visible on the Jira board, and moving ${issueKey} to "${JIRA_STATUS_DONE}" failed: ${message}`
+      );
+    }
+
+    return {
+      fallbackReason: `"${JIRA_STATUS_IN_REVIEW}" is not visible on the Jira board.`,
+      statusName: JIRA_STATUS_DONE
+    };
+  }
+
+  try {
+    await transitionJiraIssueToStatus(credentials, issueKey, JIRA_STATUS_IN_REVIEW);
+    return { statusName: JIRA_STATUS_IN_REVIEW };
+  } catch (reviewError) {
+    const reviewMessage = reviewError instanceof Error ? reviewError.message : String(reviewError);
+
+    try {
+      await transitionJiraIssueToStatus(credentials, issueKey, JIRA_STATUS_DONE);
+    } catch (doneError) {
+      const doneMessage = doneError instanceof Error ? doneError.message : String(doneError);
+      throw new Error(
+        `Failed to move ${issueKey} to "${JIRA_STATUS_IN_REVIEW}" (${reviewMessage}) and fallback to "${JIRA_STATUS_DONE}" (${doneMessage}).`
+      );
+    }
+
+    return {
+      fallbackReason: `moving to "${JIRA_STATUS_IN_REVIEW}" failed: ${reviewMessage}`,
+      statusName: JIRA_STATUS_DONE
+    };
+  }
+}
+
 async function syncTeamManagedProjectActors(
   credentials: JiraCredentials,
   projectKey: string,
@@ -1282,15 +1336,23 @@ async function ensureTeamManagedProjectBoardColumns(
   }
 }
 
-async function getTeamManagedProjectBoard(
+async function getJiraProjectBoard(
   credentials: JiraCredentials,
-  projectKey: string
+  projectKey: string,
+  boardType?: string
 ): Promise<JiraBoardSummary | undefined> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
+    const searchParams = new URLSearchParams({
+      maxResults: "50",
+      projectKeyOrId: projectKey
+    });
+    if (boardType?.trim()) {
+      searchParams.set("type", boardType.trim());
+    }
+
     const response = await jiraRequest<{ values?: JiraBoardSummary[] }>(credentials, {
       method: "GET",
-      apiPath:
-        `/rest/agile/1.0/board?projectKeyOrId=${encodeURIComponent(projectKey)}&maxResults=50&type=kanban`
+      apiPath: `/rest/agile/1.0/board?${searchParams.toString()}`
     });
     const boards = (response.values ?? []).filter((board) =>
       String(board.id ?? "").trim()
@@ -1304,6 +1366,13 @@ async function getTeamManagedProjectBoard(
   }
 
   return undefined;
+}
+
+async function getTeamManagedProjectBoard(
+  credentials: JiraCredentials,
+  projectKey: string
+): Promise<JiraBoardSummary | undefined> {
+  return getJiraProjectBoard(credentials, projectKey, "kanban");
 }
 
 async function getJiraProjectStatusIdByName(
@@ -1395,6 +1464,32 @@ async function getRapidViewEditModel(
     mappedColumns,
     rapidViewId: boardId
   };
+}
+
+async function isJiraBoardColumnVisible(
+  credentials: JiraCredentials,
+  projectKey: string,
+  columnName: string
+): Promise<boolean | undefined> {
+  try {
+    const board = await getJiraProjectBoard(credentials, projectKey);
+    const boardId = String(board?.id ?? "").trim();
+    if (!boardId) {
+      return undefined;
+    }
+
+    const boardConfiguration = await jiraRequest<JiraBoardConfiguration>(credentials, {
+      method: "GET",
+      apiPath: `/rest/agile/1.0/board/${encodeURIComponent(boardId)}/configuration`
+    });
+
+    const columns = boardConfiguration.columnConfig?.columns ?? [];
+    return columns.some(
+      (column) => normalizeJiraText(column.name) === normalizeJiraText(columnName)
+    );
+  } catch {
+    return undefined;
+  }
 }
 
 function normalizeRapidViewStatisticsField(
