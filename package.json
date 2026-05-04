@@ -101,7 +101,7 @@
       },
       {
         "command": "antigravity.selectOrCreateJiraProject",
-        "title": "Antigravity: Select/Create Jira Project"
+        "title": "Antigravity: Select/Set Jira Project"
       },
       {
         "command": "antigravity.completeJiraItem",

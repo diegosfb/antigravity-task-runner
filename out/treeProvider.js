@@ -554,11 +554,11 @@ function getQuickActionItems() {
         items.push(checkoutMain);
     }
     if (!savedJiraProjectKey) {
-        const selectOrCreateJiraProject = new NodeItem({ kind: "action", label: "Select/Create Jira Project" }, vscode.TreeItemCollapsibleState.None);
+        const selectOrCreateJiraProject = new NodeItem({ kind: "action", label: "Select/Set Jira Project" }, vscode.TreeItemCollapsibleState.None);
         selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", JIRA_ACTION_COLOR);
         selectOrCreateJiraProject.command = {
             command: "antigravity.selectOrCreateJiraProject",
-            title: "Select/Create Jira Project"
+            title: "Select/Set Jira Project"
         };
         items.push(selectOrCreateJiraProject);
     }

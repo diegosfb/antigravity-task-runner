@@ -48,7 +48,6 @@ import { initLogger, log, logAlways, showOutputChannel } from "./logger";
 import {
   createJiraIssue,
   getJiraProjects,
-  createJiraProject,
   JiraCredentials,
   JiraProjectSummary,
   JiraIssueSummary,
@@ -543,17 +542,6 @@ export function activate(context: vscode.ExtensionContext) {
     return undefined;
   };
 
-  const buildJiraProjectKeyFromName = (name: string): string | undefined => {
-    const normalized = name
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, "");
-
-    if (normalized.length < 2) return undefined;
-    const candidate = /^[A-Z]/.test(normalized) ? normalized : `P${normalized}`;
-    return candidate.slice(0, 10);
-  };
-
   const renderJiraProjectSetupHtml = (
     webview: vscode.Webview,
     projects: JiraProjectSummary[]
@@ -601,6 +589,13 @@ export function activate(context: vscode.ExtensionContext) {
       }
       textarea { min-height: 120px; resize: vertical; }
       .hint { font-size: 12px; color: var(--vscode-descriptionForeground); }
+      .instructions {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+      }
       .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
       .actions { display: flex; justify-content: flex-end; gap: 8px; }
       button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
@@ -622,19 +617,21 @@ export function activate(context: vscode.ExtensionContext) {
         </div>
       </div>
       <div class="section">
-        <div class="section-title">Create New Team-Managed Scrum Project</div>
+        <div class="section-title">Create your new project</div>
+        <span class="hint">This must be a company-managed project, not team-managed.</span>
+        <ol class="instructions">
+          <li>Create your new Jira project.</li>
+          <li>Go to Project Settings → Workflows → Switch Scheme.</li>
+          <li>Select "DSFB: Software Simplified Workflow Scheme" from the dropdown.</li>
+          <li>Click Associate and follow the steps in Jira.</li>
+        </ol>
         <label>
-          Project Name
-          <input id="project-name" type="text" autocomplete="off" />
-          <span class="hint">The Jira project key will be generated automatically from this name.</span>
-        </label>
-        <label>
-          Description
-          <textarea id="project-description"></textarea>
-          <span class="hint">Projects created here use Jira's team-managed Scrum template, and the extension will try to set up To Do, In Progress, In Review, and Done plus the default diegosfb project actors.</span>
+          New Project Key
+          <input id="manual-project-key" type="text" autocomplete="off" />
+          <span class="hint">After the workflow scheme is associated, enter the new Jira project key here to save it to this repository .env file.</span>
         </label>
         <div class="actions">
-          <button type="button" class="primary" id="create-project-button">Create Project</button>
+          <button type="button" class="primary" id="save-project-key-button">Save Project Key</button>
         </div>
       </div>
       <div class="error" id="error-message"></div>
@@ -648,12 +645,11 @@ export function activate(context: vscode.ExtensionContext) {
       const form = document.getElementById("jira-project-setup-form");
       const projectSelect = document.getElementById("project-select");
       const projectSelectHint = document.getElementById("project-select-hint");
-      const projectNameInput = document.getElementById("project-name");
-      const projectDescriptionInput = document.getElementById("project-description");
+      const manualProjectKeyInput = document.getElementById("manual-project-key");
       const errorMessage = document.getElementById("error-message");
       const cancelButton = document.getElementById("cancel-button");
       const useProjectButton = document.getElementById("use-project-button");
-      const createProjectButton = document.getElementById("create-project-button");
+      const saveProjectKeyButton = document.getElementById("save-project-key-button");
 
       const placeholderOption = document.createElement("option");
       placeholderOption.value = "";
@@ -669,7 +665,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       projectSelectHint.textContent = projects.length > 0
         ? "Choose an existing Jira project and save it to this repository .env file."
-        : "No Jira projects were loaded. You can still create a new one below.";
+        : "No Jira projects were loaded. You can still save a newly created project key below.";
 
       cancelButton.addEventListener("click", () => {
         vscode.postMessage({ type: "cancelJiraProjectSetup" });
@@ -694,15 +690,14 @@ export function activate(context: vscode.ExtensionContext) {
         });
       });
 
-      createProjectButton.addEventListener("click", () => {
+      saveProjectKeyButton.addEventListener("click", () => {
         const payload = {
-          mode: "create",
-          projectName: projectNameInput.value.trim(),
-          description: projectDescriptionInput.value.trim()
+          mode: "manual",
+          projectKey: manualProjectKeyInput.value.trim()
         };
-        if (!payload.projectName) {
-          errorMessage.textContent = "Enter a Jira project name.";
-          projectNameInput.focus();
+        if (!payload.projectKey) {
+          errorMessage.textContent = "Enter a Jira project key.";
+          manualProjectKeyInput.focus();
           return;
         }
         vscode.postMessage({ type: "submitJiraProjectSetup", payload });
@@ -718,7 +713,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (projects.length > 0) {
         projectSelect.focus();
       } else {
-        projectNameInput.focus();
+        manualProjectKeyInput.focus();
       }
     </script>
   </body>
@@ -729,7 +724,7 @@ export function activate(context: vscode.ExtensionContext) {
     projects: JiraProjectSummary[]
   ): Promise<
     | { mode: "select"; projectKey: string }
-    | { mode: "create"; name: string; key: string; description: string }
+    | { mode: "manual"; projectKey: string }
     | undefined
   > =>
     new Promise((resolve) => {
@@ -745,7 +740,7 @@ export function activate(context: vscode.ExtensionContext) {
       const resolveOnce = (
         value:
           | { mode: "select"; projectKey: string }
-          | { mode: "create"; name: string; key: string; description: string }
+          | { mode: "manual"; projectKey: string }
           | undefined
       ) => {
         if (settled) return;
@@ -782,27 +777,19 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          const name = typeof payload.projectName === "string" ? payload.projectName.trim() : "";
-          const key = buildJiraProjectKeyFromName(name);
-          const description =
-            typeof payload.description === "string" ? payload.description.trim() : "";
+          const projectKey =
+            typeof payload.projectKey === "string" ? payload.projectKey.trim().toUpperCase() : "";
+          const keyError = validateJiraProjectKey(projectKey);
 
-          if (!name) {
+          if (keyError) {
             void panel.webview.postMessage({
               type: "jiraProjectSetupError",
-              payload: { message: "Enter a Jira project name." }
-            });
-            return;
-          }
-          if (!key) {
-            void panel.webview.postMessage({
-              type: "jiraProjectSetupError",
-              payload: { message: "Enter a project name that can produce a Jira project key." }
+              payload: { message: keyError }
             });
             return;
           }
 
-          resolveOnce({ mode: "create", name, key, description });
+          resolveOnce({ mode: "manual", projectKey });
           panel.dispose();
         },
         undefined,
@@ -843,35 +830,10 @@ export function activate(context: vscode.ExtensionContext) {
     if (setupSelection.mode === "select") {
       projectKey = setupSelection.projectKey;
     } else {
-      try {
-        const createdProject = await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: "Creating Jira project",
-            cancellable: false
-          },
-          async () =>
-            createJiraProject(credentials, {
-              key: setupSelection.key,
-              name: setupSelection.name,
-              description: setupSelection.description
-            })
-        );
-
-        projectKey = createdProject.key.toUpperCase();
-        void vscode.window.showInformationMessage(
-          `Created Jira project ${projectKey} and saved it to this repository .env file.`
-        );
-        if (createdProject.warnings.length > 0) {
-          void vscode.window.showWarningMessage(
-            `Jira project ${projectKey} was created, but Jira still needs follow-up: ${createdProject.warnings.join(" ")}`
-          );
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(`Failed to create Jira project: ${message}`);
-        return undefined;
-      }
+      projectKey = setupSelection.projectKey;
+      void vscode.window.showInformationMessage(
+        `Saved Jira project ${projectKey} to this repository .env file.`
+      );
     }
 
     upsertEnvFileValue(getRepoEnvPath(repoRoot), "JIRA_PROJECT_KEY", projectKey);
