@@ -25,7 +25,7 @@ const JIRA_STATUS_DONE = "Done";
 const TEAM_MANAGED_MEMBER_GROUPS = ["jira-users-diegosfb"];
 const TEAM_MANAGED_ADMIN_GROUPS = ["site-admins"];
 const TEAM_MANAGED_ACCESS_WARNING = "Jira still requires a manual access-level check so the project is limited to jira-users-diegosfb, Diego Fernandez, and site-admins.";
-const TEAM_MANAGED_BOARD_WARNING = 'Jira may still need a manual board-columns update so "In Review" appears as a visible board column.';
+const TEAM_MANAGED_BOARD_WARNING_PREFIX = 'The Jira project was created, but the extension could not automatically configure the board columns so "In Review" appears between "In Progress" and "Done"';
 function normalizeFieldName(fieldKey, field) {
     return (field?.name || fieldKey).trim().toLowerCase();
 }
@@ -43,6 +43,11 @@ function uniqueWarnings(warnings) {
         .map((warning) => warning.trim())
         .filter(Boolean)));
 }
+function buildTeamManagedBoardWarning(detail) {
+    return detail
+        ? `${TEAM_MANAGED_BOARD_WARNING_PREFIX}: ${detail}`
+        : `${TEAM_MANAGED_BOARD_WARNING_PREFIX}.`;
+}
 function isProvidedJiraField(fieldKey, field) {
     const normalizedKey = fieldKey.trim().toLowerCase();
     const normalizedName = normalizeFieldName(fieldKey, field);
@@ -51,6 +56,9 @@ function isProvidedJiraField(fieldKey, field) {
 }
 function normalizeBaseUrl(baseUrl) {
     return baseUrl.trim().replace(/\/+$/, "");
+}
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 function getAuthHeader(credentials) {
     return `Basic ${Buffer.from(`${credentials.email}:${credentials.apiToken}`).toString("base64")}`;
@@ -163,8 +171,8 @@ async function createJiraProject(credentials, details) {
     const warnings = [
         ...(await syncTeamManagedProjectActors(credentials, createdProject.key, leadAccountId)),
         ...(await ensureTeamManagedProjectWorkflow(credentials, createdProject.id, createdProject.key)),
+        ...(await ensureTeamManagedProjectBoardColumns(credentials, createdProject.key)),
         TEAM_MANAGED_ACCESS_WARNING,
-        TEAM_MANAGED_BOARD_WARNING
     ];
     return {
         ...createdProject,
@@ -700,6 +708,209 @@ function createDirectedTransition(id, name, description, fromStatusReference, to
         type: "DIRECTED",
         validators: []
     };
+}
+async function ensureTeamManagedProjectBoardColumns(credentials, projectKey) {
+    try {
+        const board = await getTeamManagedProjectBoard(credentials, projectKey);
+        const boardId = String(board?.id ?? "").trim();
+        if (!boardId) {
+            return [
+                buildTeamManagedBoardWarning("Jira did not expose a kanban board for the new project.")
+            ];
+        }
+        const inReviewStatusId = await getJiraProjectStatusIdByName(credentials, projectKey, JIRA_STATUS_IN_REVIEW);
+        if (!inReviewStatusId) {
+            return [
+                buildTeamManagedBoardWarning(`Jira did not expose the "${JIRA_STATUS_IN_REVIEW}" status for the new project.`)
+            ];
+        }
+        const rapidViewEditModel = await getRapidViewEditModel(credentials, boardId);
+        const desiredMappedColumns = buildDesiredRapidViewMappedColumns(rapidViewEditModel.mappedColumns, inReviewStatusId);
+        if (haveEquivalentRapidViewMappedColumns(rapidViewEditModel.mappedColumns, desiredMappedColumns)) {
+            return [];
+        }
+        await jiraRequest(credentials, {
+            method: "PUT",
+            apiPath: "/rest/greenhopper/1.0/rapidviewconfig/columns",
+            body: {
+                currentStatisticsField: rapidViewEditModel.currentStatisticsField,
+                rapidViewId: rapidViewEditModel.rapidViewId,
+                mappedColumns: desiredMappedColumns
+            }
+        });
+        return [];
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return [buildTeamManagedBoardWarning(message)];
+    }
+}
+async function getTeamManagedProjectBoard(credentials, projectKey) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        const response = await jiraRequest(credentials, {
+            method: "GET",
+            apiPath: `/rest/agile/1.0/board?projectKeyOrId=${encodeURIComponent(projectKey)}&maxResults=50&type=kanban`
+        });
+        const boards = (response.values ?? []).filter((board) => String(board.id ?? "").trim());
+        if (boards.length > 0) {
+            return boards[0];
+        }
+        if (attempt < 2) {
+            await delay(500);
+        }
+    }
+    return undefined;
+}
+async function getJiraProjectStatusIdByName(credentials, projectKey, statusName) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        const response = await jiraRequest(credentials, {
+            method: "GET",
+            apiPath: `/rest/api/3/project/${encodeURIComponent(projectKey)}/statuses`
+        });
+        const matchingStatusIds = Array.from(new Set(response
+            .flatMap((issueType) => issueType.statuses ?? [])
+            .filter((status) => normalizeJiraText(status.name) === normalizeJiraText(statusName))
+            .map((status) => (status.id ?? "").trim())
+            .filter(Boolean)));
+        if (matchingStatusIds.length > 0) {
+            return matchingStatusIds[0];
+        }
+        if (attempt < 4) {
+            await delay(300);
+        }
+    }
+    return undefined;
+}
+async function getRapidViewEditModel(credentials, boardId) {
+    try {
+        const editModel = await jiraRequest(credentials, {
+            method: "GET",
+            apiPath: `/rest/greenhopper/1.0/rapidviewconfig/editmodel?rapidViewId=${encodeURIComponent(boardId)}`
+        });
+        const mappedColumns = (editModel.mappedColumns ?? []).map(sanitizeRapidViewMappedColumn);
+        if (mappedColumns.length > 0) {
+            return {
+                currentStatisticsField: normalizeRapidViewStatisticsField(editModel.currentStatisticsField),
+                mappedColumns,
+                rapidViewId: editModel.rapidViewId ?? boardId
+            };
+        }
+    }
+    catch {
+        // Fall back to the public board configuration payload if Jira rejects editmodel.
+    }
+    const boardConfiguration = await jiraRequest(credentials, {
+        method: "GET",
+        apiPath: `/rest/agile/1.0/board/${encodeURIComponent(boardId)}/configuration`
+    });
+    const mappedColumns = (boardConfiguration.columnConfig?.columns ?? []).map((column) => sanitizeRapidViewMappedColumn({
+        ...(typeof column.max === "number" ? { max: column.max } : {}),
+        ...(typeof column.min === "number" ? { min: column.min } : {}),
+        isKanPlanColumn: false,
+        mappedStatuses: (column.statuses ?? []).map((status) => ({
+            id: (status.id ?? "").trim()
+        })),
+        name: column.name ?? ""
+    }));
+    if (mappedColumns.length === 0) {
+        throw new Error("Jira did not return any editable board columns for the new project.");
+    }
+    return {
+        currentStatisticsField: {
+            id: (boardConfiguration.estimation?.field?.fieldId ?? "none_").trim() || "none_"
+        },
+        mappedColumns,
+        rapidViewId: boardId
+    };
+}
+function normalizeRapidViewStatisticsField(field) {
+    const id = (field?.id ?? "").trim();
+    return { id: id || "none_" };
+}
+function sanitizeRapidViewMappedColumn(column) {
+    return {
+        ...(typeof column.isKanPlanColumn === "boolean"
+            ? { isKanPlanColumn: column.isKanPlanColumn }
+            : {}),
+        ...(typeof column.max === "number" ? { max: column.max } : {}),
+        ...(typeof column.min === "number" ? { min: column.min } : {}),
+        mappedStatuses: uniqueRapidViewMappedStatuses(column.mappedStatuses ?? []),
+        name: (column.name ?? "").trim()
+    };
+}
+function uniqueRapidViewMappedStatuses(statuses) {
+    const seenIds = new Set();
+    const uniqueStatuses = [];
+    for (const status of statuses) {
+        const id = (status.id ?? "").trim();
+        if (!id || seenIds.has(id))
+            continue;
+        seenIds.add(id);
+        uniqueStatuses.push({ id });
+    }
+    return uniqueStatuses;
+}
+function buildDesiredRapidViewMappedColumns(mappedColumns, inReviewStatusId) {
+    const sanitizedColumns = mappedColumns.map(sanitizeRapidViewMappedColumn);
+    const normalizedInReviewStatusId = inReviewStatusId.trim();
+    const isReviewColumn = (column) => normalizeJiraText(column.name) === normalizeJiraText(JIRA_STATUS_IN_REVIEW) ||
+        (column.mappedStatuses ?? []).some((status) => (status.id ?? "").trim() === normalizedInReviewStatusId);
+    const reviewColumn = sanitizedColumns.find(isReviewColumn) ??
+        sanitizeRapidViewMappedColumn({
+            isKanPlanColumn: false,
+            mappedStatuses: [{ id: normalizedInReviewStatusId }],
+            name: JIRA_STATUS_IN_REVIEW
+        });
+    const baseColumns = sanitizedColumns
+        .filter((column) => !isReviewColumn(column))
+        .map((column) => sanitizeRapidViewMappedColumn({
+        ...column,
+        mappedStatuses: (column.mappedStatuses ?? []).filter((status) => (status.id ?? "").trim() !== normalizedInReviewStatusId)
+    }));
+    const normalizedReviewColumn = sanitizeRapidViewMappedColumn({
+        ...reviewColumn,
+        isKanPlanColumn: reviewColumn.isKanPlanColumn ?? false,
+        mappedStatuses: [{ id: normalizedInReviewStatusId }],
+        name: JIRA_STATUS_IN_REVIEW
+    });
+    const desiredColumns = [...baseColumns];
+    const inProgressIndex = findRapidViewMappedColumnIndexByName(desiredColumns, JIRA_STATUS_IN_PROGRESS);
+    const doneIndex = findRapidViewMappedDoneColumnIndex(desiredColumns);
+    let insertIndex = doneIndex === -1 ? desiredColumns.length : doneIndex;
+    if (inProgressIndex !== -1) {
+        insertIndex = doneIndex === -1 ? inProgressIndex + 1 : Math.min(doneIndex, inProgressIndex + 1);
+    }
+    if (insertIndex < 0) {
+        insertIndex = 0;
+    }
+    desiredColumns.splice(insertIndex, 0, normalizedReviewColumn);
+    return desiredColumns;
+}
+function findRapidViewMappedColumnIndexByName(mappedColumns, statusName) {
+    return mappedColumns.findIndex((column) => normalizeJiraText(column.name) === normalizeJiraText(statusName));
+}
+function findRapidViewMappedDoneColumnIndex(mappedColumns) {
+    const namedDoneIndex = findRapidViewMappedColumnIndexByName(mappedColumns, JIRA_STATUS_DONE);
+    if (namedDoneIndex !== -1) {
+        return namedDoneIndex;
+    }
+    return mappedColumns.length > 0 ? mappedColumns.length - 1 : -1;
+}
+function haveEquivalentRapidViewMappedColumns(left, right) {
+    return (JSON.stringify(simplifyRapidViewMappedColumns(left)) ===
+        JSON.stringify(simplifyRapidViewMappedColumns(right)));
+}
+function simplifyRapidViewMappedColumns(mappedColumns) {
+    return mappedColumns.map((column) => {
+        const sanitizedColumn = sanitizeRapidViewMappedColumn(column);
+        return {
+            ...(typeof sanitizedColumn.max === "number" ? { max: sanitizedColumn.max } : {}),
+            ...(typeof sanitizedColumn.min === "number" ? { min: sanitizedColumn.min } : {}),
+            isKanPlanColumn: Boolean(sanitizedColumn.isKanPlanColumn),
+            mappedStatusIds: (sanitizedColumn.mappedStatuses ?? []).map((status) => status.id ?? ""),
+            name: sanitizedColumn.name ?? ""
+        };
+    });
 }
 async function getJiraIssueTypes(credentials, projectKey) {
     const response = await jiraRequest(credentials, {
