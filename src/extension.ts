@@ -24,6 +24,7 @@ import {
   loadClaudeSettings,
   getRouterSettings,
   getToolRunCommand,
+  getAgenticHarnessExecutionCommand,
   getUseAgentForGithubRepositoryManagement,
   getDefaultGithubCodeReviewer,
   normalizeStringArray,
@@ -813,6 +814,7 @@ export function activate(context: vscode.ExtensionContext) {
               projectName,
               projectKey,
               description,
+              agenticHarnessCommand: getAgenticHarnessExecutionCommand(),
               skillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation")
             });
             runInNewTerminal(

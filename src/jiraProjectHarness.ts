@@ -1,3 +1,5 @@
+import { buildEnsureAgenticHarnessSkillInstructions } from "./agenticHarnessSkill";
+
 export const JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME =
   "DSFB: Software Simplified Workflow Scheme";
 export const JIRA_PROJECT_CREATION_SKILL_NAME = "jira-project-creation";
@@ -6,6 +8,7 @@ export type JiraProjectHarnessRequest = {
   projectName: string;
   projectKey: string;
   description?: string;
+  agenticHarnessCommand: string;
   skillSourcePath: string;
 };
 
@@ -30,13 +33,12 @@ export function buildCreateJiraProjectAgenticHarnessPrompt(
 ): string {
   const description = details.description?.trim();
   const instructions = [
-    `As the first step, check whether the skill "${JIRA_PROJECT_CREATION_SKILL_NAME}" is already available for this app either locally or globally.`,
-    `Check .agent/skills/${JIRA_PROJECT_CREATION_SKILL_NAME}, .claude/skills/${JIRA_PROJECT_CREATION_SKILL_NAME}, and ~/.claude/skills/${JIRA_PROJECT_CREATION_SKILL_NAME}.`,
-    `If the skill exists in any of those locations, do not install it and proceed directly with the Jira project creation in this same run.`,
-    `If the skill is missing everywhere, install it from ${details.skillSourcePath}.`,
-    `When installing it, create .agent/skills if needed, then symlink or copy ${details.skillSourcePath} to .agent/skills/${JIRA_PROJECT_CREATION_SKILL_NAME}.`,
-    `If .claude/skills does not exist locally, create it as a symlink to ../.agent/skills so the locally installed skill is available to the app.`,
-    `Verify that the skill "${JIRA_PROJECT_CREATION_SKILL_NAME}" is available before continuing, then use that skill for the Jira project creation in this same run.`,
+    ...buildEnsureAgenticHarnessSkillInstructions({
+      agenticHarnessCommand: details.agenticHarnessCommand,
+      skillName: JIRA_PROJECT_CREATION_SKILL_NAME,
+      localSkillSourcePath: details.skillSourcePath
+    }),
+    "Use that skill for the Jira project creation in this same run.",
     "Use the Jira tools available in this harness to create a Jira Software project.",
     "Use the Jira account already configured in the terminal environment via JIRA_BASE_URL, JIRA_EMAIL, and JIRA_API_TOKEN from the extension Settings.",
     `Project name: ${details.projectName}.`,

@@ -633,6 +633,7 @@ function activate(context) {
                     projectName,
                     projectKey,
                     description,
+                    agenticHarnessCommand: (0, settings_1.getAgenticHarnessExecutionCommand)(),
                     skillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation")
                 });
                 (0, terminal_1.runInNewTerminal)("Agentic Harness Create Jira Project", [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, (0, terminal_1.buildAgenticHarnessPromptCommand)(prompt, "prompt")], {
