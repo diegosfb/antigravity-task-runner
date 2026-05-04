@@ -632,16 +632,15 @@ function activate(context) {
                 const prompt = (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessPrompt)({
                     projectName,
                     projectKey,
-                    description
+                    description,
+                    skillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation")
                 });
-                const skillSetupPrompt = (0, jiraProjectHarness_1.buildEnsureJiraProjectCreationSkillPrompt)(path.join(extensionRoot, "Resources", "jira-project-creation"));
-                const launchScriptPath = writeAgentLaunchScript("antigravity-jira-project-creation", `cd ${(0, utils_1.quoteShellArg)(repoRoot)}\n${(0, terminal_1.buildAgenticHarnessPromptCommand)(skillSetupPrompt, "prompt")}\n${(0, terminal_1.buildAgenticHarnessPromptCommand)(prompt, "prompt")}`);
-                (0, terminal_1.runInNewTerminal)("Agentic Harness Create Jira Project", [`zsh ${(0, utils_1.quoteShellArg)(launchScriptPath)}`], {
+                (0, terminal_1.runInNewTerminal)("Agentic Harness Create Jira Project", [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, (0, terminal_1.buildAgenticHarnessPromptCommand)(prompt, "prompt")], {
                     env: (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessEnvironment)(credentials),
                     iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
                     color: terminal_1.CLAUDE_ACTION_COLOR
                 });
-                void vscode.window.showInformationMessage(`Opened Agentic Harness to prepare the jira-project-creation skill and create Jira project ${projectKey}.`);
+                void vscode.window.showInformationMessage(`Opened Agentic Harness to create Jira project ${projectKey}.`);
                 resolveOnce({ mode: "manual", projectKey });
                 panel.dispose();
                 return;

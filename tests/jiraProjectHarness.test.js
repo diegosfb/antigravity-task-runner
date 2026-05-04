@@ -4,7 +4,6 @@ const assert = require("node:assert/strict");
 const {
   buildCreateJiraProjectAgenticHarnessEnvironment,
   buildCreateJiraProjectAgenticHarnessPrompt,
-  buildEnsureJiraProjectCreationSkillPrompt,
   JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME
 } = require("../out/jiraProjectHarness.js");
 
@@ -12,10 +11,17 @@ test("buildCreateJiraProjectAgenticHarnessPrompt requires a company-managed proj
   const prompt = buildCreateJiraProjectAgenticHarnessPrompt({
     projectName: "Task Runner",
     projectKey: "TASK",
-    description: "Created from Antigravity"
+    description: "Created from Antigravity",
+    skillSourcePath: "Resources/jira-project-creation"
   });
 
-  assert.match(prompt, /Use the installed project skill "jira-project-creation"/);
+  assert.match(prompt, /As the first step, check whether the skill "jira-project-creation" is already available/);
+  assert.match(prompt, /\.agent\/skills\/jira-project-creation/);
+  assert.match(prompt, /\.claude\/skills\/jira-project-creation/);
+  assert.match(prompt, /~\/\.claude\/skills\/jira-project-creation/);
+  assert.match(prompt, /If the skill exists in any of those locations, do not install it/);
+  assert.match(prompt, /If the skill is missing everywhere, install it from Resources\/jira-project-creation\./);
+  assert.match(prompt, /use that skill for the Jira project creation in this same run/i);
   assert.match(prompt, /company-managed project/i);
   assert.match(prompt, /JIRA_BASE_URL, JIRA_EMAIL, and JIRA_API_TOKEN/);
   assert.match(prompt, new RegExp(JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -28,20 +34,11 @@ test("buildCreateJiraProjectAgenticHarnessPrompt requires a company-managed proj
 test("buildCreateJiraProjectAgenticHarnessPrompt allows an empty description", () => {
   const prompt = buildCreateJiraProjectAgenticHarnessPrompt({
     projectName: "Task Runner",
-    projectKey: "TASK"
+    projectKey: "TASK",
+    skillSourcePath: "Resources/jira-project-creation"
   });
 
   assert.match(prompt, /Leave the project description blank unless Jira requires one\./);
-});
-
-test("buildEnsureJiraProjectCreationSkillPrompt checks and installs the local project skill before creation", () => {
-  const prompt = buildEnsureJiraProjectCreationSkillPrompt("Resources/jira-project-creation");
-
-  assert.match(prompt, /Check whether the project skill "jira-project-creation" is already available/);
-  assert.match(prompt, /Resources\/jira-project-creation/);
-  assert.match(prompt, /\.agent\/skills\/jira-project-creation/);
-  assert.match(prompt, /\.claude\/skills\/jira-project-creation/);
-  assert.match(prompt, /Do not create the Jira project in this run/);
 });
 
 test("buildCreateJiraProjectAgenticHarnessEnvironment maps Jira settings to terminal env vars", () => {
