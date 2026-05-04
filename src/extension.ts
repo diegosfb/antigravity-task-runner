@@ -62,6 +62,7 @@ import {
   updateJiraIssueSummaryAndLabels
 } from "./jira";
 import {
+  buildCreateJiraProjectAgenticHarnessEnvironment,
   buildCreateJiraProjectAgenticHarnessPrompt,
   JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME
 } from "./jiraProjectHarness";
@@ -518,7 +519,7 @@ export function activate(context: vscode.ExtensionContext) {
     ].filter((value): value is string => Boolean(value));
 
     if (missing.length > 0) {
-      throw new Error(`Missing Jira settings in .env: ${missing.join(", ")}.`);
+      throw new Error(`Missing Jira settings in Antigravity Settings or .env: ${missing.join(", ")}.`);
     }
 
     return { baseUrl, email, apiToken };
@@ -779,6 +780,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   const showJiraProjectSetupDialog = async (
     repoRoot: string,
+    credentials: JiraCredentials,
     projects: JiraProjectSummary[]
   ): Promise<
     | { mode: "select"; projectKey: string }
@@ -849,6 +851,7 @@ export function activate(context: vscode.ExtensionContext) {
               "Agentic Harness Create Jira Project",
               [`cd ${quoteShellArg(repoRoot)}`, buildAgenticHarnessPromptCommand(prompt, "prompt")],
               {
+                env: buildCreateJiraProjectAgenticHarnessEnvironment(credentials),
                 iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
                 color: CLAUDE_ACTION_COLOR
               }
@@ -924,7 +927,7 @@ export function activate(context: vscode.ExtensionContext) {
       return undefined;
     }
 
-    const setupSelection = await showJiraProjectSetupDialog(repoRoot, projects);
+    const setupSelection = await showJiraProjectSetupDialog(repoRoot, credentials, projects);
     if (!setupSelection) {
       return undefined;
     }

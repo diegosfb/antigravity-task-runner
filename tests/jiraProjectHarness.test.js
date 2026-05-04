@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  buildCreateJiraProjectAgenticHarnessEnvironment,
   buildCreateJiraProjectAgenticHarnessPrompt,
   JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME
 } = require("../out/jiraProjectHarness.js");
@@ -14,6 +15,7 @@ test("buildCreateJiraProjectAgenticHarnessPrompt requires a company-managed proj
   });
 
   assert.match(prompt, /company-managed project/i);
+  assert.match(prompt, /JIRA_BASE_URL, JIRA_EMAIL, and JIRA_API_TOKEN/);
   assert.match(prompt, new RegExp(JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(prompt, /Project name: Task Runner\./);
   assert.match(prompt, /Project key: TASK\./);
@@ -28,4 +30,18 @@ test("buildCreateJiraProjectAgenticHarnessPrompt allows an empty description", (
   });
 
   assert.match(prompt, /Leave the project description blank unless Jira requires one\./);
+});
+
+test("buildCreateJiraProjectAgenticHarnessEnvironment maps Jira settings to terminal env vars", () => {
+  const env = buildCreateJiraProjectAgenticHarnessEnvironment({
+    baseUrl: "https://example.atlassian.net",
+    email: "person@example.com",
+    apiToken: "secret-token"
+  });
+
+  assert.deepEqual(env, {
+    JIRA_BASE_URL: "https://example.atlassian.net",
+    JIRA_EMAIL: "person@example.com",
+    JIRA_API_TOKEN: "secret-token"
+  });
 });

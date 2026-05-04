@@ -1,12 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME = void 0;
+exports.buildCreateJiraProjectAgenticHarnessEnvironment = buildCreateJiraProjectAgenticHarnessEnvironment;
 exports.buildCreateJiraProjectAgenticHarnessPrompt = buildCreateJiraProjectAgenticHarnessPrompt;
 exports.JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME = "DSFB: Software Simplified Workflow Scheme";
+function buildCreateJiraProjectAgenticHarnessEnvironment(credentials) {
+    return {
+        JIRA_BASE_URL: credentials.baseUrl,
+        JIRA_EMAIL: credentials.email,
+        JIRA_API_TOKEN: credentials.apiToken
+    };
+}
 function buildCreateJiraProjectAgenticHarnessPrompt(details) {
     const description = details.description?.trim();
     const instructions = [
         "Use the Jira tools available in this harness to create a Jira Software project.",
+        "Use the Jira account already configured in the terminal environment via JIRA_BASE_URL, JIRA_EMAIL, and JIRA_API_TOKEN from the extension Settings.",
         `Project name: ${details.projectName}.`,
         `Project key: ${details.projectKey}.`,
         "Create it as a company-managed project, not a team-managed project.",

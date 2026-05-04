@@ -374,7 +374,7 @@ function activate(context) {
             !apiToken ? "JIRA_API_TOKEN" : undefined
         ].filter((value) => Boolean(value));
         if (missing.length > 0) {
-            throw new Error(`Missing Jira settings in .env: ${missing.join(", ")}.`);
+            throw new Error(`Missing Jira settings in Antigravity Settings or .env: ${missing.join(", ")}.`);
         }
         return { baseUrl, email, apiToken };
     };
@@ -624,7 +624,7 @@ function activate(context) {
   </body>
 </html>`;
     };
-    const showJiraProjectSetupDialog = async (repoRoot, projects) => new Promise((resolve) => {
+    const showJiraProjectSetupDialog = async (repoRoot, credentials, projects) => new Promise((resolve) => {
         const panel = vscode.window.createWebviewPanel("jiraProjectSetup", "Set Jira Project", vscode.ViewColumn.Active, { enableScripts: true });
         panel.webview.html = renderJiraProjectSetupHtml(panel.webview, projects);
         let settled = false;
@@ -668,6 +668,7 @@ function activate(context) {
                     description
                 });
                 (0, terminal_1.runInNewTerminal)("Agentic Harness Create Jira Project", [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, (0, terminal_1.buildAgenticHarnessPromptCommand)(prompt, "prompt")], {
+                    env: (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessEnvironment)(credentials),
                     iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
                     color: terminal_1.CLAUDE_ACTION_COLOR
                 });
@@ -722,7 +723,7 @@ function activate(context) {
             void vscode.window.showErrorMessage(`Failed to load Jira projects: ${message}`);
             return undefined;
         }
-        const setupSelection = await showJiraProjectSetupDialog(repoRoot, projects);
+        const setupSelection = await showJiraProjectSetupDialog(repoRoot, credentials, projects);
         if (!setupSelection) {
             return undefined;
         }
