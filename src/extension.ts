@@ -63,9 +63,13 @@ import {
   updateJiraIssueSummaryAndLabels
 } from "./jira";
 import {
+  buildAgenticHarnessSkillTaskPrompt
+} from "./agenticHarnessSkill";
+import {
   buildCreateJiraProjectAgenticHarnessEnvironment,
   buildCreateJiraProjectAgenticHarnessPrompt,
-  JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME
+  JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME,
+  JIRA_PROJECT_CREATION_SKILL_NAME
 } from "./jiraProjectHarness";
 
 type GitInputBox = {
@@ -810,12 +814,16 @@ export function activate(context: vscode.ExtensionContext) {
               return;
             }
 
-            const prompt = buildCreateJiraProjectAgenticHarnessPrompt({
+            const jiraPrompt = buildCreateJiraProjectAgenticHarnessPrompt({
               projectName,
               projectKey,
-              description,
+              description
+            });
+            const prompt = buildAgenticHarnessSkillTaskPrompt({
               agenticHarnessCommand: getAgenticHarnessExecutionCommand(),
-              skillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation")
+              skillName: JIRA_PROJECT_CREATION_SKILL_NAME,
+              localSkillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation"),
+              taskPrompt: jiraPrompt
             });
             runInNewTerminal(
               "Agentic Harness Create Jira Project",

@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  buildAgenticHarnessSkillTaskPrompt,
   buildEnsureAgenticHarnessSkillInstructions,
   resolveAgenticHarnessSkillLocations
 } = require("../out/agenticHarnessSkill.js");
@@ -34,4 +35,16 @@ test("buildEnsureAgenticHarnessSkillInstructions tells the harness to copy a mis
   assert.match(prompt, /do not install it and continue with the task in this same run/i);
   assert.match(prompt, /copy the entire skill folder from Resources\/jira-project-creation to \.agent\/skills\/jira-project-creation/i);
   assert.match(prompt, /If \.codex\/skills does not exist locally, create it as a symlink to \.\.\/\.agent\/skills/i);
+});
+
+test("buildAgenticHarnessSkillTaskPrompt prepends the skill preflight before the task prompt", () => {
+  const prompt = buildAgenticHarnessSkillTaskPrompt({
+    agenticHarnessCommand: "claude",
+    skillName: "jira-project-creation",
+    localSkillSourcePath: "Resources/jira-project-creation",
+    taskPrompt: "Use that skill for the Jira project creation in this same run."
+  });
+
+  assert.match(prompt, /As the first step, check whether the skill "jira-project-creation" is already available/);
+  assert.match(prompt, /After the skill is available, continue with this task in the same run\. Use that skill for the Jira project creation in this same run\./);
 });

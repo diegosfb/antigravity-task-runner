@@ -11,18 +11,9 @@ test("buildCreateJiraProjectAgenticHarnessPrompt requires a company-managed proj
   const prompt = buildCreateJiraProjectAgenticHarnessPrompt({
     projectName: "Task Runner",
     projectKey: "TASK",
-    description: "Created from Antigravity",
-    agenticHarnessCommand: "claude",
-    skillSourcePath: "Resources/jira-project-creation"
+    description: "Created from Antigravity"
   });
 
-  assert.match(prompt, /As the first step, check whether the skill "jira-project-creation" is already available/);
-  assert.match(prompt, /\.agent\/skills\/jira-project-creation/);
-  assert.match(prompt, /\.claude\/skills\/jira-project-creation/);
-  assert.match(prompt, /~\/\.claude\/skills\/jira-project-creation/);
-  assert.match(prompt, /If the skill exists in any of those locations, do not install it/);
-  assert.match(prompt, /If the skill is missing everywhere, create \.agent\/skills if needed, then copy the entire skill folder from Resources\/jira-project-creation to \.agent\/skills\/jira-project-creation\./);
-  assert.match(prompt, /If \.claude\/skills does not exist locally, create it as a symlink to \.\.\/\.agent\/skills/);
   assert.match(prompt, /use that skill for the Jira project creation in this same run/i);
   assert.match(prompt, /company-managed project/i);
   assert.match(prompt, /JIRA_BASE_URL, JIRA_EMAIL, and JIRA_API_TOKEN/);
@@ -36,9 +27,7 @@ test("buildCreateJiraProjectAgenticHarnessPrompt requires a company-managed proj
 test("buildCreateJiraProjectAgenticHarnessPrompt allows an empty description", () => {
   const prompt = buildCreateJiraProjectAgenticHarnessPrompt({
     projectName: "Task Runner",
-    projectKey: "TASK",
-    agenticHarnessCommand: "claude",
-    skillSourcePath: "Resources/jira-project-creation"
+    projectKey: "TASK"
   });
 
   assert.match(prompt, /Leave the project description blank unless Jira requires one\./);

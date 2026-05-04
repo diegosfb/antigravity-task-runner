@@ -16,6 +16,7 @@ const agentRunCommand_1 = require("./agentRunCommand");
 const utils_1 = require("./utils");
 const logger_1 = require("./logger");
 const jira_1 = require("./jira");
+const agenticHarnessSkill_1 = require("./agenticHarnessSkill");
 const jiraProjectHarness_1 = require("./jiraProjectHarness");
 function activate(context) {
     const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
@@ -629,12 +630,16 @@ function activate(context) {
                     });
                     return;
                 }
-                const prompt = (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessPrompt)({
+                const jiraPrompt = (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessPrompt)({
                     projectName,
                     projectKey,
-                    description,
+                    description
+                });
+                const prompt = (0, agenticHarnessSkill_1.buildAgenticHarnessSkillTaskPrompt)({
                     agenticHarnessCommand: (0, settings_1.getAgenticHarnessExecutionCommand)(),
-                    skillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation")
+                    skillName: jiraProjectHarness_1.JIRA_PROJECT_CREATION_SKILL_NAME,
+                    localSkillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation"),
+                    taskPrompt: jiraPrompt
                 });
                 (0, terminal_1.runInNewTerminal)("Agentic Harness Create Jira Project", [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, (0, terminal_1.buildAgenticHarnessPromptCommand)(prompt, "prompt")], {
                     env: (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessEnvironment)(credentials),

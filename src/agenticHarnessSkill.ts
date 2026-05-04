@@ -4,6 +4,10 @@ export type EnsureAgenticHarnessSkillRequest = {
   localSkillSourcePath: string;
 };
 
+export type AgenticHarnessSkillTaskPromptRequest = EnsureAgenticHarnessSkillRequest & {
+  taskPrompt: string;
+};
+
 export type AgenticHarnessSkillLocations = {
   localSkillsDir: string;
   globalSkillsDir: string;
@@ -47,4 +51,13 @@ export function buildEnsureAgenticHarnessSkillInstructions(
     `If ${localSkillsDir} already exists locally as a normal folder and ${localHarnessSkillPath} is still missing after copying to ${projectSkillPath}, copy the same skill folder there as well.`,
     `Verify that the skill "${details.skillName}" is available before continuing.`
   ];
+}
+
+export function buildAgenticHarnessSkillTaskPrompt(
+  details: AgenticHarnessSkillTaskPromptRequest
+): string {
+  return [
+    ...buildEnsureAgenticHarnessSkillInstructions(details),
+    `After the skill is available, continue with this task in the same run. ${details.taskPrompt}`
+  ].join(" ");
 }

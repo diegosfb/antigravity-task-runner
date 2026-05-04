@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolveAgenticHarnessSkillLocations = resolveAgenticHarnessSkillLocations;
 exports.buildEnsureAgenticHarnessSkillInstructions = buildEnsureAgenticHarnessSkillInstructions;
+exports.buildAgenticHarnessSkillTaskPrompt = buildAgenticHarnessSkillTaskPrompt;
 function resolveAgenticHarnessSkillLocations(agenticHarnessCommand) {
     const normalizedCommand = agenticHarnessCommand.trim().toLowerCase();
     if (normalizedCommand.startsWith("codex")) {
@@ -31,5 +32,11 @@ function buildEnsureAgenticHarnessSkillInstructions(details) {
         `If ${localSkillsDir} already exists locally as a normal folder and ${localHarnessSkillPath} is still missing after copying to ${projectSkillPath}, copy the same skill folder there as well.`,
         `Verify that the skill "${details.skillName}" is available before continuing.`
     ];
+}
+function buildAgenticHarnessSkillTaskPrompt(details) {
+    return [
+        ...buildEnsureAgenticHarnessSkillInstructions(details),
+        `After the skill is available, continue with this task in the same run. ${details.taskPrompt}`
+    ].join(" ");
 }
 //# sourceMappingURL=agenticHarnessSkill.js.map
