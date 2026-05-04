@@ -641,13 +641,38 @@ function activate(context) {
                     localSkillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation"),
                     taskPrompt: jiraPrompt
                 });
-                (0, terminal_1.runInNewTerminal)("Agentic Harness Create Jira Project", [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt")], {
-                    env: (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessEnvironment)(credentials),
-                    iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
-                    color: terminal_1.CLAUDE_ACTION_COLOR
+                const envPath = getRepoEnvPath(repoRoot);
+                const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt");
+                let taskExecution;
+                try {
+                    taskExecution = await (0, terminal_1.runCommandInTaskTerminal)("Agentic Harness Create Jira Project", commandLine, {
+                        cwd: repoRoot,
+                        env: (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessEnvironment)(credentials)
+                    });
+                }
+                catch (error) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    void panel.webview.postMessage({
+                        type: "jiraProjectSetupError",
+                        payload: { message: `Failed to launch the Agentic Harness terminal: ${message}` }
+                    });
+                    return;
+                }
+                const endTaskProcessDisposable = vscode.tasks.onDidEndTaskProcess((event) => {
+                    if (event.execution !== taskExecution) {
+                        return;
+                    }
+                    endTaskProcessDisposable.dispose();
+                    if (event.exitCode === 0) {
+                        (0, utils_1.upsertEnvFileValue)(envPath, "JIRA_PROJECT_KEY", projectKey);
+                        provider.refresh();
+                        void vscode.window.showInformationMessage(`Saved Jira project ${projectKey} to this repository .env file after the Agentic Harness completed successfully.`);
+                        return;
+                    }
+                    void vscode.window.showWarningMessage(`The Agentic Harness exited with code ${event.exitCode ?? "unknown"}, so JIRA_PROJECT_KEY was not saved.`);
                 });
-                void vscode.window.showInformationMessage(`Opened Agentic Harness to create Jira project ${projectKey}.`);
-                resolveOnce({ mode: "manual", projectKey });
+                void vscode.window.showInformationMessage(`Opened Agentic Harness to create Jira project ${projectKey}. JIRA_PROJECT_KEY will be saved after the task exits successfully.`);
+                resolveOnce({ mode: "launched" });
                 panel.dispose();
                 return;
             }
@@ -701,6 +726,9 @@ function activate(context) {
         }
         const setupSelection = await showJiraProjectSetupDialog(repoRoot, credentials, projects);
         if (!setupSelection) {
+            return undefined;
+        }
+        if (setupSelection.mode === "launched") {
             return undefined;
         }
         if (setupSelection.mode === "select") {

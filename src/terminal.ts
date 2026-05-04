@@ -40,6 +40,37 @@ export function runInNewTerminal(
   }
 }
 
+export async function runCommandInTaskTerminal(
+  name: string,
+  commandLine: string,
+  options: {
+    cwd?: string;
+    env?: Record<string, string>;
+  } = {}
+): Promise<vscode.TaskExecution> {
+  const scope = options.cwd
+    ? vscode.workspace.getWorkspaceFolder(vscode.Uri.file(options.cwd)) ?? vscode.TaskScope.Workspace
+    : vscode.TaskScope.Workspace;
+  const task = new vscode.Task(
+    { type: "shell", task: name },
+    scope,
+    name,
+    "Antigravity",
+    new vscode.ShellExecution(commandLine, {
+      cwd: options.cwd,
+      env: options.env
+    })
+  );
+  task.presentationOptions = {
+    reveal: vscode.TaskRevealKind.Always,
+    panel: vscode.TaskPanelKind.Dedicated,
+    focus: true,
+    clear: false,
+    showReuseMessage: false
+  };
+  return vscode.tasks.executeTask(task);
+}
+
 export function buildAgenticHarnessPromptCommand(
   repoRoot: string,
   prompt: string,

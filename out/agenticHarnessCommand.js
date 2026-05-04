@@ -4,15 +4,22 @@ exports.buildAgenticHarnessPromptCommandForCommand = buildAgenticHarnessPromptCo
 function quoteShellArg(value) {
     return `"${value.replace(/"/g, '\\"')}"`;
 }
+function getExecutableName(command) {
+    const firstToken = command.trim().split(/\s+/)[0] || "";
+    const normalized = firstToken.replace(/\\/g, "/");
+    const basename = normalized.split("/").pop() || normalized;
+    return basename.toLowerCase();
+}
 function buildAgenticHarnessPromptCommandForCommand(command, repoRoot, prompt, mode = "dangerous") {
     const trimmedCommand = command.trim();
-    if (trimmedCommand.startsWith("claude")) {
+    const executableName = getExecutableName(trimmedCommand);
+    if (executableName === "claude") {
         return `${trimmedCommand}${mode === "dangerous" ? " --dangerously-skip-permissions" : ""} ${quoteShellArg(prompt)}`;
     }
-    if (trimmedCommand.startsWith("codex")) {
+    if (executableName === "codex") {
         const codexBaseCommand = /\bcodex\s+exec\b/.test(trimmedCommand)
             ? trimmedCommand
-            : `${trimmedCommand} exec`;
+            : trimmedCommand.replace(/\bcodex\b/, "codex exec");
         const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
         const heredocMarker = "ANTIGRAVITY_HARNESS_PROMPT_EOF";
         return `${codexBaseCommand} --full-auto -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} - <<'${heredocMarker}'\n${prompt}\n${heredocMarker}`;

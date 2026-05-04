@@ -41,3 +41,25 @@ test("buildAgenticHarnessPromptCommandForCommand keeps opencode commands simple"
 
   assert.equal(command, 'opencode run -m ollama/qwen3-coder:30b "create the jira project"');
 });
+
+test("buildAgenticHarnessPromptCommandForCommand supports codex commands with extra args", () => {
+  const command = buildAgenticHarnessPromptCommandForCommand(
+    "codex --model gpt-5.5-codex",
+    "/tmp/repo",
+    "create the jira project",
+    "prompt"
+  );
+
+  assert.match(command, /^codex exec --model gpt-5\.5-codex --full-auto -C "\/tmp\/repo"/);
+});
+
+test("buildAgenticHarnessPromptCommandForCommand supports full executable paths", () => {
+  const command = buildAgenticHarnessPromptCommandForCommand(
+    "/usr/local/bin/claude",
+    "/tmp/repo",
+    "create the jira project",
+    "prompt"
+  );
+
+  assert.equal(command, '/usr/local/bin/claude "create the jira project"');
+});

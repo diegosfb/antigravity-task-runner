@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CLAUDE_ACTION_COLOR = void 0;
 exports.runInSecondaryTerminal = runInSecondaryTerminal;
 exports.runInNewTerminal = runInNewTerminal;
+exports.runCommandInTaskTerminal = runCommandInTaskTerminal;
 exports.buildAgenticHarnessPromptCommand = buildAgenticHarnessPromptCommand;
 exports.runClaudeInitAndUpdateInNewTerminal = runClaudeInitAndUpdateInNewTerminal;
 exports.runCodexInitAndUpdateInNewTerminal = runCodexInitAndUpdateInNewTerminal;
@@ -37,6 +38,23 @@ function runInNewTerminal(name, lines, options = {}) {
     for (const line of lines) {
         terminal.sendText(line, true);
     }
+}
+async function runCommandInTaskTerminal(name, commandLine, options = {}) {
+    const scope = options.cwd
+        ? vscode.workspace.getWorkspaceFolder(vscode.Uri.file(options.cwd)) ?? vscode.TaskScope.Workspace
+        : vscode.TaskScope.Workspace;
+    const task = new vscode.Task({ type: "shell", task: name }, scope, name, "Antigravity", new vscode.ShellExecution(commandLine, {
+        cwd: options.cwd,
+        env: options.env
+    }));
+    task.presentationOptions = {
+        reveal: vscode.TaskRevealKind.Always,
+        panel: vscode.TaskPanelKind.Dedicated,
+        focus: true,
+        clear: false,
+        showReuseMessage: false
+    };
+    return vscode.tasks.executeTask(task);
 }
 function buildAgenticHarnessPromptCommand(repoRoot, prompt, mode = "dangerous") {
     const command = (0, settings_1.getAgenticHarnessExecutionCommand)();
