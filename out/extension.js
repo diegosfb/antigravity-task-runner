@@ -487,27 +487,10 @@ function activate(context) {
         <ol class="instructions">
           <li>The Agentic Harness will create the project as company-managed.</li>
           <li>It will select "${jiraProjectHarness_1.JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME}".</li>
-          <li>After the project is created, save the key below to this repository .env file.</li>
+          <li>The project key you enter here will be saved to this repository .env file automatically.</li>
         </ol>
         <div class="actions">
           <button type="button" class="primary" id="create-project-button">Create Jira Project</button>
-        </div>
-      </div>
-      <div class="section">
-        <div class="section-title">Save Newly Created Project</div>
-        <span class="hint">Use this after the project exists in Jira and the workflow scheme is associated.</span>
-        <ol class="instructions">
-          <li>If needed, go to Project Settings → Workflows → Switch Scheme.</li>
-          <li>Select "${jiraProjectHarness_1.JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME}".</li>
-          <li>Click Associate and follow the steps in Jira.</li>
-        </ol>
-        <label>
-          New Project Key
-          <input id="manual-project-key" type="text" autocomplete="off" />
-          <span class="hint">After the project is ready, enter the Jira project key here to save it to this repository .env file.</span>
-        </label>
-        <div class="actions">
-          <button type="button" class="primary" id="save-project-key-button">Save Project Key</button>
         </div>
       </div>
       <div class="error" id="error-message"></div>
@@ -524,12 +507,10 @@ function activate(context) {
       const createProjectNameInput = document.getElementById("create-project-name");
       const createProjectKeyInput = document.getElementById("create-project-key");
       const createProjectDescriptionInput = document.getElementById("create-project-description");
-      const manualProjectKeyInput = document.getElementById("manual-project-key");
       const errorMessage = document.getElementById("error-message");
       const cancelButton = document.getElementById("cancel-button");
       const useProjectButton = document.getElementById("use-project-button");
       const createProjectButton = document.getElementById("create-project-button");
-      const saveProjectKeyButton = document.getElementById("save-project-key-button");
 
       const placeholderOption = document.createElement("option");
       placeholderOption.value = "";
@@ -545,7 +526,7 @@ function activate(context) {
 
       projectSelectHint.textContent = projects.length > 0
         ? "Choose an existing Jira project and save it to this repository .env file."
-        : "No Jira projects were loaded. You can still save a newly created project key below.";
+        : "No Jira projects were loaded. You can create one below.";
 
       cancelButton.addEventListener("click", () => {
         vscode.postMessage({ type: "cancelJiraProjectSetup" });
@@ -584,7 +565,6 @@ function activate(context) {
           return;
         }
         createProjectKeyInput.value = projectKey;
-        manualProjectKeyInput.value = projectKey;
         vscode.postMessage({
           type: "createJiraProjectWithAgenticHarness",
           payload: {
@@ -593,19 +573,6 @@ function activate(context) {
             description: createProjectDescriptionInput.value.trim()
           }
         });
-      });
-
-      saveProjectKeyButton.addEventListener("click", () => {
-        const payload = {
-          mode: "manual",
-          projectKey: manualProjectKeyInput.value.trim()
-        };
-        if (!payload.projectKey) {
-          errorMessage.textContent = "Enter a Jira project key.";
-          manualProjectKeyInput.focus();
-          return;
-        }
-        vscode.postMessage({ type: "submitJiraProjectSetup", payload });
       });
 
       window.addEventListener("message", (event) => {
@@ -672,7 +639,9 @@ function activate(context) {
                     iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
                     color: terminal_1.CLAUDE_ACTION_COLOR
                 });
-                void vscode.window.showInformationMessage(`Opened Agentic Harness to create Jira project ${projectKey}. Save ${projectKey} below after the project is ready.`);
+                void vscode.window.showInformationMessage(`Opened Agentic Harness to create Jira project ${projectKey}.`);
+                resolveOnce({ mode: "manual", projectKey });
+                panel.dispose();
                 return;
             }
             if (message.type !== "submitJiraProjectSetup")
