@@ -306,21 +306,21 @@ function getExtensionSettingsFields(): SettingsField[] {
     {
       key: "jiraBaseUrl",
       label: "Jira Base URL",
-      description: "Jira base URL used for Jira actions when not provided by the repository .env.",
+      description: "Jira base URL used for all Jira actions.",
       placeholder: "https://your-company.atlassian.net",
       value: config.get<string>("jiraBaseUrl") || ""
     },
     {
       key: "jiraEmail",
       label: "Jira Email",
-      description: "Jira email used for Jira actions when not provided by the repository .env.",
+      description: "Jira email used for all Jira actions.",
       placeholder: "name@example.com",
       value: config.get<string>("jiraEmail") || ""
     },
     {
       key: "jiraApiToken",
       label: "Jira API Token",
-      description: "Jira API token used for Jira actions when not provided by the repository .env.",
+      description: "Jira API token used for all Jira actions.",
       placeholder: "jira-api-token",
       value: config.get<string>("jiraApiToken") || ""
     },

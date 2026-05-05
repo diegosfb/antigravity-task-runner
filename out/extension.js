@@ -370,12 +370,12 @@ function activate(context) {
         const apiToken = (config.get("jiraApiToken") || "").trim() ||
             (env.jira_api_token || "").trim();
         const missing = [
-            !baseUrl ? "JIRA_BASE_URL" : undefined,
-            !email ? "JIRA_EMAIL" : undefined,
-            !apiToken ? "JIRA_API_TOKEN" : undefined
+            !baseUrl ? "Jira Base URL" : undefined,
+            !email ? "Jira Email" : undefined,
+            !apiToken ? "Jira API Token" : undefined
         ].filter((value) => Boolean(value));
         if (missing.length > 0) {
-            throw new Error(`Missing Jira settings in Antigravity Settings or .env: ${missing.join(", ")}.`);
+            throw new Error(`Missing Jira credentials in Antigravity Settings: ${missing.join(", ")}.`);
         }
         return { baseUrl, email, apiToken };
     };
@@ -642,10 +642,10 @@ function activate(context) {
                     taskPrompt: jiraPrompt
                 });
                 const envPath = getRepoEnvPath(repoRoot);
-                const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt");
-                let taskExecution;
+                const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "dangerous");
+                const taskName = `Agentic Harness Create Jira Project ${Date.now()}`;
                 try {
-                    taskExecution = await (0, terminal_1.runCommandInTaskTerminal)("Agentic Harness Create Jira Project", commandLine, {
+                    await (0, terminal_1.runCommandInTaskTerminal)(taskName, commandLine, {
                         cwd: repoRoot,
                         env: (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessEnvironment)(credentials)
                     });
@@ -659,7 +659,7 @@ function activate(context) {
                     return;
                 }
                 const endTaskProcessDisposable = vscode.tasks.onDidEndTaskProcess((event) => {
-                    if (event.execution !== taskExecution) {
+                    if (event.execution.task.name !== taskName) {
                         return;
                     }
                     endTaskProcessDisposable.dispose();
@@ -2377,7 +2377,10 @@ function activate(context) {
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to load Jira item types: ${message}`);
+            const hint = /log in|not authorized|cannot create/i.test(message)
+                ? ` Verify that your Jira account has "Create Issues" permission in project ${projectKey}. You can check this under Project settings → Access in Jira.`
+                : "";
+            void vscode.window.showErrorMessage(`Failed to load Jira item types for project ${projectKey}: ${message}${hint}`);
             return;
         }
         if (issueTypes.length === 0) {

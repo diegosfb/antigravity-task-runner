@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.7.20",
+  "version": "4.9.0",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -213,7 +213,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.7.20",
+          "name": "Tasky Runner v4.9.0",
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -341,17 +341,17 @@
         "antigravity.jiraBaseUrl": {
           "type": "string",
           "default": "",
-          "description": "Jira base URL used for Jira actions when not provided by the repository .env."
+          "description": "Jira base URL used for all Jira actions."
         },
         "antigravity.jiraEmail": {
           "type": "string",
           "default": "",
-          "description": "Jira email used for Jira actions when not provided by the repository .env."
+          "description": "Jira email used for all Jira actions."
         },
         "antigravity.jiraApiToken": {
           "type": "string",
           "default": "",
-          "description": "Jira API token used for Jira actions when not provided by the repository .env."
+          "description": "Jira API token used for all Jira actions."
         },
         "antigravity.antigravityWorkspaceProject": {
           "type": "string",

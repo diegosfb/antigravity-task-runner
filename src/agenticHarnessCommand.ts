@@ -21,7 +21,10 @@ export function buildAgenticHarnessPromptCommandForCommand(
   const executableName = getExecutableName(trimmedCommand);
 
   if (executableName === "claude") {
-    return `${trimmedCommand}${mode === "dangerous" ? " --dangerously-skip-permissions" : ""} ${quoteShellArg(prompt)}`;
+    if (mode === "dangerous") {
+      return `${trimmedCommand} --dangerously-skip-permissions --print ${quoteShellArg(prompt)}`;
+    }
+    return `${trimmedCommand} ${quoteShellArg(prompt)}`;
   }
 
   if (executableName === "codex") {

@@ -5,6 +5,17 @@ const {
   buildAgenticHarnessPromptCommandForCommand
 } = require("../out/agenticHarnessCommand.js");
 
+test("buildAgenticHarnessPromptCommandForCommand uses --dangerously-skip-permissions and --print for dangerous mode", () => {
+  const command = buildAgenticHarnessPromptCommandForCommand(
+    "claude",
+    "/tmp/repo",
+    "create the jira project",
+    "dangerous"
+  );
+
+  assert.equal(command, 'claude --dangerously-skip-permissions --print "create the jira project"');
+});
+
 test("buildAgenticHarnessPromptCommandForCommand keeps claude prompt mode behavior", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
     "claude",
