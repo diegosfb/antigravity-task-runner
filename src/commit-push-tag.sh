@@ -17,8 +17,10 @@ set -euo pipefail
 #   ARTIFACT       Path or glob pattern for the artifact to attach to the GitHub release.
 #                  Supports multiple files (space-separated or glob). Optional.
 #   CREATE_RELEASE_BRANCH
-#                  When set to 1 (default), create, switch to, and push a branch
-#                  that matches the release tag after creating the release.
+#                  When set to 1, create, switch to, and push a branch that matches
+#                  the release tag after creating the release. Default is 0 (off) —
+#                  GitHub Flow policy: main is the only long-lived branch; branch
+#                  from a tag temporarily only when you need to inspect or rebuild.
 #
 # Examples:
 #   commit-push-tag.sh "feat: new feature"
@@ -35,7 +37,10 @@ fi
 
 MSG="$1"
 [[ -z "${MSG}" ]] && { echo "Commit message cannot be empty."; exit 1; }
-CREATE_RELEASE_BRANCH="${CREATE_RELEASE_BRANCH:-1}"
+# GitHub Flow: main is the only long-lived branch. Release branches violate this
+# policy. Branch from the tag temporarily only when you need to inspect or rebuild
+# an old version. Override to 1 only with explicit repository-owner approval.
+CREATE_RELEASE_BRANCH="${CREATE_RELEASE_BRANCH:-0}"
 
 # ─── Git sanity checks ───────────────────────────────────────────────────────
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
