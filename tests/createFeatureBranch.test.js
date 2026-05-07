@@ -28,16 +28,28 @@ function createTempRepoWithRemote() {
   return { rootDir, repoDir };
 }
 
+function runCreateFeatureBranchScript({ repoDir, branchName, input = "" }) {
+  const scriptPath = path.join(__dirname, "..", "src", "create_feature_branch.sh");
+  return execFileSync(
+    "bash",
+    ["-lc", `${JSON.stringify(scriptPath)} ${JSON.stringify(branchName)} 2>&1`],
+    {
+      cwd: repoDir,
+      encoding: "utf8",
+      input
+    }
+  );
+}
+
 test("create_feature_branch.sh pushes and verifies the remote branch", (t) => {
   const { rootDir, repoDir } = createTempRepoWithRemote();
   t.after(() => {
     fs.rmSync(rootDir, { recursive: true, force: true });
   });
 
-  const scriptPath = path.join(__dirname, "..", "src", "create_feature_branch.sh");
-  const output = execFileSync("bash", ["-lc", `${JSON.stringify(scriptPath)} "feature/test-branch" 2>&1`], {
-    cwd: repoDir,
-    encoding: "utf8"
+  const output = runCreateFeatureBranchScript({
+    repoDir,
+    branchName: "feature/test-branch"
   });
 
   const currentBranch = execFileSync("git", ["branch", "--show-current"], {
@@ -58,4 +70,43 @@ test("create_feature_branch.sh pushes and verifies the remote branch", (t) => {
   assert.match(remoteHeads, /refs\/heads\/feature\/test-branch$/m);
   assert.match(output, /Remote verified \| Yes/);
   assert.match(output, /branch is already fully created/i);
+});
+
+test("create_feature_branch.sh commits local changes before creating the new branch", (t) => {
+  const { rootDir, repoDir } = createTempRepoWithRemote();
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  fs.writeFileSync(path.join(repoDir, "README.md"), "hello\nlocal change\n", "utf8");
+
+  const output = runCreateFeatureBranchScript({
+    repoDir,
+    branchName: "feature/dirty-branch",
+    input: "Capture work before branching\n"
+  });
+
+  const currentBranch = execFileSync("git", ["branch", "--show-current"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+  const headSubject = execFileSync("git", ["log", "-1", "--pretty=%s"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+  const mainHeadSubject = execFileSync("git", ["log", "-1", "--pretty=%s", "main"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+  const statusOutput = execFileSync("git", ["status", "--short"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+
+  assert.equal(currentBranch, "feature/dirty-branch");
+  assert.equal(headSubject, "Capture work before branching");
+  assert.equal(mainHeadSubject, "Capture work before branching");
+  assert.equal(statusOutput, "");
+  assert.match(output, /Detected uncommitted changes on main/);
+  assert.match(output, /\+ git commit --no-gpg-sign -m Capture work before branching/);
 });

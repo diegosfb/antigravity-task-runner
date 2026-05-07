@@ -53,6 +53,16 @@ ensure_remote_origin() {
   fi
 }
 
+get_current_branch() {
+  local branch
+  branch="$(git branch --show-current)"
+  if [[ -z "$branch" ]]; then
+    echo "Couldn't determine the current branch." >&2
+    exit 1
+  fi
+  printf '%s' "$branch"
+}
+
 confirm_yes_no() {
   local message="$1"
   local answer
@@ -76,6 +86,19 @@ get_non_empty_kebab() {
       return 0
     fi
     echo "Please enter a short kebab-case value."
+  done
+}
+
+require_non_empty() {
+  local message="$1"
+  local value
+  while true; do
+    value="$(trim "$(prompt "$message")")"
+    if [[ -n "$value" ]]; then
+      printf '%s' "$value"
+      return 0
+    fi
+    echo "This field is required." >&2
   done
 }
 
@@ -123,16 +146,58 @@ run_and_echo() {
   "$@"
 }
 
+has_uncommitted_changes() {
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    return 0
+  fi
+
+  [[ -n "$(git ls-files --others --exclude-standard)" ]]
+}
+
+stage_branch_changes() {
+  run_and_echo git add -A -- .
+  run_and_echo git rm -q --cached --ignore-unmatch .env config/.env
+}
+
+commit_pending_changes_if_needed() {
+  local current_branch="$1"
+  local commit_message secret_candidate_output
+
+  if ! has_uncommitted_changes; then
+    return 0
+  fi
+
+  echo
+  echo "Detected uncommitted changes on ${current_branch}. They must be committed before creating a new branch."
+
+  secret_candidate_output="$(git status --porcelain -- .env config/.env || true)"
+  if [[ -n "$secret_candidate_output" ]]; then
+    echo "Warning: .env and config/.env are excluded from the automated pre-branch commit for safety."
+  fi
+
+  commit_message="$(require_non_empty "Enter a commit message for the changes that should be included before creating the new branch.")"
+  stage_branch_changes
+
+  if git diff --cached --quiet; then
+    echo "No committable changes were staged after excluding protected env files. Continuing with the existing branch history."
+    return 0
+  fi
+
+  run_and_echo git commit --no-gpg-sign -m "$commit_message"
+}
+
 verify_remote_branch_exists() {
   local branch_name="$1"
   run_remote_git ls-remote --exit-code --heads origin "$branch_name" >/dev/null 2>&1
 }
 
 main() {
-  local branch_name="${1:-}"
+  local branch_name="${1:-}" current_branch
 
   ensure_git_repo
   ensure_remote_origin
+  current_branch="$(get_current_branch)"
+  commit_pending_changes_if_needed "$current_branch"
 
   if [[ -z "$branch_name" ]]; then
     branch_name="$(build_branch_name)"
