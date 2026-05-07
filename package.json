@@ -173,6 +173,10 @@
         "title": "Antigravity: Checkout Main (Branch work done)"
       },
       {
+        "command": "antigravity.pullRemoteAndMerge",
+        "title": "Antigravity: Pull Remote and Merge"
+      },
+      {
         "command": "antigravity.setFeatureFlag",
         "title": "Antigravity: Set Feature Flag for changes"
       },
@@ -479,6 +483,7 @@
     "src/infer_jira_issue_link.js",
     "src/merge_branch_to_main.sh",
     "src/checkout_branch.sh",
+    "src/pull_remote_and_merge.sh",
     "src/update-agent-setup.sh",
     "src/update-agentic-workspace.sh",
     "src/workspace-setup.sh",

@@ -3629,6 +3629,69 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.pullRemoteAndMerge", async () => {
+      log("[pullRemoteAndMerge] triggered");
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+
+      try {
+        const currentBranch = await getCurrentBranchName(repoRoot);
+        if (currentBranch === "main") {
+          void vscode.window.showInformationMessage(
+            "Pull Remote and merge is only available when you are on a branch other than main."
+          );
+          return;
+        }
+        if (currentBranch === "detached HEAD") {
+          void vscode.window.showErrorMessage(
+            "Pull Remote and merge is unavailable while Git is in a detached HEAD state."
+          );
+          return;
+        }
+
+        const scriptPath = path.join(extensionRoot, "src", "pull_remote_and_merge.sh");
+        if (!fs.existsSync(scriptPath)) {
+          void vscode.window.showErrorMessage(
+            "Pull Remote and merge script not found in the extension package."
+          );
+          return;
+        }
+
+        const projectTestingCommand = getProjectTestingCommand();
+
+        runInNewTerminal(
+          "Pull Remote and Merge",
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            `${quoteShellArg(scriptPath)} ${quoteShellArg(currentBranch)}`
+          ],
+          {
+            iconPath: new vscode.ThemeIcon("sync"),
+            ...(projectTestingCommand
+              ? {
+                  env: {
+                    ANTIGRAVITY_PROJECT_TESTING_COMMAND: projectTestingCommand
+                  }
+                }
+              : {})
+          }
+        );
+
+        void vscode.window.showInformationMessage(
+          `Pull Remote and merge started on '${currentBranch}'. The workflow will update local main, merge it into '${currentBranch}', run tests, and push the branch.`
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Pull Remote and merge failed: ${message}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.setFeatureFlag", async () => {
       log("[setFeatureFlag] triggered");
       const rootPath = getRootPath();

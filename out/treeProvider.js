@@ -553,6 +553,13 @@ function getQuickActionItems() {
             title: "Go To Branch"
         };
         items.push(checkoutMain);
+        const pullRemoteAndMerge = new NodeItem({ kind: "action", label: "Pull Remote and merge" }, vscode.TreeItemCollapsibleState.None);
+        pullRemoteAndMerge.iconPath = new vscode.ThemeIcon("sync", ORANGE_ACTION_COLOR);
+        pullRemoteAndMerge.command = {
+            command: "antigravity.pullRemoteAndMerge",
+            title: "Pull Remote and merge"
+        };
+        items.push(pullRemoteAndMerge);
     }
     const setFeatureFlag = new NodeItem({ kind: "action", label: "Set Feature Flag for changes" }, vscode.TreeItemCollapsibleState.None);
     setFeatureFlag.iconPath = new vscode.ThemeIcon("symbol-boolean", FEATURE_FLAG_ACTION_COLOR);
