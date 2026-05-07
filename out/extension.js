@@ -137,7 +137,7 @@ function activate(context) {
             return bundledPath;
         return undefined;
     };
-    const renderCreateFeatureBranchHtml = (webview) => {
+    const renderCreateFeatureBranchHtml = (webview, hasJiraProject) => {
         const nonce = getNonce();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         const branchTypeData = branchTypes.map((option) => ({
@@ -224,10 +224,29 @@ function activate(context) {
         color: var(--vscode-button-secondaryForeground);
         background: var(--vscode-button-secondaryBackground);
       }
+      #jira-section {
+        display: ${hasJiraProject ? "grid" : "none"};
+        gap: 6px;
+        font-size: 13px;
+      }
+      .jira-section-title {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+      }
     </style>
   </head>
   <body>
     <form id="feature-branch-form">
+      <div id="jira-section">
+        <div class="jira-section-title">
+          Jira issue
+          <span class="hint">(optional — selects branch type and prefills name)</span>
+        </div>
+        <select id="jira-issue">
+          <option value="">— Loading Jira issues… —</option>
+        </select>
+      </div>
       <label>
         Branch type
         <select id="branch-type"></select>
@@ -254,6 +273,15 @@ function activate(context) {
       const errorMessage = document.getElementById("error-message");
       const form = document.getElementById("feature-branch-form");
       const cancelButton = document.getElementById("cancel-button");
+      const jiraSection = document.getElementById("jira-section");
+      const jiraIssueSelect = document.getElementById("jira-issue");
+
+      const slugify = (text) =>
+        text.trim().toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .replace(/-{2,}/g, "-")
+          .slice(0, 40);
 
       const updateHints = () => {
         const selected = branchTypes.find((option) => option.label === branchTypeSelect.value) || branchTypes[0];
@@ -271,6 +299,19 @@ function activate(context) {
         element.textContent = option.label;
         branchTypeSelect.appendChild(element);
       }
+
+      jiraIssueSelect.addEventListener("change", () => {
+        const opt = jiraIssueSelect.options[jiraIssueSelect.selectedIndex];
+        const issueKey = opt.dataset.key || "";
+        const summary = opt.dataset.summary || "";
+        if (!issueKey) return;
+        branchTypeSelect.value = "Jira Task";
+        updateHints();
+        const slug = slugify(summary);
+        branchNameInput.value = slug ? issueKey + "-" + slug : issueKey + "-";
+        branchNameInput.focus();
+        branchNameInput.setSelectionRange(branchNameInput.value.length, branchNameInput.value.length);
+      });
 
       branchTypeSelect.addEventListener("change", updateHints);
       cancelButton.addEventListener("click", () => {
@@ -301,6 +342,28 @@ function activate(context) {
         if (message.type === "createFeatureBranchError") {
           errorMessage.textContent = message.payload?.message || "Invalid branch name.";
         }
+        if (message.type === "jiraIssuesLoaded") {
+          const issues = message.payload?.issues || [];
+          jiraIssueSelect.innerHTML = "";
+          const placeholder = document.createElement("option");
+          placeholder.value = "";
+          placeholder.textContent = issues.length > 0
+            ? "— Pick a Jira issue (optional) —"
+            : "— No open unassigned issues —";
+          jiraIssueSelect.appendChild(placeholder);
+          for (const issue of issues) {
+            const opt = document.createElement("option");
+            opt.value = issue.key;
+            opt.dataset.key = issue.key;
+            opt.dataset.summary = issue.summary;
+            opt.textContent = issue.key + "  " + issue.summary;
+            jiraIssueSelect.appendChild(opt);
+          }
+          jiraSection.style.display = "grid";
+        }
+        if (message.type === "jiraIssuesError") {
+          jiraSection.style.display = "none";
+        }
       });
 
       branchTypeSelect.value = branchTypes[0].label;
@@ -310,54 +373,69 @@ function activate(context) {
   </body>
 </html>`;
     };
-    const showCreateFeatureBranchDialog = async () => new Promise((resolve) => {
-        const panel = vscode.window.createWebviewPanel("createFeatureBranch", "Create Feature Branch", vscode.ViewColumn.Active, { enableScripts: true });
-        panel.webview.html = renderCreateFeatureBranchHtml(panel.webview);
-        let settled = false;
-        const resolveOnce = (value) => {
-            if (settled)
-                return;
-            settled = true;
-            resolve(value);
-        };
-        panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
-        panel.webview.onDidReceiveMessage(async (message) => {
-            if (!message)
-                return;
-            if (message.type === "cancelCreateFeatureBranch") {
-                panel.dispose();
-                return;
-            }
-            if (message.type !== "submitCreateFeatureBranch")
-                return;
-            const payload = message.payload || {};
-            const selectedBranchType = branchTypes.find((option) => option.label === payload.branchType);
-            const branchNameInput = typeof payload.branchNameInput === "string" ? payload.branchNameInput : "";
-            if (!selectedBranchType) {
-                void panel.webview.postMessage({
-                    type: "createFeatureBranchError",
-                    payload: { message: "Select a branch type." }
-                });
-                return;
-            }
-            const branchName = selectedBranchType.requiresJiraKey
-                ? buildJiraTaskBranchName(branchNameInput)
-                : buildStandardBranchName(selectedBranchType.prefix, branchNameInput);
-            if (!branchName) {
-                void panel.webview.postMessage({
-                    type: "createFeatureBranchError",
-                    payload: {
-                        message: selectedBranchType.requiresJiraKey
-                            ? "Use the format JIRA-123-short-name."
-                            : "Enter a short descriptive branch name."
+    const showCreateFeatureBranchDialog = async (repoRoot) => {
+        const savedProjectKey = getSavedJiraProjectKey(repoRoot);
+        return new Promise((resolve) => {
+            const panel = vscode.window.createWebviewPanel("createFeatureBranch", "Create Feature Branch", vscode.ViewColumn.Active, { enableScripts: true });
+            panel.webview.html = renderCreateFeatureBranchHtml(panel.webview, Boolean(savedProjectKey));
+            if (savedProjectKey) {
+                void (async () => {
+                    try {
+                        const credentials = getJiraCredentialsFromEnv(repoRoot);
+                        const issues = await (0, jira_1.searchOpenUnassignedTodoJiraIssuesForProject)(credentials, savedProjectKey);
+                        void panel.webview.postMessage({ type: "jiraIssuesLoaded", payload: { issues } });
                     }
-                });
-                return;
+                    catch {
+                        void panel.webview.postMessage({ type: "jiraIssuesError" });
+                    }
+                })();
             }
-            resolveOnce({ branchType: selectedBranchType, branchName });
-            panel.dispose();
-        }, undefined, context.subscriptions);
-    });
+            let settled = false;
+            const resolveOnce = (value) => {
+                if (settled)
+                    return;
+                settled = true;
+                resolve(value);
+            };
+            panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+            panel.webview.onDidReceiveMessage(async (message) => {
+                if (!message)
+                    return;
+                if (message.type === "cancelCreateFeatureBranch") {
+                    panel.dispose();
+                    return;
+                }
+                if (message.type !== "submitCreateFeatureBranch")
+                    return;
+                const payload = message.payload || {};
+                const selectedBranchType = branchTypes.find((option) => option.label === payload.branchType);
+                const branchNameInput = typeof payload.branchNameInput === "string" ? payload.branchNameInput : "";
+                if (!selectedBranchType) {
+                    void panel.webview.postMessage({
+                        type: "createFeatureBranchError",
+                        payload: { message: "Select a branch type." }
+                    });
+                    return;
+                }
+                const branchName = selectedBranchType.requiresJiraKey
+                    ? buildJiraTaskBranchName(branchNameInput)
+                    : buildStandardBranchName(selectedBranchType.prefix, branchNameInput);
+                if (!branchName) {
+                    void panel.webview.postMessage({
+                        type: "createFeatureBranchError",
+                        payload: {
+                            message: selectedBranchType.requiresJiraKey
+                                ? "Use the format JIRA-123-short-name."
+                                : "Enter a short descriptive branch name."
+                        }
+                    });
+                    return;
+                }
+                resolveOnce({ branchType: selectedBranchType, branchName });
+                panel.dispose();
+            }, undefined, context.subscriptions);
+        });
+    };
     const getRepoEnvPath = (repoRoot) => path.join(repoRoot, ".env");
     const getJiraCredentialsFromEnv = (repoRoot) => {
         const envPath = getRepoEnvPath(repoRoot);
@@ -979,7 +1057,7 @@ function activate(context) {
       for (const issue of issues) {
         const option = document.createElement("option");
         option.value = issue.key;
-        option.textContent = issue.key;
+        option.textContent = issue.key + "  " + issue.summary;
         issueSelect.appendChild(option);
       }
 
@@ -2660,7 +2738,7 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        const dialogResult = await showCreateFeatureBranchDialog();
+        const dialogResult = await showCreateFeatureBranchDialog(repoRoot);
         if (!dialogResult)
             return;
         const { branchType, branchName } = dialogResult;
@@ -2694,12 +2772,21 @@ function activate(context) {
             void vscode.window.showErrorMessage("Create pull request script not found in the extension package.");
             return;
         }
+        let prBranch = "";
+        try {
+            prBranch = await getCurrentBranchName(repoRoot);
+        }
+        catch {
+            // best-effort
+        }
+        const branchLabel = prBranch ? `'${prBranch}'` : "your feature branch";
         (0, terminal_1.runInNewTerminal)("Create Pull Request", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
             `ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER=${(0, utils_1.quoteShellArg)(defaultGithubCodeReviewer)} ${(0, utils_1.quoteShellArg)(scriptPath)}`
         ], {
             iconPath: new vscode.ThemeIcon("git-pull-request")
         });
+        void vscode.window.showInformationMessage(`PR creation started on ${branchLabel}. The workflow will sync local main first, then return to ${branchLabel} to finish preparing the pull request.`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.mergeBranchToMain", async () => {
         (0, logger_1.log)("[mergeBranchToMain] triggered");
@@ -2776,6 +2863,33 @@ function activate(context) {
             const message = error instanceof Error ? error.message : String(error);
             void vscode.window.showErrorMessage(`Checkout branch failed: ${message}`);
         }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.setFeatureFlag", async () => {
+        (0, logger_1.log)("[setFeatureFlag] triggered");
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const prompt = [
+            "Compare the current branch against origin/main.",
+            "For every new or modified code path that introduces a behavior change,",
+            "wrap it in a feature flag that can be toggled on or off via the .env file.",
+            "Name each flag using the format FEATURE_<JIRA_TICKET_OR_BRANCH_SLUG>_<SHORT_DESCRIPTION> (all caps, underscores).",
+            "Add each flag with a default value of false (disabled) to .env.example.",
+            "If a .env file already exists in the repo root, add the same flags there too.",
+            "Do not alter existing flags or unrelated code."
+        ].join(" ");
+        (0, logger_1.logAlways)("[setFeatureFlag] delegating to Agentic Harness");
+        (0, terminal_1.runInNewTerminal)("Set Feature Flags", [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "dangerous")
+        ], {
+            iconPath: new vscode.ThemeIcon("symbol-boolean", terminal_1.CLAUDE_ACTION_COLOR),
+            color: terminal_1.CLAUDE_ACTION_COLOR
+        });
+        void vscode.window.showInformationMessage("Opened Feature Flag setup terminal.");
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.reviewPullRequest", async () => {
         (0, logger_1.log)("[reviewPullRequest] triggered");

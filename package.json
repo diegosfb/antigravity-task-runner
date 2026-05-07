@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.9.2",
+  "version": "4.9.14",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -27,6 +27,7 @@
     "onCommand:antigravity.createPullRequest",
     "onCommand:antigravity.mergeBranchToMain",
     "onCommand:antigravity.checkoutMain",
+    "onCommand:antigravity.setFeatureFlag",
     "onCommand:antigravity.reviewPullRequest",
     "onCommand:antigravity.approvePullRequest",
     "onCommand:antigravity.feedbackOnPullRequest",
@@ -164,6 +165,10 @@
         "title": "Antigravity: Checkout Main (Branch work done)"
       },
       {
+        "command": "antigravity.setFeatureFlag",
+        "title": "Antigravity: Set Feature Flag for changes"
+      },
+      {
         "command": "antigravity.reviewPullRequest",
         "title": "Antigravity: Review a Pull Request"
       },
@@ -213,7 +218,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.9.2",
+          "name": "Tasky Runner v4.9.14",
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -317,6 +322,16 @@
           "type": "string",
           "default": "@diegosfb",
           "description": "GitHub username suggested by default when creating a pull request."
+        },
+        "antigravity.buildCommand": {
+          "type": "string",
+          "default": "",
+          "description": "Command used to build the solution (e.g. npm run build, make, ./gradlew build)."
+        },
+        "antigravity.projectTestingCommand": {
+          "type": "string",
+          "default": "",
+          "description": "Command used to run the project's test suite (e.g. npm test, pytest, go test ./...)."
         },
         "antigravity.antigravityPath": {
           "type": "string",

@@ -229,6 +229,20 @@ function getExtensionSettingsFields() {
             value: getDefaultGithubCodeReviewer()
         },
         {
+            key: "buildCommand",
+            label: "Build Command",
+            description: "Command used to build the solution (e.g. npm run build, make, ./gradlew build).",
+            placeholder: "npm run build",
+            value: config.get("buildCommand") || ""
+        },
+        {
+            key: "projectTestingCommand",
+            label: "Project Testing Command",
+            description: "Command used to run the project's test suite (e.g. npm test, pytest, go test ./...).",
+            placeholder: "npm test",
+            value: config.get("projectTestingCommand") || ""
+        },
+        {
             key: "antigravityPath",
             label: "Antigravity Executable",
             description: "Path to the Antigravity executable for running agents.",
