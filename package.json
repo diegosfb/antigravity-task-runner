@@ -468,6 +468,7 @@
     "src/git_remote_fallback.sh",
     "src/create_feature_branch.sh",
     "src/create_pull_requrest.sh",
+    "src/infer_jira_issue_link.js",
     "src/merge_branch_to_main.sh",
     "src/checkout_branch.sh",
     "src/update-agent-setup.sh",
