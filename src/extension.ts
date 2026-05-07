@@ -13,6 +13,7 @@ import {
   runInNewTerminal,
   runCommandInTaskTerminal,
   buildAgenticHarnessPromptCommand,
+  buildLightAgenticHarnessPromptCommand,
   runClaudeInitAndUpdateInNewTerminal,
   runCodexInitAndUpdateInNewTerminal,
   CLAUDE_ACTION_COLOR
@@ -2792,7 +2793,7 @@ export function activate(context: vscode.ExtensionContext) {
             "Agentic Harness Commit",
             [
               `cd ${quoteShellArg(repoRoot)}`,
-              buildAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")
+              buildLightAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")
             ],
             {
               iconPath: new vscode.ThemeIcon("git-commit", CLAUDE_ACTION_COLOR),
