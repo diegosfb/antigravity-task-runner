@@ -368,6 +368,7 @@ const JIRA_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
+const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
 
 const TOP_LEVEL_LINKED_FOLDERS = [
   { label: "claude", path: path.join(os.homedir(), ".claude") },
@@ -706,6 +707,17 @@ function getQuickActionItems(): NodeItem[] {
       title: "Pull Remote and merge"
     };
     items.push(pullRemoteAndMerge);
+
+    const agenticReviewOfMerge = new NodeItem(
+      { kind: "action", label: "Agentic review of Merge" },
+      vscode.TreeItemCollapsibleState.None
+    );
+    agenticReviewOfMerge.iconPath = new vscode.ThemeIcon("warning", MERGE_REVIEW_ACTION_COLOR);
+    agenticReviewOfMerge.command = {
+      command: "antigravity.agenticReviewOfMerge",
+      title: "Agentic review of Merge"
+    };
+    items.push(agenticReviewOfMerge);
 
   }
 

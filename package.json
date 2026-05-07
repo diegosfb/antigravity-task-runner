@@ -28,6 +28,7 @@
     "onCommand:antigravity.mergeBranchToMain",
     "onCommand:antigravity.checkoutMain",
     "onCommand:antigravity.setFeatureFlag",
+    "onCommand:antigravity.agenticReviewOfMerge",
     "onCommand:antigravity.reviewPullRequest",
     "onCommand:antigravity.approvePullRequest",
     "onCommand:antigravity.feedbackOnPullRequest",
@@ -175,6 +176,10 @@
       {
         "command": "antigravity.pullRemoteAndMerge",
         "title": "Antigravity: Pull Remote and Merge"
+      },
+      {
+        "command": "antigravity.agenticReviewOfMerge",
+        "title": "Antigravity: Agentic Review of Merge"
       },
       {
         "command": "antigravity.setFeatureFlag",

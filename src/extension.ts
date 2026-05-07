@@ -74,6 +74,7 @@ import {
   JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME,
   JIRA_PROJECT_CREATION_SKILL_NAME
 } from "./jiraProjectHarness";
+import { buildMergeReviewPrompt } from "./mergeReviewPrompt";
 
 type GitInputBox = {
   value: string;
@@ -3687,6 +3688,67 @@ export function activate(context: vscode.ExtensionContext) {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(`Pull Remote and merge failed: ${message}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.agenticReviewOfMerge", async () => {
+      log("[agenticReviewOfMerge] triggered");
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+
+      try {
+        const currentBranch = await getCurrentBranchName(repoRoot);
+        if (currentBranch === "main") {
+          void vscode.window.showInformationMessage(
+            "Agentic review of Merge is only available when you are on a branch other than main."
+          );
+          return;
+        }
+        if (currentBranch === "detached HEAD") {
+          void vscode.window.showErrorMessage(
+            "Agentic review of Merge is unavailable while Git is in a detached HEAD state."
+          );
+          return;
+        }
+
+        const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+        if (statusOutput.trim().length > 0) {
+          void vscode.window.showWarningMessage(
+            "Commit or stash your local changes before running Agentic review of Merge so the review covers a clean merge result."
+          );
+          return;
+        }
+
+        const prompt = buildMergeReviewPrompt({
+          currentBranch,
+          projectTestingCommand: getProjectTestingCommand()
+        });
+
+        logAlways("[agenticReviewOfMerge] delegating review to Agentic Harness");
+        runInNewTerminal(
+          "Agentic Review of Merge",
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            buildAgenticHarnessPromptCommand(repoRoot, prompt)
+          ],
+          {
+            iconPath: new vscode.ThemeIcon("warning", new vscode.ThemeColor("terminal.ansiRed")),
+            color: new vscode.ThemeColor("terminal.ansiRed")
+          }
+        );
+
+        void vscode.window.showInformationMessage(
+          `Opened Agentic review of Merge for '${currentBranch}' using the selected Agent Harness.`
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Agentic review of Merge failed: ${message}`);
       }
     })
   );
