@@ -910,7 +910,7 @@ function getClaudeActionItems(): NodeItem[] {
     { kind: "action", label: "Build Project" },
     vscode.TreeItemCollapsibleState.None
   );
-  buildProject.iconPath = new vscode.ThemeIcon("tools", CLAUDE_MODEL_ACTION_COLOR);
+  buildProject.iconPath = new vscode.ThemeIcon("tools", QUICK_ACTION_COLOR);
   buildProject.command = {
     command: "antigravity.buildProject",
     title: "Build Project"
@@ -920,7 +920,7 @@ function getClaudeActionItems(): NodeItem[] {
     { kind: "action", label: "Run Project Tests" },
     vscode.TreeItemCollapsibleState.None
   );
-  runProjectTests.iconPath = new vscode.ThemeIcon("beaker", CLAUDE_MODEL_ACTION_COLOR);
+  runProjectTests.iconPath = new vscode.ThemeIcon("beaker", QUICK_ACTION_COLOR);
   runProjectTests.command = {
     command: "antigravity.runProjectTests",
     title: "Run Project Tests"
