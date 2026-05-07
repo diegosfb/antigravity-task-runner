@@ -425,6 +425,14 @@ git push origin --delete feature/abandoned-task-name
 - **Hotfix:** Defect that is affecting PROD and it needs to be fixed ASAP
   (optional)
 
+**Jira Issues Dependencies:**
+
+
+Blocks (Outgoing): Task A blocks Task B. Task A must be done first.
+
+Is Blocked By (Incoming): Task B is blocked by Task A. Task B is waiting on A to finish
+
+
 **Tips:**
 
 - Restrict skipping steps
