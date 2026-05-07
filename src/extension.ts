@@ -2184,6 +2184,19 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.openHelpDoc", async () => {
+      const helpDocPath = path.join(extensionRoot, "Knowhow", "help.md");
+      if (!fs.existsSync(helpDocPath)) {
+        void vscode.window.showErrorMessage(
+          "Help document not found in the installed Task Runner extension files."
+        );
+        return;
+      }
+      await openFile(helpDocPath);
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.runClaudeAgent", async (agentName: string) => {
       log(`[runClaudeAgent] agentName: ${agentName}`);
       if (!agentName) {

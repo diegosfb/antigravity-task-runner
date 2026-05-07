@@ -1774,6 +1774,14 @@ function activate(context) {
             void vscode.window.showInformationMessage("Antigravity settings updated.");
         }, undefined, context.subscriptions);
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openHelpDoc", async () => {
+        const helpDocPath = path.join(extensionRoot, "Knowhow", "help.md");
+        if (!fs.existsSync(helpDocPath)) {
+            void vscode.window.showErrorMessage("Help document not found in the installed Task Runner extension files.");
+            return;
+        }
+        await (0, scripts_1.openFile)(helpDocPath);
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.runClaudeAgent", async (agentName) => {
         (0, logger_1.log)(`[runClaudeAgent] agentName: ${agentName}`);
         if (!agentName) {
@@ -2299,7 +2307,7 @@ function activate(context) {
                 (0, logger_1.logAlways)("[commitChanges] delegating commit to Agentic Harness");
                 (0, terminal_1.runInNewTerminal)("Agentic Harness Commit", [
                     `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                    (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt")
+                    (0, terminal_1.buildLightAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt")
                 ], {
                     iconPath: new vscode.ThemeIcon("git-commit", terminal_1.CLAUDE_ACTION_COLOR),
                     color: terminal_1.CLAUDE_ACTION_COLOR

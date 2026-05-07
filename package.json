@@ -20,6 +20,7 @@
     "onStartupFinished",
     "onView:antigravityView",
     "onCommand:antigravity.openSettings",
+    "onCommand:antigravity.openHelpDoc",
     "onCommand:antigravity.openAgent",
     "onCommand:antigravity.runAgent",
     "onCommand:antigravity.runWorkflow",
@@ -48,6 +49,11 @@
         "command": "antigravity.openSettings",
         "title": "Antigravity: Settings",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "antigravity.openHelpDoc",
+        "title": "Antigravity: Open Help Doc",
+        "icon": "$(book)"
       },
       {
         "command": "antigravity.runAgent",
@@ -262,6 +268,11 @@
           "command": "antigravity.openSettings",
           "when": "view == antigravityView",
           "group": "navigation"
+        },
+        {
+          "command": "antigravity.openHelpDoc",
+          "when": "view == antigravityView",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
@@ -510,7 +521,8 @@
     "src/update-agentic-workspace.sh",
     "src/workspace-setup.sh",
     "Knowhow/Antigravity workflows/create_feature_branch/WORKFLOW.md",
-    "Knowhow/Antigravity workflows/approve_pull_request/WORKFLOW.md"
+    "Knowhow/Antigravity workflows/approve_pull_request/WORKFLOW.md",
+    "Knowhow/help.md"
   ],
   "scripts": {
     "compile": "node node_modules/typescript/lib/tsc.js -p ./",
