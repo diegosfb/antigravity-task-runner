@@ -39,6 +39,43 @@ function createTempRepoWithFeatureBranch(branchName = "feature/TEST-123-auto-lin
   return { rootDir, repoDir, branchName };
 }
 
+function createTempRepoWithRebaseConflict(branchName = "feature/TEST-789-rebase-conflict") {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-create-pr-conflict-"));
+  const remoteDir = path.join(rootDir, "remote.git");
+  const repoDir = path.join(rootDir, "repo");
+
+  execFileSync("git", ["init", "--bare", remoteDir], { stdio: "ignore" });
+  fs.mkdirSync(repoDir, { recursive: true });
+  execFileSync("git", ["init"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["config", "user.name", "Test User"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["config", "user.email", "test@example.com"], {
+    cwd: repoDir,
+    stdio: "ignore"
+  });
+
+  fs.writeFileSync(path.join(repoDir, "index.js"), "console.log('base');\n", "utf8");
+  execFileSync("git", ["add", "index.js"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "Initial commit"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["branch", "-M", "main"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["remote", "add", "origin", remoteDir], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["push", "-u", "origin", "main"], { cwd: repoDir, stdio: "ignore" });
+
+  execFileSync("git", ["checkout", "-b", branchName], { cwd: repoDir, stdio: "ignore" });
+  fs.writeFileSync(path.join(repoDir, "index.js"), "console.log('feature change');\n", "utf8");
+  execFileSync("git", ["add", "index.js"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "Update index.js"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["push", "-u", "origin", branchName], { cwd: repoDir, stdio: "ignore" });
+
+  execFileSync("git", ["checkout", "main"], { cwd: repoDir, stdio: "ignore" });
+  fs.writeFileSync(path.join(repoDir, "index.js"), "console.log('main change');\n", "utf8");
+  execFileSync("git", ["add", "index.js"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "Update index.js on main"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["push", "origin", "main"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["checkout", branchName], { cwd: repoDir, stdio: "ignore" });
+
+  return { rootDir, repoDir, branchName };
+}
+
 function createGhStub(binDir, logPath, bodyCopyPath) {
   writeExecutable(
     path.join(binDir, "gh"),
@@ -195,4 +232,38 @@ test("create_pull_requrest.sh commits dirty feature branch changes before rebasi
   assert.equal(branchHeadSubject, "Capture dirty branch changes");
   assert.equal(remoteBranchRef, localBranchRef);
   assert.equal(currentBranch, "main");
+});
+
+test("create_pull_requrest.sh prints recovery steps when a rebase conflict stops PR creation", (t) => {
+  const { rootDir, repoDir, branchName } = createTempRepoWithRebaseConflict();
+  const binDir = path.join(rootDir, "bin");
+  const ghLogPath = path.join(rootDir, "gh-pr-create.log");
+  const bodyCopyPath = path.join(rootDir, "pr-body.md");
+  fs.mkdirSync(binDir, { recursive: true });
+  createGhStub(binDir, ghLogPath, bodyCopyPath);
+  createNodeStub(binDir, "");
+
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  try {
+    runCreatePullRequestScript({
+      repoDir,
+      binDir,
+      input: ""
+    });
+    assert.fail("Expected the PR creation script to stop on a rebase conflict.");
+  } catch (error) {
+    const combinedOutput = `${error.stdout ?? ""}${error.stderr ?? ""}`;
+
+    assert.equal(error.status, 1);
+    assert.match(combinedOutput, /Rebase stopped because of conflicts\. No pull request was created yet\./);
+    assert.match(combinedOutput, /1\. Run 'git status' to see the conflicted files\./);
+    assert.match(combinedOutput, /3\. Run 'git add\/rm <conflicted_files>' to mark each conflict as resolved\./);
+    assert.match(combinedOutput, /4\. Run 'git rebase --continue'\./);
+    assert.ok(combinedOutput.includes(`git push --force-with-lease origin ${branchName}`));
+    assert.match(combinedOutput, /To back out instead, run 'git rebase --abort'\./);
+    assert.ok(!fs.existsSync(bodyCopyPath));
+  }
 });

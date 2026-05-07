@@ -157,6 +157,26 @@ commit_pending_changes_if_needed() {
   run_and_echo git commit --no-gpg-sign -m "$commit_message"
 }
 
+print_rebase_conflict_instructions() {
+  local feature_branch="$1"
+
+  cat >&2 <<EOF
+Rebase stopped because of conflicts. No pull request was created yet.
+
+To finish this PR flow:
+1. Run 'git status' to see the conflicted files.
+2. Open each conflicted file and resolve the conflict markers (<<<<<<<, =======, >>>>>>>).
+3. Run 'git add/rm <conflicted_files>' to mark each conflict as resolved.
+4. Run 'git rebase --continue'.
+5. Repeat until the rebase completes.
+6. Run your build/tests.
+7. Run 'git push --force-with-lease origin ${feature_branch}'.
+8. Re-run PR creation.
+
+To back out instead, run 'git rebase --abort'.
+EOF
+}
+
 infer_linked_issue_from_branch() {
   local feature_branch="$1"
   local helper_path="${SCRIPT_DIR}/infer_jira_issue_link.js"
@@ -326,7 +346,7 @@ main() {
 
   echo "Rebasing your feature branch onto the latest main so reviewers see a clean PR history."
   if ! run_and_echo git rebase main; then
-    echo "Rebase stopped because of conflicts. Resolve them locally, then run 'git rebase --continue' (or 'git rebase --abort' to back out) before retrying PR creation." >&2
+    print_rebase_conflict_instructions "$feature_branch"
     exit 1
   fi
 
