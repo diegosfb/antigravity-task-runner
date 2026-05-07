@@ -2185,7 +2185,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.openHelpDoc", async () => {
-      const helpDocPath = path.join(extensionRoot, "Knowhow", "help.md");
+      const helpDocPath = path.join(extensionRoot, "Resources", "help.md");
       if (!fs.existsSync(helpDocPath)) {
         void vscode.window.showErrorMessage(
           "Help document not found in the installed Task Runner extension files."
