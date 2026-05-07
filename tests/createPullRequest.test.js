@@ -248,8 +248,11 @@ HOW_END`,
   }).trim();
 
   assert.match(output, /Detected uncommitted changes on feature\/test-pr\./);
+  assert.match(output, /Updating the local main branch to sync with the remote repository\./);
+  assert.match(output, /\+ git checkout main/);
   assert.match(output, /\+ git pull origin main/);
-  assert.doesNotMatch(output, /\+ git checkout main/);
+  assert.match(output, /\+ git checkout feature\/test-pr/);
+  assert.match(output, /\+ git merge main/);
   assert.equal(lastCommitMessage, "Capture pending PR changes");
   assert.equal(pendingFileAtHead, "waiting to be committed\n");
   assert.equal(readmeAtHead, "hello\nfeature branch change\npending update\n");

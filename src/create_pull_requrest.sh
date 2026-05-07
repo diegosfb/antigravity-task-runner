@@ -308,8 +308,13 @@ main() {
 
   commit_pending_changes_if_needed "$feature_branch"
 
-  echo "Syncing your feature branch with the latest main so reviewers see a clean PR."
+  echo "Updating the local main branch to sync with the remote repository."
+  run_and_echo git checkout main
   run_remote_git_and_echo pull origin main
+  run_and_echo git checkout "$feature_branch"
+
+  echo "Syncing your feature branch with the latest main so reviewers see a clean PR."
+  run_and_echo git merge main
   run_remote_git_and_echo push origin "$feature_branch"
 
   existing_pr_url="$(gh pr list --head "$feature_branch" --base main --state open --json url --jq '.[0].url' 2>/dev/null || true)"
