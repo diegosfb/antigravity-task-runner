@@ -177,6 +177,32 @@ To back out instead, run 'git rebase --abort'.
 EOF
 }
 
+has_commits_between_base_and_feature() {
+  local base_branch="$1"
+  local feature_branch="$2"
+  [[ "$(git rev-list --count "${base_branch}..${feature_branch}")" -gt 0 ]]
+}
+
+print_no_commits_for_pr_instructions() {
+  local base_branch="$1"
+  local feature_branch="$2"
+
+  cat >&2 <<EOF
+There are no commits on ${feature_branch} that are not already on ${base_branch}.
+GitHub cannot create a pull request when there are no commits between the base and head branches.
+
+This usually means one of these happened:
+- your feature branch was already merged or cherry-picked into ${base_branch}
+- your feature branch was fast-forwarded to match ${base_branch}
+- your branch does not have a unique commit yet
+
+To verify:
+1. Run 'git log --oneline ${base_branch}..${feature_branch}'.
+2. If no commits are listed, there is nothing to open a PR for yet.
+3. Add or recover the missing feature commit(s) on ${feature_branch}, then rerun PR creation.
+EOF
+}
+
 infer_linked_issue_from_branch() {
   local feature_branch="$1"
   local helper_path="${SCRIPT_DIR}/infer_jira_issue_link.js"
@@ -366,6 +392,11 @@ main() {
 
   echo "Pushing the rebased feature branch to origin."
   run_remote_git_and_echo push --force-with-lease origin "$feature_branch"
+
+  if ! has_commits_between_base_and_feature "main" "$feature_branch"; then
+    print_no_commits_for_pr_instructions "main" "$feature_branch"
+    exit 1
+  fi
 
   why_answer="$(require_non_empty "What problem does this PR solve, or what feature/functionality does it provide?")"
   how_answer="$(require_non_empty "Briefly describe your technical approach. What changed and how does it work at a high level?")"

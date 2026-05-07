@@ -76,6 +76,42 @@ function createTempRepoWithRebaseConflict(branchName = "feature/TEST-789-rebase-
   return { rootDir, repoDir, branchName };
 }
 
+function createTempRepoWithFeatureBranchMatchingMain(branchName = "feature/TEST-321-no-pr-diff") {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-create-pr-no-diff-"));
+  const remoteDir = path.join(rootDir, "remote.git");
+  const repoDir = path.join(rootDir, "repo");
+
+  execFileSync("git", ["init", "--bare", remoteDir], { stdio: "ignore" });
+  fs.mkdirSync(repoDir, { recursive: true });
+  execFileSync("git", ["init"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["config", "user.name", "Test User"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["config", "user.email", "test@example.com"], {
+    cwd: repoDir,
+    stdio: "ignore"
+  });
+
+  fs.writeFileSync(path.join(repoDir, "index.js"), "console.log('base');\n", "utf8");
+  execFileSync("git", ["add", "index.js"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "Initial commit"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["branch", "-M", "main"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["remote", "add", "origin", remoteDir], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["push", "-u", "origin", "main"], { cwd: repoDir, stdio: "ignore" });
+
+  execFileSync("git", ["checkout", "-b", branchName], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["push", "-u", "origin", branchName], { cwd: repoDir, stdio: "ignore" });
+
+  execFileSync("git", ["checkout", "main"], { cwd: repoDir, stdio: "ignore" });
+  fs.writeFileSync(path.join(repoDir, "index.js"), "console.log('main advanced');\n", "utf8");
+  execFileSync("git", ["add", "index.js"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "Advance main"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["push", "origin", "main"], { cwd: repoDir, stdio: "ignore" });
+
+  execFileSync("git", ["checkout", branchName], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["merge", "--ff-only", "main"], { cwd: repoDir, stdio: "ignore" });
+
+  return { rootDir, repoDir, branchName };
+}
+
 function createGhStub(binDir, logPath, bodyCopyPath) {
   writeExecutable(
     path.join(binDir, "gh"),
@@ -265,5 +301,43 @@ test("create_pull_requrest.sh prints recovery steps when a rebase conflict stops
     assert.ok(combinedOutput.includes(`git push --force-with-lease origin ${branchName}`));
     assert.match(combinedOutput, /To back out instead, run 'git rebase --abort'\./);
     assert.ok(!fs.existsSync(bodyCopyPath));
+  }
+});
+
+test("create_pull_requrest.sh stops before prompting when the feature branch has no commits beyond main", (t) => {
+  const { rootDir, repoDir, branchName } = createTempRepoWithFeatureBranchMatchingMain();
+  const binDir = path.join(rootDir, "bin");
+  const ghLogPath = path.join(rootDir, "gh-pr-create.log");
+  const bodyCopyPath = path.join(rootDir, "pr-body.md");
+  fs.mkdirSync(binDir, { recursive: true });
+  createGhStub(binDir, ghLogPath, bodyCopyPath);
+  createNodeStub(binDir, "");
+
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  try {
+    runCreatePullRequestScript({
+      repoDir,
+      binDir,
+      input: "skip\nskip\n"
+    });
+    assert.fail("Expected the PR creation script to stop when there are no commits to open a PR for.");
+  } catch (error) {
+    const combinedOutput = `${error.stdout ?? ""}${error.stderr ?? ""}`;
+
+    assert.equal(error.status, 1);
+    assert.match(combinedOutput, /There are no commits on feature\/TEST-321-no-pr-diff that are not already on main\./);
+    assert.match(combinedOutput, /GitHub cannot create a pull request when there are no commits between the base and head branches\./);
+    assert.match(combinedOutput, /Run 'git log --oneline main\.\.feature\/TEST-321-no-pr-diff'\./);
+    assert.doesNotMatch(combinedOutput, /What problem does this PR solve/);
+    assert.ok(!fs.existsSync(bodyCopyPath));
+    assert.ok(!fs.existsSync(ghLogPath));
+    const currentBranch = execFileSync("git", ["branch", "--show-current"], {
+      cwd: repoDir,
+      encoding: "utf8"
+    }).trim();
+    assert.equal(currentBranch, branchName);
   }
 });
