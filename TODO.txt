@@ -89,3 +89,19 @@ Assign Jira Item to Agent	Lets you choose an eligible Jira item and an agent, up
 ----------------
 
 Meld Diff Error: Error running diff command! ErrorCode: 127 StdErr: /bin/sh: meld: command not found
+
+
+------------------
+
+Can you add a help icon on the top right corner of the Task Runner sidebar panel next to the gear icon for settings.
+When clicked it should bring up the help file Knowhow/help.md
+
+
+------------------
+
+Also add a settings section to the file explaining all the settings to the Knowhow/help.md
+
+------------------  
+
+Run liteLLM OpenAI add it as a setting.
+

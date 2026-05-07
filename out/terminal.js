@@ -5,6 +5,7 @@ exports.runInSecondaryTerminal = runInSecondaryTerminal;
 exports.runInNewTerminal = runInNewTerminal;
 exports.runCommandInTaskTerminal = runCommandInTaskTerminal;
 exports.buildAgenticHarnessPromptCommand = buildAgenticHarnessPromptCommand;
+exports.buildLightAgenticHarnessPromptCommand = buildLightAgenticHarnessPromptCommand;
 exports.runClaudeInitAndUpdateInNewTerminal = runClaudeInitAndUpdateInNewTerminal;
 exports.runCodexInitAndUpdateInNewTerminal = runCodexInitAndUpdateInNewTerminal;
 exports.runClaudePromptInNewTerminal = runClaudePromptInNewTerminal;
@@ -60,6 +61,12 @@ function buildAgenticHarnessPromptCommand(repoRoot, prompt, mode = "dangerous") 
     const command = (0, settings_1.getAgenticHarnessExecutionCommand)();
     const runString = (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)(command, repoRoot, prompt, mode);
     (0, logger_1.logAlways)(`[agenticHarness] runString: ${runString}`);
+    return runString;
+}
+function buildLightAgenticHarnessPromptCommand(repoRoot, prompt, mode = "dangerous") {
+    const command = (0, settings_1.getLightAgenticHarnessExecutionCommand)();
+    const runString = (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)(command, repoRoot, prompt, mode);
+    (0, logger_1.logAlways)(`[lightAgenticHarness] runString: ${runString}`);
     return runString;
 }
 async function runClaudeInitAndUpdateInNewTerminal(repoRoot, prompt) {

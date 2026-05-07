@@ -52,7 +52,34 @@
       "Bash(git restore:*)",
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "Bash(npx @vscode/vsce package --no-yarn)"
+      "Bash(npx @vscode/vsce package --no-yarn)",
+      "Bash(mkdir -p /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/docs/superpowers/specs)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k: d[k] for k in ['scripts','devDependencies'] if k in d}, indent=2\\)\\)\")",
+      "Bash(node -e \"require\\('./package.json'\\); console.log\\('OK'\\)\")",
+      "Bash(node -e \"try { require\\('./package.json'\\); console.log\\('✓ Valid JSON'\\); } catch\\(e\\) { console.log\\('✗ Invalid JSON:', e.message\\); }\")",
+      "Bash(node -e ' *)",
+      "Bash(grep -E '^\\\\+.*[[:space:]]$')",
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner add src/settings.ts)",
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner commit -m 'Add getLightAgenticHarnessExecutionCommand and settings field')",
+      "Bash(cat)",
+      "Bash(/tmp/verify_mirror.sh)",
+      "Bash(sed -n '197,203p' src/settings.ts)",
+      "Bash(sed -n '205,211p' src/settings.ts)",
+      "Bash(sed -n '238,246p' src/settings.ts)",
+      "Bash(sed -n '247,255p' src/settings.ts)",
+      "Bash(sed -n '411,421p' src/settings.ts)",
+      "Bash(sed -n '423,432p' src/settings.ts)",
+      "Bash(/tmp/final_review.sh)",
+      "Bash(/tmp/edge_case_check.sh)",
+      "Bash(sed -n '191,195p' src/settings.ts)",
+      "Bash(sed -n '422,432p' src/settings.ts)",
+      "Bash(cat > *)",
+      "Bash(npm test *)",
+      "Bash(node -e \"require\\('/Users/diego.brihuega/Documents/Projects/antigravity-task-runner/package.json'\\); console.log\\('OK'\\)\")"
+    ],
+    "additionalDirectories": [
+      "/Users/diego.brihuega/Documents/Projects/antigravity-task-runner/docs/superpowers",
+      "/tmp"
     ]
   }
 }
