@@ -4,6 +4,7 @@ const http = require("node:http");
 
 const {
   createJiraProject,
+  searchOpenUnassignedTodoJiraIssuesForAssignment,
   transitionJiraIssueToReviewOrDone,
   transitionJiraIssueToStatus
 } = require("../out/jira.js");
@@ -532,6 +533,168 @@ test("createJiraProject creates and configures a team-managed kanban Jira softwa
     ],
     rapidViewId: 176
   });
+});
+
+test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out items blocked by unfinished dependencies", async (t) => {
+  let capturedSearchRequest = null;
+
+  const server = http.createServer(async (request, response) => {
+    if (request.url === "/rest/api/3/search/jql" && request.method === "POST") {
+      capturedSearchRequest = await readJsonBody(request);
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          issues: [
+            {
+              id: "10001",
+              key: "TASK-1",
+              fields: {
+                summary: "Blocked by unfinished work",
+                issuetype: { name: "Task" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "To Do" },
+                issuelinks: [
+                  {
+                    type: {
+                      inward: "is blocked by",
+                      name: "Blocks",
+                      outward: "blocks"
+                    },
+                    inwardIssue: {
+                      id: "10011",
+                      key: "TASK-11",
+                      fields: {
+                        status: { name: "In Progress" }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              id: "10002",
+              key: "TASK-2",
+              fields: {
+                summary: "Blocked by reviewed work",
+                issuetype: { name: "Task" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "To Do" },
+                issuelinks: [
+                  {
+                    type: {
+                      inward: "is blocked by",
+                      name: "Blocks",
+                      outward: "blocks"
+                    },
+                    inwardIssue: {
+                      id: "10012",
+                      key: "TASK-12",
+                      fields: {
+                        status: { name: "In Review" }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              id: "10003",
+              key: "TASK-3",
+              fields: {
+                summary: "Unblocked issue",
+                issuetype: { name: "Task" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "To Do" },
+                issuelinks: []
+              }
+            },
+            {
+              id: "10004",
+              key: "TASK-4",
+              fields: {
+                summary: "Blocks another issue but is not blocked itself",
+                issuetype: { name: "Task" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "To Do" },
+                issuelinks: [
+                  {
+                    type: {
+                      inward: "is blocked by",
+                      name: "Blocks",
+                      outward: "blocks"
+                    },
+                    outwardIssue: {
+                      id: "10014",
+                      key: "TASK-14",
+                      fields: {
+                        status: { name: "To Do" }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              id: "10005",
+              key: "TASK-5",
+              fields: {
+                summary: "Blocked by completed work",
+                issuetype: { name: "Task" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "To Do" },
+                issuelinks: [
+                  {
+                    type: {
+                      inward: "is blocked by",
+                      name: "Blocks",
+                      outward: "blocks"
+                    },
+                    inwardIssue: {
+                      id: "10015",
+                      key: "TASK-15",
+                      fields: {
+                        status: { name: "Done" }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        })
+      );
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Not found" }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  const issues = await searchOpenUnassignedTodoJiraIssuesForAssignment(
+    {
+      baseUrl: `http://127.0.0.1:${port}`,
+      email: "person@example.com",
+      apiToken: "secret-token"
+    },
+    "TASK"
+  );
+
+  assert.deepEqual(
+    issues.map((issue) => issue.key),
+    ["TASK-2", "TASK-3", "TASK-4", "TASK-5"]
+  );
+  assert.deepEqual(capturedSearchRequest.fields, [
+    "summary",
+    "issuetype",
+    "project",
+    "status",
+    "issuelinks"
+  ]);
+  assert.match(capturedSearchRequest.jql, /^project = "TASK" AND assignee IS EMPTY AND statusCategory = "To Do"/);
 });
 
 test("createJiraProject warns when Jira rejects the board column update", async (t) => {

@@ -1064,7 +1064,7 @@ function activate(context) {
         const selected = issues.find((issue) => issue.key === issueSelect.value);
         issueHint.textContent = selected
           ? [selected.summary, selected.detail].filter(Boolean).join(" • ")
-          : "Choose an unassigned Jira item that is currently in To Do.";
+          : "Choose an unassigned Jira item that is currently in To Do and not blocked by unfinished Jira items.";
       };
 
       for (const agent of agents) {
@@ -2611,9 +2611,9 @@ function activate(context) {
         try {
             issues = await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `Loading unassigned Jira items in ${projectKey}`,
+                title: `Loading assignable unassigned Jira items in ${projectKey}`,
                 cancellable: false
-            }, async () => (0, jira_1.searchOpenUnassignedTodoJiraIssuesForProject)(credentials, projectKey));
+            }, async () => (0, jira_1.searchOpenUnassignedTodoJiraIssuesForAssignment)(credentials, projectKey));
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -2621,7 +2621,7 @@ function activate(context) {
             return;
         }
         if (issues.length === 0) {
-            void vscode.window.showInformationMessage(`No unassigned Jira tickets in To Do were found for project ${projectKey}.`);
+            void vscode.window.showInformationMessage(`No unassigned Jira tickets in To Do that are not blocked by unfinished Jira items were found for project ${projectKey}.`);
             return;
         }
         const selection = await showAssignJiraItemToAgentDialog(projectKey, assignableAgentOptions, issues);

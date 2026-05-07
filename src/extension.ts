@@ -58,6 +58,7 @@ import {
   JiraIssueType,
   getJiraIssueTypes,
   searchOpenUnassignedJiraIssues,
+  searchOpenUnassignedTodoJiraIssuesForAssignment,
   searchOpenUnassignedTodoJiraIssuesForProject,
   assignJiraIssueToCurrentUser,
   searchOpenAssignedJiraIssuesForCurrentUser,
@@ -1324,7 +1325,7 @@ export function activate(context: vscode.ExtensionContext) {
         const selected = issues.find((issue) => issue.key === issueSelect.value);
         issueHint.textContent = selected
           ? [selected.summary, selected.detail].filter(Boolean).join(" • ")
-          : "Choose an unassigned Jira item that is currently in To Do.";
+          : "Choose an unassigned Jira item that is currently in To Do and not blocked by unfinished Jira items.";
       };
 
       for (const agent of agents) {
@@ -3228,10 +3229,10 @@ export function activate(context: vscode.ExtensionContext) {
         issues = await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: `Loading unassigned Jira items in ${projectKey}`,
+            title: `Loading assignable unassigned Jira items in ${projectKey}`,
             cancellable: false
           },
-          async () => searchOpenUnassignedTodoJiraIssuesForProject(credentials, projectKey)
+          async () => searchOpenUnassignedTodoJiraIssuesForAssignment(credentials, projectKey)
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -3241,7 +3242,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (issues.length === 0) {
         void vscode.window.showInformationMessage(
-          `No unassigned Jira tickets in To Do were found for project ${projectKey}.`
+          `No unassigned Jira tickets in To Do that are not blocked by unfinished Jira items were found for project ${projectKey}.`
         );
         return;
       }

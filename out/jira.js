@@ -5,6 +5,7 @@ exports.createJiraProject = createJiraProject;
 exports.getJiraProjects = getJiraProjects;
 exports.searchOpenUnassignedJiraIssues = searchOpenUnassignedJiraIssues;
 exports.searchOpenUnassignedTodoJiraIssuesForProject = searchOpenUnassignedTodoJiraIssuesForProject;
+exports.searchOpenUnassignedTodoJiraIssuesForAssignment = searchOpenUnassignedTodoJiraIssuesForAssignment;
 exports.searchOpenAssignedJiraIssuesForCurrentUser = searchOpenAssignedJiraIssuesForCurrentUser;
 exports.assignJiraIssueToCurrentUser = assignJiraIssueToCurrentUser;
 exports.updateJiraIssueSummary = updateJiraIssueSummary;
@@ -33,6 +34,10 @@ function normalizeFieldName(fieldKey, field) {
 function normalizeJiraText(value) {
     return (value ?? "").trim().toLowerCase();
 }
+const ASSIGNABLE_BLOCKER_DONE_STATUSES = new Set([
+    normalizeJiraText(JIRA_STATUS_IN_REVIEW),
+    normalizeJiraText(JIRA_STATUS_DONE)
+]);
 function matchesJiraName(value, target) {
     const normalizedTarget = normalizeJiraText(target);
     if (!value || !normalizedTarget)
@@ -198,30 +203,27 @@ async function searchOpenUnassignedJiraIssues(credentials) {
         }
     });
     return (response.issues ?? [])
-        .map((issue) => ({
-        id: (issue.id ?? "").trim(),
-        key: (issue.key ?? "").trim(),
-        summary: (issue.fields?.summary ?? "").trim(),
-        projectKey: (issue.fields?.project?.key ?? "").trim(),
-        projectName: (issue.fields?.project?.name ?? "").trim(),
-        issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
-        statusName: (issue.fields?.status?.name ?? "").trim()
-    }))
+        .map(mapJiraIssueSearchResultToSummary)
         .filter((issue) => issue.id && issue.key && issue.summary);
 }
-async function searchOpenUnassignedTodoJiraIssuesForProject(credentials, projectKey) {
+async function searchOpenUnassignedTodoJiraIssueSearchResultsForProject(credentials, projectKey) {
     const normalizedProjectKey = projectKey.trim().toUpperCase();
     const response = await jiraRequest(credentials, {
         method: "POST",
         apiPath: "/rest/api/3/search/jql",
         body: {
-            fields: ["summary", "issuetype", "project", "status"],
+            fields: ["summary", "issuetype", "project", "status", "issuelinks"],
             jql: `project = "${normalizedProjectKey}" AND assignee IS EMPTY AND statusCategory = "To Do" ORDER BY updated DESC`,
             maxResults: 100
         }
     });
-    return (response.issues ?? [])
-        .map((issue) => ({
+    return {
+        issues: response.issues ?? [],
+        normalizedProjectKey
+    };
+}
+function mapJiraIssueSearchResultToSummary(issue) {
+    return {
         id: (issue.id ?? "").trim(),
         key: (issue.key ?? "").trim(),
         summary: (issue.fields?.summary ?? "").trim(),
@@ -229,11 +231,40 @@ async function searchOpenUnassignedTodoJiraIssuesForProject(credentials, project
         projectName: (issue.fields?.project?.name ?? "").trim(),
         issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
         statusName: (issue.fields?.status?.name ?? "").trim()
-    }))
-        .filter((issue) => issue.id &&
+    };
+}
+function isProjectIssueSummaryValid(issue, normalizedProjectKey) {
+    return Boolean(issue.id &&
         issue.key &&
         issue.summary &&
         issue.projectKey === normalizedProjectKey);
+}
+function isBlockedByDependencyLink(link) {
+    if (!link.inwardIssue)
+        return false;
+    const inwardLabel = normalizeJiraText(link.type?.inward);
+    return inwardLabel.includes("blocked by");
+}
+function hasIncompleteBlockingDependency(issue) {
+    return (issue.fields?.issuelinks ?? []).some((link) => {
+        if (!isBlockedByDependencyLink(link))
+            return false;
+        const blockerStatus = normalizeJiraText(link.inwardIssue?.fields?.status?.name);
+        return !ASSIGNABLE_BLOCKER_DONE_STATUSES.has(blockerStatus);
+    });
+}
+async function searchOpenUnassignedTodoJiraIssuesForProject(credentials, projectKey) {
+    const { issues, normalizedProjectKey } = await searchOpenUnassignedTodoJiraIssueSearchResultsForProject(credentials, projectKey);
+    return issues
+        .map(mapJiraIssueSearchResultToSummary)
+        .filter((issue) => isProjectIssueSummaryValid(issue, normalizedProjectKey));
+}
+async function searchOpenUnassignedTodoJiraIssuesForAssignment(credentials, projectKey) {
+    const { issues, normalizedProjectKey } = await searchOpenUnassignedTodoJiraIssueSearchResultsForProject(credentials, projectKey);
+    return issues
+        .filter((issue) => !hasIncompleteBlockingDependency(issue))
+        .map(mapJiraIssueSearchResultToSummary)
+        .filter((issue) => isProjectIssueSummaryValid(issue, normalizedProjectKey));
 }
 async function searchOpenAssignedJiraIssuesForCurrentUser(credentials, projectKey) {
     const currentUserAccountId = await getJiraCurrentUserAccountId(credentials);
@@ -249,19 +280,10 @@ async function searchOpenAssignedJiraIssuesForCurrentUser(credentials, projectKe
     });
     return (response.issues ?? [])
         .map((issue) => ({
-        id: (issue.id ?? "").trim(),
-        key: (issue.key ?? "").trim(),
-        summary: (issue.fields?.summary ?? "").trim(),
-        projectKey: (issue.fields?.project?.key ?? "").trim(),
-        projectName: (issue.fields?.project?.name ?? "").trim(),
-        issueTypeName: (issue.fields?.issuetype?.name ?? "").trim(),
-        statusName: (issue.fields?.status?.name ?? "").trim(),
+        ...mapJiraIssueSearchResultToSummary(issue),
         assigneeAccountId: (issue.fields?.assignee?.accountId ?? "").trim()
     }))
-        .filter((issue) => issue.id &&
-        issue.key &&
-        issue.summary &&
-        issue.projectKey === normalizedProjectKey &&
+        .filter((issue) => isProjectIssueSummaryValid(issue, normalizedProjectKey) &&
         issue.assigneeAccountId === currentUserAccountId &&
         ["To Do", "In Progress"].includes(issue.statusName))
         .map(({ assigneeAccountId, ...issue }) => issue);
