@@ -1780,7 +1780,7 @@ function activate(context) {
             void vscode.window.showErrorMessage("Help document not found in the installed Task Runner extension files.");
             return;
         }
-        await (0, scripts_1.openFile)(helpDocPath);
+        await vscode.window.showTextDocument(vscode.Uri.file(helpDocPath), { preview: true });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.runClaudeAgent", async (agentName) => {
         (0, logger_1.log)(`[runClaudeAgent] agentName: ${agentName}`);

@@ -2192,7 +2192,7 @@ export function activate(context: vscode.ExtensionContext) {
         );
         return;
       }
-      await openFile(helpDocPath);
+      await vscode.window.showTextDocument(vscode.Uri.file(helpDocPath), { preview: true });
     })
   );
 
