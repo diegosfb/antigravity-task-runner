@@ -535,7 +535,7 @@ test("createJiraProject creates and configures a team-managed kanban Jira softwa
   });
 });
 
-test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out items blocked by unfinished dependencies", async (t) => {
+test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out blocked and off-project items", async (t) => {
   let capturedSearchRequest = null;
 
   const server = http.createServer(async (request, response) => {
@@ -685,6 +685,17 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out items blocked 
                   }
                 ]
               }
+            },
+            {
+              id: "10007",
+              key: "OTHER-7",
+              fields: {
+                summary: "Available issue from another project",
+                issuetype: { name: "Task" },
+                project: { key: "OTHER", name: "Other Project" },
+                status: { name: "To Do" },
+                issuelinks: []
+              }
             }
           ]
         })
@@ -713,6 +724,7 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out items blocked 
     issues.map((issue) => issue.key),
     ["TASK-2", "TASK-3", "TASK-4", "TASK-5", "TASK-6"]
   );
+  assert.ok(issues.every((issue) => issue.projectKey === "TASK"));
   assert.deepEqual(capturedSearchRequest.fields, [
     "summary",
     "issuetype",

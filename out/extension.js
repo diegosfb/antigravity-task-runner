@@ -2539,9 +2539,9 @@ function activate(context) {
         try {
             issues = await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: "Loading unassigned Jira items",
+                title: `Loading available Jira items from ${projectKey.trim().toUpperCase()}`,
                 cancellable: false
-            }, async () => (0, jira_1.searchOpenUnassignedJiraIssues)(credentials));
+            }, async () => (0, jira_1.searchOpenUnassignedTodoJiraIssuesForAssignment)(credentials, projectKey));
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -2549,7 +2549,7 @@ function activate(context) {
             return;
         }
         if (issues.length === 0) {
-            void vscode.window.showInformationMessage("No open Jira tickets assigned to no one were found.");
+            void vscode.window.showInformationMessage(`No unassigned To Do Jira items are currently available in ${projectKey.trim().toUpperCase()}. Items blocked by work that is not In Review or Done are hidden.`);
             return;
         }
         const selection = await vscode.window.showQuickPick(issues.map((issue) => ({
@@ -2561,7 +2561,7 @@ function activate(context) {
             issue
         })), {
             title: "Take Jira Item (Assign)",
-            placeHolder: "Select an open Jira ticket that is currently unassigned",
+            placeHolder: `Select an unassigned To Do Jira item from ${projectKey.trim().toUpperCase()} that is not blocked by unfinished work`,
             matchOnDescription: true,
             matchOnDetail: true
         });

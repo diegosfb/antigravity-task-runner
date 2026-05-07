@@ -57,7 +57,6 @@ import {
   JiraIssueSummary,
   JiraIssueType,
   getJiraIssueTypes,
-  searchOpenUnassignedJiraIssues,
   searchOpenUnassignedTodoJiraIssuesForAssignment,
   searchOpenUnassignedTodoJiraIssuesForProject,
   assignJiraIssueToCurrentUser,
@@ -3130,10 +3129,10 @@ export function activate(context: vscode.ExtensionContext) {
         issues = await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: "Loading unassigned Jira items",
+            title: `Loading available Jira items from ${projectKey.trim().toUpperCase()}`,
             cancellable: false
           },
-          async () => searchOpenUnassignedJiraIssues(credentials)
+          async () => searchOpenUnassignedTodoJiraIssuesForAssignment(credentials, projectKey)
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -3143,7 +3142,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (issues.length === 0) {
         void vscode.window.showInformationMessage(
-          "No open Jira tickets assigned to no one were found."
+          `No unassigned To Do Jira items are currently available in ${projectKey.trim().toUpperCase()}. Items blocked by work that is not In Review or Done are hidden.`
         );
         return;
       }
@@ -3159,7 +3158,7 @@ export function activate(context: vscode.ExtensionContext) {
         })),
         {
           title: "Take Jira Item (Assign)",
-          placeHolder: "Select an open Jira ticket that is currently unassigned",
+          placeHolder: `Select an unassigned To Do Jira item from ${projectKey.trim().toUpperCase()} that is not blocked by unfinished work`,
           matchOnDescription: true,
           matchOnDetail: true
         }
