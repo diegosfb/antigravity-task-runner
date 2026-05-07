@@ -162,7 +162,8 @@ exec ${JSON.stringify(process.execPath)} "$@"
 function runCreatePullRequestScript({
   repoDir,
   binDir,
-  input
+  input,
+  env = {}
 }) {
   const scriptPath = path.join(__dirname, "..", "src", "create_pull_requrest.sh");
   return execFileSync("bash", [scriptPath], {
@@ -171,6 +172,7 @@ function runCreatePullRequestScript({
     input,
     env: {
       ...process.env,
+      ...env,
       PATH: `${binDir}:${process.env.PATH}`
     }
   });
@@ -226,6 +228,41 @@ test("create_pull_requrest.sh leaves the linked issue empty when Jira inference 
 
   assert.match(prBody, /\*\*Linked Issue:\*\* N\/A/);
   assert.match(prBody, /\*\*Reviewer:\*\* `@octocat`/);
+});
+
+test("create_pull_requrest.sh uses the configured Project Testing Command before prompting", (t) => {
+  const { rootDir, repoDir } = createTempRepoWithFeatureBranch("feature/TEST-456-saved-test-command");
+  const binDir = path.join(rootDir, "bin");
+  const ghLogPath = path.join(rootDir, "gh-pr-create.log");
+  const bodyCopyPath = path.join(rootDir, "pr-body.md");
+  const testMarkerPath = path.join(rootDir, "saved-test-command.log");
+  fs.mkdirSync(binDir, { recursive: true });
+  createGhStub(binDir, ghLogPath, bodyCopyPath);
+  createNodeStub(binDir, "");
+  writeExecutable(
+    path.join(binDir, "saved-project-tests"),
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf 'used\\n' > ${JSON.stringify(testMarkerPath)}
+`
+  );
+
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  const output = runCreatePullRequestScript({
+    repoDir,
+    binDir,
+    input: "Use saved testing command\nRuns the saved test command from settings before creating the PR.\n\n@octocat\n",
+    env: {
+      ANTIGRAVITY_PROJECT_TESTING_COMMAND: "saved-project-tests"
+    }
+  });
+
+  assert.match(output, /Using Project Testing Command from settings\./);
+  assert.doesNotMatch(output, /What command runs your project's test suite/);
+  assert.equal(fs.readFileSync(testMarkerPath, "utf8"), "used\n");
 });
 
 test("create_pull_requrest.sh commits dirty feature branch changes before rebasing and pushing", (t) => {

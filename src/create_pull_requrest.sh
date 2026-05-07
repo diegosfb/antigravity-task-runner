@@ -376,7 +376,13 @@ main() {
     exit 1
   fi
 
-  test_command="$(optional_value "What command runs your project's test suite? (type 'skip' to skip)")"
+  test_command="$(trim "${ANTIGRAVITY_PROJECT_TESTING_COMMAND:-}")"
+  if [[ -n "$test_command" ]]; then
+    echo "Using Project Testing Command from settings."
+  else
+    test_command="$(optional_value "What command runs your project's test suite? (type 'skip' to skip)")"
+  fi
+
   if [[ -n "$test_command" && "$(to_lower "$test_command")" != "skip" ]]; then
     run_shell_command "$test_command"
   else

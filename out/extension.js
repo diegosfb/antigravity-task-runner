@@ -2767,6 +2767,7 @@ function activate(context) {
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         const defaultGithubCodeReviewer = (0, settings_1.getDefaultGithubCodeReviewer)();
+        const projectTestingCommand = (0, settings_1.getProjectTestingCommand)();
         const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
         if (!fs.existsSync(scriptPath)) {
             void vscode.window.showErrorMessage("Create pull request script not found in the extension package.");
@@ -2782,9 +2783,15 @@ function activate(context) {
         const branchLabel = prBranch ? `'${prBranch}'` : "your feature branch";
         (0, terminal_1.runInNewTerminal)("Create Pull Request", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            `ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER=${(0, utils_1.quoteShellArg)(defaultGithubCodeReviewer)} ${(0, utils_1.quoteShellArg)(scriptPath)}`
+            `${(0, utils_1.quoteShellArg)(scriptPath)}`
         ], {
-            iconPath: new vscode.ThemeIcon("git-pull-request")
+            iconPath: new vscode.ThemeIcon("git-pull-request"),
+            env: {
+                ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER: defaultGithubCodeReviewer,
+                ...(projectTestingCommand
+                    ? { ANTIGRAVITY_PROJECT_TESTING_COMMAND: projectTestingCommand }
+                    : {})
+            }
         });
         void vscode.window.showInformationMessage(`PR creation started on ${branchLabel}. The workflow will sync local main first, then return to ${branchLabel} to finish preparing the pull request.`);
     }));

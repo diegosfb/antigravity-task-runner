@@ -28,6 +28,7 @@ import {
   getAgenticHarnessExecutionCommand,
   getUseAgentForGithubRepositoryManagement,
   getDefaultGithubCodeReviewer,
+  getProjectTestingCommand,
   normalizeStringArray,
   readClaudeAnthropicBaseUrl,
   isLocalLiteLLMBaseUrl,
@@ -3436,6 +3437,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
       const repoRoot = getRepoRoot(rootPath);
       const defaultGithubCodeReviewer = getDefaultGithubCodeReviewer();
+      const projectTestingCommand = getProjectTestingCommand();
       const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
       if (!fs.existsSync(scriptPath)) {
         void vscode.window.showErrorMessage(
@@ -3457,10 +3459,16 @@ export function activate(context: vscode.ExtensionContext) {
         "Create Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          `ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER=${quoteShellArg(defaultGithubCodeReviewer)} ${quoteShellArg(scriptPath)}`
+          `${quoteShellArg(scriptPath)}`
         ],
         {
-          iconPath: new vscode.ThemeIcon("git-pull-request")
+          iconPath: new vscode.ThemeIcon("git-pull-request"),
+          env: {
+            ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER: defaultGithubCodeReviewer,
+            ...(projectTestingCommand
+              ? { ANTIGRAVITY_PROJECT_TESTING_COMMAND: projectTestingCommand }
+              : {})
+          }
         }
       );
 

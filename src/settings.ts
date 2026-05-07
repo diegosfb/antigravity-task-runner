@@ -204,6 +204,11 @@ export function getDefaultGithubCodeReviewer(): string {
   );
 }
 
+export function getProjectTestingCommand(): string {
+  const config = vscode.workspace.getConfiguration("antigravity");
+  return (config.get<string>("projectTestingCommand") || "").trim();
+}
+
 export function getUseAgentForGithubRepositoryManagement(): boolean {
   const config = vscode.workspace.getConfiguration("antigravity");
   return config.get<boolean>("useAgentForGithubRepositoryManagement") ?? false;

@@ -10,6 +10,7 @@ exports.loadOpenRouterConfig = loadOpenRouterConfig;
 exports.loadClaudeSettings = loadClaudeSettings;
 exports.getAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand;
 exports.getDefaultGithubCodeReviewer = getDefaultGithubCodeReviewer;
+exports.getProjectTestingCommand = getProjectTestingCommand;
 exports.getUseAgentForGithubRepositoryManagement = getUseAgentForGithubRepositoryManagement;
 exports.renderAntigravitySettingsHtml = renderAntigravitySettingsHtml;
 exports.renderAgenticSetupHtml = renderAgenticSetupHtml;
@@ -168,6 +169,10 @@ function getDefaultGithubCodeReviewer() {
     const config = vscode.workspace.getConfiguration("antigravity");
     return ((config.get("defaultGithubCodeReviewer") || "").trim() ||
         exports.DEFAULT_GITHUB_CODE_REVIEWER);
+}
+function getProjectTestingCommand() {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    return (config.get("projectTestingCommand") || "").trim();
 }
 function getUseAgentForGithubRepositoryManagement() {
     const config = vscode.workspace.getConfiguration("antigravity");
