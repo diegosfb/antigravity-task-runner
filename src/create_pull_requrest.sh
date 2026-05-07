@@ -350,8 +350,8 @@ cleanup_temp_files() {
 }
 
 main() {
-  local feature_branch build_command test_command why_answer how_answer issue_link docs_and_screenshots reviewer reviewer_logins reviewer_display pr_title pr_url existing_pr_url pr_description_draft
-  local build_warning="" test_warning=""
+  local feature_branch test_command why_answer how_answer issue_link docs_and_screenshots reviewer reviewer_logins reviewer_display pr_title pr_url existing_pr_url pr_description_draft
+  local build_warning="WARNING: Build/validation was skipped." test_warning=""
 
   ensure_git_repo
   ensure_remote_origin
@@ -374,13 +374,6 @@ main() {
   if ! run_and_echo git rebase main; then
     print_rebase_conflict_instructions "$feature_branch"
     exit 1
-  fi
-
-  build_command="$(optional_value "What command runs your project's build or validation step? (type 'skip' to skip)")"
-  if [[ -n "$build_command" && "$(to_lower "$build_command")" != "skip" ]]; then
-    run_shell_command "$build_command"
-  else
-    build_warning="WARNING: Build/validation was skipped."
   fi
 
   test_command="$(optional_value "What command runs your project's test suite? (type 'skip' to skip)")"

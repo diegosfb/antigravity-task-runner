@@ -192,12 +192,13 @@ test("create_pull_requrest.sh uses the inferred Jira issue link without promptin
   const output = runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "skip\nskip\nAuto-link Jira issue from branch\nUpdates the PR body without prompting for a ticket link.\n\n@octocat\n"
+    input: "skip\nAuto-link Jira issue from branch\nUpdates the PR body without prompting for a ticket link.\n\n@octocat\n"
   });
 
   const prBody = fs.readFileSync(bodyCopyPath, "utf8");
 
   assert.match(output, /Creating the pull request on GitHub\./);
+  assert.doesNotMatch(output, /What command runs your project's build or validation step/);
   assert.match(prBody, /\*\*Linked Issue:\*\* https:\/\/jira\.example\.com\/browse\/TEST-123/);
   assert.match(prBody, /\*\*Reviewer:\*\* `@octocat`/);
 });
@@ -218,7 +219,7 @@ test("create_pull_requrest.sh leaves the linked issue empty when Jira inference 
   runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "skip\nskip\nSkip missing Jira issue\nLeaves the linked issue as N/A when Jira cannot find the ticket.\n\n@octocat\n"
+    input: "skip\nSkip missing Jira issue\nLeaves the linked issue as N/A when Jira cannot find the ticket.\n\n@octocat\n"
   });
 
   const prBody = fs.readFileSync(bodyCopyPath, "utf8");
@@ -244,7 +245,7 @@ test("create_pull_requrest.sh commits dirty feature branch changes before rebasi
   const output = runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "Capture dirty branch changes\nskip\nskip\nCommit dirty branch changes before opening the PR.\nStages and commits the local edit, then rebases and pushes before creating the PR.\n\n@octocat\n"
+    input: "Capture dirty branch changes\nskip\nCommit dirty branch changes before opening the PR.\nStages and commits the local edit, then rebases and pushes before creating the PR.\n\n@octocat\n"
   });
 
   const branchHeadSubject = execFileSync("git", ["log", "-1", "--pretty=%s", branchName], {
@@ -321,7 +322,7 @@ test("create_pull_requrest.sh stops before prompting when the feature branch has
     runCreatePullRequestScript({
       repoDir,
       binDir,
-      input: "skip\nskip\n"
+      input: "skip\n"
     });
     assert.fail("Expected the PR creation script to stop when there are no commits to open a PR for.");
   } catch (error) {
