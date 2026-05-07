@@ -7,6 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/git_remote_fallback.sh"
 
 PR_BODY_FILE=""
+DEFAULT_GITHUB_REVIEWER="${ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER:-@diegosfb}"
 
 prompt() {
   local message="$1"
@@ -103,11 +104,164 @@ optional_value() {
   trim "$(prompt "$1")"
 }
 
+optional_value_with_default() {
+  local value="$1"
+  local default_value="$2"
+  local response
+
+  response="$(optional_value "${value} [${default_value}]")"
+  if [[ -n "$response" ]]; then
+    printf '%s' "$response"
+    return 0
+  fi
+
+  printf '%s' "$default_value"
+}
+
+has_uncommitted_changes() {
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    return 0
+  fi
+
+  [[ -n "$(git ls-files --others --exclude-standard)" ]]
+}
+
+stage_pr_changes() {
+  run_shell_command "git add -A -- . && git rm -q --cached --ignore-unmatch .env config/.env"
+}
+
+commit_pending_changes_if_needed() {
+  local feature_branch="$1"
+  local commit_message secret_candidate_output
+
+  if ! has_uncommitted_changes; then
+    return 0
+  fi
+
+  echo
+  echo "Detected uncommitted changes on ${feature_branch}. They must be committed before creating a pull request."
+
+  secret_candidate_output="$(git status --porcelain -- .env config/.env || true)"
+  if [[ -n "$secret_candidate_output" ]]; then
+    echo "Warning: .env and config/.env are excluded from the automated pre-PR commit for safety."
+  fi
+
+  commit_message="$(require_non_empty "Enter a commit message for the changes that should be included in this pull request.")"
+  stage_pr_changes
+
+  if git diff --cached --quiet; then
+    echo "No committable changes were staged after excluding protected env files. Continuing with the existing branch history."
+    return 0
+  fi
+
+  run_and_echo git commit --no-gpg-sign -m "$commit_message"
+}
+
 normalize_reviewers_for_github() {
   local value="$1"
   value="$(printf '%s' "$value" | tr -d '[:space:]')"
   value="$(printf '%s' "$value" | sed 's/@//g')"
   printf '%s' "$value"
+}
+
+to_single_line() {
+  printf '%s' "$1" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g; s/^ //; s/ $//'
+}
+
+extract_marked_block() {
+  local content="$1"
+  local start_marker="$2"
+  local end_marker="$3"
+
+  awk -v start="$start_marker" -v end="$end_marker" '
+    {
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      sub(/[[:space:]]+$/, "", line)
+    }
+    line == start { capture = 1; next }
+    line == end { exit }
+    capture { print }
+  ' <<< "$content"
+}
+
+collect_pr_description_context() {
+  local base_branch="$1"
+  local feature_branch="$2"
+  local commits files_changed diff_stat patch_excerpt
+
+  commits="$(git log --reverse --max-count=20 --pretty=format:'- %s' "${base_branch}..${feature_branch}" 2>/dev/null || true)"
+  files_changed="$(git diff --name-status "${base_branch}...${feature_branch}" 2>/dev/null | head -n 200 || true)"
+  diff_stat="$(git diff --stat "${base_branch}...${feature_branch}" 2>/dev/null || true)"
+  patch_excerpt="$(git diff --unified=0 --no-color "${base_branch}...${feature_branch}" 2>/dev/null | head -n 400 || true)"
+
+  cat <<EOF
+Base branch: ${base_branch}
+Feature branch: ${feature_branch}
+
+Recent commits:
+${commits:-N/A}
+
+Files changed:
+${files_changed:-N/A}
+
+Diff stat:
+${diff_stat:-N/A}
+
+Patch excerpt:
+${patch_excerpt:-N/A}
+EOF
+}
+
+generate_pr_descriptions_with_claude() {
+  local base_branch="$1"
+  local feature_branch="$2"
+  local context prompt response why how
+
+  if ! command -v claude >/dev/null 2>&1; then
+    return 1
+  fi
+
+  context="$(collect_pr_description_context "$base_branch" "$feature_branch")"
+  prompt="$(cat <<EOF
+You are preparing text for a GitHub pull request.
+
+Based on the repository context below, write concise PR copy for the diff between ${base_branch} and ${feature_branch}.
+
+Return only the following exact marker blocks and nothing else:
+
+WHY_START
+<one sentence, plain English, suitable for the PR title suffix>
+WHY_END
+HOW_START
+<two to four sentences, plain English, describing the technical approach at a high level>
+HOW_END
+
+Rules:
+- Be specific to the actual changes.
+- Do not mention that you are an AI or that this was generated.
+- Do not invent issues, screenshots, recordings, or tests.
+- Keep the WHY concise.
+- Keep the HOW under 600 characters total.
+
+Repository context:
+${context}
+EOF
+)"
+
+  if ! response="$(claude --dangerously-skip-permissions "$prompt" 2>/dev/null)"; then
+    return 1
+  fi
+
+  why="$(trim "$(extract_marked_block "$response" "WHY_START" "WHY_END")")"
+  how="$(trim "$(extract_marked_block "$response" "HOW_START" "HOW_END")")"
+
+  if [[ -z "$why" || -z "$how" ]]; then
+    return 1
+  fi
+
+  printf '%s\n' "$why"
+  printf '%s' "$how"
 }
 
 format_reviewers_for_body() {
@@ -139,8 +293,8 @@ cleanup_temp_files() {
 }
 
 main() {
-  local feature_branch test_command why_answer how_answer issue_link docs_and_screenshots reviewer reviewer_logins reviewer_display pr_title pr_url existing_pr_url
-  local test_warning=""
+  local feature_branch build_command test_command why_answer how_answer issue_link docs_and_screenshots reviewer reviewer_logins reviewer_display pr_title pr_url existing_pr_url pr_description_draft
+  local build_warning="" test_warning=""
 
   ensure_git_repo
   ensure_remote_origin
@@ -152,12 +306,25 @@ main() {
     exit 1
   fi
 
-  echo "Syncing your feature branch with the latest main so reviewers see a clean PR."
+  commit_pending_changes_if_needed "$feature_branch"
+
+  echo "Updating the local main branch to sync with the remote repository."
   run_and_echo git checkout main
-  run_remote_git_and_echo pull origin main
+  run_remote_git_and_echo -c pull.rebase=true pull origin main
   run_and_echo git checkout "$feature_branch"
-  run_and_echo git merge main
-  run_remote_git_and_echo push origin "$feature_branch"
+
+  echo "Rebasing your feature branch onto the latest main so reviewers see a clean PR history."
+  if ! run_and_echo git rebase main; then
+    echo "Rebase stopped because of conflicts. Resolve them locally, then run 'git rebase --continue' (or 'git rebase --abort' to back out) before retrying PR creation." >&2
+    exit 1
+  fi
+
+  build_command="$(optional_value "What command runs your project's build or validation step? (type 'skip' to skip)")"
+  if [[ -n "$build_command" && "$(to_lower "$build_command")" != "skip" ]]; then
+    run_shell_command "$build_command"
+  else
+    build_warning="WARNING: Build/validation was skipped."
+  fi
 
   test_command="$(optional_value "What command runs your project's test suite? (type 'skip' to skip)")"
   if [[ -n "$test_command" && "$(to_lower "$test_command")" != "skip" ]]; then
@@ -166,11 +333,37 @@ main() {
     test_warning="WARNING: Tests were skipped."
   fi
 
-  why_answer="$(require_non_empty "What problem does this PR solve, or what feature/functionality does it provide?")"
-  how_answer="$(require_non_empty "Briefly describe your technical approach. What changed and how does it work at a high level?")"
+  echo "Pushing the rebased feature branch to origin."
+  run_remote_git_and_echo push --force-with-lease origin "$feature_branch"
+
+  existing_pr_url="$(gh pr list --head "$feature_branch" --base main --state open --json url --jq '.[0].url' 2>/dev/null || true)"
+  if [[ -n "$existing_pr_url" ]]; then
+    echo
+    echo "An open pull request already exists for ${feature_branch}:"
+    echo "$existing_pr_url"
+    exit 0
+  fi
+
+  if pr_description_draft="$(generate_pr_descriptions_with_claude "main" "$feature_branch")"; then
+    why_answer="$(printf '%s\n' "$pr_description_draft" | sed -n '1p')"
+    how_answer="$(printf '%s\n' "$pr_description_draft" | sed -n '2,$p')"
+    echo
+    echo "Claude drafted the PR summary automatically."
+    echo "Why: $why_answer"
+    echo
+    echo "How:"
+    echo "$how_answer"
+    echo
+  else
+    echo
+    echo "Claude could not draft the PR summary automatically, so let's fill it in manually."
+    why_answer="$(require_non_empty "What problem does this PR solve, or what feature/functionality does it provide?")"
+    how_answer="$(require_non_empty "Briefly describe your technical approach. What changed and how does it work at a high level?")"
+  fi
+
   issue_link="$(optional_value "Is there a linked Jira, Trello, or GitHub Issue? Press Enter to skip.")"
   docs_and_screenshots="$(optional_value "Any documentation updates, screenshots, or recordings to include? Press Enter to skip.")"
-  reviewer="$(require_non_empty "Who should be tagged as the responsible code reviewer? (e.g. @john-doe)")"
+  reviewer="$(optional_value_with_default "Who should be tagged as the responsible code reviewer? Press Enter to accept the suggested reviewer." "$DEFAULT_GITHUB_REVIEWER")"
   reviewer_logins="$(normalize_reviewers_for_github "$reviewer")"
   reviewer_display="$(format_reviewers_for_body "$reviewer_logins")"
 
@@ -179,7 +372,7 @@ main() {
     exit 1
   fi
 
-  pr_title="${feature_branch}: ${why_answer}"
+  pr_title="${feature_branch}: $(to_single_line "$why_answer")"
   PR_BODY_FILE="$(mktemp)"
 
   cat >"$PR_BODY_FILE" <<EOF
@@ -197,14 +390,6 @@ $how_answer
 
 **Reviewer:** \`$reviewer_display\`
 EOF
-
-  existing_pr_url="$(gh pr list --head "$feature_branch" --base main --state open --json url --jq '.[0].url' 2>/dev/null || true)"
-  if [[ -n "$existing_pr_url" ]]; then
-    echo
-    echo "An open pull request already exists for ${feature_branch}:"
-    echo "$existing_pr_url"
-    exit 0
-  fi
 
   echo "Creating the pull request on GitHub."
   echo "+ gh pr create --base main --head $feature_branch --title $pr_title --body-file $PR_BODY_FILE --reviewer $reviewer_logins"
@@ -239,8 +424,9 @@ $how_answer
 **Reviewer:** \`$reviewer_display\`
 EOF
 
-  if [[ -n "$test_warning" ]]; then
+  if [[ -n "$build_warning" || -n "$test_warning" ]]; then
     echo
+    [[ -n "$build_warning" ]] && echo "$build_warning"
     [[ -n "$test_warning" ]] && echo "$test_warning"
   fi
 
@@ -248,6 +434,10 @@ EOF
 
 💡 Important: Any changes requested by the reviewer should be committed and pushed to this same feature branch. GitHub will automatically update the open PR with your new commits. Never close this PR and open a new one.
 EOF
+
+  echo
+  echo "Switching your local checkout back to main."
+  run_and_echo git checkout main
 }
 
 trap cleanup_temp_files EXIT

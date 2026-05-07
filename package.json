@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.7.5",
+  "version": "4.9.14",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -27,6 +27,7 @@
     "onCommand:antigravity.createPullRequest",
     "onCommand:antigravity.mergeBranchToMain",
     "onCommand:antigravity.checkoutMain",
+    "onCommand:antigravity.setFeatureFlag",
     "onCommand:antigravity.reviewPullRequest",
     "onCommand:antigravity.approvePullRequest",
     "onCommand:antigravity.feedbackOnPullRequest",
@@ -101,7 +102,7 @@
       },
       {
         "command": "antigravity.selectOrCreateJiraProject",
-        "title": "Antigravity: Select/Create Jira Project"
+        "title": "Antigravity: Select/Set Jira Project"
       },
       {
         "command": "antigravity.completeJiraItem",
@@ -164,6 +165,10 @@
         "title": "Antigravity: Checkout Main (Branch work done)"
       },
       {
+        "command": "antigravity.setFeatureFlag",
+        "title": "Antigravity: Set Feature Flag for changes"
+      },
+      {
         "command": "antigravity.reviewPullRequest",
         "title": "Antigravity: Review a Pull Request"
       },
@@ -213,7 +218,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.7.5",
+          "name": "Tasky Runner v4.9.14",
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -313,6 +318,21 @@
           "default": "Antigravity Agent",
           "description": "Terminal name used when running agents."
         },
+        "antigravity.defaultGithubCodeReviewer": {
+          "type": "string",
+          "default": "@diegosfb",
+          "description": "GitHub username suggested by default when creating a pull request."
+        },
+        "antigravity.buildCommand": {
+          "type": "string",
+          "default": "",
+          "description": "Command used to build the solution (e.g. npm run build, make, ./gradlew build)."
+        },
+        "antigravity.projectTestingCommand": {
+          "type": "string",
+          "default": "",
+          "description": "Command used to run the project's test suite (e.g. npm test, pytest, go test ./...)."
+        },
         "antigravity.antigravityPath": {
           "type": "string",
           "default": "antigravity",
@@ -336,17 +356,17 @@
         "antigravity.jiraBaseUrl": {
           "type": "string",
           "default": "",
-          "description": "Jira base URL used for Jira actions when not provided by the repository .env."
+          "description": "Jira base URL used for all Jira actions."
         },
         "antigravity.jiraEmail": {
           "type": "string",
           "default": "",
-          "description": "Jira email used for Jira actions when not provided by the repository .env."
+          "description": "Jira email used for all Jira actions."
         },
         "antigravity.jiraApiToken": {
           "type": "string",
           "default": "",
-          "description": "Jira API token used for Jira actions when not provided by the repository .env."
+          "description": "Jira API token used for all Jira actions."
         },
         "antigravity.antigravityWorkspaceProject": {
           "type": "string",

@@ -281,6 +281,7 @@ const CLAUDE_MODEL_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const JIRA_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
+const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
 const TOP_LEVEL_LINKED_FOLDERS = [
     { label: "claude", path: path.join(os.homedir(), ".claude") },
     { label: "codex", path: path.join(os.homedir(), ".codex") }
@@ -553,12 +554,19 @@ function getQuickActionItems() {
         };
         items.push(checkoutMain);
     }
+    const setFeatureFlag = new NodeItem({ kind: "action", label: "Set Feature Flag for changes" }, vscode.TreeItemCollapsibleState.None);
+    setFeatureFlag.iconPath = new vscode.ThemeIcon("symbol-boolean", FEATURE_FLAG_ACTION_COLOR);
+    setFeatureFlag.command = {
+        command: "antigravity.setFeatureFlag",
+        title: "Set Feature Flag for changes"
+    };
+    items.push(setFeatureFlag);
     if (!savedJiraProjectKey) {
-        const selectOrCreateJiraProject = new NodeItem({ kind: "action", label: "Select/Create Jira Project" }, vscode.TreeItemCollapsibleState.None);
+        const selectOrCreateJiraProject = new NodeItem({ kind: "action", label: "Select/Set Jira Project" }, vscode.TreeItemCollapsibleState.None);
         selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", JIRA_ACTION_COLOR);
         selectOrCreateJiraProject.command = {
             command: "antigravity.selectOrCreateJiraProject",
-            title: "Select/Create Jira Project"
+            title: "Select/Set Jira Project"
         };
         items.push(selectOrCreateJiraProject);
     }

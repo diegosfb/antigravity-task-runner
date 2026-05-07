@@ -38,9 +38,20 @@ Follow each step **in order**. Do not skip ahead. Wait for the user's input wher
 
 ---
 
-## Step 1 — Sync with the Latest Code
+## Step 1 — Commit Pending Work and Sync with the Latest Code
 
-Before opening a PR, pull the latest changes from `main` and merge them into your feature branch. This resolves conflicts locally so reviewers never see a broken PR.
+Before opening a PR, make sure every code change that belongs in the PR is committed on your feature branch. If the working tree is dirty, commit it first so the later branch switch to `main` is safe and the PR diff is complete.
+
+Run:
+
+```bash
+git add -A
+git commit -m "<describe the final changes>"
+```
+
+If only secret-bearing env files changed, do **not** commit them. Leave `config/.env` uncommitted and use `config/.env.example` as the safe reference.
+
+Then pull the latest changes from `main` and merge them into your feature branch. This resolves conflicts locally so reviewers never see a broken PR.
 
 Run:
 
@@ -106,15 +117,21 @@ If tests **fail**, stop and advise the user to fix the failing tests before proc
 
 ---
 
-## Step 4 — Gather the PR Description
+## Step 4 — Draft the PR Description
 
-Ask the user to provide a structured PR description by answering the following prompts one at a time:
+Use Claude to draft the structured PR description from the current branch diff, commit history, and changed files.
 
 ### 4a — The "Why" *(required)*
 
-> "What problem does this PR solve, or what feature/functionality does it provide? (The 'Why')"
+Generate a concise "Why" summary automatically with Claude.
 
 ### 4b — The "How" *(required)*
+
+Generate a concise "How" summary automatically with Claude.
+
+If Claude is unavailable, fails, or produces an empty answer, fall back to asking the user manually:
+
+> "What problem does this PR solve, or what feature/functionality does it provide? (The 'Why')"
 
 > "Briefly describe your technical approach. What did you change and how does it work at a high level? (The 'How')"
 
@@ -132,7 +149,9 @@ Ask the user to provide a structured PR description by answering the following p
 
 Ask:
 
-> "Who should be tagged as the responsible code reviewer? (Provide their GitHub username, e.g. `@john-doe`)"
+> "Who should be tagged as the responsible code reviewer? Press Enter to accept the suggested default reviewer."
+
+The default suggested reviewer should come from the extension setting `antigravity.defaultGithubCodeReviewer`, which defaults to `@diegosfb`.
 
 If the project has multiple reviewers or a review policy (e.g. 2 approvals required), note it here.
 
