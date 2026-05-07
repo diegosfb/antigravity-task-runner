@@ -446,6 +446,23 @@
           },
           "description": "Saved Agentic Harness execution commands offered on the Settings page."
         },
+        "antigravity.lightAgenticHarnessExecutionCommand": {
+          "type": "string",
+          "default": "claude --model claude-haiku-4-5-20251001",
+          "description": "Selected Light Agentic Harness execution command."
+        },
+        "antigravity.lightAgenticHarnessExecutionCommands": {
+          "type": "array",
+          "default": [
+            "claude --model claude-haiku-4-5-20251001",
+            "opencode run -m ollama/qwen3-coder:30b",
+            "gemini"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Saved Light Agentic Harness execution commands offered on the Settings page."
+        },
         "antigravity.claudeSetupGithub": {
           "type": "string",
           "default": "",
