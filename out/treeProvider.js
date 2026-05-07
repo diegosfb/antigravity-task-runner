@@ -692,6 +692,18 @@ function getClaudeActionItems() {
         command: "antigravity.runLiteLLMOpenAI",
         title: "Run liteLLM OpenAI"
     };
-    return [item, setClaudeModel, runLiteLLMOpenAI];
+    const buildProject = new NodeItem({ kind: "action", label: "Build Project" }, vscode.TreeItemCollapsibleState.None);
+    buildProject.iconPath = new vscode.ThemeIcon("tools", CLAUDE_MODEL_ACTION_COLOR);
+    buildProject.command = {
+        command: "antigravity.buildProject",
+        title: "Build Project"
+    };
+    const runProjectTests = new NodeItem({ kind: "action", label: "Run Project Tests" }, vscode.TreeItemCollapsibleState.None);
+    runProjectTests.iconPath = new vscode.ThemeIcon("beaker", CLAUDE_MODEL_ACTION_COLOR);
+    runProjectTests.command = {
+        command: "antigravity.runProjectTests",
+        title: "Run Project Tests"
+    };
+    return [item, setClaudeModel, runLiteLLMOpenAI, buildProject, runProjectTests];
 }
 //# sourceMappingURL=treeProvider.js.map

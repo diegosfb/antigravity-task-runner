@@ -28,6 +28,7 @@ import {
   getAgenticHarnessExecutionCommand,
   getUseAgentForGithubRepositoryManagement,
   getDefaultGithubCodeReviewer,
+  getBuildCommand,
   getProjectTestingCommand,
   normalizeStringArray,
   readClaudeAnthropicBaseUrl,
@@ -170,6 +171,33 @@ export function activate(context: vscode.ExtensionContext) {
         attemptsRemaining - 1
       );
     }, 500);
+  };
+
+  const runConfiguredProjectCommand = async (
+    taskName: string,
+    commandLine: string,
+    settingLabel: string
+  ): Promise<void> => {
+    if (!commandLine) {
+      void vscode.window.showErrorMessage(
+        `${settingLabel} is not set in Antigravity settings.`
+      );
+      return;
+    }
+
+    const rootPath = getRootPath();
+    if (!rootPath) {
+      void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+      return;
+    }
+
+    const repoRoot = getRepoRoot(rootPath);
+    try {
+      await runCommandInTaskTerminal(taskName, commandLine, { cwd: repoRoot });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`${taskName} failed: ${message}`);
+    }
   };
 
   type BranchTypeOption = {
@@ -2848,6 +2876,26 @@ export function activate(context: vscode.ExtensionContext) {
       }
       const repoRoot = getRepoRoot(rootPath);
       await runInSecondaryTerminal([`cd ${quoteShellArg(repoRoot)}`, command]);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.buildProject", async () => {
+      await runConfiguredProjectCommand(
+        "Build Project",
+        getBuildCommand(),
+        "Build Command"
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.runProjectTests", async () => {
+      await runConfiguredProjectCommand(
+        "Run Project Tests",
+        getProjectTestingCommand(),
+        "Project Testing Command"
+      );
     })
   );
 

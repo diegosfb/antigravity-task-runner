@@ -66,6 +66,25 @@ function activate(context) {
             refreshAutocommitUiWhenStateChanges(repoRoot, expectedRunningState, attemptsRemaining - 1);
         }, 500);
     };
+    const runConfiguredProjectCommand = async (taskName, commandLine, settingLabel) => {
+        if (!commandLine) {
+            void vscode.window.showErrorMessage(`${settingLabel} is not set in Antigravity settings.`);
+            return;
+        }
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        try {
+            await (0, terminal_1.runCommandInTaskTerminal)(taskName, commandLine, { cwd: repoRoot });
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`${taskName} failed: ${message}`);
+        }
+    };
     const branchTypes = [
         {
             label: "Feature",
@@ -2336,6 +2355,12 @@ function activate(context) {
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         await (0, terminal_1.runInSecondaryTerminal)([`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, command]);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.buildProject", async () => {
+        await runConfiguredProjectCommand("Build Project", (0, settings_1.getBuildCommand)(), "Build Command");
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.runProjectTests", async () => {
+        await runConfiguredProjectCommand("Run Project Tests", (0, settings_1.getProjectTestingCommand)(), "Project Testing Command");
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createClaudeMd", async () => {
         (0, logger_1.log)(`[createClaudeMd] triggered`);
