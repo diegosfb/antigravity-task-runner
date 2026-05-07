@@ -242,10 +242,17 @@ HOW_END`,
     cwd: repoDir,
     encoding: "utf8"
   }).trim();
+  const currentBranch = execFileSync("git", ["branch", "--show-current"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
 
   assert.match(output, /Detected uncommitted changes on feature\/test-pr\./);
+  assert.match(output, /\+ git pull origin main/);
+  assert.doesNotMatch(output, /\+ git checkout main/);
   assert.equal(lastCommitMessage, "Capture pending PR changes");
   assert.equal(pendingFileAtHead, "waiting to be committed\n");
   assert.equal(readmeAtHead, "hello\nfeature branch change\npending update\n");
   assert.equal(statusOutput, "");
+  assert.equal(currentBranch, "feature/test-pr");
 });
