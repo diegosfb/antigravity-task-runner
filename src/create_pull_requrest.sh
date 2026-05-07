@@ -310,7 +310,7 @@ main() {
 
   echo "Updating the local main branch to sync with the remote repository."
   run_and_echo git checkout main
-  run_remote_git_and_echo pull origin main
+  run_remote_git_and_echo -c pull.rebase=true pull origin main
   run_and_echo git checkout "$feature_branch"
 
   echo "Rebasing your feature branch onto the latest main so reviewers see a clean PR history."

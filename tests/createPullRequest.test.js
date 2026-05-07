@@ -250,7 +250,7 @@ HOW_END`,
   assert.match(output, /Detected uncommitted changes on feature\/test-pr\./);
   assert.match(output, /Updating the local main branch to sync with the remote repository\./);
   assert.match(output, /\+ git checkout main/);
-  assert.match(output, /\+ git pull origin main/);
+  assert.match(output, /\+ git -c pull.rebase=true pull origin main/);
   assert.match(output, /\+ git checkout feature\/test-pr/);
   assert.match(output, /Rebasing your feature branch onto the latest main so reviewers see a clean PR history\./);
   assert.match(output, /\+ git rebase main/);
