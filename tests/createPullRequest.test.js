@@ -119,7 +119,7 @@ test("create_pull_requrest.sh uses the inferred Jira issue link without promptin
   const output = runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "skip\nAuto-link Jira issue from branch\nUpdates the PR body without prompting for a ticket link.\n\n@octocat\n"
+    input: "skip\nskip\nAuto-link Jira issue from branch\nUpdates the PR body without prompting for a ticket link.\n\n@octocat\n"
   });
 
   const prBody = fs.readFileSync(bodyCopyPath, "utf8");
@@ -145,11 +145,54 @@ test("create_pull_requrest.sh leaves the linked issue empty when Jira inference 
   runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "skip\nSkip missing Jira issue\nLeaves the linked issue as N/A when Jira cannot find the ticket.\n\n@octocat\n"
+    input: "skip\nskip\nSkip missing Jira issue\nLeaves the linked issue as N/A when Jira cannot find the ticket.\n\n@octocat\n"
   });
 
   const prBody = fs.readFileSync(bodyCopyPath, "utf8");
 
   assert.match(prBody, /\*\*Linked Issue:\*\* N\/A/);
   assert.match(prBody, /\*\*Reviewer:\*\* `@octocat`/);
+});
+
+test("create_pull_requrest.sh commits dirty feature branch changes before rebasing and pushing", (t) => {
+  const { rootDir, repoDir, branchName } = createTempRepoWithFeatureBranch("feature/TEST-456-dirty-branch");
+  const binDir = path.join(rootDir, "bin");
+  const ghLogPath = path.join(rootDir, "gh-pr-create.log");
+  const bodyCopyPath = path.join(rootDir, "pr-body.md");
+  fs.mkdirSync(binDir, { recursive: true });
+  createGhStub(binDir, ghLogPath, bodyCopyPath);
+  createNodeStub(binDir, "");
+  fs.writeFileSync(path.join(repoDir, "feature.txt"), "new feature\nwith local edit\n", "utf8");
+
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  const output = runCreatePullRequestScript({
+    repoDir,
+    binDir,
+    input: "Capture dirty branch changes\nskip\nskip\nCommit dirty branch changes before opening the PR.\nStages and commits the local edit, then rebases and pushes before creating the PR.\n\n@octocat\n"
+  });
+
+  const branchHeadSubject = execFileSync("git", ["log", "-1", "--pretty=%s", branchName], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+  const localBranchRef = execFileSync("git", ["rev-parse", branchName], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+  const remoteBranchRef = execFileSync("git", ["rev-parse", `origin/${branchName}`], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+  const currentBranch = execFileSync("git", ["branch", "--show-current"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+
+  assert.match(output, /Detected uncommitted changes on feature\/TEST-456-dirty-branch/);
+  assert.equal(branchHeadSubject, "Capture dirty branch changes");
+  assert.equal(remoteBranchRef, localBranchRef);
+  assert.equal(currentBranch, "main");
 });

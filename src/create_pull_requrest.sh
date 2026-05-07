@@ -104,6 +104,59 @@ optional_value() {
   trim "$(prompt "$1")"
 }
 
+optional_value_with_default() {
+  local value="$1"
+  local default_value="$2"
+  local response
+
+  response="$(optional_value "${value} [${default_value}]")"
+  if [[ -n "$response" ]]; then
+    printf '%s' "$response"
+    return 0
+  fi
+
+  printf '%s' "$default_value"
+}
+
+has_uncommitted_changes() {
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    return 0
+  fi
+
+  [[ -n "$(git ls-files --others --exclude-standard)" ]]
+}
+
+stage_pr_changes() {
+  run_shell_command "git add -A -- . && git rm -q --cached --ignore-unmatch .env config/.env"
+}
+
+commit_pending_changes_if_needed() {
+  local feature_branch="$1"
+  local commit_message secret_candidate_output
+
+  if ! has_uncommitted_changes; then
+    return 0
+  fi
+
+  echo
+  echo "Detected uncommitted changes on ${feature_branch}. They must be committed before creating a pull request."
+
+  secret_candidate_output="$(git status --porcelain -- .env config/.env || true)"
+  if [[ -n "$secret_candidate_output" ]]; then
+    echo "Warning: .env and config/.env are excluded from the automated pre-PR commit for safety."
+  fi
+
+  commit_message="$(require_non_empty "Enter a commit message for the changes that should be included in this pull request.")"
+  stage_pr_changes
+
+  if git diff --cached --quiet; then
+    echo "No committable changes were staged after excluding protected env files. Continuing with the existing branch history."
+    return 0
+  fi
+
+  run_and_echo git commit --no-gpg-sign -m "$commit_message"
+}
+
 infer_linked_issue_from_branch() {
   local feature_branch="$1"
   local helper_path="${SCRIPT_DIR}/infer_jira_issue_link.js"
@@ -290,6 +343,9 @@ main() {
   else
     test_warning="WARNING: Tests were skipped."
   fi
+
+  echo "Pushing the rebased feature branch to origin."
+  run_remote_git_and_echo push --force-with-lease origin "$feature_branch"
 
   why_answer="$(require_non_empty "What problem does this PR solve, or what feature/functionality does it provide?")"
   how_answer="$(require_non_empty "Briefly describe your technical approach. What changed and how does it work at a high level?")"
