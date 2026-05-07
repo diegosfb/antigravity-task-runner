@@ -18,7 +18,7 @@ This document describes the items that appear in the Task Runner sidebar and wha
 
 | Item | What it does | How to use it | When it appears |
 | --- | --- | --- | --- |
-| `Claude Terminal` | Opens a new terminal in the repo root and runs `claude`. If Claude is configured to talk to a local liteLLM endpoint, Task Runner starts liteLLM first and waits for it to be ready. | Click it when you want an interactive Claude session rooted in the current project. | Always |
+| `Claude Terminal` | Opens a new terminal in the repo root and runs `claude`. Before launching, Task Runner checks Claude's `ANTHROPIC_BASE_URL`. If that value points at `localhost` or `127.0.0.1`, Task Runner treats Claude as using a local liteLLM proxy, runs the configured liteLLM start command, waits for the health check to pass, and only then launches `claude`. | Click it when you want an interactive Claude session rooted in the current project. See `Claude + local liteLLM setup` below for the exact files and keys. | Always |
 | `Set Claude Model` | Opens a model-selection panel for Claude and applies the chosen router, model, effort level, and internal behavior. If `~/.claude/routerconfig.json` does not exist yet, Task Runner creates it from `routerconfig.example.json` and opens it. | Click it, choose the desired router and model, then apply the change. | Always |
 | `Run liteLLM OpenAI` | Runs the configured `tool-run.litellm-openai` command from Claude router config in the secondary terminal. | Use it when your Claude setup depends on a local liteLLM service. | Always |
 | `Build Project` | Runs the command stored in `antigravity.buildCommand`. | Set the build command in Task Runner settings, then click the item. | Always |
@@ -28,6 +28,95 @@ This document describes the items that appear in the Task Runner sidebar and wha
 | `claude` folder | Lets you browse `~/.claude`. | Expand it to inspect Claude settings, workflows, plugins, or local files. | When `~/.claude` exists |
 | `codex` folder | Lets you browse `~/.codex`. | Expand it to inspect Codex-related local files and settings. | When `~/.codex` exists |
 | Custom add-ons folder | Lets you browse the folder configured in `antigravity.customAgenticPlatformAddons`. | Set the add-ons path in settings, then expand the folder to browse reusable assets. | When the setting is configured and the folder exists |
+
+## Claude + Local liteLLM Setup
+
+Task Runner decides whether it should auto-start liteLLM when you click `Claude Terminal` by checking Claude's `ANTHROPIC_BASE_URL`.
+
+### Where Task Runner reads that value
+
+1. Project override first: `<repo>/.agent/claude/settings.json`
+2. Global fallback: `~/.claude/settings.json`
+
+Task Runner reads `env.ANTHROPIC_BASE_URL` from those files in that order. If the project-level file exists, it wins.
+
+### What counts as "local liteLLM"
+
+- If `ANTHROPIC_BASE_URL` starts with `http://localhost`
+- Or if it starts with `http://127.0.0.1`
+
+When that happens, clicking `Claude Terminal` will:
+
+1. Run the `Run liteLLM OpenAI` action internally
+2. Start the command stored at `~/.claude/routerconfig.json` under `tool-run.litellm-openai`
+3. Wait for `http://localhost:4000/health`
+4. Launch `claude`
+
+### Important current limitation
+
+- The readiness check is hardcoded to `http://localhost:4000/health`.
+- In practice, that means the local liteLLM setup should use port `4000` if you want the auto-start behavior to work cleanly.
+
+### Easiest way to configure it
+
+Use the `Set Claude Model` item in the Task Runner sidebar.
+
+1. Click `Set Claude Model`
+2. If `~/.claude/routerconfig.json` does not exist yet, Task Runner creates it from `routerconfig.example.json`
+3. Choose the `LiteLLM` router
+4. Choose the model you want Claude to use through liteLLM
+5. Apply the change
+
+That flow writes the selected router's `baseurl`, auth token, API key, and model into `~/.claude/settings.json`, and if the router has a `post_run` entry such as `litellm-openai`, it also runs the matching command from `tool-run`.
+
+### Manual configuration files
+
+Global Claude settings example in `~/.claude/settings.json`:
+
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://localhost:4000",
+    "ANTHROPIC_MODEL": "openai/gpt-5.2-codex",
+    "ANTHROPIC_API_KEY": "<your-api-key-if-needed>",
+    "ANTHROPIC_AUTH_TOKEN": ""
+  }
+}
+```
+
+Optional project-specific override in `<repo>/.agent/claude/settings.json`:
+
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://localhost:4000"
+  }
+}
+```
+
+liteLLM launch command example in `~/.claude/routerconfig.json`:
+
+```json
+{
+  "tool-run": {
+    "litellm-openai": "OPENAI_API_KEY=<your-key> LITELLM_DROP_PARAMS=true litellm --model openai/gpt-5.2-codex"
+  },
+  "LiteLLM-settings": {
+    "baseurl": "http://localhost:4000",
+    "post_run": "litellm-openai"
+  }
+}
+```
+
+### Which file should you edit
+
+- Edit `~/.claude/settings.json` if you want one global Claude setup across projects.
+- Edit `<repo>/.agent/claude/settings.json` if this repo should override your normal global Claude endpoint.
+- Edit `~/.claude/routerconfig.json` if you need to change how liteLLM is launched or which router/model options appear in `Set Claude Model`.
+
+### Common failure mode
+
+If `ANTHROPIC_BASE_URL` points to `localhost` but `tool-run.litellm-openai` is missing from `~/.claude/routerconfig.json`, `Claude Terminal` will recognize that you want local liteLLM but will have no start command to run. In that case, fix `routerconfig.json` first.
 
 ## Quick Actions
 
