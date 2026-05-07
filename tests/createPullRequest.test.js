@@ -111,6 +111,30 @@ function createTempRepoWithFeatureBranchMatchingMain(branchName = "feature/TEST-
   return { rootDir, repoDir, branchName };
 }
 
+function createTempRepoWithLocalMainAheadAfterFeatureMerged(
+  branchName = "feature/TEST-987-local-main-drift"
+) {
+  const { rootDir, repoDir } = createTempRepoWithFeatureBranch(branchName);
+
+  execFileSync("git", ["checkout", "main"], { cwd: repoDir, stdio: "ignore" });
+  fs.writeFileSync(path.join(repoDir, "main-only.txt"), "main branch work\n", "utf8");
+  execFileSync("git", ["add", "main-only.txt"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "Advance main"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["push", "origin", "main"], { cwd: repoDir, stdio: "ignore" });
+
+  execFileSync("git", ["checkout", branchName], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["merge", "--no-edit", "main"], { cwd: repoDir, stdio: "ignore" });
+
+  execFileSync("git", ["checkout", "main"], { cwd: repoDir, stdio: "ignore" });
+  fs.writeFileSync(path.join(repoDir, "local-main-only.txt"), "local-only main work\n", "utf8");
+  execFileSync("git", ["add", "local-main-only.txt"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "Advance local main only"], { cwd: repoDir, stdio: "ignore" });
+
+  execFileSync("git", ["checkout", branchName], { cwd: repoDir, stdio: "ignore" });
+
+  return { rootDir, repoDir, branchName };
+}
+
 function createGhStub(binDir, logPath, bodyCopyPath) {
   writeExecutable(
     path.join(binDir, "gh"),
@@ -358,7 +382,7 @@ test("create_pull_requrest.sh stops when local main needs updates from origin/ma
   }
 });
 
-test("create_pull_requrest.sh stops when the feature branch still needs the latest main merge", (t) => {
+test("create_pull_requrest.sh stops when the feature branch still needs the latest origin/main merge", (t) => {
   const { rootDir, repoDir, branchName } = createTempRepoNeedingMainMerge();
   const binDir = path.join(rootDir, "bin");
   const ghLogPath = path.join(rootDir, "gh-pr-create.log");
@@ -382,9 +406,9 @@ test("create_pull_requrest.sh stops when the feature branch still needs the late
     const combinedOutput = `${error.stdout ?? ""}${error.stderr ?? ""}`;
 
     assert.equal(error.status, 1);
-    assert.match(combinedOutput, new RegExp(`${branchName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} does not include the current local main branch\\.`));
+    assert.match(combinedOutput, new RegExp(`${branchName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} does not include the latest origin/main commits\\.`));
     assert.match(combinedOutput, /Create Pull Request will not merge main automatically\./);
-    assert.match(combinedOutput, /Run 'Pull Remote and merge' first so you can verify the merge with main works before opening the PR\./);
+    assert.match(combinedOutput, new RegExp(`Run 'Pull Remote and merge' first so the latest origin/main changes are pulled locally and merged into ${branchName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.`));
     assert.doesNotMatch(combinedOutput, /What command runs your project's test suite/);
     assert.ok(!fs.existsSync(bodyCopyPath));
     assert.ok(!fs.existsSync(ghLogPath));
@@ -394,6 +418,39 @@ test("create_pull_requrest.sh stops when the feature branch still needs the late
     }).trim();
     assert.equal(currentBranch, branchName);
   }
+});
+
+test("create_pull_requrest.sh allows PR creation when the feature branch already includes origin/main", (t) => {
+  const { rootDir, repoDir, branchName } =
+    createTempRepoWithLocalMainAheadAfterFeatureMerged();
+  const binDir = path.join(rootDir, "bin");
+  const ghLogPath = path.join(rootDir, "gh-pr-create.log");
+  const bodyCopyPath = path.join(rootDir, "pr-body.md");
+  fs.mkdirSync(binDir, { recursive: true });
+  createGhStub(binDir, ghLogPath, bodyCopyPath);
+  createNodeStub(binDir, "");
+
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  const output = runCreatePullRequestScript({
+    repoDir,
+    binDir,
+    input: "skip\n\n@octocat\n"
+  });
+
+  const currentBranch = execFileSync("git", ["branch", "--show-current"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+
+  assert.match(output, new RegExp(`Verified that ${branchName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} already contains the latest origin/main commits\\.`));
+  assert.match(output, /Creating the pull request on GitHub\./);
+  assertNoManualPrSummaryPrompts(output);
+  assert.ok(fs.existsSync(bodyCopyPath));
+  assert.ok(fs.existsSync(ghLogPath));
+  assert.equal(currentBranch, "main");
 });
 
 test("create_pull_requrest.sh stops before prompting when the feature branch has no commits beyond main", (t) => {

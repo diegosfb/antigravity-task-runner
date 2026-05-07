@@ -174,11 +174,11 @@ print_feature_branch_merge_instructions() {
   local feature_branch="$1"
 
   cat >&2 <<EOF
-${feature_branch} does not include the current local main branch. Create Pull Request will not merge main automatically.
+${feature_branch} does not include the latest origin/main commits. Create Pull Request will not merge main automatically.
 
 To finish this PR flow:
 1. Stay on ${feature_branch}.
-2. Run 'Pull Remote and merge' first so you can verify the merge with main works before opening the PR.
+2. Run 'Pull Remote and merge' first so the latest origin/main changes are pulled locally and merged into ${feature_branch}.
 3. Resolve any merge issues and rerun Create Pull Request.
 EOF
 }
@@ -193,9 +193,10 @@ local_main_includes_remote_main() {
   git merge-base --is-ancestor "origin/main" main
 }
 
-feature_branch_includes_main() {
+feature_branch_includes_base_ref() {
   local feature_branch="$1"
-  git merge-base --is-ancestor main "$feature_branch"
+  local base_ref="$2"
+  git merge-base --is-ancestor "$base_ref" "$feature_branch"
 }
 
 print_no_commits_for_pr_instructions() {
@@ -425,6 +426,7 @@ cleanup_temp_files() {
 
 main() {
   local feature_branch test_command why_answer how_answer issue_link docs_and_screenshots reviewer reviewer_logins reviewer_display pr_title pr_url existing_pr_url pr_description_draft
+  local pr_base_ref="origin/main"
   local build_warning="WARNING: Build/validation was skipped." test_warning=""
 
   ensure_git_repo
@@ -451,17 +453,17 @@ main() {
     exit 1
   fi
 
-  if ! feature_branch_includes_main "$feature_branch"; then
+  if ! feature_branch_includes_base_ref "$feature_branch" "$pr_base_ref"; then
     print_feature_branch_merge_instructions "$feature_branch"
     exit 1
   fi
 
-  if ! has_commits_between_base_and_feature "main" "$feature_branch"; then
+  if ! has_commits_between_base_and_feature "$pr_base_ref" "$feature_branch"; then
     print_no_commits_for_pr_instructions "main" "$feature_branch"
     exit 1
   fi
 
-  echo "Verified that ${feature_branch} already contains the current local main branch."
+  echo "Verified that ${feature_branch} already contains the latest origin/main commits."
 
   test_command="$(trim "${ANTIGRAVITY_PROJECT_TESTING_COMMAND:-}")"
   if [[ -n "$test_command" ]]; then
@@ -479,7 +481,7 @@ main() {
   echo "Pushing the feature branch to origin."
   run_remote_git_and_echo push origin "$feature_branch"
 
-  pr_description_draft="$(generate_pr_descriptions_from_branch_commits "main" "$feature_branch")"
+  pr_description_draft="$(generate_pr_descriptions_from_branch_commits "$pr_base_ref" "$feature_branch")"
   why_answer="$(trim "$(printf '%s\n' "$pr_description_draft" | sed -n '1p')")"
   how_answer="$(trim "$(printf '%s\n' "$pr_description_draft" | sed -n '2,$p')")"
   if [[ -z "$why_answer" || -z "$how_answer" ]]; then
