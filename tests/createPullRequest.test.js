@@ -226,15 +226,15 @@ HOW_END`,
     }
   });
 
-  const lastCommitMessage = execFileSync("git", ["log", "-1", "--pretty=%s"], {
+  const lastCommitMessage = execFileSync("git", ["log", "-1", "--pretty=%s", "feature/test-pr"], {
     cwd: repoDir,
     encoding: "utf8"
   }).trim();
-  const pendingFileAtHead = execFileSync("git", ["show", "HEAD:pending-change.txt"], {
+  const pendingFileAtHead = execFileSync("git", ["show", "feature/test-pr:pending-change.txt"], {
     cwd: repoDir,
     encoding: "utf8"
   });
-  const readmeAtHead = execFileSync("git", ["show", "HEAD:README.md"], {
+  const readmeAtHead = execFileSync("git", ["show", "feature/test-pr:README.md"], {
     cwd: repoDir,
     encoding: "utf8"
   });
@@ -256,11 +256,12 @@ HOW_END`,
   assert.match(output, /\+ git rebase main/);
   assert.match(output, /Pushing the rebased feature branch to origin\./);
   assert.match(output, /\+ git push --force-with-lease origin feature\/test-pr/);
+  assert.match(output, /Switching your local checkout back to main\./);
   assert.equal(lastCommitMessage, "Capture pending PR changes");
   assert.equal(pendingFileAtHead, "waiting to be committed\n");
   assert.equal(readmeAtHead, "hello\nfeature branch change\npending update\n");
   assert.equal(statusOutput, "");
-  assert.equal(currentBranch, "feature/test-pr");
+  assert.equal(currentBranch, "main");
 });
 
 test("create_pull_requrest.sh runs build and test commands before pushing the rebased branch", (t) => {

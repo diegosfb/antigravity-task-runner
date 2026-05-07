@@ -434,6 +434,10 @@ EOF
 
 💡 Important: Any changes requested by the reviewer should be committed and pushed to this same feature branch. GitHub will automatically update the open PR with your new commits. Never close this PR and open a new one.
 EOF
+
+  echo
+  echo "Switching your local checkout back to main."
+  run_and_echo git checkout main
 }
 
 trap cleanup_temp_files EXIT
