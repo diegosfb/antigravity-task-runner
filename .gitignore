@@ -10,6 +10,7 @@ coverage/
 !.env.example
 !config/.env.example
 .claude/settings.local.json
+.vscode/settings.json
 .agent/claude/routerconfig.json
 .agent/claude/settings.json
 

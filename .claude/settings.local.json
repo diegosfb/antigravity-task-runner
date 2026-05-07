@@ -51,7 +51,8 @@
       "Bash(ls \"/Users/diego.brihuega/Documents/Projects/antigravity-task-runner/Project Level\"*)",
       "Bash(git restore:*)",
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "Bash(npx @vscode/vsce package --no-yarn)"
     ]
   }
 }

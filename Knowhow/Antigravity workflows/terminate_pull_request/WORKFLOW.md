@@ -50,7 +50,7 @@ Compose and suggest this comment for the GitHub PR:
 >
 > _Reason: `<user's reason>`_
 >
-> The branch (`<feature-branch>`) will be preserved on the server for reference but will not be merged.
+> No code will be merged. The branch (`<feature-branch>`) will be cleaned up.
 
 Instruct the user:
 
@@ -64,14 +64,14 @@ Ask the user to confirm when the PR is closed:
 
 ## Step 2 — Decide What to Do with the Remote Branch
 
-The instructions for terminating a PR depend on whether you want to keep the remote branch as a reference or fully remove it.
+Abandoned branches should be deleted unless there is a specific reason to keep them. The default is to delete.
 
 Ask the user:
 
-> "Do you want to keep the branch on GitHub for future reference, or delete it from the remote too? (keep / delete)"
+> "Is there a specific reason to keep this branch on GitHub? If not, it will be deleted. (yes — state the reason / no)"
 
-- **Keep** — Leave the branch on the server as-is. No remote deletion needed. Continue to Step 3 for local cleanup.
-- **Delete** — The branch will be deleted from GitHub in Step 3c after local cleanup.
+- **No specific reason** — proceed to Step 3; the remote branch will be deleted in Step 4.
+- **Yes, specific reason** — accept the reason, leave the remote branch as-is, skip Step 4, and note the reason in the summary so the team knows why it was preserved.
 
 ---
 
@@ -121,7 +121,7 @@ Present a completed checklist to the user:
 > |---------------------------------------------|----------------------|
 > | Closing comment left on GitHub              | ✅                   |
 > | PR closed on GitHub (not merged)            | ✅                   |
-> | Remote branch (`origin/<feature-branch>`)   | Kept / Deleted *(update as applicable)* |
+> | Remote branch (`origin/<feature-branch>`)   | Deleted / Kept — `<reason>` *(update as applicable)* |
 > | Local branch (`<feature-branch>`) deleted   | ✅                   |
 >
 > The PR is now closed. No code was merged. The work is preserved in the closed PR's history on GitHub for future reference.

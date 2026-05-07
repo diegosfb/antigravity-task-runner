@@ -6,6 +6,7 @@ import * as os from "os";
 export const LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
 export const DEFAULT_SOP_MANUAL_LINK =
   "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7";
+export const DEFAULT_GITHUB_CODE_REVIEWER = "@diegosfb";
 
 export function isLocalLiteLLMBaseUrl(baseUrl: string | undefined): boolean {
   if (!baseUrl) return false;
@@ -195,6 +196,14 @@ export function getAgenticHarnessExecutionCommand(): string {
   );
 }
 
+export function getDefaultGithubCodeReviewer(): string {
+  const config = vscode.workspace.getConfiguration("antigravity");
+  return (
+    (config.get<string>("defaultGithubCodeReviewer") || "").trim() ||
+    DEFAULT_GITHUB_CODE_REVIEWER
+  );
+}
+
 export function getUseAgentForGithubRepositoryManagement(): boolean {
   const config = vscode.workspace.getConfiguration("antigravity");
   return config.get<boolean>("useAgentForGithubRepositoryManagement") ?? false;
@@ -257,6 +266,27 @@ function getExtensionSettingsFields(): SettingsField[] {
       value: config.get<string>("agentTerminalName") || ""
     },
     {
+      key: "defaultGithubCodeReviewer",
+      label: "Default GitHub Code Reviewer",
+      description: "Suggested reviewer when creating a pull request. You can still override it per PR.",
+      placeholder: "@diegosfb",
+      value: getDefaultGithubCodeReviewer()
+    },
+    {
+      key: "buildCommand",
+      label: "Build Command",
+      description: "Command used to build the solution (e.g. npm run build, make, ./gradlew build).",
+      placeholder: "npm run build",
+      value: config.get<string>("buildCommand") || ""
+    },
+    {
+      key: "projectTestingCommand",
+      label: "Project Testing Command",
+      description: "Command used to run the project's test suite (e.g. npm test, pytest, go test ./...).",
+      placeholder: "npm test",
+      value: config.get<string>("projectTestingCommand") || ""
+    },
+    {
       key: "antigravityPath",
       label: "Antigravity Executable",
       description: "Path to the Antigravity executable for running agents.",
@@ -290,21 +320,21 @@ function getExtensionSettingsFields(): SettingsField[] {
     {
       key: "jiraBaseUrl",
       label: "Jira Base URL",
-      description: "Jira base URL used for Jira actions when not provided by the repository .env.",
+      description: "Jira base URL used for all Jira actions.",
       placeholder: "https://your-company.atlassian.net",
       value: config.get<string>("jiraBaseUrl") || ""
     },
     {
       key: "jiraEmail",
       label: "Jira Email",
-      description: "Jira email used for Jira actions when not provided by the repository .env.",
+      description: "Jira email used for all Jira actions.",
       placeholder: "name@example.com",
       value: config.get<string>("jiraEmail") || ""
     },
     {
       key: "jiraApiToken",
       label: "Jira API Token",
-      description: "Jira API token used for Jira actions when not provided by the repository .env.",
+      description: "Jira API token used for all Jira actions.",
       placeholder: "jira-api-token",
       value: config.get<string>("jiraApiToken") || ""
     },

@@ -11,6 +11,7 @@ import {
 import {
   runInSecondaryTerminal,
   runInNewTerminal,
+  runCommandInTaskTerminal,
   buildAgenticHarnessPromptCommand,
   runClaudeInitAndUpdateInNewTerminal,
   runCodexInitAndUpdateInNewTerminal,
@@ -24,7 +25,9 @@ import {
   loadClaudeSettings,
   getRouterSettings,
   getToolRunCommand,
+  getAgenticHarnessExecutionCommand,
   getUseAgentForGithubRepositoryManagement,
+  getDefaultGithubCodeReviewer,
   normalizeStringArray,
   readClaudeAnthropicBaseUrl,
   isLocalLiteLLMBaseUrl,
@@ -47,7 +50,6 @@ import { initLogger, log, logAlways, showOutputChannel } from "./logger";
 import {
   createJiraIssue,
   getJiraProjects,
-  createJiraProject,
   JiraCredentials,
   JiraProjectSummary,
   JiraIssueSummary,
@@ -58,8 +60,18 @@ import {
   assignJiraIssueToCurrentUser,
   searchOpenAssignedJiraIssuesForCurrentUser,
   transitionJiraIssueToStatus,
+  transitionJiraIssueToReviewOrDone,
   updateJiraIssueSummaryAndLabels
 } from "./jira";
+import {
+  buildAgenticHarnessSkillTaskPrompt
+} from "./agenticHarnessSkill";
+import {
+  buildCreateJiraProjectAgenticHarnessEnvironment,
+  buildCreateJiraProjectAgenticHarnessPrompt,
+  JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME,
+  JIRA_PROJECT_CREATION_SKILL_NAME
+} from "./jiraProjectHarness";
 
 type GitInputBox = {
   value: string;
@@ -249,7 +261,7 @@ export function activate(context: vscode.ExtensionContext) {
     return undefined;
   };
 
-  const renderCreateFeatureBranchHtml = (webview: vscode.Webview): string => {
+  const renderCreateFeatureBranchHtml = (webview: vscode.Webview, hasJiraProject: boolean): string => {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
     const branchTypeData = branchTypes.map((option) => ({
@@ -337,10 +349,29 @@ export function activate(context: vscode.ExtensionContext) {
         color: var(--vscode-button-secondaryForeground);
         background: var(--vscode-button-secondaryBackground);
       }
+      #jira-section {
+        display: ${hasJiraProject ? "grid" : "none"};
+        gap: 6px;
+        font-size: 13px;
+      }
+      .jira-section-title {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+      }
     </style>
   </head>
   <body>
     <form id="feature-branch-form">
+      <div id="jira-section">
+        <div class="jira-section-title">
+          Jira issue
+          <span class="hint">(optional — selects branch type and prefills name)</span>
+        </div>
+        <select id="jira-issue">
+          <option value="">— Loading Jira issues… —</option>
+        </select>
+      </div>
       <label>
         Branch type
         <select id="branch-type"></select>
@@ -367,6 +398,15 @@ export function activate(context: vscode.ExtensionContext) {
       const errorMessage = document.getElementById("error-message");
       const form = document.getElementById("feature-branch-form");
       const cancelButton = document.getElementById("cancel-button");
+      const jiraSection = document.getElementById("jira-section");
+      const jiraIssueSelect = document.getElementById("jira-issue");
+
+      const slugify = (text) =>
+        text.trim().toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .replace(/-{2,}/g, "-")
+          .slice(0, 40);
 
       const updateHints = () => {
         const selected = branchTypes.find((option) => option.label === branchTypeSelect.value) || branchTypes[0];
@@ -384,6 +424,19 @@ export function activate(context: vscode.ExtensionContext) {
         element.textContent = option.label;
         branchTypeSelect.appendChild(element);
       }
+
+      jiraIssueSelect.addEventListener("change", () => {
+        const opt = jiraIssueSelect.options[jiraIssueSelect.selectedIndex];
+        const issueKey = opt.dataset.key || "";
+        const summary = opt.dataset.summary || "";
+        if (!issueKey) return;
+        branchTypeSelect.value = "Jira Task";
+        updateHints();
+        const slug = slugify(summary);
+        branchNameInput.value = slug ? issueKey + "-" + slug : issueKey + "-";
+        branchNameInput.focus();
+        branchNameInput.setSelectionRange(branchNameInput.value.length, branchNameInput.value.length);
+      });
 
       branchTypeSelect.addEventListener("change", updateHints);
       cancelButton.addEventListener("click", () => {
@@ -414,6 +467,28 @@ export function activate(context: vscode.ExtensionContext) {
         if (message.type === "createFeatureBranchError") {
           errorMessage.textContent = message.payload?.message || "Invalid branch name.";
         }
+        if (message.type === "jiraIssuesLoaded") {
+          const issues = message.payload?.issues || [];
+          jiraIssueSelect.innerHTML = "";
+          const placeholder = document.createElement("option");
+          placeholder.value = "";
+          placeholder.textContent = issues.length > 0
+            ? "— Pick a Jira issue (optional) —"
+            : "— No open unassigned issues —";
+          jiraIssueSelect.appendChild(placeholder);
+          for (const issue of issues) {
+            const opt = document.createElement("option");
+            opt.value = issue.key;
+            opt.dataset.key = issue.key;
+            opt.dataset.summary = issue.summary;
+            opt.textContent = issue.key + "  " + issue.summary;
+            jiraIssueSelect.appendChild(opt);
+          }
+          jiraSection.style.display = "grid";
+        }
+        if (message.type === "jiraIssuesError") {
+          jiraSection.style.display = "none";
+        }
       });
 
       branchTypeSelect.value = branchTypes[0].label;
@@ -424,17 +499,30 @@ export function activate(context: vscode.ExtensionContext) {
 </html>`;
   };
 
-  const showCreateFeatureBranchDialog = async (): Promise<
+  const showCreateFeatureBranchDialog = async (repoRoot: string): Promise<
     { branchType: BranchTypeOption; branchName: string } | undefined
-  > =>
-    new Promise((resolve) => {
+  > => {
+    const savedProjectKey = getSavedJiraProjectKey(repoRoot);
+    return new Promise((resolve) => {
       const panel = vscode.window.createWebviewPanel(
         "createFeatureBranch",
         "Create Feature Branch",
         vscode.ViewColumn.Active,
         { enableScripts: true }
       );
-      panel.webview.html = renderCreateFeatureBranchHtml(panel.webview);
+      panel.webview.html = renderCreateFeatureBranchHtml(panel.webview, Boolean(savedProjectKey));
+
+      if (savedProjectKey) {
+        void (async () => {
+          try {
+            const credentials = getJiraCredentialsFromEnv(repoRoot);
+            const issues = await searchOpenUnassignedTodoJiraIssuesForProject(credentials, savedProjectKey);
+            void panel.webview.postMessage({ type: "jiraIssuesLoaded", payload: { issues } });
+          } catch {
+            void panel.webview.postMessage({ type: "jiraIssuesError" });
+          }
+        })();
+      }
 
       let settled = false;
       const resolveOnce = (value: { branchType: BranchTypeOption; branchName: string } | undefined) => {
@@ -489,6 +577,7 @@ export function activate(context: vscode.ExtensionContext) {
         context.subscriptions
       );
     });
+  };
 
   const getRepoEnvPath = (repoRoot: string): string => path.join(repoRoot, ".env");
 
@@ -507,13 +596,13 @@ export function activate(context: vscode.ExtensionContext) {
       (env.jira_api_token || "").trim();
 
     const missing = [
-      !baseUrl ? "JIRA_BASE_URL" : undefined,
-      !email ? "JIRA_EMAIL" : undefined,
-      !apiToken ? "JIRA_API_TOKEN" : undefined
+      !baseUrl ? "Jira Base URL" : undefined,
+      !email ? "Jira Email" : undefined,
+      !apiToken ? "Jira API Token" : undefined
     ].filter((value): value is string => Boolean(value));
 
     if (missing.length > 0) {
-      throw new Error(`Missing Jira settings in .env: ${missing.join(", ")}.`);
+      throw new Error(`Missing Jira credentials in Antigravity Settings: ${missing.join(", ")}.`);
     }
 
     return { baseUrl, email, apiToken };
@@ -539,17 +628,6 @@ export function activate(context: vscode.ExtensionContext) {
       return "Use letters and numbers only, starting with a letter.";
     }
     return undefined;
-  };
-
-  const buildJiraProjectKeyFromName = (name: string): string | undefined => {
-    const normalized = name
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, "");
-
-    if (normalized.length < 2) return undefined;
-    const candidate = /^[A-Z]/.test(normalized) ? normalized : `P${normalized}`;
-    return candidate.slice(0, 10);
   };
 
   const renderJiraProjectSetupHtml = (
@@ -599,6 +677,13 @@ export function activate(context: vscode.ExtensionContext) {
       }
       textarea { min-height: 120px; resize: vertical; }
       .hint { font-size: 12px; color: var(--vscode-descriptionForeground); }
+      .instructions {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+      }
       .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
       .actions { display: flex; justify-content: flex-end; gap: 8px; }
       button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
@@ -620,19 +705,28 @@ export function activate(context: vscode.ExtensionContext) {
         </div>
       </div>
       <div class="section">
-        <div class="section-title">Create New Software Development Project</div>
+        <div class="section-title">Create Jira Project</div>
+        <span class="hint">This uses the selected Agentic Harness command from Settings and must create a company-managed Jira Software project.</span>
         <label>
           Project Name
-          <input id="project-name" type="text" autocomplete="off" />
-          <span class="hint">The Jira project key will be generated automatically from this name.</span>
+          <input id="create-project-name" type="text" autocomplete="off" />
         </label>
         <label>
-          Description
-          <textarea id="project-description"></textarea>
-          <span class="hint">Projects created here use Jira's Software Development project type.</span>
+          Project Key
+          <input id="create-project-key" type="text" autocomplete="off" />
+          <span class="hint">Use letters and numbers only, starting with a letter.</span>
         </label>
+        <label>
+          Description (optional)
+          <textarea id="create-project-description"></textarea>
+        </label>
+        <ol class="instructions">
+          <li>The Agentic Harness will create the project as company-managed.</li>
+          <li>It will select "${JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME}".</li>
+          <li>The project key you enter here will be saved to this repository .env file automatically.</li>
+        </ol>
         <div class="actions">
-          <button type="button" class="primary" id="create-project-button">Create Project</button>
+          <button type="button" class="primary" id="create-project-button">Create Jira Project</button>
         </div>
       </div>
       <div class="error" id="error-message"></div>
@@ -646,8 +740,9 @@ export function activate(context: vscode.ExtensionContext) {
       const form = document.getElementById("jira-project-setup-form");
       const projectSelect = document.getElementById("project-select");
       const projectSelectHint = document.getElementById("project-select-hint");
-      const projectNameInput = document.getElementById("project-name");
-      const projectDescriptionInput = document.getElementById("project-description");
+      const createProjectNameInput = document.getElementById("create-project-name");
+      const createProjectKeyInput = document.getElementById("create-project-key");
+      const createProjectDescriptionInput = document.getElementById("create-project-description");
       const errorMessage = document.getElementById("error-message");
       const cancelButton = document.getElementById("cancel-button");
       const useProjectButton = document.getElementById("use-project-button");
@@ -667,7 +762,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       projectSelectHint.textContent = projects.length > 0
         ? "Choose an existing Jira project and save it to this repository .env file."
-        : "No Jira projects were loaded. You can still create a new one below.";
+        : "No Jira projects were loaded. You can create one below.";
 
       cancelButton.addEventListener("click", () => {
         vscode.postMessage({ type: "cancelJiraProjectSetup" });
@@ -693,17 +788,27 @@ export function activate(context: vscode.ExtensionContext) {
       });
 
       createProjectButton.addEventListener("click", () => {
-        const payload = {
-          mode: "create",
-          projectName: projectNameInput.value.trim(),
-          description: projectDescriptionInput.value.trim()
-        };
-        if (!payload.projectName) {
+        const projectName = createProjectNameInput.value.trim();
+        const projectKey = createProjectKeyInput.value.trim().toUpperCase();
+        if (!projectName) {
           errorMessage.textContent = "Enter a Jira project name.";
-          projectNameInput.focus();
+          createProjectNameInput.focus();
           return;
         }
-        vscode.postMessage({ type: "submitJiraProjectSetup", payload });
+        if (!projectKey) {
+          errorMessage.textContent = "Enter a Jira project key.";
+          createProjectKeyInput.focus();
+          return;
+        }
+        createProjectKeyInput.value = projectKey;
+        vscode.postMessage({
+          type: "createJiraProjectWithAgenticHarness",
+          payload: {
+            projectName,
+            projectKey,
+            description: createProjectDescriptionInput.value.trim()
+          }
+        });
       });
 
       window.addEventListener("message", (event) => {
@@ -716,7 +821,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (projects.length > 0) {
         projectSelect.focus();
       } else {
-        projectNameInput.focus();
+        createProjectNameInput.focus();
       }
     </script>
   </body>
@@ -724,10 +829,13 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   const showJiraProjectSetupDialog = async (
+    repoRoot: string,
+    credentials: JiraCredentials,
     projects: JiraProjectSummary[]
   ): Promise<
     | { mode: "select"; projectKey: string }
-    | { mode: "create"; name: string; key: string; description: string }
+    | { mode: "manual"; projectKey: string }
+    | { mode: "launched" }
     | undefined
   > =>
     new Promise((resolve) => {
@@ -743,7 +851,8 @@ export function activate(context: vscode.ExtensionContext) {
       const resolveOnce = (
         value:
           | { mode: "select"; projectKey: string }
-          | { mode: "create"; name: string; key: string; description: string }
+          | { mode: "manual"; projectKey: string }
+          | { mode: "launched" }
           | undefined
       ) => {
         if (settled) return;
@@ -756,6 +865,88 @@ export function activate(context: vscode.ExtensionContext) {
         async (message) => {
           if (!message) return;
           if (message.type === "cancelJiraProjectSetup") {
+            panel.dispose();
+            return;
+          }
+          if (message.type === "createJiraProjectWithAgenticHarness") {
+            const payload = message.payload || {};
+            const projectName =
+              typeof payload.projectName === "string" ? payload.projectName.trim() : "";
+            const projectKey =
+              typeof payload.projectKey === "string" ? payload.projectKey.trim().toUpperCase() : "";
+            const description =
+              typeof payload.description === "string" ? payload.description.trim() : "";
+
+            if (!projectName) {
+              void panel.webview.postMessage({
+                type: "jiraProjectSetupError",
+                payload: { message: "Enter a Jira project name." }
+              });
+              return;
+            }
+
+            const keyError = validateJiraProjectKey(projectKey);
+            if (keyError) {
+              void panel.webview.postMessage({
+                type: "jiraProjectSetupError",
+                payload: { message: keyError }
+              });
+              return;
+            }
+
+            const jiraPrompt = buildCreateJiraProjectAgenticHarnessPrompt({
+              projectName,
+              projectKey,
+              description
+            });
+            const prompt = buildAgenticHarnessSkillTaskPrompt({
+              agenticHarnessCommand: getAgenticHarnessExecutionCommand(),
+              skillName: JIRA_PROJECT_CREATION_SKILL_NAME,
+              localSkillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation"),
+              taskPrompt: jiraPrompt
+            });
+            const envPath = getRepoEnvPath(repoRoot);
+            const commandLine = buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous");
+            const taskName = `Agentic Harness Create Jira Project ${Date.now()}`;
+            try {
+              await runCommandInTaskTerminal(
+                taskName,
+                commandLine,
+                {
+                  cwd: repoRoot,
+                  env: buildCreateJiraProjectAgenticHarnessEnvironment(credentials)
+                }
+              );
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              void panel.webview.postMessage({
+                type: "jiraProjectSetupError",
+                payload: { message: `Failed to launch the Agentic Harness terminal: ${message}` }
+              });
+              return;
+            }
+
+            const endTaskProcessDisposable = vscode.tasks.onDidEndTaskProcess((event) => {
+              if (event.execution.task.name !== taskName) {
+                return;
+              }
+              endTaskProcessDisposable.dispose();
+              if (event.exitCode === 0) {
+                upsertEnvFileValue(envPath, "JIRA_PROJECT_KEY", projectKey);
+                provider.refresh();
+                void vscode.window.showInformationMessage(
+                  `Saved Jira project ${projectKey} to this repository .env file after the Agentic Harness completed successfully.`
+                );
+                return;
+              }
+              void vscode.window.showWarningMessage(
+                `The Agentic Harness exited with code ${event.exitCode ?? "unknown"}, so JIRA_PROJECT_KEY was not saved.`
+              );
+            });
+            void vscode.window.showInformationMessage(
+              `Opened Agentic Harness to create Jira project ${projectKey}. JIRA_PROJECT_KEY will be saved after the task exits successfully.`
+            );
+            resolveOnce({ mode: "launched" });
             panel.dispose();
             return;
           }
@@ -780,27 +971,19 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          const name = typeof payload.projectName === "string" ? payload.projectName.trim() : "";
-          const key = buildJiraProjectKeyFromName(name);
-          const description =
-            typeof payload.description === "string" ? payload.description.trim() : "";
+          const projectKey =
+            typeof payload.projectKey === "string" ? payload.projectKey.trim().toUpperCase() : "";
+          const keyError = validateJiraProjectKey(projectKey);
 
-          if (!name) {
+          if (keyError) {
             void panel.webview.postMessage({
               type: "jiraProjectSetupError",
-              payload: { message: "Enter a Jira project name." }
-            });
-            return;
-          }
-          if (!key) {
-            void panel.webview.postMessage({
-              type: "jiraProjectSetupError",
-              payload: { message: "Enter a project name that can produce a Jira project key." }
+              payload: { message: keyError }
             });
             return;
           }
 
-          resolveOnce({ mode: "create", name, key, description });
+          resolveOnce({ mode: "manual", projectKey });
           panel.dispose();
         },
         undefined,
@@ -833,38 +1016,22 @@ export function activate(context: vscode.ExtensionContext) {
       return undefined;
     }
 
-    const setupSelection = await showJiraProjectSetupDialog(projects);
+    const setupSelection = await showJiraProjectSetupDialog(repoRoot, credentials, projects);
     if (!setupSelection) {
+      return undefined;
+    }
+
+    if (setupSelection.mode === "launched") {
       return undefined;
     }
 
     if (setupSelection.mode === "select") {
       projectKey = setupSelection.projectKey;
     } else {
-      try {
-        const createdProject = await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: "Creating Jira project",
-            cancellable: false
-          },
-          async () =>
-            createJiraProject(credentials, {
-              key: setupSelection.key,
-              name: setupSelection.name,
-              description: setupSelection.description
-            })
-        );
-
-        projectKey = createdProject.key.toUpperCase();
-        void vscode.window.showInformationMessage(
-          `Created Jira project ${projectKey} and saved it to this repository .env file.`
-        );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(`Failed to create Jira project: ${message}`);
-        return undefined;
-      }
+      projectKey = setupSelection.projectKey;
+      void vscode.window.showInformationMessage(
+        `Saved Jira project ${projectKey} to this repository .env file.`
+      );
     }
 
     upsertEnvFileValue(getRepoEnvPath(repoRoot), "JIRA_PROJECT_KEY", projectKey);
@@ -1140,7 +1307,7 @@ export function activate(context: vscode.ExtensionContext) {
       for (const issue of issues) {
         const option = document.createElement("option");
         option.value = issue.key;
-        option.textContent = issue.key;
+        option.textContent = issue.key + "  " + issue.summary;
         issueSelect.appendChild(option);
       }
 
@@ -1267,10 +1434,10 @@ export function activate(context: vscode.ExtensionContext) {
   ): string => {
     const jiraAccessInstructions =
       agentLabel === "Codex"
-        ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as diegosfb@gmail.com, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using diegosfb@gmail.com. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as diegosfb@gmail.com, then continue with the MCP-backed Jira actions. Inspect Jira item ${issueKey}, add each assumption as a Jira comment line beginning with "AGENT ASSUMTION:", add a final Jira comment beginning with "AGENT SOLUTION:", and transition Jira item ${issueKey} to In Review by using Jira MCP actions.`
+        ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as diegosfb@gmail.com, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using diegosfb@gmail.com. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as diegosfb@gmail.com, then continue with the MCP-backed Jira actions. Inspect Jira item ${issueKey}, add each assumption as a Jira comment line beginning with "AGENT ASSUMTION:", add a final Jira comment beginning with "AGENT SOLUTION:", and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead by using Jira MCP actions.`
         : "";
 
-    return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+    return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
   };
 
   const writeAgentLaunchScript = (scriptPrefix: string, command: string): string => {
@@ -2594,7 +2761,7 @@ export function activate(context: vscode.ExtensionContext) {
             "Agentic Harness Commit",
             [
               `cd ${quoteShellArg(repoRoot)}`,
-              buildAgenticHarnessPromptCommand(prompt, "prompt")
+              buildAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")
             ],
             {
               iconPath: new vscode.ThemeIcon("git-commit", CLAUDE_ACTION_COLOR),
@@ -2833,7 +3000,12 @@ export function activate(context: vscode.ExtensionContext) {
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(`Failed to load Jira item types: ${message}`);
+        const hint = /log in|not authorized|cannot create/i.test(message)
+          ? ` Verify that your Jira account has "Create Issues" permission in project ${projectKey}. You can check this under Project settings → Access in Jira.`
+          : "";
+        void vscode.window.showErrorMessage(
+          `Failed to load Jira item types for project ${projectKey}: ${message}${hint}`
+        );
         return;
       }
 
@@ -3132,7 +3304,8 @@ export function activate(context: vscode.ExtensionContext) {
         })),
         {
           title: "Jira Item Completed",
-          placeHolder: `Select one of your Jira tickets in ${projectKey} to move into In Review`,
+          placeHolder:
+            `Select one of your Jira tickets in ${projectKey} to move into In Review, or Done if review is unavailable`,
           matchOnDescription: true,
           matchOnDetail: true
         }
@@ -3141,25 +3314,34 @@ export function activate(context: vscode.ExtensionContext) {
       if (!selection) return;
 
       const confirm = await vscode.window.showInformationMessage(
-        `Move ${selection.issue.key} to In Review?`,
+        `Move ${selection.issue.key} to In Review, or Done if review is unavailable?`,
         { modal: true },
         "Mark Completed"
       );
       if (confirm !== "Mark Completed") return;
 
       try {
-        await vscode.window.withProgress(
+        const transitionResult = await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: `Moving ${selection.issue.key} to In Review`,
+            title: `Completing ${selection.issue.key} in Jira`,
             cancellable: false
           },
-          async () => transitionJiraIssueToStatus(credentials, selection.issue.key, "In Review")
+          async () =>
+            transitionJiraIssueToReviewOrDone(
+              credentials,
+              projectKey,
+              selection.issue.key
+            )
         );
 
-        void vscode.window.showInformationMessage(
-          `Moved Jira item ${selection.issue.key} to In Review.`
-        );
+        const transitionMessage =
+          transitionResult.statusName === "In Review"
+            ? `Moved Jira item ${selection.issue.key} to In Review.`
+            : transitionResult.fallbackReason
+              ? `Moved Jira item ${selection.issue.key} to Done because ${transitionResult.fallbackReason}`
+              : `Moved Jira item ${selection.issue.key} to Done.`;
+        void vscode.window.showInformationMessage(transitionMessage);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(`Failed to update Jira item: ${message}`);
@@ -3216,7 +3398,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      const dialogResult = await showCreateFeatureBranchDialog();
+      const dialogResult = await showCreateFeatureBranchDialog(repoRoot);
       if (!dialogResult) return;
       const { branchType, branchName } = dialogResult;
       log(`[createFeatureBranch] branchName: ${branchName}`);
@@ -3253,6 +3435,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
+      const defaultGithubCodeReviewer = getDefaultGithubCodeReviewer();
       const scriptPath = path.join(extensionRoot, "src", "create_pull_requrest.sh");
       if (!fs.existsSync(scriptPath)) {
         void vscode.window.showErrorMessage(
@@ -3261,15 +3444,28 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      let prBranch = "";
+      try {
+        prBranch = await getCurrentBranchName(repoRoot);
+      } catch {
+        // best-effort
+      }
+
+      const branchLabel = prBranch ? `'${prBranch}'` : "your feature branch";
+
       runInNewTerminal(
         "Create Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          quoteShellArg(scriptPath)
+          `ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER=${quoteShellArg(defaultGithubCodeReviewer)} ${quoteShellArg(scriptPath)}`
         ],
         {
           iconPath: new vscode.ThemeIcon("git-pull-request")
         }
+      );
+
+      void vscode.window.showInformationMessage(
+        `PR creation started on ${branchLabel}. The workflow will sync local main first, then return to ${branchLabel} to finish preparing the pull request.`
       );
     })
   );
@@ -3377,6 +3573,42 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.setFeatureFlag", async () => {
+      log("[setFeatureFlag] triggered");
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+
+      const prompt = [
+        "Compare the current branch against origin/main.",
+        "For every new or modified code path that introduces a behavior change,",
+        "wrap it in a feature flag that can be toggled on or off via the .env file.",
+        "Name each flag using the format FEATURE_<JIRA_TICKET_OR_BRANCH_SLUG>_<SHORT_DESCRIPTION> (all caps, underscores).",
+        "Add each flag with a default value of false (disabled) to .env.example.",
+        "If a .env file already exists in the repo root, add the same flags there too.",
+        "Do not alter existing flags or unrelated code."
+      ].join(" ");
+
+      logAlways("[setFeatureFlag] delegating to Agentic Harness");
+      runInNewTerminal(
+        "Set Feature Flags",
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous")
+        ],
+        {
+          iconPath: new vscode.ThemeIcon("symbol-boolean", CLAUDE_ACTION_COLOR),
+          color: CLAUDE_ACTION_COLOR
+        }
+      );
+      void vscode.window.showInformationMessage("Opened Feature Flag setup terminal.");
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.reviewPullRequest", async () => {
       log("[reviewPullRequest] triggered");
       const rootPath = getRootPath();
@@ -3441,7 +3673,7 @@ export function activate(context: vscode.ExtensionContext) {
         "Agentic Harness Approve Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
-          buildAgenticHarnessPromptCommand(`run this workflow ${workflowFile}`)
+          buildAgenticHarnessPromptCommand(repoRoot, `run this workflow ${workflowFile}`)
         ],
         {
           iconPath: new vscode.ThemeIcon("pass", CLAUDE_ACTION_COLOR),
