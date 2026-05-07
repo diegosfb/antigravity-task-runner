@@ -182,6 +182,26 @@ exec ${JSON.stringify(process.execPath)} "$@"
   );
 }
 
+function createUserShellStub(binDir, logPath) {
+  const shellPath = path.join(binDir, "user-shell");
+  writeExecutable(
+    shellPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\\n' "$*" > ${JSON.stringify(logPath)}
+
+if [[ "$#" -ge 2 && "$1" == "-lc" ]]; then
+  command="$2"
+  command="\${command//test\\/\\*\\*\\/\\*.test.js/test/example.test.js}"
+  exec /bin/bash -lc "$command"
+fi
+
+exec /bin/bash "$@"
+`
+  );
+  return shellPath;
+}
+
 function runCreatePullRequestScript({
   repoDir,
   binDir,
@@ -297,6 +317,55 @@ printf 'used\\n' > ${JSON.stringify(testMarkerPath)}
   assert.doesNotMatch(output, /What command runs your project's test suite/);
   assertNoManualPrSummaryPrompts(output);
   assert.equal(fs.readFileSync(testMarkerPath, "utf8"), "used\n");
+});
+
+test("create_pull_requrest.sh runs the saved Project Testing Command with the user's shell", (t) => {
+  const { rootDir, repoDir } = createTempRepoWithFeatureBranch("feature/TEST-457-shell-test-command");
+  const binDir = path.join(rootDir, "bin");
+  const ghLogPath = path.join(rootDir, "gh-pr-create.log");
+  const bodyCopyPath = path.join(rootDir, "pr-body.md");
+  const shellLogPath = path.join(rootDir, "user-shell.log");
+  fs.mkdirSync(binDir, { recursive: true });
+  createGhStub(binDir, ghLogPath, bodyCopyPath);
+  const shellPath = createUserShellStub(binDir, shellLogPath);
+
+  fs.mkdirSync(path.join(repoDir, "test"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repoDir, "test", "example.test.js"),
+    `const test = require("node:test");
+const assert = require("node:assert/strict");
+
+test("passes through the user's shell glob expansion", () => {
+  assert.equal(1, 1);
+});
+`,
+    "utf8"
+  );
+  execFileSync("git", ["add", "test/example.test.js"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "Add shell-based node test"], {
+    cwd: repoDir,
+    stdio: "ignore"
+  });
+
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  const output = runCreatePullRequestScript({
+    repoDir,
+    binDir,
+    input: "\n@octocat\n",
+    env: {
+      ANTIGRAVITY_PROJECT_TESTING_COMMAND: "node --test test/**/*.test.js",
+      SHELL: shellPath
+    }
+  });
+
+  assert.match(output, /Using Project Testing Command from settings\./);
+  assert.doesNotMatch(output, /Could not find .+test\/\*\*\/\*\.test\.js/);
+  assert.equal(fs.existsSync(bodyCopyPath), true);
+  assert.equal(fs.existsSync(ghLogPath), true);
+  assert.match(fs.readFileSync(shellLogPath, "utf8"), /-lc node --test test\/\*\*\/\*\.test\.js/);
 });
 
 test("create_pull_requrest.sh commits dirty feature branch changes before pushing", (t) => {

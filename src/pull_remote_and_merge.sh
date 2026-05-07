@@ -46,10 +46,27 @@ run_and_echo() {
   "$@"
 }
 
+resolve_command_shell() {
+  local shell_path="${SHELL:-}"
+  if [[ -n "$shell_path" && -x "$shell_path" ]]; then
+    printf '%s' "$shell_path"
+    return 0
+  fi
+
+  if command -v bash >/dev/null 2>&1; then
+    command -v bash
+    return 0
+  fi
+
+  printf '%s' "/bin/sh"
+}
+
 run_shell_command() {
   local command="$1"
+  local shell_path
+  shell_path="$(resolve_command_shell)"
   echo "+ $command"
-  bash -lc "$command"
+  "$shell_path" -lc "$command"
 }
 
 ensure_git_repo() {
