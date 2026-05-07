@@ -103,6 +103,17 @@ optional_value() {
   trim "$(prompt "$1")"
 }
 
+infer_linked_issue_from_branch() {
+  local feature_branch="$1"
+  local helper_path="${SCRIPT_DIR}/infer_jira_issue_link.js"
+
+  if [[ ! -f "$helper_path" ]] || ! command -v node >/dev/null 2>&1; then
+    return 0
+  fi
+
+  node "$helper_path" "$feature_branch" 2>/dev/null || true
+}
+
 normalize_reviewers_for_github() {
   local value="$1"
   value="$(printf '%s' "$value" | tr -d '[:space:]')"
@@ -168,7 +179,7 @@ main() {
 
   why_answer="$(require_non_empty "What problem does this PR solve, or what feature/functionality does it provide?")"
   how_answer="$(require_non_empty "Briefly describe your technical approach. What changed and how does it work at a high level?")"
-  issue_link="$(optional_value "Is there a linked Jira, Trello, or GitHub Issue? Press Enter to skip.")"
+  issue_link="$(infer_linked_issue_from_branch "$feature_branch")"
   docs_and_screenshots="$(optional_value "Any documentation updates, screenshots, or recordings to include? Press Enter to skip.")"
   reviewer="$(require_non_empty "Who should be tagged as the responsible code reviewer? (e.g. @john-doe)")"
   reviewer_logins="$(normalize_reviewers_for_github "$reviewer")"
