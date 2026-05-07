@@ -239,17 +239,55 @@ function isProjectIssueSummaryValid(issue, normalizedProjectKey) {
         issue.summary &&
         issue.projectKey === normalizedProjectKey);
 }
-function isBlockedByDependencyLink(link) {
-    if (!link.inwardIssue)
-        return false;
+function getBlockingDependencyReference(link) {
     const inwardLabel = normalizeJiraText(link.type?.inward);
-    return inwardLabel.includes("blocked by");
+    if (link.inwardIssue && inwardLabel.includes("blocked by")) {
+        return {
+            issueKey: (link.inwardIssue.key ?? "").trim(),
+            statusName: (link.inwardIssue.fields?.status?.name ?? "").trim()
+        };
+    }
+    const outwardLabel = normalizeJiraText(link.type?.outward);
+    if (link.outwardIssue && outwardLabel.includes("blocked by")) {
+        return {
+            issueKey: (link.outwardIssue.key ?? "").trim(),
+            statusName: (link.outwardIssue.fields?.status?.name ?? "").trim()
+        };
+    }
+    return undefined;
 }
-function hasIncompleteBlockingDependency(issue) {
+async function loadBlockingDependencyStatuses(credentials, issues) {
+    const missingIssueKeys = Array.from(new Set(issues
+        .flatMap((issue) => (issue.fields?.issuelinks ?? [])
+        .map((link) => getBlockingDependencyReference(link))
+        .filter((reference) => Boolean(reference))
+        .filter((reference) => reference.issueKey.length > 0 && reference.statusName.length === 0)
+        .map((reference) => reference.issueKey))));
+    if (missingIssueKeys.length === 0) {
+        return new Map();
+    }
+    const response = await jiraRequest(credentials, {
+        method: "POST",
+        apiPath: "/rest/api/3/search/jql",
+        body: {
+            fields: ["status"],
+            jql: `key in (${missingIssueKeys.map((issueKey) => `"${issueKey}"`).join(", ")})`,
+            maxResults: missingIssueKeys.length
+        }
+    });
+    return new Map((response.issues ?? [])
+        .map((issue) => [
+        (issue.key ?? "").trim(),
+        (issue.fields?.status?.name ?? "").trim()
+    ])
+        .filter(([issueKey]) => issueKey.length > 0));
+}
+function hasIncompleteBlockingDependency(issue, blockingStatusesByKey) {
     return (issue.fields?.issuelinks ?? []).some((link) => {
-        if (!isBlockedByDependencyLink(link))
+        const reference = getBlockingDependencyReference(link);
+        if (!reference)
             return false;
-        const blockerStatus = normalizeJiraText(link.inwardIssue?.fields?.status?.name);
+        const blockerStatus = normalizeJiraText(reference.statusName || blockingStatusesByKey.get(reference.issueKey));
         return !ASSIGNABLE_BLOCKER_DONE_STATUSES.has(blockerStatus);
     });
 }
@@ -261,8 +299,9 @@ async function searchOpenUnassignedTodoJiraIssuesForProject(credentials, project
 }
 async function searchOpenUnassignedTodoJiraIssuesForAssignment(credentials, projectKey) {
     const { issues, normalizedProjectKey } = await searchOpenUnassignedTodoJiraIssueSearchResultsForProject(credentials, projectKey);
+    const blockingStatusesByKey = await loadBlockingDependencyStatuses(credentials, issues);
     return issues
-        .filter((issue) => !hasIncompleteBlockingDependency(issue))
+        .filter((issue) => !hasIncompleteBlockingDependency(issue, blockingStatusesByKey))
         .map(mapJiraIssueSearchResultToSummary)
         .filter((issue) => isProjectIssueSummaryValid(issue, normalizedProjectKey));
 }

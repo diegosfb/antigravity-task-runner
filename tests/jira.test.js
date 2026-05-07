@@ -659,6 +659,32 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out items blocked 
                   }
                 ]
               }
+            },
+            {
+              id: "10006",
+              key: "TASK-6",
+              fields: {
+                summary: "Blocked by completed work exposed through outwardIssue",
+                issuetype: { name: "Task" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "To Do" },
+                issuelinks: [
+                  {
+                    type: {
+                      inward: "blocks",
+                      name: "Custom Reverse Blocks",
+                      outward: "is blocked by"
+                    },
+                    outwardIssue: {
+                      id: "10016",
+                      key: "TASK-16",
+                      fields: {
+                        status: { name: "Done" }
+                      }
+                    }
+                  }
+                ]
+              }
             }
           ]
         })
@@ -685,7 +711,7 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out items blocked 
 
   assert.deepEqual(
     issues.map((issue) => issue.key),
-    ["TASK-2", "TASK-3", "TASK-4", "TASK-5"]
+    ["TASK-2", "TASK-3", "TASK-4", "TASK-5", "TASK-6"]
   );
   assert.deepEqual(capturedSearchRequest.fields, [
     "summary",
@@ -695,6 +721,132 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out items blocked 
     "issuelinks"
   ]);
   assert.match(capturedSearchRequest.jql, /^project = "TASK" AND assignee IS EMPTY AND statusCategory = "To Do"/);
+});
+
+test("searchOpenUnassignedTodoJiraIssuesForAssignment reloads missing blocker statuses before filtering", async (t) => {
+  const capturedSearchRequests = [];
+
+  const server = http.createServer(async (request, response) => {
+    if (request.url === "/rest/api/3/search/jql" && request.method === "POST") {
+      const requestBody = await readJsonBody(request);
+      capturedSearchRequests.push(requestBody);
+
+      if (capturedSearchRequests.length === 1) {
+        response.writeHead(200, { "Content-Type": "application/json" });
+        response.end(
+          JSON.stringify({
+            issues: [
+              {
+                id: "20001",
+                key: "TASK-21",
+                fields: {
+                  summary: "Blocked by unfinished work with missing link status",
+                  issuetype: { name: "Task" },
+                  project: { key: "TASK", name: "Task Runner" },
+                  status: { name: "To Do" },
+                  issuelinks: [
+                    {
+                      type: {
+                        inward: "is blocked by",
+                        name: "Blocks",
+                        outward: "blocks"
+                      },
+                      inwardIssue: {
+                        id: "20011",
+                        key: "TASK-211",
+                        fields: {}
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                id: "20002",
+                key: "TASK-22",
+                fields: {
+                  summary: "Blocked by reviewed work with missing link status",
+                  issuetype: { name: "Task" },
+                  project: { key: "TASK", name: "Task Runner" },
+                  status: { name: "To Do" },
+                  issuelinks: [
+                    {
+                      type: {
+                        inward: "is blocked by",
+                        name: "Blocks",
+                        outward: "blocks"
+                      },
+                      inwardIssue: {
+                        id: "20012",
+                        key: "TASK-212",
+                        fields: {}
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                id: "20003",
+                key: "TASK-23",
+                fields: {
+                  summary: "Unblocked issue",
+                  issuetype: { name: "Task" },
+                  project: { key: "TASK", name: "Task Runner" },
+                  status: { name: "To Do" },
+                  issuelinks: []
+                }
+              }
+            ]
+          })
+        );
+        return;
+      }
+
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          issues: [
+            {
+              id: "20011",
+              key: "TASK-211",
+              fields: {
+                status: { name: "In Progress" }
+              }
+            },
+            {
+              id: "20012",
+              key: "TASK-212",
+              fields: {
+                status: { name: "In Review" }
+              }
+            }
+          ]
+        })
+      );
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Not found" }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  const issues = await searchOpenUnassignedTodoJiraIssuesForAssignment(
+    {
+      baseUrl: `http://127.0.0.1:${port}`,
+      email: "person@example.com",
+      apiToken: "secret-token"
+    },
+    "TASK"
+  );
+
+  assert.equal(capturedSearchRequests.length, 2);
+  assert.deepEqual(issues.map((issue) => issue.key), ["TASK-22", "TASK-23"]);
+  assert.deepEqual(capturedSearchRequests[1].fields, ["status"]);
+  assert.match(capturedSearchRequests[1].jql, /"TASK-211"/);
+  assert.match(capturedSearchRequests[1].jql, /"TASK-212"/);
 });
 
 test("createJiraProject warns when Jira rejects the board column update", async (t) => {
