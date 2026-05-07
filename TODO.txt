@@ -1,0 +1,91 @@
+Instead of message
+
+To finish this PR flow:
+1. Stay on feature/feat4.
+2. Run 'Pull Remote and merge' first so you can verify the merge with main works before opening the PR.
+3. Resolve any merge issues and rerun Create Pull Request.
+
+Use message 
+
+PR creation aborted! To finish this PR flow:
+1. Stay on feature/feat4.
+2. Run 'Pull Remote and merge' and Resolve any merge issues (verify the merge with main works before opening the PR again).
+3. Try 'Create Pull Request' again
+
+
+-----------------
+
+antigravity folder	Lets you browse the home Antigravity folder at ~/.gemini/antigravity.
+
+Deberia ser /Users/diego.brihuega/.antigravity ???
+Cual es la politica entre gemini and antigravity folders?
+
+
+-----------------
+
+Pull Remote and merge cambiar el icon algo que sea mas representativo de traer del cloud a local.
+Algo como download
+
+-----------------
+
+Add
+Light Agentic Harnes execution command setting 
+So we have one for light work like commit messages using a ligth model or local model and one for heavy agent work. 
+
+Change useAgentForGithubRepositoryManagement to be true by default.
+
+-----------------
+
+Create Pull Request does not currently use an agent or the Agentic Harness.
+
+The sidebar command just launches the shell script src/create_pull_requrest.sh (line 1) from src/extension.ts (line 3481). That script:
+
+
+checks that your branch already includes origin/main
+
+optionally runs the project test command
+
+pushes the branch
+
+drafts the PR summary from branch commits in src/create_pull_requrest.sh (line 501)
+
+creates the PR with gh pr create in src/create_pull_requrest.sh (line 548)
+
+
+One nuance: there is a Claude-based helper function in the script at src/create_pull_requrest.sh (line 338), but the active flow does not call it. So when you click the item today, it stays script-driven, not agent-driven.
+
+-----------------
+
+
+Merge branch to main should call the Commit Item that uses the Agentic Harness, to format the message and commit it.
+
+-----------------
+
+
+Pull Remote and merge does not use an agent.
+
+That sidebar item directly launches the shell script src/pull_remote_and_merge.sh (line 1) from src/extension.ts (line 3634). The flow is script-driven:
+
+
+it may ask for a commit message if you have uncommitted changes - It should call the Commit Item instead of asking for a message. 
+
+it checks out main and pulls origin/main
+
+it switches back to your feature branch
+
+it merges main into that branch
+
+it runs the project test command if configured
+
+it pushes the branch
+
+
+----------------
+
+It should by default bring the agent harness line selected on settings
+
+Assign Jira Item to Agent	Lets you choose an eligible Jira item and an agent, updates the Jira summary and labels, assigns the issue to you, moves it to In Progress, and launches the selected agent for that issue.
+
+----------------
+
+Meld Diff Error: Error running diff command! ErrorCode: 127 StdErr: /bin/sh: meld: command not found
