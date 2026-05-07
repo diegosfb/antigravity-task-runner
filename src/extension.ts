@@ -2192,7 +2192,10 @@ export function activate(context: vscode.ExtensionContext) {
         );
         return;
       }
-      await vscode.window.showTextDocument(vscode.Uri.file(helpDocPath), { preview: true });
+      await vscode.commands.executeCommand(
+        "markdown.showPreview",
+        vscode.Uri.file(helpDocPath)
+      );
     })
   );
 
