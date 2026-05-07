@@ -141,7 +141,7 @@ HOW_END`,
   const output = runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "skip\n\n\n\n",
+    input: "skip\nskip\n\n\n\n",
     env: {
       ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER: "@diegosfb"
     }
@@ -175,7 +175,7 @@ test("create_pull_requrest.sh falls back to manual PR copy when Claude is unavai
   const output = runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "skip\nManual why from the user\nManual how from the user\n\n\n@octocat\n",
+    input: "skip\nskip\nManual why from the user\nManual how from the user\n\n\n@octocat\n",
     env: {
       ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER: "@diegosfb"
     }
@@ -220,7 +220,7 @@ HOW_END`,
   const output = runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "Capture pending PR changes\nskip\n\n\n\n",
+    input: "Capture pending PR changes\nskip\nskip\n\n\n\n",
     env: {
       ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER: "@diegosfb"
     }
@@ -252,10 +252,62 @@ HOW_END`,
   assert.match(output, /\+ git checkout main/);
   assert.match(output, /\+ git pull origin main/);
   assert.match(output, /\+ git checkout feature\/test-pr/);
-  assert.match(output, /\+ git merge main/);
+  assert.match(output, /Rebasing your feature branch onto the latest main so reviewers see a clean PR history\./);
+  assert.match(output, /\+ git rebase main/);
+  assert.match(output, /Pushing the rebased feature branch to origin\./);
+  assert.match(output, /\+ git push --force-with-lease origin feature\/test-pr/);
   assert.equal(lastCommitMessage, "Capture pending PR changes");
   assert.equal(pendingFileAtHead, "waiting to be committed\n");
   assert.equal(readmeAtHead, "hello\nfeature branch change\npending update\n");
   assert.equal(statusOutput, "");
   assert.equal(currentBranch, "feature/test-pr");
+});
+
+test("create_pull_requrest.sh runs build and test commands before pushing the rebased branch", (t) => {
+  const { rootDir, repoDir } = createTempRepoWithFeatureBranch();
+  const binDir = path.join(rootDir, "bin");
+  const ghLogPath = path.join(rootDir, "gh-pr-create.log");
+  const bodyCopyPath = path.join(rootDir, "pr-body.md");
+  const claudePromptLogPath = path.join(rootDir, "claude-prompt.log");
+  const validationLogPath = path.join(rootDir, "validation.log");
+  fs.mkdirSync(binDir, { recursive: true });
+  createGhStub(binDir, ghLogPath, bodyCopyPath);
+  createClaudeStub(
+    binDir,
+    `WHY_START
+Validate the rebased branch before opening the pull request.
+WHY_END
+HOW_START
+Runs the requested build and test commands after rebasing onto main, then force-pushes the updated branch before creating the PR.
+HOW_END`,
+    claudePromptLogPath
+  );
+
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  const buildCommand = `printf 'build\\n' >> ${JSON.stringify(validationLogPath)}`;
+  const testCommand = `printf 'test\\n' >> ${JSON.stringify(validationLogPath)}`;
+
+  const output = runCreatePullRequestScript({
+    repoDir,
+    binDir,
+    input: `${buildCommand}\n${testCommand}\n\n\n\n`,
+    env: {
+      ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER: "@diegosfb"
+    }
+  });
+
+  const validationLog = fs.readFileSync(validationLogPath, "utf8");
+  const buildIndex = output.indexOf(`+ ${buildCommand}`);
+  const testIndex = output.indexOf(`+ ${testCommand}`);
+  const pushIndex = output.indexOf("+ git push --force-with-lease origin feature/test-pr");
+
+  assert.equal(validationLog, "build\ntest\n");
+  assert.ok(buildIndex >= 0);
+  assert.ok(testIndex >= 0);
+  assert.ok(pushIndex >= 0);
+  assert.ok(buildIndex < testIndex);
+  assert.ok(testIndex < pushIndex);
 });

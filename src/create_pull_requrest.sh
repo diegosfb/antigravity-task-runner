@@ -293,8 +293,8 @@ cleanup_temp_files() {
 }
 
 main() {
-  local feature_branch test_command why_answer how_answer issue_link docs_and_screenshots reviewer reviewer_logins reviewer_display pr_title pr_url existing_pr_url pr_description_draft
-  local test_warning=""
+  local feature_branch build_command test_command why_answer how_answer issue_link docs_and_screenshots reviewer reviewer_logins reviewer_display pr_title pr_url existing_pr_url pr_description_draft
+  local build_warning="" test_warning=""
 
   ensure_git_repo
   ensure_remote_origin
@@ -313,16 +313,17 @@ main() {
   run_remote_git_and_echo pull origin main
   run_and_echo git checkout "$feature_branch"
 
-  echo "Syncing your feature branch with the latest main so reviewers see a clean PR."
-  run_and_echo git merge main
-  run_remote_git_and_echo push origin "$feature_branch"
+  echo "Rebasing your feature branch onto the latest main so reviewers see a clean PR history."
+  if ! run_and_echo git rebase main; then
+    echo "Rebase stopped because of conflicts. Resolve them locally, then run 'git rebase --continue' (or 'git rebase --abort' to back out) before retrying PR creation." >&2
+    exit 1
+  fi
 
-  existing_pr_url="$(gh pr list --head "$feature_branch" --base main --state open --json url --jq '.[0].url' 2>/dev/null || true)"
-  if [[ -n "$existing_pr_url" ]]; then
-    echo
-    echo "An open pull request already exists for ${feature_branch}:"
-    echo "$existing_pr_url"
-    exit 0
+  build_command="$(optional_value "What command runs your project's build or validation step? (type 'skip' to skip)")"
+  if [[ -n "$build_command" && "$(to_lower "$build_command")" != "skip" ]]; then
+    run_shell_command "$build_command"
+  else
+    build_warning="WARNING: Build/validation was skipped."
   fi
 
   test_command="$(optional_value "What command runs your project's test suite? (type 'skip' to skip)")"
@@ -330,6 +331,17 @@ main() {
     run_shell_command "$test_command"
   else
     test_warning="WARNING: Tests were skipped."
+  fi
+
+  echo "Pushing the rebased feature branch to origin."
+  run_remote_git_and_echo push --force-with-lease origin "$feature_branch"
+
+  existing_pr_url="$(gh pr list --head "$feature_branch" --base main --state open --json url --jq '.[0].url' 2>/dev/null || true)"
+  if [[ -n "$existing_pr_url" ]]; then
+    echo
+    echo "An open pull request already exists for ${feature_branch}:"
+    echo "$existing_pr_url"
+    exit 0
   fi
 
   if pr_description_draft="$(generate_pr_descriptions_with_claude "main" "$feature_branch")"; then
@@ -412,8 +424,9 @@ $how_answer
 **Reviewer:** \`$reviewer_display\`
 EOF
 
-  if [[ -n "$test_warning" ]]; then
+  if [[ -n "$build_warning" || -n "$test_warning" ]]; then
     echo
+    [[ -n "$build_warning" ]] && echo "$build_warning"
     [[ -n "$test_warning" ]] && echo "$test_warning"
   fi
 
