@@ -38,9 +38,20 @@ Follow each step **in order**. Do not skip ahead. Wait for the user's input wher
 
 ---
 
-## Step 1 — Sync with the Latest Code
+## Step 1 — Commit Pending Work and Sync with the Latest Code
 
-Before opening a PR, pull the latest changes from `main` and merge them into your feature branch. This resolves conflicts locally so reviewers never see a broken PR.
+Before opening a PR, make sure every code change that belongs in the PR is committed on your feature branch. If the working tree is dirty, commit it first so the later branch switch to `main` is safe and the PR diff is complete.
+
+Run:
+
+```bash
+git add -A
+git commit -m "<describe the final changes>"
+```
+
+If only secret-bearing env files changed, do **not** commit them. Leave `config/.env` uncommitted and use `config/.env.example` as the safe reference.
+
+Then pull the latest changes from `main` and merge them into your feature branch. This resolves conflicts locally so reviewers never see a broken PR.
 
 Run:
 

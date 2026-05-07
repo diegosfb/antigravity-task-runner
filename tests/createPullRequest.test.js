@@ -190,3 +190,62 @@ test("create_pull_requrest.sh falls back to manual PR copy when Claude is unavai
   assert.match(prBody, /\*\*How:\*\*\nManual how from the user/);
   assert.match(prBody, /\*\*Reviewer:\*\* `@octocat`/);
 });
+
+test("create_pull_requrest.sh commits pending changes before opening the PR", (t) => {
+  const { rootDir, repoDir } = createTempRepoWithFeatureBranch();
+  const binDir = path.join(rootDir, "bin");
+  const ghLogPath = path.join(rootDir, "gh-pr-create.log");
+  const bodyCopyPath = path.join(rootDir, "pr-body.md");
+  const claudePromptLogPath = path.join(rootDir, "claude-prompt.log");
+  fs.mkdirSync(binDir, { recursive: true });
+  createGhStub(binDir, ghLogPath, bodyCopyPath);
+  createClaudeStub(
+    binDir,
+    `WHY_START
+Capture the last local changes before opening the pull request.
+WHY_END
+HOW_START
+Commits the dirty working tree first, then syncs main into the feature branch and opens the pull request with the updated diff.
+HOW_END`,
+    claudePromptLogPath
+  );
+
+  fs.writeFileSync(path.join(repoDir, "README.md"), "hello\nfeature branch change\npending update\n", "utf8");
+  fs.writeFileSync(path.join(repoDir, "pending-change.txt"), "waiting to be committed\n", "utf8");
+
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  const output = runCreatePullRequestScript({
+    repoDir,
+    binDir,
+    input: "Capture pending PR changes\nskip\n\n\n\n",
+    env: {
+      ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER: "@diegosfb"
+    }
+  });
+
+  const lastCommitMessage = execFileSync("git", ["log", "-1", "--pretty=%s"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+  const pendingFileAtHead = execFileSync("git", ["show", "HEAD:pending-change.txt"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  });
+  const readmeAtHead = execFileSync("git", ["show", "HEAD:README.md"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  });
+  const statusOutput = execFileSync("git", ["status", "--porcelain"], {
+    cwd: repoDir,
+    encoding: "utf8"
+  }).trim();
+
+  assert.match(output, /Detected uncommitted changes on feature\/test-pr\./);
+  assert.equal(lastCommitMessage, "Capture pending PR changes");
+  assert.equal(pendingFileAtHead, "waiting to be committed\n");
+  assert.equal(readmeAtHead, "hello\nfeature branch change\npending update\n");
+  assert.equal(statusOutput, "");
+});

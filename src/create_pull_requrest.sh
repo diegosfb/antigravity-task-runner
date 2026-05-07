@@ -118,6 +118,45 @@ optional_value_with_default() {
   printf '%s' "$default_value"
 }
 
+has_uncommitted_changes() {
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    return 0
+  fi
+
+  [[ -n "$(git ls-files --others --exclude-standard)" ]]
+}
+
+stage_pr_changes() {
+  run_shell_command "git add -A -- . && git rm -q --cached --ignore-unmatch .env config/.env"
+}
+
+commit_pending_changes_if_needed() {
+  local feature_branch="$1"
+  local commit_message secret_candidate_output
+
+  if ! has_uncommitted_changes; then
+    return 0
+  fi
+
+  echo
+  echo "Detected uncommitted changes on ${feature_branch}. They must be committed before creating a pull request."
+
+  secret_candidate_output="$(git status --porcelain -- .env config/.env || true)"
+  if [[ -n "$secret_candidate_output" ]]; then
+    echo "Warning: .env and config/.env are excluded from the automated pre-PR commit for safety."
+  fi
+
+  commit_message="$(require_non_empty "Enter a commit message for the changes that should be included in this pull request.")"
+  stage_pr_changes
+
+  if git diff --cached --quiet; then
+    echo "No committable changes were staged after excluding protected env files. Continuing with the existing branch history."
+    return 0
+  fi
+
+  run_and_echo git commit --no-gpg-sign -m "$commit_message"
+}
+
 normalize_reviewers_for_github() {
   local value="$1"
   value="$(printf '%s' "$value" | tr -d '[:space:]')"
@@ -266,6 +305,8 @@ main() {
     echo "You are currently on main. Switch to your feature branch before creating a pull request." >&2
     exit 1
   fi
+
+  commit_pending_changes_if_needed "$feature_branch"
 
   echo "Syncing your feature branch with the latest main so reviewers see a clean PR."
   run_and_echo git checkout main
