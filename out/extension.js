@@ -2819,7 +2819,7 @@ function activate(context) {
                     : {})
             }
         });
-        void vscode.window.showInformationMessage(`PR creation started on ${branchLabel}. The workflow will sync local main first, then return to ${branchLabel} to finish preparing the pull request.`);
+        void vscode.window.showInformationMessage(`PR creation started on ${branchLabel}. The workflow will verify that local main is already up to date and that ${branchLabel} already includes main before it opens the pull request.`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.mergeBranchToMain", async () => {
         (0, logger_1.log)("[mergeBranchToMain] triggered");

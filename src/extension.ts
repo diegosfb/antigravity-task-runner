@@ -3523,7 +3523,7 @@ export function activate(context: vscode.ExtensionContext) {
       );
 
       void vscode.window.showInformationMessage(
-        `PR creation started on ${branchLabel}. The workflow will sync local main first, then return to ${branchLabel} to finish preparing the pull request.`
+        `PR creation started on ${branchLabel}. The workflow will verify that local main is already up to date and that ${branchLabel} already includes main before it opens the pull request.`
       );
     })
   );

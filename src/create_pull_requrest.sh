@@ -157,23 +157,29 @@ commit_pending_changes_if_needed() {
   run_and_echo git commit --no-gpg-sign -m "$commit_message"
 }
 
-print_rebase_conflict_instructions() {
+print_local_main_update_instructions() {
   local feature_branch="$1"
 
   cat >&2 <<EOF
-Rebase stopped because of conflicts. No pull request was created yet.
+Local main is missing commits from origin/main. Create Pull Request will not update or merge main automatically.
 
 To finish this PR flow:
-1. Run 'git status' to see the conflicted files.
-2. Open each conflicted file and resolve the conflict markers (<<<<<<<, =======, >>>>>>>).
-3. Run 'git add/rm <conflicted_files>' to mark each conflict as resolved.
-4. Run 'git rebase --continue'.
-5. Repeat until the rebase completes.
-6. Run your build/tests.
-7. Run 'git push --force-with-lease origin ${feature_branch}'.
-8. Re-run PR creation.
+1. Stay on ${feature_branch}.
+2. Run 'Pull Remote and merge' first so the latest origin/main is pulled locally and merged into ${feature_branch}.
+3. Resolve any merge issues and rerun Create Pull Request.
+EOF
+}
 
-To back out instead, run 'git rebase --abort'.
+print_feature_branch_merge_instructions() {
+  local feature_branch="$1"
+
+  cat >&2 <<EOF
+${feature_branch} does not include the current local main branch. Create Pull Request will not merge main automatically.
+
+To finish this PR flow:
+1. Stay on ${feature_branch}.
+2. Run 'Pull Remote and merge' first so you can verify the merge with main works before opening the PR.
+3. Resolve any merge issues and rerun Create Pull Request.
 EOF
 }
 
@@ -181,6 +187,15 @@ has_commits_between_base_and_feature() {
   local base_branch="$1"
   local feature_branch="$2"
   [[ "$(git rev-list --count "${base_branch}..${feature_branch}")" -gt 0 ]]
+}
+
+local_main_includes_remote_main() {
+  git merge-base --is-ancestor "origin/main" main
+}
+
+feature_branch_includes_main() {
+  local feature_branch="$1"
+  git merge-base --is-ancestor main "$feature_branch"
 }
 
 print_no_commits_for_pr_instructions() {
@@ -424,16 +439,29 @@ main() {
 
   commit_pending_changes_if_needed "$feature_branch"
 
-  echo "Updating the local main branch to sync with the remote repository."
-  run_and_echo git checkout main
-  run_remote_git_and_echo -c pull.rebase=true pull origin main
-  run_and_echo git checkout "$feature_branch"
-
-  echo "Rebasing your feature branch onto the latest main so reviewers see a clean PR history."
-  if ! run_and_echo git rebase main; then
-    print_rebase_conflict_instructions "$feature_branch"
+  echo "Checking whether local main already includes the latest origin/main commits."
+  run_remote_git_and_echo fetch origin refs/heads/main:refs/remotes/origin/main
+  if ! git show-ref --verify --quiet refs/remotes/origin/main; then
+    echo "Remote tracking branch origin/main is unavailable after fetching. Confirm that origin/main exists before creating a pull request." >&2
     exit 1
   fi
+
+  if ! local_main_includes_remote_main; then
+    print_local_main_update_instructions "$feature_branch"
+    exit 1
+  fi
+
+  if ! feature_branch_includes_main "$feature_branch"; then
+    print_feature_branch_merge_instructions "$feature_branch"
+    exit 1
+  fi
+
+  if ! has_commits_between_base_and_feature "main" "$feature_branch"; then
+    print_no_commits_for_pr_instructions "main" "$feature_branch"
+    exit 1
+  fi
+
+  echo "Verified that ${feature_branch} already contains the current local main branch."
 
   test_command="$(trim "${ANTIGRAVITY_PROJECT_TESTING_COMMAND:-}")"
   if [[ -n "$test_command" ]]; then
@@ -448,13 +476,8 @@ main() {
     test_warning="WARNING: Tests were skipped."
   fi
 
-  echo "Pushing the rebased feature branch to origin."
-  run_remote_git_and_echo push --force-with-lease origin "$feature_branch"
-
-  if ! has_commits_between_base_and_feature "main" "$feature_branch"; then
-    print_no_commits_for_pr_instructions "main" "$feature_branch"
-    exit 1
-  fi
+  echo "Pushing the feature branch to origin."
+  run_remote_git_and_echo push origin "$feature_branch"
 
   pr_description_draft="$(generate_pr_descriptions_from_branch_commits "main" "$feature_branch")"
   why_answer="$(trim "$(printf '%s\n' "$pr_description_draft" | sed -n '1p')")"

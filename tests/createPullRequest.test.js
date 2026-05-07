@@ -39,39 +39,38 @@ function createTempRepoWithFeatureBranch(branchName = "feature/TEST-123-auto-lin
   return { rootDir, repoDir, branchName };
 }
 
-function createTempRepoWithRebaseConflict(branchName = "feature/TEST-789-rebase-conflict") {
-  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-create-pr-conflict-"));
-  const remoteDir = path.join(rootDir, "remote.git");
-  const repoDir = path.join(rootDir, "repo");
-
-  execFileSync("git", ["init", "--bare", remoteDir], { stdio: "ignore" });
-  fs.mkdirSync(repoDir, { recursive: true });
-  execFileSync("git", ["init"], { cwd: repoDir, stdio: "ignore" });
-  execFileSync("git", ["config", "user.name", "Test User"], { cwd: repoDir, stdio: "ignore" });
-  execFileSync("git", ["config", "user.email", "test@example.com"], {
-    cwd: repoDir,
-    stdio: "ignore"
-  });
-
-  fs.writeFileSync(path.join(repoDir, "index.js"), "console.log('base');\n", "utf8");
-  execFileSync("git", ["add", "index.js"], { cwd: repoDir, stdio: "ignore" });
-  execFileSync("git", ["commit", "-m", "Initial commit"], { cwd: repoDir, stdio: "ignore" });
-  execFileSync("git", ["branch", "-M", "main"], { cwd: repoDir, stdio: "ignore" });
-  execFileSync("git", ["remote", "add", "origin", remoteDir], { cwd: repoDir, stdio: "ignore" });
-  execFileSync("git", ["push", "-u", "origin", "main"], { cwd: repoDir, stdio: "ignore" });
-
-  execFileSync("git", ["checkout", "-b", branchName], { cwd: repoDir, stdio: "ignore" });
-  fs.writeFileSync(path.join(repoDir, "index.js"), "console.log('feature change');\n", "utf8");
-  execFileSync("git", ["add", "index.js"], { cwd: repoDir, stdio: "ignore" });
-  execFileSync("git", ["commit", "-m", "Update index.js"], { cwd: repoDir, stdio: "ignore" });
-  execFileSync("git", ["push", "-u", "origin", branchName], { cwd: repoDir, stdio: "ignore" });
+function createTempRepoNeedingMainMerge(branchName = "feature/TEST-789-needs-main-merge") {
+  const { rootDir, repoDir } = createTempRepoWithFeatureBranch(branchName);
 
   execFileSync("git", ["checkout", "main"], { cwd: repoDir, stdio: "ignore" });
-  fs.writeFileSync(path.join(repoDir, "index.js"), "console.log('main change');\n", "utf8");
-  execFileSync("git", ["add", "index.js"], { cwd: repoDir, stdio: "ignore" });
-  execFileSync("git", ["commit", "-m", "Update index.js on main"], { cwd: repoDir, stdio: "ignore" });
+  fs.writeFileSync(path.join(repoDir, "main-only.txt"), "main branch work\n", "utf8");
+  execFileSync("git", ["add", "main-only.txt"], { cwd: repoDir, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "Advance main"], { cwd: repoDir, stdio: "ignore" });
   execFileSync("git", ["push", "origin", "main"], { cwd: repoDir, stdio: "ignore" });
   execFileSync("git", ["checkout", branchName], { cwd: repoDir, stdio: "ignore" });
+
+  return { rootDir, repoDir, branchName };
+}
+
+function createTempRepoWithOutdatedLocalMain(branchName = "feature/TEST-654-outdated-local-main") {
+  const { rootDir, repoDir } = createTempRepoWithFeatureBranch(branchName);
+  const remoteDir = path.join(rootDir, "remote.git");
+  const updaterDir = path.join(rootDir, "updater");
+
+  execFileSync("git", ["clone", remoteDir, updaterDir], { stdio: "ignore" });
+  execFileSync("git", ["checkout", "main"], { cwd: updaterDir, stdio: "ignore" });
+  execFileSync("git", ["config", "user.name", "Remote Update User"], {
+    cwd: updaterDir,
+    stdio: "ignore"
+  });
+  execFileSync("git", ["config", "user.email", "remote-update@example.com"], {
+    cwd: updaterDir,
+    stdio: "ignore"
+  });
+  fs.writeFileSync(path.join(updaterDir, "remote-main.txt"), "remote main work\n", "utf8");
+  execFileSync("git", ["add", "remote-main.txt"], { cwd: updaterDir, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "Advance remote main"], { cwd: updaterDir, stdio: "ignore" });
+  execFileSync("git", ["push", "origin", "main"], { cwd: updaterDir, stdio: "ignore" });
 
   return { rootDir, repoDir, branchName };
 }
@@ -276,7 +275,7 @@ printf 'used\\n' > ${JSON.stringify(testMarkerPath)}
   assert.equal(fs.readFileSync(testMarkerPath, "utf8"), "used\n");
 });
 
-test("create_pull_requrest.sh commits dirty feature branch changes before rebasing and pushing", (t) => {
+test("create_pull_requrest.sh commits dirty feature branch changes before pushing", (t) => {
   const { rootDir, repoDir, branchName } = createTempRepoWithFeatureBranch("feature/TEST-456-dirty-branch");
   const binDir = path.join(rootDir, "bin");
   const ghLogPath = path.join(rootDir, "gh-pr-create.log");
@@ -320,8 +319,8 @@ test("create_pull_requrest.sh commits dirty feature branch changes before rebasi
   assert.equal(currentBranch, "main");
 });
 
-test("create_pull_requrest.sh prints recovery steps when a rebase conflict stops PR creation", (t) => {
-  const { rootDir, repoDir, branchName } = createTempRepoWithRebaseConflict();
+test("create_pull_requrest.sh stops when local main needs updates from origin/main", (t) => {
+  const { rootDir, repoDir, branchName } = createTempRepoWithOutdatedLocalMain();
   const binDir = path.join(rootDir, "bin");
   const ghLogPath = path.join(rootDir, "gh-pr-create.log");
   const bodyCopyPath = path.join(rootDir, "pr-body.md");
@@ -339,18 +338,61 @@ test("create_pull_requrest.sh prints recovery steps when a rebase conflict stops
       binDir,
       input: ""
     });
-    assert.fail("Expected the PR creation script to stop on a rebase conflict.");
+    assert.fail("Expected the PR creation script to stop when local main is behind origin/main.");
   } catch (error) {
     const combinedOutput = `${error.stdout ?? ""}${error.stderr ?? ""}`;
 
     assert.equal(error.status, 1);
-    assert.match(combinedOutput, /Rebase stopped because of conflicts\. No pull request was created yet\./);
-    assert.match(combinedOutput, /1\. Run 'git status' to see the conflicted files\./);
-    assert.match(combinedOutput, /3\. Run 'git add\/rm <conflicted_files>' to mark each conflict as resolved\./);
-    assert.match(combinedOutput, /4\. Run 'git rebase --continue'\./);
-    assert.ok(combinedOutput.includes(`git push --force-with-lease origin ${branchName}`));
-    assert.match(combinedOutput, /To back out instead, run 'git rebase --abort'\./);
+    assert.match(combinedOutput, /Local main is missing commits from origin\/main\./);
+    assert.match(combinedOutput, /Create Pull Request will not update or merge main automatically\./);
+    assert.match(combinedOutput, /Run 'Pull Remote and merge' first/);
+    assert.ok(combinedOutput.includes(`Stay on ${branchName}`));
+    assert.doesNotMatch(combinedOutput, /What command runs your project's test suite/);
     assert.ok(!fs.existsSync(bodyCopyPath));
+    assert.ok(!fs.existsSync(ghLogPath));
+    const currentBranch = execFileSync("git", ["branch", "--show-current"], {
+      cwd: repoDir,
+      encoding: "utf8"
+    }).trim();
+    assert.equal(currentBranch, branchName);
+  }
+});
+
+test("create_pull_requrest.sh stops when the feature branch still needs the latest main merge", (t) => {
+  const { rootDir, repoDir, branchName } = createTempRepoNeedingMainMerge();
+  const binDir = path.join(rootDir, "bin");
+  const ghLogPath = path.join(rootDir, "gh-pr-create.log");
+  const bodyCopyPath = path.join(rootDir, "pr-body.md");
+  fs.mkdirSync(binDir, { recursive: true });
+  createGhStub(binDir, ghLogPath, bodyCopyPath);
+  createNodeStub(binDir, "");
+
+  t.after(() => {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  try {
+    runCreatePullRequestScript({
+      repoDir,
+      binDir,
+      input: ""
+    });
+    assert.fail("Expected the PR creation script to stop when the feature branch does not include main.");
+  } catch (error) {
+    const combinedOutput = `${error.stdout ?? ""}${error.stderr ?? ""}`;
+
+    assert.equal(error.status, 1);
+    assert.match(combinedOutput, new RegExp(`${branchName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} does not include the current local main branch\\.`));
+    assert.match(combinedOutput, /Create Pull Request will not merge main automatically\./);
+    assert.match(combinedOutput, /Run 'Pull Remote and merge' first so you can verify the merge with main works before opening the PR\./);
+    assert.doesNotMatch(combinedOutput, /What command runs your project's test suite/);
+    assert.ok(!fs.existsSync(bodyCopyPath));
+    assert.ok(!fs.existsSync(ghLogPath));
+    const currentBranch = execFileSync("git", ["branch", "--show-current"], {
+      cwd: repoDir,
+      encoding: "utf8"
+    }).trim();
+    assert.equal(currentBranch, branchName);
   }
 });
 
