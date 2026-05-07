@@ -109,6 +109,7 @@ type AssignableAgentOption = {
 
 export function activate(context: vscode.ExtensionContext) {
   const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
+  const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
   context.subscriptions.push(outputChannel);
   initLogger(outputChannel);
 
@@ -3672,7 +3673,8 @@ export function activate(context: vscode.ExtensionContext) {
             `${quoteShellArg(scriptPath)} ${quoteShellArg(currentBranch)}`
           ],
           {
-            iconPath: new vscode.ThemeIcon("sync"),
+            iconPath: new vscode.ThemeIcon("sync", PULL_REMOTE_AND_MERGE_ACTION_COLOR),
+            color: PULL_REMOTE_AND_MERGE_ACTION_COLOR,
             ...(projectTestingCommand
               ? {
                   env: {

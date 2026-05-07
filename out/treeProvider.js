@@ -277,6 +277,7 @@ class AntigravityViewProvider {
 exports.AntigravityViewProvider = AntigravityViewProvider;
 const QUICK_ACTION_COLOR = new vscode.ThemeColor("charts.green");
 const ORANGE_ACTION_COLOR = new vscode.ThemeColor("charts.orange");
+const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const CLAUDE_MODEL_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const JIRA_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
@@ -555,7 +556,7 @@ function getQuickActionItems() {
         };
         items.push(checkoutMain);
         const pullRemoteAndMerge = new NodeItem({ kind: "action", label: "Pull Remote and merge" }, vscode.TreeItemCollapsibleState.None);
-        pullRemoteAndMerge.iconPath = new vscode.ThemeIcon("sync", ORANGE_ACTION_COLOR);
+        pullRemoteAndMerge.iconPath = new vscode.ThemeIcon("sync", PULL_REMOTE_AND_MERGE_ACTION_COLOR);
         pullRemoteAndMerge.command = {
             command: "antigravity.pullRemoteAndMerge",
             title: "Pull Remote and merge"

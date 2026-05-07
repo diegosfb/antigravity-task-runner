@@ -21,6 +21,7 @@ const jiraProjectHarness_1 = require("./jiraProjectHarness");
 const mergeReviewPrompt_1 = require("./mergeReviewPrompt");
 function activate(context) {
     const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
+    const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
     context.subscriptions.push(outputChannel);
     (0, logger_1.initLogger)(outputChannel);
     const provider = new treeProvider_1.AntigravityViewProvider();
@@ -2925,7 +2926,8 @@ function activate(context) {
                 `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
                 `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(currentBranch)}`
             ], {
-                iconPath: new vscode.ThemeIcon("sync"),
+                iconPath: new vscode.ThemeIcon("sync", PULL_REMOTE_AND_MERGE_ACTION_COLOR),
+                color: PULL_REMOTE_AND_MERGE_ACTION_COLOR,
                 ...(projectTestingCommand
                     ? {
                         env: {
