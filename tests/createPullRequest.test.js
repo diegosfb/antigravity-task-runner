@@ -178,6 +178,11 @@ function runCreatePullRequestScript({
   });
 }
 
+function assertNoManualPrSummaryPrompts(output) {
+  assert.doesNotMatch(output, /What problem does this PR solve/);
+  assert.doesNotMatch(output, /Briefly describe your technical approach/);
+}
+
 test("create_pull_requrest.sh uses the inferred Jira issue link without prompting for it", (t) => {
   const { rootDir, repoDir } = createTempRepoWithFeatureBranch("feature/TEST-123-auto-link");
   const binDir = path.join(rootDir, "bin");
@@ -194,13 +199,17 @@ test("create_pull_requrest.sh uses the inferred Jira issue link without promptin
   const output = runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "skip\nAuto-link Jira issue from branch\nUpdates the PR body without prompting for a ticket link.\n\n@octocat\n"
+    input: "skip\n\n@octocat\n"
   });
 
   const prBody = fs.readFileSync(bodyCopyPath, "utf8");
 
   assert.match(output, /Creating the pull request on GitHub\./);
   assert.doesNotMatch(output, /What command runs your project's build or validation step/);
+  assertNoManualPrSummaryPrompts(output);
+  assert.match(output, /Drafted the PR summary automatically from the branch commits\./);
+  assert.match(prBody, /\*\*Why:\*\*\nAdd feature branch changes/);
+  assert.match(prBody, /feature\.txt/);
   assert.match(prBody, /\*\*Linked Issue:\*\* https:\/\/jira\.example\.com\/browse\/TEST-123/);
   assert.match(prBody, /\*\*Reviewer:\*\* `@octocat`/);
 });
@@ -221,12 +230,13 @@ test("create_pull_requrest.sh leaves the linked issue empty when Jira inference 
   runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "skip\nSkip missing Jira issue\nLeaves the linked issue as N/A when Jira cannot find the ticket.\n\n@octocat\n"
+    input: "skip\n\n@octocat\n"
   });
 
   const prBody = fs.readFileSync(bodyCopyPath, "utf8");
 
   assert.match(prBody, /\*\*Linked Issue:\*\* N\/A/);
+  assert.match(prBody, /\*\*Why:\*\*\nAdd feature branch changes/);
   assert.match(prBody, /\*\*Reviewer:\*\* `@octocat`/);
 });
 
@@ -254,7 +264,7 @@ printf 'used\\n' > ${JSON.stringify(testMarkerPath)}
   const output = runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "Use saved testing command\nRuns the saved test command from settings before creating the PR.\n\n@octocat\n",
+    input: "\n@octocat\n",
     env: {
       ANTIGRAVITY_PROJECT_TESTING_COMMAND: "saved-project-tests"
     }
@@ -262,6 +272,7 @@ printf 'used\\n' > ${JSON.stringify(testMarkerPath)}
 
   assert.match(output, /Using Project Testing Command from settings\./);
   assert.doesNotMatch(output, /What command runs your project's test suite/);
+  assertNoManualPrSummaryPrompts(output);
   assert.equal(fs.readFileSync(testMarkerPath, "utf8"), "used\n");
 });
 
@@ -282,7 +293,7 @@ test("create_pull_requrest.sh commits dirty feature branch changes before rebasi
   const output = runCreatePullRequestScript({
     repoDir,
     binDir,
-    input: "Capture dirty branch changes\nskip\nCommit dirty branch changes before opening the PR.\nStages and commits the local edit, then rebases and pushes before creating the PR.\n\n@octocat\n"
+    input: "Capture dirty branch changes\nskip\n\n@octocat\n"
   });
 
   const branchHeadSubject = execFileSync("git", ["log", "-1", "--pretty=%s", branchName], {
@@ -303,6 +314,7 @@ test("create_pull_requrest.sh commits dirty feature branch changes before rebasi
   }).trim();
 
   assert.match(output, /Detected uncommitted changes on feature\/TEST-456-dirty-branch/);
+  assertNoManualPrSummaryPrompts(output);
   assert.equal(branchHeadSubject, "Capture dirty branch changes");
   assert.equal(remoteBranchRef, localBranchRef);
   assert.equal(currentBranch, "main");

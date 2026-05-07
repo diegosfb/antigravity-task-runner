@@ -225,6 +225,38 @@ to_single_line() {
   printf '%s' "$1" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g; s/^ //; s/ $//'
 }
 
+join_non_empty_lines() {
+  local delimiter="$1"
+  local input="$2"
+  local result="" line
+
+  while IFS= read -r line; do
+    line="$(trim "$line")"
+    if [[ -z "$line" ]]; then
+      continue
+    fi
+
+    if [[ -n "$result" ]]; then
+      result="${result}${delimiter}"
+    fi
+    result="${result}${line}"
+  done <<< "$input"
+
+  printf '%s' "$result"
+}
+
+truncate_text() {
+  local value="$1"
+  local max_length="$2"
+
+  if [[ "${#value}" -le "$max_length" ]]; then
+    printf '%s' "$value"
+    return 0
+  fi
+
+  printf '%s...' "${value:0:max_length-3}"
+}
+
 extract_marked_block() {
   local content="$1"
   local start_marker="$2"
@@ -321,6 +353,33 @@ EOF
   printf '%s' "$how"
 }
 
+generate_pr_descriptions_from_branch_commits() {
+  local base_branch="$1"
+  local feature_branch="$2"
+  local commit_subjects why how file_list diff_summary commit_summary
+
+  commit_subjects="$(git log --reverse --max-count=5 --pretty=format:'%s' "${base_branch}..${feature_branch}" 2>/dev/null || true)"
+  why="$(trim "$(printf '%s\n' "$commit_subjects" | sed -n '1p')")"
+  if [[ -z "$why" ]]; then
+    why="Update branch changes"
+  fi
+
+  commit_summary="$(join_non_empty_lines '; ' "$commit_subjects")"
+  file_list="$(join_non_empty_lines ', ' "$(git diff --name-only "${base_branch}...${feature_branch}" 2>/dev/null | head -n 5 || true)")"
+  diff_summary="$(trim "$(git diff --shortstat "${base_branch}...${feature_branch}" 2>/dev/null || true)")"
+
+  how="Derived from the branch commits: ${commit_summary:-$why}."
+  if [[ -n "$file_list" ]]; then
+    how="${how} Files changed include: ${file_list}."
+  fi
+  if [[ -n "$diff_summary" ]]; then
+    how="${how} Diff summary: ${diff_summary}."
+  fi
+
+  printf '%s\n' "$(truncate_text "$why" 120)"
+  printf '%s' "$(truncate_text "$how" 600)"
+}
+
 format_reviewers_for_body() {
   local raw_reviewers="$1"
   local formatted_reviewers=""
@@ -397,8 +456,22 @@ main() {
     exit 1
   fi
 
-  why_answer="$(require_non_empty "What problem does this PR solve, or what feature/functionality does it provide?")"
-  how_answer="$(require_non_empty "Briefly describe your technical approach. What changed and how does it work at a high level?")"
+  pr_description_draft="$(generate_pr_descriptions_from_branch_commits "main" "$feature_branch")"
+  why_answer="$(trim "$(printf '%s\n' "$pr_description_draft" | sed -n '1p')")"
+  how_answer="$(trim "$(printf '%s\n' "$pr_description_draft" | sed -n '2,$p')")"
+  if [[ -z "$why_answer" || -z "$how_answer" ]]; then
+    echo "Couldn't derive the PR summary automatically from the branch commits." >&2
+    exit 1
+  fi
+
+  echo
+  echo "Drafted the PR summary automatically from the branch commits."
+  echo "Why: $why_answer"
+  echo
+  echo "How:"
+  echo "$how_answer"
+  echo
+
   issue_link="$(infer_linked_issue_from_branch "$feature_branch")"
   docs_and_screenshots="$(optional_value "Any documentation updates, screenshots, or recordings to include? Press Enter to skip.")"
   reviewer="$(optional_value_with_default "Who should be tagged as the responsible code reviewer? Press Enter to accept the suggested reviewer." "$DEFAULT_GITHUB_REVIEWER")"
