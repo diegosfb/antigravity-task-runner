@@ -318,14 +318,10 @@ async function searchOpenAssignedJiraIssuesForCurrentUser(credentials, projectKe
         }
     });
     return (response.issues ?? [])
-        .map((issue) => ({
-        ...mapJiraIssueSearchResultToSummary(issue),
-        assigneeAccountId: (issue.fields?.assignee?.accountId ?? "").trim()
-    }))
+        .filter((issue) => (issue.fields?.assignee?.accountId ?? "").trim() === currentUserAccountId)
+        .map(mapJiraIssueSearchResultToSummary)
         .filter((issue) => isProjectIssueSummaryValid(issue, normalizedProjectKey) &&
-        issue.assigneeAccountId === currentUserAccountId &&
-        ["To Do", "In Progress"].includes(issue.statusName))
-        .map(({ assigneeAccountId, ...issue }) => issue);
+        ["To Do", "In Progress"].includes(issue.statusName));
 }
 async function assignJiraIssueToCurrentUser(credentials, issueKey) {
     const accountId = await getJiraCurrentUserAccountId(credentials);
@@ -404,7 +400,7 @@ async function transitionJiraIssueToReviewOrDone(credentials, projectKey, issueK
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            throw new Error(`"${JIRA_STATUS_IN_REVIEW}" is not visible on the Jira board, and moving ${issueKey} to "${JIRA_STATUS_DONE}" failed: ${message}`);
+            throw new Error(`"${JIRA_STATUS_IN_REVIEW}" is not visible on the Jira board, and moving ${issueKey} to "${JIRA_STATUS_DONE}" failed: ${message}`, { cause: error });
         }
         return {
             fallbackReason: `"${JIRA_STATUS_IN_REVIEW}" is not visible on the Jira board.`,
@@ -422,7 +418,7 @@ async function transitionJiraIssueToReviewOrDone(credentials, projectKey, issueK
         }
         catch (doneError) {
             const doneMessage = doneError instanceof Error ? doneError.message : String(doneError);
-            throw new Error(`Failed to move ${issueKey} to "${JIRA_STATUS_IN_REVIEW}" (${reviewMessage}) and fallback to "${JIRA_STATUS_DONE}" (${doneMessage}).`);
+            throw new Error(`Failed to move ${issueKey} to "${JIRA_STATUS_IN_REVIEW}" (${reviewMessage}) and fallback to "${JIRA_STATUS_DONE}" (${doneMessage}).`, { cause: doneError });
         }
         return {
             fallbackReason: `moving to "${JIRA_STATUS_IN_REVIEW}" failed: ${reviewMessage}`,

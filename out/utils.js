@@ -137,7 +137,7 @@ function parseEnvFile(filePath) {
     const values = {};
     if (!fs.existsSync(filePath))
         return values;
-    let content = "";
+    let content;
     try {
         content = fs.readFileSync(filePath, "utf8");
     }
