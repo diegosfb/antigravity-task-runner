@@ -3,15 +3,15 @@
 This folder contains GitHub Actions workflows used to validate and secure the project on every push and pull request.
 
 ## Why this exists
-- **Consistency**: Ensure linting and builds run the same way for every change.
+- **Consistency**: Ensure validation runs the same way for every change.
 - **Security**: Catch dependency vulnerabilities and accidental secret leaks early.
 - **Stability**: Prevent breaking changes from landing in `main` without validation.
 
 ## What it does
 The `ci.yml` workflow runs four jobs:
 
-1. **Lint and Build**
-   - Installs dependencies, runs TypeScript lint checks, and builds the project.
+1. **Compile and Test**
+   - Installs dependencies and runs `npm test`, which compiles the extension and executes the Node test suite.
 2. **Dependency Audit**
    - Runs `npm audit --production` to flag known vulnerabilities.
 3. **Secret Scan**

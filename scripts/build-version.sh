@@ -2,14 +2,11 @@
 
 set -euo pipefail
 
-echo "Running lint..."
-npm run lint
+echo "Running tests..."
+npm test
 
 echo "Running npm audit..."
 npm audit
-
-echo "Running build..."
-npm run build
 
 echo "NOTE: E2E tests are not run automatically by this script. Run them manually if required."
 
@@ -17,7 +14,12 @@ echo "NOTE: E2E tests are not run automatically by this script. Run them manuall
 
 VERSION=$(node -p "require('./package.json').version")
 
-git add package.json package-lock.json src/App.tsx
+STAGE_FILES=(package.json package-lock.json)
+if [ -f src/App.tsx ]; then
+  STAGE_FILES+=(src/App.tsx)
+fi
+
+git add "${STAGE_FILES[@]}"
 
 git commit -m "Release v$VERSION"
 
