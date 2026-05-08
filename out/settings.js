@@ -365,6 +365,7 @@ function getExtensionSettingsFields() {
             key: "lightAgenticHarnessExecutionCommand",
             label: "Light Agentic Harness execution commands",
             description: "Pick a saved command or type your own. Applying settings saves custom values into the list for next time.",
+            note: "Note: This is used for light command usage like generating commit messages, Jira messages, etc. This command should run in an unattended way and close the session once it is done.",
             placeholder: "claude --model claude-haiku-4-5-20251001",
             value: selectedLightAgenticHarnessExecutionCommand,
             type: "command-list",
@@ -407,6 +408,7 @@ function renderAntigravitySettingsHtml(webview) {
       label { font-size: 12px; color: var(--vscode-descriptionForeground); }
       input[type="text"], select { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); font-size: 13px; }
       .description { font-size: 11px; color: var(--vscode-descriptionForeground); }
+      .note { font-size: 11px; color: var(--vscode-descriptionForeground); white-space: pre-wrap; }
       .command-list-controls { display: flex; flex-direction: column; gap: 8px; }
       .actions { margin-top: 18px; display: flex; justify-content: flex-end; }
       button { padding: 8px 14px; border-radius: 6px; border: none; background: var(--vscode-button-background); color: var(--vscode-button-foreground); cursor: pointer; }
@@ -488,6 +490,12 @@ function renderAntigravitySettingsHtml(webview) {
           controls.appendChild(input);
           wrapper.appendChild(controls);
           wrapper.appendChild(desc);
+          if (field.note) {
+            const note = document.createElement("div");
+            note.className = "note";
+            note.textContent = field.note;
+            wrapper.appendChild(note);
+          }
         } else {
           wrapper.className = "field";
           const label = document.createElement("label");
@@ -504,6 +512,12 @@ function renderAntigravitySettingsHtml(webview) {
           wrapper.appendChild(label);
           wrapper.appendChild(input);
           wrapper.appendChild(desc);
+          if (field.note) {
+            const note = document.createElement("div");
+            note.className = "note";
+            note.textContent = field.note;
+            wrapper.appendChild(note);
+          }
         }
         return wrapper;
       }
