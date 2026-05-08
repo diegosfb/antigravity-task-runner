@@ -1,6 +1,6 @@
 # CI Workflows
 
-This folder contains GitHub Actions workflows used to validate and secure the project on every push and pull request.
+This folder contains GitHub Actions workflows used to validate, package, and release the project.
 
 ## Why this exists
 - **Consistency**: Ensure validation runs the same way for every change.
@@ -38,6 +38,17 @@ The deploy workflow uses the same credentials as build artifacts:
 - `GCP_SERVICE_ACCOUNT_JSON`
 
 The deploy workflow accepts a `version_tag` input. If omitted, it deploys the latest git tag.
+
+## CD Workflow
+
+`cd.yml` publishes the VS Code extension to the Marketplace.
+
+- **Automatic**: Runs on pushed tags matching `v*`.
+- **Manual**: `workflow_dispatch` supports an optional `ref` input for retries or manual publishes.
+- **Validation**: Installs dependencies, runs `npm run lint`, runs `npm test`, packages a `.vsix`, uploads it as a workflow artifact, and publishes it with `@vscode/vsce`.
+
+Required GitHub secret:
+- `VSCE_PAT`
 
 ## How to use it
 - **Automatic**: The workflow runs on every push to `main` and every pull request targeting `main`.
