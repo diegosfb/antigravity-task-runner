@@ -107,10 +107,6 @@ type GitExtensionExports = {
   getAPI(version: 1): GitApi;
 };
 
-type AssignableAgentOption = {
-  label: AssignableAgentLabel;
-};
-
 export function activate(context: vscode.ExtensionContext) {
   const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
   const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
@@ -120,14 +116,6 @@ export function activate(context: vscode.ExtensionContext) {
   const provider = new AntigravityViewProvider();
   const extensionRoot = context.extensionPath;
   log(`[activate] Extension root: ${extensionRoot}`);
-  const assignableAgentOptions: AssignableAgentOption[] = [
-    { label: "Antigravity" },
-    { label: "Claude Code" },
-    { label: "Codex" },
-    { label: "OpenCode" },
-    { label: "Qwen Code" }
-  ];
-
   const launchClaudeInit = async (
     repoRoot: string,
     guidelinesFileName = "Project Level CLAUDE.md Guidelines.txt"
@@ -1252,15 +1240,12 @@ export function activate(context: vscode.ExtensionContext) {
   const renderAssignJiraItemToAgentHtml = (
     webview: vscode.Webview,
     projectKey: string,
-    agents: AssignableAgentOption[],
     issues: JiraIssueSummary[],
-    initialAgentLabel: AssignableAgentOption["label"],
     initialAgentCommand: string,
     agentCommandOptions: string[]
   ): string => {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-    const agentOptions = agents.map((agent) => agent.label);
     const issueOptions = issues.map((issue) => ({
       key: issue.key,
       summary: issue.summary,
@@ -1304,11 +1289,6 @@ export function activate(context: vscode.ExtensionContext) {
     <form id="assign-jira-item-to-agent-form">
       <div class="current-branch-title">Jira Project: <span class="current-branch-value">${projectKey}</span></div>
       <label>
-        Agent
-        <select id="agent-select"></select>
-        <span class="hint">Choose the agent label to use for Jira naming, prompts, and status updates.</span>
-      </label>
-      <label>
         Agent Harness Command
         <div class="command-list-controls">
           <select id="agent-command-preset"></select>
@@ -1329,13 +1309,10 @@ export function activate(context: vscode.ExtensionContext) {
     </form>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
-      const agents = ${JSON.stringify(agentOptions)};
       const issues = ${JSON.stringify(issueOptions)};
-      const initialAgentLabel = ${JSON.stringify(initialAgentLabel)};
       const initialAgentCommand = ${JSON.stringify(initialAgentCommand)};
       const agentCommandOptions = ${JSON.stringify(agentCommandOptions)};
       const form = document.getElementById("assign-jira-item-to-agent-form");
-      const agentSelect = document.getElementById("agent-select");
       const agentCommandPresetSelect = document.getElementById("agent-command-preset");
       const agentCommandInput = document.getElementById("agent-command-input");
       const issueSelect = document.getElementById("issue-select");
@@ -1349,13 +1326,6 @@ export function activate(context: vscode.ExtensionContext) {
           ? [selected.summary, selected.detail].filter(Boolean).join(" • ")
           : "Choose an unassigned Jira item that is currently in To Do and not blocked by unfinished Jira items.";
       };
-
-      for (const agent of agents) {
-        const option = document.createElement("option");
-        option.value = agent;
-        option.textContent = agent;
-        agentSelect.appendChild(option);
-      }
 
       const customCommandOption = document.createElement("option");
       customCommandOption.value = "__custom__";
@@ -1398,9 +1368,9 @@ export function activate(context: vscode.ExtensionContext) {
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
-        if (!agentSelect.value) {
-          errorMessage.textContent = "Select an agent.";
-          agentSelect.focus();
+        if (!agentCommandInput.value.trim()) {
+          errorMessage.textContent = "Enter an agent harness command.";
+          agentCommandInput.focus();
           return;
         }
         if (!issueSelect.value) {
@@ -1411,7 +1381,6 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.postMessage({
           type: "submitAssignJiraItemToAgent",
           payload: {
-            agentLabel: agentSelect.value,
             issueKey: issueSelect.value,
             agentCommand: agentCommandInput.value.trim()
           }
@@ -1425,12 +1394,11 @@ export function activate(context: vscode.ExtensionContext) {
         }
       });
 
-      agentSelect.value = agents.includes(initialAgentLabel) ? initialAgentLabel : agents[0];
       agentCommandInput.value = initialAgentCommand || "";
       syncCommandPresetFromInput();
       issueSelect.value = issues[0]?.key || "";
       updateIssueHint();
-      agentSelect.focus();
+      issueSelect.focus();
     </script>
   </body>
 </html>`;
@@ -1452,16 +1420,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   const showAssignJiraItemToAgentDialog = async (
     projectKey: string,
-    agents: AssignableAgentOption[],
     issues: JiraIssueSummary[]
   ): Promise<{
-    agentLabel: AssignableAgentOption["label"];
     issueKey: string;
     agentCommand: string;
   } | undefined> =>
     new Promise((resolve) => {
       const initialAgentCommand = getAgenticHarnessExecutionCommand();
-      const initialAgentLabel = inferAssignableAgentLabelFromCommand(initialAgentCommand);
       const agentCommandOptions = getAssignableAgentCommandOptions();
       const panel = vscode.window.createWebviewPanel(
         "assignJiraItemToAgent",
@@ -1472,9 +1437,7 @@ export function activate(context: vscode.ExtensionContext) {
       panel.webview.html = renderAssignJiraItemToAgentHtml(
         panel.webview,
         projectKey,
-        agents,
         issues,
-        initialAgentLabel,
         initialAgentCommand,
         agentCommandOptions
       );
@@ -1482,7 +1445,6 @@ export function activate(context: vscode.ExtensionContext) {
       let settled = false;
       const resolveOnce = (
         value: {
-          agentLabel: AssignableAgentOption["label"];
           issueKey: string;
           agentCommand: string;
         } | undefined
@@ -1503,19 +1465,9 @@ export function activate(context: vscode.ExtensionContext) {
           if (message.type !== "submitAssignJiraItemToAgent") return;
 
           const payload = message.payload || {};
-          const agentLabel = typeof payload.agentLabel === "string" ? payload.agentLabel.trim() : "";
           const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
           const agentCommand =
             typeof payload.agentCommand === "string" ? payload.agentCommand.trim() : "";
-          const selectedAgent = agents.find((agent) => agent.label === agentLabel);
-
-          if (!selectedAgent) {
-            void panel.webview.postMessage({
-              type: "assignJiraItemToAgentError",
-              payload: { message: "Select an agent." }
-            });
-            return;
-          }
 
           if (!issueKey || !issues.some((issue) => issue.key === issueKey)) {
             void panel.webview.postMessage({
@@ -1525,8 +1477,15 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
+          if (!agentCommand) {
+            void panel.webview.postMessage({
+              type: "assignJiraItemToAgentError",
+              payload: { message: "Enter an agent harness command." }
+            });
+            return;
+          }
+
           resolveOnce({
-            agentLabel: selectedAgent.label,
             issueKey,
             agentCommand
           });
@@ -1539,19 +1498,19 @@ export function activate(context: vscode.ExtensionContext) {
 
   const buildIssueSummaryForAgent = (
     originalSummary: string,
-    agentLabel: AssignableAgentOption["label"]
+    agentLabel: AssignableAgentLabel
   ): string => {
     const baseSummary = originalSummary.replace(/\s+- By Agent .+$/i, "").trim();
     return `${baseSummary} - By Agent ${agentLabel}`;
   };
 
-  const buildAgentJiraLabel = (agentLabel: AssignableAgentOption["label"]): string =>
+  const buildAgentJiraLabel = (agentLabel: AssignableAgentLabel): string =>
     `developed-by-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
 
   const buildJiraAgentPrompt = (
     issueKey: string,
     summary: string,
-    agentLabel: AssignableAgentOption["label"]
+    agentLabel: AssignableAgentLabel
   ): string => {
     const jiraAccessInstructions =
       agentLabel === "Codex"
@@ -1575,28 +1534,12 @@ export function activate(context: vscode.ExtensionContext) {
 
   const launchAgentForJiraItem = async (
     repoRoot: string,
-    agentLabel: AssignableAgentOption["label"],
+    agentLabel: AssignableAgentLabel,
     issueKey: string,
     issueSummary: string,
-    agentCommand = ""
+    agentCommand: string
   ): Promise<void> => {
     const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
-    if (agentLabel === "Antigravity" && !agentCommand.trim()) {
-      try {
-        await vscode.commands.executeCommand("workbench.action.chat.openAgent");
-        await vscode.commands.executeCommand("workbench.action.chat.open", {
-          query: prompt,
-          isPartialQuery: false
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(
-          `Failed to send Jira item to VS Code Agent mode: ${message}`
-        );
-      }
-      return;
-    }
-
     const command = buildAgentRunCommand(repoRoot, agentLabel, prompt, {
       customCommand: agentCommand
     });
@@ -3516,7 +3459,6 @@ export function activate(context: vscode.ExtensionContext) {
 
       const selection = await showAssignJiraItemToAgentDialog(
         projectKey,
-        assignableAgentOptions,
         issues
       );
       if (!selection) return;
@@ -3527,13 +3469,14 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const updatedSummary = buildIssueSummaryForAgent(issue.summary, selection.agentLabel);
+      const agentLabel = inferAssignableAgentLabelFromCommand(selection.agentCommand);
+      const updatedSummary = buildIssueSummaryForAgent(issue.summary, agentLabel);
 
       try {
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: `Assigning ${issue.key} to ${selection.agentLabel}`,
+            title: `Assigning ${issue.key}`,
             cancellable: false
           },
           async () => {
@@ -3541,7 +3484,7 @@ export function activate(context: vscode.ExtensionContext) {
               credentials,
               issue.key,
               updatedSummary,
-              [buildAgentJiraLabel(selection.agentLabel)]
+              [buildAgentJiraLabel(agentLabel)]
             );
             await assignJiraIssueToCurrentUser(credentials, issue.key);
             await transitionJiraIssueToStatus(credentials, issue.key, "In Progress");
@@ -3555,13 +3498,13 @@ export function activate(context: vscode.ExtensionContext) {
 
       await launchAgentForJiraItem(
         repoRoot,
-        selection.agentLabel,
+        agentLabel,
         issue.key,
         issue.summary,
         selection.agentCommand
       );
       void vscode.window.showInformationMessage(
-        `${issue.key} was assigned to ${credentials.email}, moved to In Progress, and sent to ${selection.agentLabel}.`
+        `${issue.key} was assigned to ${credentials.email}, moved to In Progress, and launched with the selected agent harness command.`
       );
     })
   );

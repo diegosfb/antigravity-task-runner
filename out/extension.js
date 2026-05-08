@@ -27,13 +27,6 @@ function activate(context) {
     const provider = new treeProvider_1.AntigravityViewProvider();
     const extensionRoot = context.extensionPath;
     (0, logger_1.log)(`[activate] Extension root: ${extensionRoot}`);
-    const assignableAgentOptions = [
-        { label: "Antigravity" },
-        { label: "Claude Code" },
-        { label: "Codex" },
-        { label: "OpenCode" },
-        { label: "Qwen Code" }
-    ];
     const launchClaudeInit = async (repoRoot, guidelinesFileName = "Project Level CLAUDE.md Guidelines.txt") => {
         (0, logger_1.log)(`[launchClaudeInit] repoRoot: ${repoRoot}`);
         const guidelineCandidates = [
@@ -990,10 +983,9 @@ function activate(context) {
             panel.dispose();
         }, undefined, context.subscriptions);
     });
-    const renderAssignJiraItemToAgentHtml = (webview, projectKey, agents, issues, initialAgentLabel, initialAgentCommand, agentCommandOptions) => {
+    const renderAssignJiraItemToAgentHtml = (webview, projectKey, issues, initialAgentCommand, agentCommandOptions) => {
         const nonce = getNonce();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-        const agentOptions = agents.map((agent) => agent.label);
         const issueOptions = issues.map((issue) => ({
             key: issue.key,
             summary: issue.summary,
@@ -1036,11 +1028,6 @@ function activate(context) {
     <form id="assign-jira-item-to-agent-form">
       <div class="current-branch-title">Jira Project: <span class="current-branch-value">${projectKey}</span></div>
       <label>
-        Agent
-        <select id="agent-select"></select>
-        <span class="hint">Choose the agent label to use for Jira naming, prompts, and status updates.</span>
-      </label>
-      <label>
         Agent Harness Command
         <div class="command-list-controls">
           <select id="agent-command-preset"></select>
@@ -1061,13 +1048,10 @@ function activate(context) {
     </form>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
-      const agents = ${JSON.stringify(agentOptions)};
       const issues = ${JSON.stringify(issueOptions)};
-      const initialAgentLabel = ${JSON.stringify(initialAgentLabel)};
       const initialAgentCommand = ${JSON.stringify(initialAgentCommand)};
       const agentCommandOptions = ${JSON.stringify(agentCommandOptions)};
       const form = document.getElementById("assign-jira-item-to-agent-form");
-      const agentSelect = document.getElementById("agent-select");
       const agentCommandPresetSelect = document.getElementById("agent-command-preset");
       const agentCommandInput = document.getElementById("agent-command-input");
       const issueSelect = document.getElementById("issue-select");
@@ -1081,13 +1065,6 @@ function activate(context) {
           ? [selected.summary, selected.detail].filter(Boolean).join(" • ")
           : "Choose an unassigned Jira item that is currently in To Do and not blocked by unfinished Jira items.";
       };
-
-      for (const agent of agents) {
-        const option = document.createElement("option");
-        option.value = agent;
-        option.textContent = agent;
-        agentSelect.appendChild(option);
-      }
 
       const customCommandOption = document.createElement("option");
       customCommandOption.value = "__custom__";
@@ -1130,9 +1107,9 @@ function activate(context) {
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
-        if (!agentSelect.value) {
-          errorMessage.textContent = "Select an agent.";
-          agentSelect.focus();
+        if (!agentCommandInput.value.trim()) {
+          errorMessage.textContent = "Enter an agent harness command.";
+          agentCommandInput.focus();
           return;
         }
         if (!issueSelect.value) {
@@ -1143,7 +1120,6 @@ function activate(context) {
         vscode.postMessage({
           type: "submitAssignJiraItemToAgent",
           payload: {
-            agentLabel: agentSelect.value,
             issueKey: issueSelect.value,
             agentCommand: agentCommandInput.value.trim()
           }
@@ -1157,12 +1133,11 @@ function activate(context) {
         }
       });
 
-      agentSelect.value = agents.includes(initialAgentLabel) ? initialAgentLabel : agents[0];
       agentCommandInput.value = initialAgentCommand || "";
       syncCommandPresetFromInput();
       issueSelect.value = issues[0]?.key || "";
       updateIssueHint();
-      agentSelect.focus();
+      issueSelect.focus();
     </script>
   </body>
 </html>`;
@@ -1176,12 +1151,11 @@ function activate(context) {
             .map((item) => item.trim())
             .filter(Boolean)));
     };
-    const showAssignJiraItemToAgentDialog = async (projectKey, agents, issues) => new Promise((resolve) => {
+    const showAssignJiraItemToAgentDialog = async (projectKey, issues) => new Promise((resolve) => {
         const initialAgentCommand = (0, settings_1.getAgenticHarnessExecutionCommand)();
-        const initialAgentLabel = (0, agentRunCommand_1.inferAssignableAgentLabelFromCommand)(initialAgentCommand);
         const agentCommandOptions = getAssignableAgentCommandOptions();
         const panel = vscode.window.createWebviewPanel("assignJiraItemToAgent", "Assign Jira Item to Agent", vscode.ViewColumn.Active, { enableScripts: true });
-        panel.webview.html = renderAssignJiraItemToAgentHtml(panel.webview, projectKey, agents, issues, initialAgentLabel, initialAgentCommand, agentCommandOptions);
+        panel.webview.html = renderAssignJiraItemToAgentHtml(panel.webview, projectKey, issues, initialAgentCommand, agentCommandOptions);
         let settled = false;
         const resolveOnce = (value) => {
             if (settled)
@@ -1200,17 +1174,8 @@ function activate(context) {
             if (message.type !== "submitAssignJiraItemToAgent")
                 return;
             const payload = message.payload || {};
-            const agentLabel = typeof payload.agentLabel === "string" ? payload.agentLabel.trim() : "";
             const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
             const agentCommand = typeof payload.agentCommand === "string" ? payload.agentCommand.trim() : "";
-            const selectedAgent = agents.find((agent) => agent.label === agentLabel);
-            if (!selectedAgent) {
-                void panel.webview.postMessage({
-                    type: "assignJiraItemToAgentError",
-                    payload: { message: "Select an agent." }
-                });
-                return;
-            }
             if (!issueKey || !issues.some((issue) => issue.key === issueKey)) {
                 void panel.webview.postMessage({
                     type: "assignJiraItemToAgentError",
@@ -1218,8 +1183,14 @@ function activate(context) {
                 });
                 return;
             }
+            if (!agentCommand) {
+                void panel.webview.postMessage({
+                    type: "assignJiraItemToAgentError",
+                    payload: { message: "Enter an agent harness command." }
+                });
+                return;
+            }
             resolveOnce({
-                agentLabel: selectedAgent.label,
                 issueKey,
                 agentCommand
             });
@@ -1247,22 +1218,8 @@ function activate(context) {
         });
         return scriptPath;
     };
-    const launchAgentForJiraItem = async (repoRoot, agentLabel, issueKey, issueSummary, agentCommand = "") => {
+    const launchAgentForJiraItem = async (repoRoot, agentLabel, issueKey, issueSummary, agentCommand) => {
         const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
-        if (agentLabel === "Antigravity" && !agentCommand.trim()) {
-            try {
-                await vscode.commands.executeCommand("workbench.action.chat.openAgent");
-                await vscode.commands.executeCommand("workbench.action.chat.open", {
-                    query: prompt,
-                    isPartialQuery: false
-                });
-            }
-            catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                void vscode.window.showErrorMessage(`Failed to send Jira item to VS Code Agent mode: ${message}`);
-            }
-            return;
-        }
         const command = (0, agentRunCommand_1.buildAgentRunCommand)(repoRoot, agentLabel, prompt, {
             customCommand: agentCommand
         });
@@ -2812,7 +2769,7 @@ function activate(context) {
             void vscode.window.showInformationMessage(`No unassigned Jira tickets in To Do that are not blocked by unfinished Jira items were found for project ${projectKey}.`);
             return;
         }
-        const selection = await showAssignJiraItemToAgentDialog(projectKey, assignableAgentOptions, issues);
+        const selection = await showAssignJiraItemToAgentDialog(projectKey, issues);
         if (!selection)
             return;
         const issue = issues.find((candidate) => candidate.key === selection.issueKey);
@@ -2820,14 +2777,15 @@ function activate(context) {
             void vscode.window.showErrorMessage("The selected Jira item is no longer available.");
             return;
         }
-        const updatedSummary = buildIssueSummaryForAgent(issue.summary, selection.agentLabel);
+        const agentLabel = (0, agentRunCommand_1.inferAssignableAgentLabelFromCommand)(selection.agentCommand);
+        const updatedSummary = buildIssueSummaryForAgent(issue.summary, agentLabel);
         try {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `Assigning ${issue.key} to ${selection.agentLabel}`,
+                title: `Assigning ${issue.key}`,
                 cancellable: false
             }, async () => {
-                await (0, jira_1.updateJiraIssueSummaryAndLabels)(credentials, issue.key, updatedSummary, [buildAgentJiraLabel(selection.agentLabel)]);
+                await (0, jira_1.updateJiraIssueSummaryAndLabels)(credentials, issue.key, updatedSummary, [buildAgentJiraLabel(agentLabel)]);
                 await (0, jira_1.assignJiraIssueToCurrentUser)(credentials, issue.key);
                 await (0, jira_1.transitionJiraIssueToStatus)(credentials, issue.key, "In Progress");
             });
@@ -2837,8 +2795,8 @@ function activate(context) {
             void vscode.window.showErrorMessage(`Failed to assign Jira item to agent: ${message}`);
             return;
         }
-        await launchAgentForJiraItem(repoRoot, selection.agentLabel, issue.key, issue.summary, selection.agentCommand);
-        void vscode.window.showInformationMessage(`${issue.key} was assigned to ${credentials.email}, moved to In Progress, and sent to ${selection.agentLabel}.`);
+        await launchAgentForJiraItem(repoRoot, agentLabel, issue.key, issue.summary, selection.agentCommand);
+        void vscode.window.showInformationMessage(`${issue.key} was assigned to ${credentials.email}, moved to In Progress, and launched with the selected agent harness command.`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.completeJiraItem", async () => {
         const rootPath = (0, utils_1.getRootPath)();

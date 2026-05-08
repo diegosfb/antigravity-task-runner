@@ -1,6 +1,12 @@
 import { buildAgenticHarnessPromptCommandForCommand } from "./agenticHarnessCommand";
 
-export type AssignableAgentLabel = "Antigravity" | "Claude Code" | "Codex" | "OpenCode" | "Qwen Code";
+export type AssignableAgentLabel =
+  | "Antigravity"
+  | "Claude Code"
+  | "Codex"
+  | "Gemini"
+  | "OpenCode"
+  | "Qwen Code";
 
 function quoteShellArg(value: string): string {
   return `"${value.replace(/"/g, '\\"')}"`;
@@ -17,6 +23,7 @@ export function inferAssignableAgentLabelFromCommand(command: string): Assignabl
   const executableName = getExecutableName(command);
   if (executableName === "claude") return "Claude Code";
   if (executableName === "codex") return "Codex";
+  if (executableName === "gemini") return "Gemini";
   if (trimmedCommand.includes("qwen3-coder")) return "Qwen Code";
   if (executableName === "opencode") return "OpenCode";
   return "Antigravity";

@@ -18,6 +18,8 @@ function inferAssignableAgentLabelFromCommand(command) {
         return "Claude Code";
     if (executableName === "codex")
         return "Codex";
+    if (executableName === "gemini")
+        return "Gemini";
     if (trimmedCommand.includes("qwen3-coder"))
         return "Qwen Code";
     if (executableName === "opencode")
