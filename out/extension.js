@@ -3080,7 +3080,7 @@ function activate(context) {
                 `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
                 `${(0, utils_1.quoteShellArg)(scriptPath)} ${(0, utils_1.quoteShellArg)(currentBranch)}`
             ], {
-                iconPath: new vscode.ThemeIcon("sync", PULL_REMOTE_AND_MERGE_ACTION_COLOR),
+                iconPath: new vscode.ThemeIcon("cloud-download", PULL_REMOTE_AND_MERGE_ACTION_COLOR),
                 color: PULL_REMOTE_AND_MERGE_ACTION_COLOR,
                 ...(projectTestingCommand
                     ? {

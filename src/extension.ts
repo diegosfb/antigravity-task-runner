@@ -3887,7 +3887,7 @@ export function activate(context: vscode.ExtensionContext) {
             `${quoteShellArg(scriptPath)} ${quoteShellArg(currentBranch)}`
           ],
           {
-            iconPath: new vscode.ThemeIcon("sync", PULL_REMOTE_AND_MERGE_ACTION_COLOR),
+            iconPath: new vscode.ThemeIcon("cloud-download", PULL_REMOTE_AND_MERGE_ACTION_COLOR),
             color: PULL_REMOTE_AND_MERGE_ACTION_COLOR,
             ...(projectTestingCommand
               ? {
