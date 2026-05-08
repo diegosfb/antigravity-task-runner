@@ -433,7 +433,7 @@
         },
         "antigravity.useAgentForGithubRepositoryManagement": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "When enabled, agent-driven flows are preferred for GitHub repository management tasks."
         },
         "antigravity.agenticHarnessExecutionCommand": {

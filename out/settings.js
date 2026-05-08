@@ -192,7 +192,7 @@ function getProjectTestingCommand() {
 }
 function getUseAgentForGithubRepositoryManagement() {
     const config = vscode.workspace.getConfiguration("antigravity");
-    return config.get("useAgentForGithubRepositoryManagement") ?? false;
+    return config.get("useAgentForGithubRepositoryManagement") ?? true;
 }
 function getExtensionSettingsFields() {
     const config = vscode.workspace.getConfiguration("antigravity");
@@ -349,7 +349,7 @@ function getExtensionSettingsFields() {
             placeholder: "",
             value: "",
             type: "checkbox",
-            checked: config.get("useAgentForGithubRepositoryManagement") ?? false
+            checked: config.get("useAgentForGithubRepositoryManagement") ?? true
         },
         {
             key: "agenticHarnessExecutionCommand",

@@ -231,7 +231,7 @@ export function getProjectTestingCommand(): string {
 
 export function getUseAgentForGithubRepositoryManagement(): boolean {
   const config = vscode.workspace.getConfiguration("antigravity");
-  return config.get<boolean>("useAgentForGithubRepositoryManagement") ?? false;
+  return config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true;
 }
 
 function getExtensionSettingsFields(): SettingsField[] {
@@ -407,7 +407,7 @@ function getExtensionSettingsFields(): SettingsField[] {
       placeholder: "",
       value: "",
       type: "checkbox",
-      checked: config.get<boolean>("useAgentForGithubRepositoryManagement") ?? false
+      checked: config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true
     },
     {
       key: "agenticHarnessExecutionCommand",
