@@ -1356,7 +1356,8 @@ function activate(context) {
             (0, logger_1.logAlways)("[commitChanges] no changes detected");
             return { kind: "no_changes" };
         }
-        if ((0, settings_1.getUseAgentForGithubRepositoryManagement)()) {
+        const shouldUseAgenticHarness = options.forceAgenticHarness === true || (0, settings_1.getUseAgentForGithubRepositoryManagement)();
+        if (shouldUseAgenticHarness) {
             const prompt = "commit all changes and automatically generate the commit message";
             const taskName = `Agentic Harness Commit ${Date.now()}`;
             const preCommitHead = await getHeadCommitSha(repoRoot);
@@ -2994,9 +2995,31 @@ function activate(context) {
                 void vscode.window.showErrorMessage("Merge branch to main is unavailable while Git is in a detached HEAD state.");
                 return;
             }
-            const canProceed = await prepareCommitBeforeCheckout(repoRoot, "main");
-            if (!canProceed)
-                return;
+            await vscode.workspace.saveAll(false);
+            const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+            if (statusOutput.trim().length > 0) {
+                (0, logger_1.logAlways)("[mergeBranchToMain] uncommitted changes detected; running Agentic Harness commit first");
+                const commitResult = await runCommitChangesFlow(repoRoot, {
+                    awaitAgenticHarness: true,
+                    forceAgenticHarness: true
+                });
+                if (commitResult.kind === "failed") {
+                    void vscode.window.showErrorMessage(`Merge branch to main stopped before launch: ${commitResult.message}`);
+                    return;
+                }
+                if (commitResult.kind === "committed") {
+                    void vscode.window.showInformationMessage(`Committed changes before merging to main: ${commitResult.message}`);
+                }
+                const remainingStatusOutput = await execInRepo("git status --porcelain", repoRoot);
+                if (remainingStatusOutput.trim().length > 0) {
+                    const branchLabel = `'${currentBranch}'`;
+                    const remainingMessage = commitResult.kind === "nothing_committable"
+                        ? `${branchLabel} still has changes that were not committed by the Agentic Harness.`
+                        : `${branchLabel} still has uncommitted changes after the commit step.`;
+                    void vscode.window.showErrorMessage(`Merge branch to main stopped because ${remainingMessage}`);
+                    return;
+                }
+            }
             const scriptPath = path.join(extensionRoot, "src", "merge_branch_to_main.sh");
             if (!fs.existsSync(scriptPath)) {
                 void vscode.window.showErrorMessage("Merge branch to main script not found in the extension package.");
