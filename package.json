@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.9.22",
+  "version": "4.9.30",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -20,6 +20,7 @@
     "onStartupFinished",
     "onView:antigravityView",
     "onCommand:antigravity.openSettings",
+    "onCommand:antigravity.openHelpDoc",
     "onCommand:antigravity.openAgent",
     "onCommand:antigravity.runAgent",
     "onCommand:antigravity.runWorkflow",
@@ -48,6 +49,11 @@
         "command": "antigravity.openSettings",
         "title": "Antigravity: Settings",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "antigravity.openHelpDoc",
+        "title": "Antigravity: Open Help Doc",
+        "icon": "$(book)"
       },
       {
         "command": "antigravity.runAgent",
@@ -235,7 +241,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.9.22",
+          "name": "Tasky Runner v4.9.30",
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -262,6 +268,11 @@
           "command": "antigravity.openSettings",
           "when": "view == antigravityView",
           "group": "navigation"
+        },
+        {
+          "command": "antigravity.openHelpDoc",
+          "when": "view == antigravityView",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
@@ -445,6 +456,23 @@
             "type": "string"
           },
           "description": "Saved Agentic Harness execution commands offered on the Settings page."
+        },
+        "antigravity.lightAgenticHarnessExecutionCommand": {
+          "type": "string",
+          "default": "claude --model claude-haiku-4-5-20251001",
+          "description": "Selected Light Agentic Harness execution command."
+        },
+        "antigravity.lightAgenticHarnessExecutionCommands": {
+          "type": "array",
+          "default": [
+            "claude --model claude-haiku-4-5-20251001",
+            "opencode run -m ollama/qwen3-coder:30b",
+            "gemini"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Saved Light Agentic Harness execution commands offered on the Settings page."
         },
         "antigravity.claudeSetupGithub": {
           "type": "string",

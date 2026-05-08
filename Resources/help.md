@@ -5,14 +5,72 @@ This document describes the items that appear in the Task Runner sidebar and wha
 ## Before You Start
 
 - Open the `Task Runner` view from the VS Code activity bar.
-- Use the settings gear button to configure values such as:
-  - `antigravity.rootPath`
-  - `antigravity.workspaceProjectPath`
-  - `antigravity.buildCommand`
-  - `antigravity.projectTestingCommand`
-  - `antigravity.workflowsFolder`
+- Use the settings gear button for the built-in Task Runner settings screen, or edit raw `antigravity.*` values in VS Code `settings.json`.
 - Jira items work best when the repo has a valid `.env` with Jira credentials and a saved `JIRA_PROJECT_KEY`.
 - Claude items expect the `claude` CLI and local Claude config to be available.
+
+## Settings
+
+Task Runner settings can be edited in two places:
+
+- Click the settings gear in the `Task Runner` view for the built-in settings page.
+- Open VS Code Settings or `settings.json` and edit the raw `antigravity.*` keys directly.
+
+As a rule of thumb, save repo-specific behavior in Workspace settings and personal machine-specific values in User settings.
+
+### Paths, folders, and linked content
+
+| Setting | Used by | What it controls |
+| --- | --- | --- |
+| `antigravity.rootPath` | Agents, workflows, project assets | Repo-relative path to the antigravity folder that contains agent and workflow content. Leave it at the default unless the repo stores that folder somewhere else. |
+| `antigravity.workspaceProjectPath` | `Workspace Setup`, environment/config scripts | Folder where workspace files are extracted or downloaded. Relative values are resolved from the repo root. |
+| `antigravity.workflowsFolder` | `Workflows` section | Base folder searched for workflow markdown before Task Runner falls back to bundled workflows. |
+| `antigravity.customAgenticPlatformAddons` | Linked folders section | Extra local folder to show in the sidebar so you can browse custom shared assets. |
+| `antigravity.sopManualLink` | `SOP Manual` | Markdown URL downloaded by the SOP Manual action. If `SOP_MANUAL_LINK` exists in the repo `.env`, that repo value overrides this setting. |
+| `antigravity.antigravityWorkspaceProject` | `Update Agentic Workspace` | Local folder path where the `antigravity-workspace` repo should live when Task Runner refreshes shared workspace assets. This is an advanced setting and is usually edited only in raw settings. |
+
+### Build, Git, and terminal behavior
+
+| Setting | Used by | What it controls |
+| --- | --- | --- |
+| `antigravity.terminalName` | Workflow and repo scripts | Terminal name used for the regular Task Runner script terminal. |
+| `antigravity.agentTerminalName` | Agent launches | Terminal name used when Task Runner runs an agent-oriented command. |
+| `antigravity.buildCommand` | `Build Project` | Exact build command Task Runner runs for the project. |
+| `antigravity.projectTestingCommand` | `Run Project Tests`, PR and merge scripts | Exact test command Task Runner runs when a flow wants project validation. |
+| `antigravity.defaultGithubCodeReviewer` | `Create Pull Request` | Default GitHub reviewer suggestion shown in the PR flow. |
+| `antigravity.createReleaseBranchWhenCreatingReleases` | `Create Repo Release` | When enabled, release creation also creates, checks out, and pushes a release branch named for the release. |
+| `antigravity.autoUpdateClaudeMd` | `Autocommit Start` | When enabled, starting autocommit also asks Claude to refresh `CLAUDE.md`. |
+| `antigravity.enableDebugLogging` | Antigravity output channel | When enabled, Task Runner writes extra debug logs to the extension output. |
+| `antigravity.useAgentForGithubRepositoryManagement` | `Commit` | Switches GitHub repo management to prefer agent-driven flows. In the current implementation this mainly affects `Commit`: when enabled, the commit flow delegates message generation and commit execution to the selected light agent harness instead of the built-in local message generator. |
+
+### Jira settings
+
+| Setting | Used by | What it controls |
+| --- | --- | --- |
+| `antigravity.jiraBaseUrl` | All Jira actions | Jira site base URL, usually your Atlassian cloud URL. |
+| `antigravity.jiraEmail` | All Jira actions | Jira account email used for API authentication. |
+| `antigravity.jiraApiToken` | All Jira actions | Jira API token used for API authentication. Treat this as a secret and do not commit it to Git. |
+
+### Agent and harness commands
+
+| Setting | Used by | What it controls |
+| --- | --- | --- |
+| `antigravity.antigravityPath` | Agent launches that still use the Antigravity executable | Path to the `antigravity` executable. Change it only if the command is not on your PATH or you want a custom binary. |
+| `antigravity.antigravityArgs` | Same executable-based agent launches | Argument template passed to the `antigravity` executable. It supports `{agent}` and `{agentFile}` placeholders. |
+| `antigravity.agenticHarnessExecutionCommand` | Main agentic actions | Primary harness command used for heavier agent-driven actions such as `Assign Jira Item to Agent`, `Agentic review of Merge`, and `Set Feature Flag for changes`. |
+| `antigravity.agenticHarnessExecutionCommands` | Settings command picker | Saved list of selectable main harness commands. Add values here if you want more options in the settings dropdown. |
+| `antigravity.lightAgenticHarnessExecutionCommand` | Lightweight agentic actions | Lighter or cheaper harness command used for smaller prompt-driven tasks. If `Use Agent for Github Repository Management` is enabled, `Commit` uses this lighter harness path. |
+| `antigravity.lightAgenticHarnessExecutionCommands` | Settings command picker | Saved list of selectable light harness commands. Edit it when you want different quick-select options in the settings UI. |
+
+### Fallback sources and setup repos
+
+| Setting | Used by | What it controls |
+| --- | --- | --- |
+| `antigravity.scriptFallbackBaseUrl` | Missing repo scripts | Base URL Task Runner uses to download a script when `./scripts/<name>.sh` is missing locally. |
+| `antigravity.configFallbackBaseUrl` | Environment/config downloads | Base URL Task Runner uses to download missing config files such as `DEV-settings.yaml` or `.env`. |
+| `antigravity.claudeSetupGithub` | `Update Agentic Setup` | GitHub repo URL used when refreshing Claude setup files. This is an advanced setup value. |
+| `antigravity.geminiSetupGithub` | `Update Agentic Setup` | GitHub repo URL used when refreshing Gemini setup files. This is an advanced setup value. |
+| `antigravity.codexSetupGithub` | `Update Agentic Setup` | GitHub repo URL used when refreshing Codex setup files. This is an advanced setup value. |
 
 ## Launchers And Linked Folders
 

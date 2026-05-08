@@ -13,6 +13,7 @@ import {
   runInNewTerminal,
   runCommandInTaskTerminal,
   buildAgenticHarnessPromptCommand,
+  buildLightAgenticHarnessPromptCommand,
   runClaudeInitAndUpdateInNewTerminal,
   runCodexInitAndUpdateInNewTerminal,
   CLAUDE_ACTION_COLOR
@@ -2183,6 +2184,22 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.openHelpDoc", async () => {
+      const helpDocPath = path.join(extensionRoot, "Resources", "help.md");
+      if (!fs.existsSync(helpDocPath)) {
+        void vscode.window.showErrorMessage(
+          "Help document not found in the installed Task Runner extension files."
+        );
+        return;
+      }
+      await vscode.commands.executeCommand(
+        "markdown.showPreview",
+        vscode.Uri.file(helpDocPath)
+      );
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.runClaudeAgent", async (agentName: string) => {
       log(`[runClaudeAgent] agentName: ${agentName}`);
       if (!agentName) {
@@ -2792,7 +2809,7 @@ export function activate(context: vscode.ExtensionContext) {
             "Agentic Harness Commit",
             [
               `cd ${quoteShellArg(repoRoot)}`,
-              buildAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")
+              buildLightAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")
             ],
             {
               iconPath: new vscode.ThemeIcon("git-commit", CLAUDE_ACTION_COLOR),

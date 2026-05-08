@@ -9,6 +9,7 @@ exports.getRouterSettings = getRouterSettings;
 exports.loadOpenRouterConfig = loadOpenRouterConfig;
 exports.loadClaudeSettings = loadClaudeSettings;
 exports.getAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand;
+exports.getLightAgenticHarnessExecutionCommand = getLightAgenticHarnessExecutionCommand;
 exports.getDefaultGithubCodeReviewer = getDefaultGithubCodeReviewer;
 exports.getBuildCommand = getBuildCommand;
 exports.getProjectTestingCommand = getProjectTestingCommand;
@@ -161,10 +162,20 @@ const DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS = [
     "opencode run -m ollama/qwen3-coder:480b-cloud",
     "opencode run -m ollama/gpt-oss:20-cloud"
 ];
+const DEFAULT_LIGHT_AGENTIC_HARNESS_EXECUTION_COMMANDS = [
+    "claude --model claude-haiku-4-5-20251001",
+    "opencode run -m ollama/qwen3-coder:30b",
+    "gemini"
+];
 function getAgenticHarnessExecutionCommand() {
     const config = vscode.workspace.getConfiguration("antigravity");
     return ((config.get("agenticHarnessExecutionCommand") || "").trim() ||
         DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0]);
+}
+function getLightAgenticHarnessExecutionCommand() {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    return ((config.get("lightAgenticHarnessExecutionCommand") || "").trim() ||
+        DEFAULT_LIGHT_AGENTIC_HARNESS_EXECUTION_COMMANDS[0]);
 }
 function getDefaultGithubCodeReviewer() {
     const config = vscode.workspace.getConfiguration("antigravity");
@@ -188,6 +199,9 @@ function getExtensionSettingsFields() {
     const savedAgenticHarnessExecutionCommands = mergeUniqueStrings(DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS, config.get("agenticHarnessExecutionCommands"));
     const selectedAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand();
     const agenticHarnessExecutionCommands = mergeUniqueStrings(savedAgenticHarnessExecutionCommands, [selectedAgenticHarnessExecutionCommand]);
+    const savedLightAgenticHarnessExecutionCommands = mergeUniqueStrings(DEFAULT_LIGHT_AGENTIC_HARNESS_EXECUTION_COMMANDS, config.get("lightAgenticHarnessExecutionCommands"));
+    const selectedLightAgenticHarnessExecutionCommand = getLightAgenticHarnessExecutionCommand();
+    const lightAgenticHarnessExecutionCommands = mergeUniqueStrings(savedLightAgenticHarnessExecutionCommands, [selectedLightAgenticHarnessExecutionCommand]);
     return [
         {
             key: "rootPath",
@@ -346,6 +360,16 @@ function getExtensionSettingsFields() {
             type: "command-list",
             options: agenticHarnessExecutionCommands,
             optionsKey: "agenticHarnessExecutionCommands"
+        },
+        {
+            key: "lightAgenticHarnessExecutionCommand",
+            label: "Light Agentic Harness execution commands",
+            description: "Pick a saved command or type your own. Applying settings saves custom values into the list for next time.",
+            placeholder: "claude --model claude-haiku-4-5-20251001",
+            value: selectedLightAgenticHarnessExecutionCommand,
+            type: "command-list",
+            options: lightAgenticHarnessExecutionCommands,
+            optionsKey: "lightAgenticHarnessExecutionCommands"
         },
         {
             key: "customAgenticPlatformAddons",

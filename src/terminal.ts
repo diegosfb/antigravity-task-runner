@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { logAlways } from "./logger";
-import { getAgenticHarnessExecutionCommand } from "./settings";
+import { getAgenticHarnessExecutionCommand, getLightAgenticHarnessExecutionCommand } from "./settings";
 import { buildAgenticHarnessPromptCommandForCommand, type AgenticHarnessPromptMode } from "./agenticHarnessCommand";
 import { quoteShellArg } from "./utils";
 
@@ -84,6 +84,22 @@ export function buildAgenticHarnessPromptCommand(
     mode
   );
   logAlways(`[agenticHarness] runString: ${runString}`);
+  return runString;
+}
+
+export function buildLightAgenticHarnessPromptCommand(
+  repoRoot: string,
+  prompt: string,
+  mode: AgenticHarnessPromptMode = "dangerous"
+): string {
+  const command = getLightAgenticHarnessExecutionCommand();
+  const runString = buildAgenticHarnessPromptCommandForCommand(
+    command,
+    repoRoot,
+    prompt,
+    mode
+  );
+  logAlways(`[lightAgenticHarness] runString: ${runString}`);
   return runString;
 }
 
