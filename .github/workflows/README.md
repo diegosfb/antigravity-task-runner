@@ -10,8 +10,8 @@ This folder contains GitHub Actions workflows used to validate and secure the pr
 ## What it does
 The `ci.yml` workflow runs four jobs:
 
-1. **Compile and Test**
-   - Installs dependencies and runs `npm test`, which compiles the extension and executes the Node test suite.
+1. **Lint and Test**
+   - Installs dependencies, runs `npm run lint`, then runs `npm test`, which compiles the extension and executes the Node test suite.
 2. **Dependency Audit**
    - Runs `npm audit --production` to flag known vulnerabilities.
 3. **Secret Scan**

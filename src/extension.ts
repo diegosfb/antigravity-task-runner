@@ -1032,7 +1032,7 @@ export function activate(context: vscode.ExtensionContext) {
       return projectKey;
     }
 
-    let projects: JiraProjectSummary[] = [];
+    let projects: JiraProjectSummary[];
     try {
       projects = await vscode.window.withProgress(
         {

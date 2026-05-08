@@ -810,7 +810,7 @@ function activate(context) {
         if (projectKey) {
             return projectKey;
         }
-        let projects = [];
+        let projects;
         try {
             projects = await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,

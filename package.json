@@ -525,6 +525,7 @@
   ],
   "scripts": {
     "compile": "node node_modules/typescript/lib/tsc.js -p ./",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.js\"",
     "test": "npm run compile && node --test tests/*.test.js",
     "create-release": "bash scripts/create-release.sh",
     "sync-view-name": "node src/sync-view-name.js",
@@ -532,8 +533,12 @@
     "bump-version": "./scripts/bump-version.sh"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.19.0",
     "@types/vscode": "^1.98.0",
-    "typescript": "^5.8.3"
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.59.2"
   }
 }

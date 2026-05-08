@@ -120,7 +120,7 @@ export async function listInfrastructureYamlFiles(repoRoot: string): Promise<str
 export function parseEnvFile(filePath: string): Record<string, string> {
   const values: Record<string, string> = {};
   if (!fs.existsSync(filePath)) return values;
-  let content = "";
+  let content: string;
   try {
     content = fs.readFileSync(filePath, "utf8");
   } catch {
