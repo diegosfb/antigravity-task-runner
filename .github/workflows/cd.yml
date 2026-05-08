@@ -1,0 +1,71 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to publish (tag, branch, or SHA). Defaults to the selected ref."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-${{ github.event.inputs.ref || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish-extension:
+    name: Publish VS Code Extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Package VSIX
+        run: npx @vscode/vsce package
+
+      - name: Resolve VSIX path
+        id: vsix
+        shell: bash
+        run: |
+          set -euo pipefail
+          VSIX_PATH="$(find . -maxdepth 1 -name '*.vsix' -print | head -n 1)"
+          if [[ -z "${VSIX_PATH}" ]]; then
+            echo "No VSIX artifact was generated."
+            exit 1
+          fi
+          echo "path=${VSIX_PATH#./}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.vsix.outputs.path }}
+          path: ${{ steps.vsix.outputs.path }}
+
+      - name: Publish to VS Code Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx @vscode/vsce publish --packagePath "${{ steps.vsix.outputs.path }}"
