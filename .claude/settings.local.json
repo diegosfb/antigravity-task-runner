@@ -75,7 +75,11 @@
       "Bash(sed -n '422,432p' src/settings.ts)",
       "Bash(cat > *)",
       "Bash(npm test *)",
-      "Bash(node -e \"require\\('/Users/diego.brihuega/Documents/Projects/antigravity-task-runner/package.json'\\); console.log\\('OK'\\)\")"
+      "Bash(node -e \"require\\('/Users/diego.brihuega/Documents/Projects/antigravity-task-runner/package.json'\\); console.log\\('OK'\\)\")",
+      "Bash(gh pr create --title 'Add Light Agentic Harness execution command setting' --body ' *)",
+      "Bash(which gh *)",
+      "Read(//usr/local/bin/**)",
+      "Bash(/opt/homebrew/bin/gh pr create --title 'Add Light Agentic Harness execution command setting' --body ' *)"
     ],
     "additionalDirectories": [
       "/Users/diego.brihuega/Documents/Projects/antigravity-task-runner/docs/superpowers",
