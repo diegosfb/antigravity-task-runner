@@ -456,7 +456,11 @@ main() {
     exit 1
   fi
 
-  commit_pending_changes_if_needed "$feature_branch"
+  if [[ "${ANTIGRAVITY_SKIP_PRE_PR_COMMIT:-0}" == "1" ]]; then
+    echo "Pre-PR commit handling was already completed by Task Runner."
+  else
+    commit_pending_changes_if_needed "$feature_branch"
+  fi
 
   echo "Checking whether local main already includes the latest origin/main commits."
   run_remote_git_and_echo fetch origin refs/heads/main:refs/remotes/origin/main

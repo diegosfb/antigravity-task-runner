@@ -1291,6 +1291,147 @@ function activate(context) {
             return `Remove ${entries.length} files`;
         return `Update ${entries.length} files`;
     };
+    const AUTOMATED_COMMIT_PROTECTED_PATHS = new Set([".env", "config/.env"]);
+    const normalizeGitPath = (filePath) => filePath
+        .trim()
+        .replace(/^"(.*)"$/, "$1")
+        .replace(/\\/g, "/")
+        .replace(/^\.\/+/, "");
+    const isProtectedAutomatedCommitPath = (filePath) => AUTOMATED_COMMIT_PROTECTED_PATHS.has(normalizeGitPath(filePath));
+    const parseGitStatusPorcelain = (output) => output
+        .split(/\r?\n/)
+        .map((line) => line.replace(/\r/g, ""))
+        .filter((line) => line.length >= 4)
+        .map((line) => {
+        const indexStatus = line.charAt(0);
+        const workTreeStatus = line.charAt(1);
+        const pathSection = line.slice(3).trim();
+        const renameSeparator = " -> ";
+        const isRename = (indexStatus === "R" || workTreeStatus === "R" || indexStatus === "C" || workTreeStatus === "C") &&
+            pathSection.includes(renameSeparator);
+        if (isRename) {
+            const [previousPath = "", nextPath = ""] = pathSection.split(renameSeparator);
+            return {
+                indexStatus,
+                workTreeStatus,
+                path: nextPath,
+                previousPath
+            };
+        }
+        return {
+            indexStatus,
+            workTreeStatus,
+            path: pathSection
+        };
+    })
+        .filter((entry) => entry.path.length > 0);
+    const hasNonProtectedUncommittedChanges = async (repoRoot) => {
+        const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+        return parseGitStatusPorcelain(statusOutput).some((entry) => {
+            const candidatePaths = [entry.path, entry.previousPath].filter((value) => Boolean(value));
+            return candidatePaths.some((candidatePath) => !isProtectedAutomatedCommitPath(candidatePath));
+        });
+    };
+    const getHeadCommitSha = async (repoRoot) => {
+        try {
+            return (await execInRepo("git rev-parse HEAD", repoRoot)).trim();
+        }
+        catch {
+            return "";
+        }
+    };
+    const waitForTaskProcessExit = async (taskExecution, taskName) => new Promise((resolve) => {
+        const disposable = vscode.tasks.onDidEndTaskProcess((event) => {
+            if (event.execution === taskExecution || event.execution.task.name === taskName) {
+                disposable.dispose();
+                resolve(event.exitCode);
+            }
+        });
+    });
+    const runCommitChangesFlow = async (repoRoot, options) => {
+        await focusSourceControlChanges();
+        await vscode.workspace.saveAll(false);
+        const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+        if (statusOutput.trim().length === 0) {
+            (0, logger_1.logAlways)("[commitChanges] no changes detected");
+            return { kind: "no_changes" };
+        }
+        if ((0, settings_1.getUseAgentForGithubRepositoryManagement)()) {
+            const prompt = "commit all changes and automatically generate the commit message";
+            const taskName = `Agentic Harness Commit ${Date.now()}`;
+            const preCommitHead = await getHeadCommitSha(repoRoot);
+            (0, logger_1.logAlways)("[commitChanges] delegating commit to Agentic Harness task");
+            const taskExecution = await (0, terminal_1.runCommandInTaskTerminal)(taskName, (0, terminal_1.buildLightAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt"), { cwd: repoRoot });
+            if (!options.awaitAgenticHarness) {
+                return { kind: "delegated" };
+            }
+            const exitCode = await waitForTaskProcessExit(taskExecution, taskName);
+            if (exitCode !== 0) {
+                return {
+                    kind: "failed",
+                    message: `The Agentic Harness commit exited with code ${exitCode ?? "unknown"}.`
+                };
+            }
+            const postCommitHead = await getHeadCommitSha(repoRoot);
+            const remainingStatusOutput = await execInRepo("git status --porcelain", repoRoot);
+            const blockingChangesRemain = await hasNonProtectedUncommittedChanges(repoRoot);
+            provider.refresh();
+            if (postCommitHead && postCommitHead !== preCommitHead) {
+                if (blockingChangesRemain) {
+                    return {
+                        kind: "failed",
+                        message: "The Agentic Harness commit finished, but some non-protected changes are still uncommitted."
+                    };
+                }
+                const latestSubject = (await execInRepo("git log -1 --pretty=%s", repoRoot)).trim();
+                return {
+                    kind: "committed",
+                    message: latestSubject || "Agentic Harness commit"
+                };
+            }
+            if (blockingChangesRemain) {
+                return {
+                    kind: "failed",
+                    message: "The Agentic Harness finished without creating a commit for the remaining changes."
+                };
+            }
+            if (remainingStatusOutput.trim().length > 0) {
+                return { kind: "nothing_committable" };
+            }
+            return {
+                kind: "failed",
+                message: "The Agentic Harness finished without creating a commit."
+            };
+        }
+        const secretCandidateOutput = await execInRepo("git status --porcelain -- .env config/.env", repoRoot);
+        if (secretCandidateOutput.trim().length > 0) {
+            (0, logger_1.logAlways)("[commitChanges] excluding .env/config/.env from automated commit");
+            void vscode.window.showWarningMessage("Excluded .env and config/.env from this automated commit for safety.");
+        }
+        await execInRepo("git add -A -- . && git rm -q --cached --ignore-unmatch .env config/.env", repoRoot);
+        const repository = await getGitRepository(repoRoot);
+        if (!repository) {
+            (0, logger_1.logAlways)("[commitChanges] ERROR: VS Code Git repository not found");
+            return {
+                kind: "failed",
+                message: "VS Code Git integration could not find the current repository."
+            };
+        }
+        const commitMessage = await buildGeneratedCommitMessage(repoRoot);
+        if (!commitMessage.trim()) {
+            (0, logger_1.logAlways)("[commitChanges] no commit message generated");
+            return { kind: "nothing_committable" };
+        }
+        (0, logger_1.logAlways)(`[commitChanges] generated message: ${commitMessage}`);
+        repository.inputBox.value = commitMessage;
+        await repository.commit(commitMessage, { all: false });
+        provider.refresh();
+        (0, logger_1.logAlways)("[commitChanges] commit completed");
+        return {
+            kind: "committed",
+            message: commitMessage
+        };
+    };
     const getGitApi = async () => {
         const gitExtension = vscode.extensions.getExtension("vscode.git");
         if (!gitExtension) {
@@ -2294,51 +2435,26 @@ function activate(context) {
                 void vscode.window.showWarningMessage("Initialize a Git repository before using Commit.");
                 return;
             }
-            await focusSourceControlChanges();
-            await vscode.workspace.saveAll(false);
-            const statusOutput = await execInRepo("git status --porcelain", repoRoot);
-            if (statusOutput.trim().length === 0) {
-                (0, logger_1.logAlways)("[commitChanges] no changes detected");
+            const result = await runCommitChangesFlow(repoRoot, {
+                awaitAgenticHarness: false
+            });
+            if (result.kind === "no_changes") {
                 void vscode.window.showInformationMessage("No changes to commit.");
                 return;
             }
-            if ((0, settings_1.getUseAgentForGithubRepositoryManagement)()) {
-                const prompt = "commit all changes and automatically generate the commit message";
-                (0, logger_1.logAlways)("[commitChanges] delegating commit to Agentic Harness");
-                (0, terminal_1.runInNewTerminal)("Agentic Harness Commit", [
-                    `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                    (0, terminal_1.buildLightAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt")
-                ], {
-                    iconPath: new vscode.ThemeIcon("git-commit", terminal_1.CLAUDE_ACTION_COLOR),
-                    color: terminal_1.CLAUDE_ACTION_COLOR
-                });
+            if (result.kind === "delegated") {
                 void vscode.window.showInformationMessage("Opened Agentic Harness Commit terminal.");
                 return;
             }
-            const secretCandidateOutput = await execInRepo("git status --porcelain -- .env config/.env", repoRoot);
-            if (secretCandidateOutput.trim().length > 0) {
-                (0, logger_1.logAlways)("[commitChanges] excluding .env/config/.env from automated commit");
-                void vscode.window.showWarningMessage("Excluded .env and config/.env from this automated commit for safety.");
-            }
-            await execInRepo("git add -A -- . && git rm -q --cached --ignore-unmatch .env config/.env", repoRoot);
-            const repository = await getGitRepository(repoRoot);
-            if (!repository) {
-                (0, logger_1.logAlways)("[commitChanges] ERROR: VS Code Git repository not found");
-                void vscode.window.showErrorMessage("VS Code Git integration could not find the current repository.");
-                return;
-            }
-            const commitMessage = await buildGeneratedCommitMessage(repoRoot);
-            if (!commitMessage.trim()) {
-                (0, logger_1.logAlways)("[commitChanges] no commit message generated");
+            if (result.kind === "nothing_committable") {
                 void vscode.window.showWarningMessage("Nothing commitable was staged.");
                 return;
             }
-            (0, logger_1.logAlways)(`[commitChanges] generated message: ${commitMessage}`);
-            repository.inputBox.value = commitMessage;
-            await repository.commit(commitMessage, { all: false });
-            provider.refresh();
-            (0, logger_1.logAlways)("[commitChanges] commit completed");
-            void vscode.window.showInformationMessage(`Committed changes: ${commitMessage}`);
+            if (result.kind === "committed") {
+                void vscode.window.showInformationMessage(`Committed changes: ${result.message}`);
+                return;
+            }
+            throw new Error(result.message);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -2816,6 +2932,35 @@ function activate(context) {
             // best-effort
         }
         const branchLabel = prBranch ? `'${prBranch}'` : "your feature branch";
+        try {
+            await vscode.workspace.saveAll(false);
+            const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+            if (statusOutput.trim().length > 0) {
+                (0, logger_1.logAlways)("[createPullRequest] uncommitted changes detected; running commit flow first");
+                const commitResult = await runCommitChangesFlow(repoRoot, {
+                    awaitAgenticHarness: true
+                });
+                if (commitResult.kind === "failed") {
+                    void vscode.window.showErrorMessage(`Create Pull Request stopped before launch: ${commitResult.message}`);
+                    return;
+                }
+                if (commitResult.kind === "nothing_committable") {
+                    void vscode.window.showWarningMessage("Only protected .env changes remained uncommitted, so PR creation will continue without a new commit.");
+                }
+                else if (commitResult.kind === "committed") {
+                    void vscode.window.showInformationMessage(`Committed changes before opening the pull request: ${commitResult.message}`);
+                }
+                if (await hasNonProtectedUncommittedChanges(repoRoot)) {
+                    void vscode.window.showErrorMessage(`Create Pull Request stopped because ${branchLabel} still has uncommitted changes after the commit step.`);
+                    return;
+                }
+            }
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Create Pull Request couldn't complete the pre-flight commit step: ${message}`);
+            return;
+        }
         (0, terminal_1.runInNewTerminal)("Create Pull Request", [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
             `${(0, utils_1.quoteShellArg)(scriptPath)}`
@@ -2823,6 +2968,7 @@ function activate(context) {
             iconPath: new vscode.ThemeIcon("git-pull-request"),
             env: {
                 ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER: defaultGithubCodeReviewer,
+                ANTIGRAVITY_SKIP_PRE_PR_COMMIT: "1",
                 ...(projectTestingCommand
                     ? { ANTIGRAVITY_PROJECT_TESTING_COMMAND: projectTestingCommand }
                     : {})
