@@ -584,6 +584,24 @@ function getQuickActionItems(): NodeItem[] {
           .toUpperCase()
       : "";
 
+  const setupWorkspace = new NodeItem(
+    { kind: "action", label: "Setup Workspace" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  setupWorkspace.iconPath = new vscode.ThemeIcon("repo-clone", QUICK_ACTION_COLOR);
+  if (hasAgentFolder) {
+    setupWorkspace.iconPath = new vscode.ThemeIcon(
+      "repo-clone",
+      new vscode.ThemeColor("disabledForeground")
+    );
+    setupWorkspace.tooltip = "A .agent folder already exists in this project.";
+  }
+  setupWorkspace.command = {
+    command: "antigravity.setupWorkspace",
+    title: "Setup Workspace"
+  };
+  items.push(setupWorkspace);
+
   const workspaceSetup = new NodeItem(
     { kind: "action", label: "Workspace Setup" },
     vscode.TreeItemCollapsibleState.None

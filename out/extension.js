@@ -19,6 +19,7 @@ const jira_1 = require("./jira");
 const agenticHarnessSkill_1 = require("./agenticHarnessSkill");
 const jiraProjectHarness_1 = require("./jiraProjectHarness");
 const mergeReviewPrompt_1 = require("./mergeReviewPrompt");
+const projectTemplates_1 = require("./projectTemplates");
 function getRepoPackageVersion(repoRoot) {
     try {
         const packageJsonPath = path.join(repoRoot, "package.json");
@@ -164,6 +165,237 @@ function activate(context) {
             return bundledPath;
         return undefined;
     };
+    const escapeHtml = (value) => value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    const renderSetupWorkspaceHtml = (webview, workspaceDir, projectTemplates) => {
+        const nonce = getNonce();
+        const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+        const templateCards = projectTemplates
+            .map((template, index) => {
+            const checked = index === 0 ? " checked" : "";
+            const selectedClass = index === 0 ? " selected" : "";
+            const descriptionHtml = escapeHtml(template.description).replace(/\n/g, "<br />");
+            return `
+          <label class="template-card${selectedClass}">
+            <input type="radio" name="project-template" value="${escapeHtml(template.name)}"${checked} />
+            <span class="template-copy">
+              <span class="template-name">${escapeHtml(template.name)}</span>
+              <span class="template-description">${descriptionHtml}</span>
+            </span>
+          </label>
+        `;
+        })
+            .join("");
+        return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Setup Workspace</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: var(--vscode-font-family);
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+      }
+      form {
+        display: grid;
+        gap: 16px;
+      }
+      .intro {
+        display: grid;
+        gap: 6px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+      }
+      .workspace-path {
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 12px;
+        color: var(--vscode-textPreformat-foreground);
+        background: var(--vscode-textCodeBlock-background);
+        border-radius: 6px;
+        padding: 10px 12px;
+        overflow-wrap: anywhere;
+      }
+      .template-list {
+        display: grid;
+        gap: 10px;
+      }
+      .template-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--vscode-input-border, transparent);
+        background: var(--vscode-sideBar-background);
+        cursor: pointer;
+      }
+      .template-card.selected {
+        border-color: var(--vscode-focusBorder);
+        background: var(--vscode-list-hoverBackground);
+      }
+      .template-card input {
+        margin-top: 3px;
+      }
+      .template-copy {
+        display: grid;
+        gap: 6px;
+      }
+      .template-name {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .template-description {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        line-height: 1.5;
+      }
+      .error {
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--vscode-errorForeground);
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 4px;
+      }
+      button {
+        font: inherit;
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 14px;
+        cursor: pointer;
+      }
+      button[type="submit"] {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+      }
+      button[type="button"] {
+        color: var(--vscode-button-secondaryForeground);
+        background: var(--vscode-button-secondaryBackground);
+      }
+    </style>
+  </head>
+  <body>
+    <form id="setup-workspace-form">
+      <div class="intro">
+        <div>Select a project template to download into the configured workspace path.</div>
+        <div class="hint">After you click Setup, the selected Agentic Harness command from Settings will be launched to perform the download.</div>
+        <div class="workspace-path">${escapeHtml(workspaceDir)}</div>
+      </div>
+
+      <div class="template-list">
+        ${templateCards}
+      </div>
+
+      <div id="setup-workspace-error" class="error" aria-live="polite"></div>
+
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit">Setup</button>
+      </div>
+    </form>
+
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const form = document.getElementById("setup-workspace-form");
+      const errorMessage = document.getElementById("setup-workspace-error");
+      const cancelButton = document.getElementById("cancel-button");
+      const cards = Array.from(document.querySelectorAll(".template-card"));
+      const radios = Array.from(document.querySelectorAll('input[name="project-template"]'));
+
+      const syncSelectedState = () => {
+        cards.forEach((card) => {
+          const radio = card.querySelector('input[name="project-template"]');
+          card.classList.toggle("selected", Boolean(radio && radio.checked));
+        });
+      };
+
+      radios.forEach((radio) => {
+        radio.addEventListener("change", syncSelectedState);
+      });
+
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelSetupWorkspace" });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const selected = radios.find((radio) => radio.checked);
+        if (!selected) {
+          errorMessage.textContent = "Select a project type.";
+          return;
+        }
+        errorMessage.textContent = "";
+        vscode.postMessage({
+          type: "submitSetupWorkspace",
+          payload: { templateName: selected.value }
+        });
+      });
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (message?.type === "setupWorkspaceError") {
+          errorMessage.textContent =
+            message.payload?.message || "Unable to start workspace setup.";
+        }
+      });
+
+      syncSelectedState();
+    </script>
+  </body>
+</html>`;
+    };
+    const showSetupWorkspaceDialog = async (workspaceDir, projectTemplates) => new Promise((resolve) => {
+        const panel = vscode.window.createWebviewPanel("setupWorkspace", "Setup Workspace", vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = renderSetupWorkspaceHtml(panel.webview, workspaceDir, projectTemplates);
+        let settled = false;
+        const resolveOnce = (value) => {
+            if (settled)
+                return;
+            settled = true;
+            resolve(value);
+        };
+        panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelSetupWorkspace") {
+                panel.dispose();
+                return;
+            }
+            if (message.type !== "submitSetupWorkspace")
+                return;
+            const payload = message.payload || {};
+            const templateName = typeof payload.templateName === "string" ? payload.templateName.trim() : "";
+            const selectedTemplate = projectTemplates.find((projectTemplate) => projectTemplate.name === templateName);
+            if (!selectedTemplate) {
+                void panel.webview.postMessage({
+                    type: "setupWorkspaceError",
+                    payload: { message: "Select a project type." }
+                });
+                return;
+            }
+            resolveOnce(selectedTemplate);
+            panel.dispose();
+        }, undefined, context.subscriptions);
+    });
     const renderCreateFeatureBranchHtml = (webview, hasJiraProject) => {
         const nonce = getNonce();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -2343,6 +2575,54 @@ function activate(context) {
             }
             panel.dispose();
         }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.setupWorkspace", async () => {
+        (0, logger_1.showOutputChannel)();
+        (0, logger_1.logAlways)("[Setup Workspace] Command triggered");
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspaceRoot) {
+            (0, logger_1.logAlways)("[Setup Workspace] ERROR: No workspace folder is open");
+            void vscode.window.showErrorMessage("No workspace folder is open.");
+            return;
+        }
+        const repoRoot = workspaceRoot;
+        const workspaceDir = (0, utils_1.getWorkspaceProjectPath)(repoRoot);
+        (0, logger_1.logAlways)(`[Setup Workspace] workspaceDir: ${workspaceDir}`);
+        let projectTemplates;
+        try {
+            projectTemplates = await (0, projectTemplates_1.loadProjectTemplates)(path.join(extensionRoot, "Resources"));
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.logAlways)(`[Setup Workspace] ERROR loading templates: ${message}`);
+            void vscode.window.showErrorMessage(`Unable to load Resources/project-templates.json: ${message}`);
+            return;
+        }
+        if (projectTemplates.length === 0) {
+            (0, logger_1.logAlways)("[Setup Workspace] ERROR: No valid project templates found");
+            void vscode.window.showErrorMessage("Resources/project-templates.json does not contain any valid project templates.");
+            return;
+        }
+        const selectedTemplate = await showSetupWorkspaceDialog(workspaceDir, projectTemplates);
+        if (!selectedTemplate) {
+            (0, logger_1.logAlways)("[Setup Workspace] Selection cancelled");
+            return;
+        }
+        fs.mkdirSync(workspaceDir, { recursive: true });
+        const prompt = (0, projectTemplates_1.buildSetupWorkspacePrompt)(selectedTemplate, workspaceDir);
+        const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(workspaceDir, prompt, "dangerous");
+        const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;
+        try {
+            await (0, terminal_1.runCommandInTaskTerminal)(taskName, commandLine, { cwd: workspaceDir });
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.logAlways)(`[Setup Workspace] ERROR launching harness: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to launch the Agentic Harness terminal: ${message}`);
+            return;
+        }
+        (0, logger_1.logAlways)(`[Setup Workspace] Opened harness for template ${selectedTemplate.name} in ${workspaceDir}`);
+        void vscode.window.showInformationMessage(`Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}.`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.workspaceSetup", async () => {
         (0, logger_1.showOutputChannel)();

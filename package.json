@@ -34,6 +34,7 @@
     "onCommand:antigravity.approvePullRequest",
     "onCommand:antigravity.feedbackOnPullRequest",
     "onCommand:antigravity.addJiraItem",
+    "onCommand:antigravity.setupWorkspace",
     "onCommand:antigravity.selectOrCreateJiraProject",
     "onCommand:antigravity.assignJiraItemToAgent",
     "onCommand:antigravity.takeJiraItemAssign",
@@ -207,6 +208,10 @@
       {
         "command": "antigravity.addJiraItem",
         "title": "Antigravity: Add Jira Item"
+      },
+      {
+        "command": "antigravity.setupWorkspace",
+        "title": "Antigravity: Setup Workspace"
       },
       {
         "command": "antigravity.openSopManual",
