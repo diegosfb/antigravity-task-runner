@@ -707,7 +707,7 @@ function getQuickActionItems(): NodeItem[] {
       { kind: "action", label: "Pull Remote and merge" },
       vscode.TreeItemCollapsibleState.None
     );
-    pullRemoteAndMerge.iconPath = new vscode.ThemeIcon("sync", PULL_REMOTE_AND_MERGE_ACTION_COLOR);
+    pullRemoteAndMerge.iconPath = new vscode.ThemeIcon("cloud-download", PULL_REMOTE_AND_MERGE_ACTION_COLOR);
     pullRemoteAndMerge.command = {
       command: "antigravity.pullRemoteAndMerge",
       title: "Pull Remote and merge"

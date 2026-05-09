@@ -2,7 +2,11 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
+<<<<<<< HEAD
+  "version": "4.10.3",
+=======
   "version": "4.9.33",
+>>>>>>> main
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -246,7 +250,11 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
+<<<<<<< HEAD
+          "name": "Tasky Runner v4.10.3",
+=======
           "name": "Tasky Runner v4.9.33",
+>>>>>>> main
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -443,7 +451,7 @@
         },
         "antigravity.useAgentForGithubRepositoryManagement": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "When enabled, agent-driven flows are preferred for GitHub repository management tasks."
         },
         "antigravity.agenticHarnessExecutionCommand": {

@@ -38,7 +38,11 @@ import {
   LOCAL_LITELLM_READY_URL
 } from "./settings";
 import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing, downloadMarkdownToTempFile } from "./scripts";
-import { buildAgentRunCommand, type AssignableAgentLabel } from "./agentRunCommand";
+import {
+  buildAgentRunCommand,
+  inferAssignableAgentLabelFromCommand,
+  type AssignableAgentLabel
+} from "./agentRunCommand";
 import {
   getRootPath,
   getRepoRoot,
@@ -104,6 +108,8 @@ type GitExtensionExports = {
   getAPI(version: 1): GitApi;
 };
 
+<<<<<<< HEAD
+=======
 type AssignableAgentOption = {
   label: AssignableAgentLabel;
 };
@@ -121,6 +127,7 @@ function getRepoPackageVersion(repoRoot: string): string | undefined {
   }
 }
 
+>>>>>>> main
 export function activate(context: vscode.ExtensionContext) {
   const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
   const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
@@ -130,14 +137,6 @@ export function activate(context: vscode.ExtensionContext) {
   const provider = new AntigravityViewProvider();
   const extensionRoot = context.extensionPath;
   log(`[activate] Extension root: ${extensionRoot}`);
-  const assignableAgentOptions: AssignableAgentOption[] = [
-    { label: "Antigravity" },
-    { label: "Claude Code" },
-    { label: "Codex" },
-    { label: "OpenCode" },
-    { label: "Qwen Code" }
-  ];
-
   const launchClaudeInit = async (
     repoRoot: string,
     guidelinesFileName = "Project Level CLAUDE.md Guidelines.txt"
@@ -1265,12 +1264,12 @@ export function activate(context: vscode.ExtensionContext) {
   const renderAssignJiraItemToAgentHtml = (
     webview: vscode.Webview,
     projectKey: string,
-    agents: AssignableAgentOption[],
-    issues: JiraIssueSummary[]
+    issues: JiraIssueSummary[],
+    initialAgentCommand: string,
+    agentCommandOptions: string[]
   ): string => {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-    const agentOptions = agents.map((agent) => agent.label);
     const issueOptions = issues.map((issue) => ({
       key: issue.key,
       summary: issue.summary,
@@ -1289,8 +1288,8 @@ export function activate(context: vscode.ExtensionContext) {
       body { margin: 0; padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
       form { display: grid; gap: 16px; }
       label { display: grid; gap: 6px; font-size: 13px; }
-      select, button { font: inherit; }
-      select {
+      select, input, button { font: inherit; }
+      select, input {
         width: 100%;
         box-sizing: border-box;
         padding: 8px 10px;
@@ -1299,6 +1298,7 @@ export function activate(context: vscode.ExtensionContext) {
         border: 1px solid var(--vscode-input-border, transparent);
         border-radius: 6px;
       }
+      .command-list-controls { display: grid; gap: 8px; }
       .current-branch-title { font-size: 18px; font-weight: 600; }
       .current-branch-value { color: #7cc7ff; }
       .hint { font-size: 12px; color: var(--vscode-descriptionForeground); }
@@ -1313,9 +1313,12 @@ export function activate(context: vscode.ExtensionContext) {
     <form id="assign-jira-item-to-agent-form">
       <div class="current-branch-title">Jira Project: <span class="current-branch-value">${projectKey}</span></div>
       <label>
-        Agent
-        <select id="agent-select"></select>
-        <span class="hint">Choose which coding agent should receive the work prompt.</span>
+        Agent Harness Command
+        <div class="command-list-controls">
+          <select id="agent-command-preset"></select>
+          <input id="agent-command-input" type="text" autocomplete="off" />
+        </div>
+        <span class="hint">Starts with the selected Agentic Harness execution command from settings. Pick a saved command or type your own for this Jira assignment.</span>
       </label>
       <label>
         Jira Item
@@ -1330,10 +1333,12 @@ export function activate(context: vscode.ExtensionContext) {
     </form>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
-      const agents = ${JSON.stringify(agentOptions)};
       const issues = ${JSON.stringify(issueOptions)};
+      const initialAgentCommand = ${JSON.stringify(initialAgentCommand)};
+      const agentCommandOptions = ${JSON.stringify(agentCommandOptions)};
       const form = document.getElementById("assign-jira-item-to-agent-form");
-      const agentSelect = document.getElementById("agent-select");
+      const agentCommandPresetSelect = document.getElementById("agent-command-preset");
+      const agentCommandInput = document.getElementById("agent-command-input");
       const issueSelect = document.getElementById("issue-select");
       const issueHint = document.getElementById("issue-hint");
       const cancelButton = document.getElementById("cancel-button");
@@ -1346,11 +1351,16 @@ export function activate(context: vscode.ExtensionContext) {
           : "Choose an unassigned Jira item that is currently in To Do and not blocked by unfinished Jira items.";
       };
 
-      for (const agent of agents) {
+      const customCommandOption = document.createElement("option");
+      customCommandOption.value = "__custom__";
+      customCommandOption.textContent = "Custom value";
+      agentCommandPresetSelect.appendChild(customCommandOption);
+
+      for (const command of agentCommandOptions) {
         const option = document.createElement("option");
-        option.value = agent;
-        option.textContent = agent;
-        agentSelect.appendChild(option);
+        option.value = command;
+        option.textContent = command;
+        agentCommandPresetSelect.appendChild(option);
       }
 
       for (const issue of issues) {
@@ -1360,6 +1370,20 @@ export function activate(context: vscode.ExtensionContext) {
         issueSelect.appendChild(option);
       }
 
+      const syncCommandPresetFromInput = () => {
+        const selectedPreset = agentCommandOptions.find((optionValue) => optionValue === agentCommandInput.value);
+        agentCommandPresetSelect.value = selectedPreset || "__custom__";
+      };
+
+      agentCommandPresetSelect.addEventListener("change", () => {
+        if (agentCommandPresetSelect.value !== "__custom__") {
+          agentCommandInput.value = agentCommandPresetSelect.value;
+        }
+        syncCommandPresetFromInput();
+      });
+
+      agentCommandInput.addEventListener("input", syncCommandPresetFromInput);
+
       cancelButton.addEventListener("click", () => {
         vscode.postMessage({ type: "cancelAssignJiraItemToAgent" });
       });
@@ -1368,9 +1392,9 @@ export function activate(context: vscode.ExtensionContext) {
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
-        if (!agentSelect.value) {
-          errorMessage.textContent = "Select an agent.";
-          agentSelect.focus();
+        if (!agentCommandInput.value.trim()) {
+          errorMessage.textContent = "Enter an agent harness command.";
+          agentCommandInput.focus();
           return;
         }
         if (!issueSelect.value) {
@@ -1381,8 +1405,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.postMessage({
           type: "submitAssignJiraItemToAgent",
           payload: {
-            agentLabel: agentSelect.value,
-            issueKey: issueSelect.value
+            issueKey: issueSelect.value,
+            agentCommand: agentCommandInput.value.trim()
           }
         });
       });
@@ -1394,32 +1418,60 @@ export function activate(context: vscode.ExtensionContext) {
         }
       });
 
-      agentSelect.value = agents[0];
+      agentCommandInput.value = initialAgentCommand || "";
+      syncCommandPresetFromInput();
       issueSelect.value = issues[0]?.key || "";
       updateIssueHint();
-      agentSelect.focus();
+      issueSelect.focus();
     </script>
   </body>
 </html>`;
   };
 
+  const getAssignableAgentCommandOptions = (): string[] => {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    return Array.from(
+      new Set(
+        [
+          getAgenticHarnessExecutionCommand(),
+          ...normalizeStringArray(config.get<string[]>("agenticHarnessExecutionCommands"))
+        ]
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
+    );
+  };
+
   const showAssignJiraItemToAgentDialog = async (
     projectKey: string,
-    agents: AssignableAgentOption[],
     issues: JiraIssueSummary[]
-  ): Promise<{ agentLabel: AssignableAgentOption["label"]; issueKey: string } | undefined> =>
+  ): Promise<{
+    issueKey: string;
+    agentCommand: string;
+  } | undefined> =>
     new Promise((resolve) => {
+      const initialAgentCommand = getAgenticHarnessExecutionCommand();
+      const agentCommandOptions = getAssignableAgentCommandOptions();
       const panel = vscode.window.createWebviewPanel(
         "assignJiraItemToAgent",
         "Assign Jira Item to Agent",
         vscode.ViewColumn.Active,
         { enableScripts: true }
       );
-      panel.webview.html = renderAssignJiraItemToAgentHtml(panel.webview, projectKey, agents, issues);
+      panel.webview.html = renderAssignJiraItemToAgentHtml(
+        panel.webview,
+        projectKey,
+        issues,
+        initialAgentCommand,
+        agentCommandOptions
+      );
 
       let settled = false;
       const resolveOnce = (
-        value: { agentLabel: AssignableAgentOption["label"]; issueKey: string } | undefined
+        value: {
+          issueKey: string;
+          agentCommand: string;
+        } | undefined
       ) => {
         if (settled) return;
         settled = true;
@@ -1437,17 +1489,9 @@ export function activate(context: vscode.ExtensionContext) {
           if (message.type !== "submitAssignJiraItemToAgent") return;
 
           const payload = message.payload || {};
-          const agentLabel = typeof payload.agentLabel === "string" ? payload.agentLabel.trim() : "";
           const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
-          const selectedAgent = agents.find((agent) => agent.label === agentLabel);
-
-          if (!selectedAgent) {
-            void panel.webview.postMessage({
-              type: "assignJiraItemToAgentError",
-              payload: { message: "Select an agent." }
-            });
-            return;
-          }
+          const agentCommand =
+            typeof payload.agentCommand === "string" ? payload.agentCommand.trim() : "";
 
           if (!issueKey || !issues.some((issue) => issue.key === issueKey)) {
             void panel.webview.postMessage({
@@ -1457,7 +1501,18 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          resolveOnce({ agentLabel: selectedAgent.label, issueKey });
+          if (!agentCommand) {
+            void panel.webview.postMessage({
+              type: "assignJiraItemToAgentError",
+              payload: { message: "Enter an agent harness command." }
+            });
+            return;
+          }
+
+          resolveOnce({
+            issueKey,
+            agentCommand
+          });
           panel.dispose();
         },
         undefined,
@@ -1467,19 +1522,19 @@ export function activate(context: vscode.ExtensionContext) {
 
   const buildIssueSummaryForAgent = (
     originalSummary: string,
-    agentLabel: AssignableAgentOption["label"]
+    agentLabel: AssignableAgentLabel
   ): string => {
     const baseSummary = originalSummary.replace(/\s+- By Agent .+$/i, "").trim();
     return `${baseSummary} - By Agent ${agentLabel}`;
   };
 
-  const buildAgentJiraLabel = (agentLabel: AssignableAgentOption["label"]): string =>
+  const buildAgentJiraLabel = (agentLabel: AssignableAgentLabel): string =>
     `developed-by-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
 
   const buildJiraAgentPrompt = (
     issueKey: string,
     summary: string,
-    agentLabel: AssignableAgentOption["label"]
+    agentLabel: AssignableAgentLabel
   ): string => {
     const jiraAccessInstructions =
       agentLabel === "Codex"
@@ -1503,39 +1558,25 @@ export function activate(context: vscode.ExtensionContext) {
 
   const launchAgentForJiraItem = async (
     repoRoot: string,
-    agentLabel: AssignableAgentOption["label"],
+    agentLabel: AssignableAgentLabel,
     issueKey: string,
-    issueSummary: string
+    issueSummary: string,
+    agentCommand: string
   ): Promise<void> => {
     const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
-    if (agentLabel === "Antigravity") {
-      try {
-        await vscode.commands.executeCommand("workbench.action.chat.openAgent");
-        await vscode.commands.executeCommand("workbench.action.chat.open", {
-          query: prompt,
-          isPartialQuery: false
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(
-          `Failed to send Jira item to VS Code Agent mode: ${message}`
-        );
-      }
-      return;
-    }
-
-    const command = buildAgentRunCommand(repoRoot, agentLabel, prompt);
-    const lines =
-      agentLabel === "Codex"
-        ? [
-          `zsh ${quoteShellArg(
-            writeAgentLaunchScript(
-              "antigravity-codex-jira",
-              `cd ${quoteShellArg(repoRoot)}\n${command}`
-            )
-          )}`
-        ]
-        : [`cd ${quoteShellArg(repoRoot)}`, command];
+    const command = buildAgentRunCommand(repoRoot, agentLabel, prompt, {
+      customCommand: agentCommand
+    });
+    const lines = command.includes("\n")
+      ? [
+        `zsh ${quoteShellArg(
+          writeAgentLaunchScript(
+            `antigravity-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-jira`,
+            `cd ${quoteShellArg(repoRoot)}\n${command}`
+          )
+        )}`
+      ]
+      : [`cd ${quoteShellArg(repoRoot)}`, command];
     runInNewTerminal(
       `${agentLabel}: ${issueKey}`,
       lines,
@@ -1628,6 +1669,211 @@ export function activate(context: vscode.ExtensionContext) {
     if (prefixSet.size === 1 && prefixSet.has("A")) return `Add ${entries.length} files`;
     if (prefixSet.size === 1 && prefixSet.has("D")) return `Remove ${entries.length} files`;
     return `Update ${entries.length} files`;
+  };
+
+  type CommitChangesResult =
+    | { kind: "no_changes" }
+    | { kind: "committed"; message: string }
+    | { kind: "nothing_committable" }
+    | { kind: "delegated" }
+    | { kind: "failed"; message: string };
+
+  const AUTOMATED_COMMIT_PROTECTED_PATHS = new Set([".env", "config/.env"]);
+
+  const normalizeGitPath = (filePath: string): string =>
+    filePath
+      .trim()
+      .replace(/^"(.*)"$/, "$1")
+      .replace(/\\/g, "/")
+      .replace(/^\.\/+/, "");
+
+  const isProtectedAutomatedCommitPath = (filePath: string): boolean =>
+    AUTOMATED_COMMIT_PROTECTED_PATHS.has(normalizeGitPath(filePath));
+
+  const parseGitStatusPorcelain = (output: string): Array<{
+    indexStatus: string;
+    workTreeStatus: string;
+    path: string;
+    previousPath?: string;
+  }> =>
+    output
+      .split(/\r?\n/)
+      .map((line) => line.replace(/\r/g, ""))
+      .filter((line) => line.length >= 4)
+      .map((line) => {
+        const indexStatus = line.charAt(0);
+        const workTreeStatus = line.charAt(1);
+        const pathSection = line.slice(3).trim();
+        const renameSeparator = " -> ";
+        const isRename =
+          (indexStatus === "R" || workTreeStatus === "R" || indexStatus === "C" || workTreeStatus === "C") &&
+          pathSection.includes(renameSeparator);
+        if (isRename) {
+          const [previousPath = "", nextPath = ""] = pathSection.split(renameSeparator);
+          return {
+            indexStatus,
+            workTreeStatus,
+            path: nextPath,
+            previousPath
+          };
+        }
+        return {
+          indexStatus,
+          workTreeStatus,
+          path: pathSection
+        };
+      })
+      .filter((entry) => entry.path.length > 0);
+
+  const hasNonProtectedUncommittedChanges = async (repoRoot: string): Promise<boolean> => {
+    const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+    return parseGitStatusPorcelain(statusOutput).some((entry) => {
+      const candidatePaths = [entry.path, entry.previousPath].filter(
+        (value): value is string => Boolean(value)
+      );
+      return candidatePaths.some((candidatePath) => !isProtectedAutomatedCommitPath(candidatePath));
+    });
+  };
+
+  const getHeadCommitSha = async (repoRoot: string): Promise<string> => {
+    try {
+      return (await execInRepo("git rev-parse HEAD", repoRoot)).trim();
+    } catch {
+      return "";
+    }
+  };
+
+  const waitForTaskProcessExit = async (
+    taskExecution: vscode.TaskExecution,
+    taskName: string
+  ): Promise<number | undefined> =>
+    new Promise((resolve) => {
+      const disposable = vscode.tasks.onDidEndTaskProcess((event) => {
+        if (event.execution === taskExecution || event.execution.task.name === taskName) {
+          disposable.dispose();
+          resolve(event.exitCode);
+        }
+      });
+    });
+
+  const runCommitChangesFlow = async (
+    repoRoot: string,
+    options: { awaitAgenticHarness: boolean; forceAgenticHarness?: boolean }
+  ): Promise<CommitChangesResult> => {
+    await focusSourceControlChanges();
+    await vscode.workspace.saveAll(false);
+
+    const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+    if (statusOutput.trim().length === 0) {
+      logAlways("[commitChanges] no changes detected");
+      return { kind: "no_changes" };
+    }
+
+    const shouldUseAgenticHarness =
+      options.forceAgenticHarness === true || getUseAgentForGithubRepositoryManagement();
+
+    if (shouldUseAgenticHarness) {
+      const prompt = "commit all changes and automatically generate the commit message";
+      const taskName = `Agentic Harness Commit ${Date.now()}`;
+      const preCommitHead = await getHeadCommitSha(repoRoot);
+      logAlways("[commitChanges] delegating commit to Agentic Harness task");
+
+      const taskExecution = await runCommandInTaskTerminal(
+        taskName,
+        buildLightAgenticHarnessPromptCommand(repoRoot, prompt, "prompt"),
+        { cwd: repoRoot }
+      );
+
+      if (!options.awaitAgenticHarness) {
+        return { kind: "delegated" };
+      }
+
+      const exitCode = await waitForTaskProcessExit(taskExecution, taskName);
+      if (exitCode !== 0) {
+        return {
+          kind: "failed",
+          message: `The Agentic Harness commit exited with code ${exitCode ?? "unknown"}.`
+        };
+      }
+
+      const postCommitHead = await getHeadCommitSha(repoRoot);
+      const remainingStatusOutput = await execInRepo("git status --porcelain", repoRoot);
+      const blockingChangesRemain = await hasNonProtectedUncommittedChanges(repoRoot);
+
+      provider.refresh();
+
+      if (postCommitHead && postCommitHead !== preCommitHead) {
+        if (blockingChangesRemain) {
+          return {
+            kind: "failed",
+            message: "The Agentic Harness commit finished, but some non-protected changes are still uncommitted."
+          };
+        }
+        const latestSubject = (await execInRepo("git log -1 --pretty=%s", repoRoot)).trim();
+        return {
+          kind: "committed",
+          message: latestSubject || "Agentic Harness commit"
+        };
+      }
+
+      if (blockingChangesRemain) {
+        return {
+          kind: "failed",
+          message: "The Agentic Harness finished without creating a commit for the remaining changes."
+        };
+      }
+
+      if (remainingStatusOutput.trim().length > 0) {
+        return { kind: "nothing_committable" };
+      }
+
+      return {
+        kind: "failed",
+        message: "The Agentic Harness finished without creating a commit."
+      };
+    }
+
+    const secretCandidateOutput = await execInRepo(
+      "git status --porcelain -- .env config/.env",
+      repoRoot
+    );
+    if (secretCandidateOutput.trim().length > 0) {
+      logAlways("[commitChanges] excluding .env/config/.env from automated commit");
+      void vscode.window.showWarningMessage(
+        "Excluded .env and config/.env from this automated commit for safety."
+      );
+    }
+
+    await execInRepo(
+      "git add -A -- . && git rm -q --cached --ignore-unmatch .env config/.env",
+      repoRoot
+    );
+
+    const repository = await getGitRepository(repoRoot);
+    if (!repository) {
+      logAlways("[commitChanges] ERROR: VS Code Git repository not found");
+      return {
+        kind: "failed",
+        message: "VS Code Git integration could not find the current repository."
+      };
+    }
+
+    const commitMessage = await buildGeneratedCommitMessage(repoRoot);
+    if (!commitMessage.trim()) {
+      logAlways("[commitChanges] no commit message generated");
+      return { kind: "nothing_committable" };
+    }
+
+    logAlways(`[commitChanges] generated message: ${commitMessage}`);
+    repository.inputBox.value = commitMessage;
+    await repository.commit(commitMessage, { all: false });
+    provider.refresh();
+
+    logAlways("[commitChanges] commit completed");
+    return {
+      kind: "committed",
+      message: commitMessage
+    };
   };
 
   const getGitApi = async (): Promise<GitApi> => {
@@ -2809,75 +3055,29 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
 
-        await focusSourceControlChanges();
-        await vscode.workspace.saveAll(false);
-
-        const statusOutput = await execInRepo("git status --porcelain", repoRoot);
-        if (statusOutput.trim().length === 0) {
-          logAlways("[commitChanges] no changes detected");
+        const result = await runCommitChangesFlow(repoRoot, {
+          awaitAgenticHarness: false
+        });
+        if (result.kind === "no_changes") {
           void vscode.window.showInformationMessage("No changes to commit.");
           return;
         }
-
-        if (getUseAgentForGithubRepositoryManagement()) {
-          const prompt = "commit all changes and automatically generate the commit message";
-          logAlways("[commitChanges] delegating commit to Agentic Harness");
-          runInNewTerminal(
-            "Agentic Harness Commit",
-            [
-              `cd ${quoteShellArg(repoRoot)}`,
-              buildLightAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")
-            ],
-            {
-              iconPath: new vscode.ThemeIcon("git-commit", CLAUDE_ACTION_COLOR),
-              color: CLAUDE_ACTION_COLOR
-            }
-          );
+        if (result.kind === "delegated") {
           void vscode.window.showInformationMessage(
             "Opened Agentic Harness Commit terminal."
           );
           return;
         }
-
-        const secretCandidateOutput = await execInRepo(
-          "git status --porcelain -- .env config/.env",
-          repoRoot
-        );
-        if (secretCandidateOutput.trim().length > 0) {
-          logAlways("[commitChanges] excluding .env/config/.env from automated commit");
-          void vscode.window.showWarningMessage(
-            "Excluded .env and config/.env from this automated commit for safety."
-          );
-        }
-
-        await execInRepo(
-          "git add -A -- . && git rm -q --cached --ignore-unmatch .env config/.env",
-          repoRoot
-        );
-
-        const repository = await getGitRepository(repoRoot);
-        if (!repository) {
-          logAlways("[commitChanges] ERROR: VS Code Git repository not found");
-          void vscode.window.showErrorMessage(
-            "VS Code Git integration could not find the current repository."
-          );
-          return;
-        }
-
-        const commitMessage = await buildGeneratedCommitMessage(repoRoot);
-        if (!commitMessage.trim()) {
-          logAlways("[commitChanges] no commit message generated");
+        if (result.kind === "nothing_committable") {
           void vscode.window.showWarningMessage("Nothing commitable was staged.");
           return;
         }
+        if (result.kind === "committed") {
+          void vscode.window.showInformationMessage(`Committed changes: ${result.message}`);
+          return;
+        }
 
-        logAlways(`[commitChanges] generated message: ${commitMessage}`);
-        repository.inputBox.value = commitMessage;
-        await repository.commit(commitMessage, { all: false });
-        provider.refresh();
-
-        logAlways("[commitChanges] commit completed");
-        void vscode.window.showInformationMessage(`Committed changes: ${commitMessage}`);
+        throw new Error(result.message);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logAlways(
@@ -3283,7 +3483,6 @@ export function activate(context: vscode.ExtensionContext) {
 
       const selection = await showAssignJiraItemToAgentDialog(
         projectKey,
-        assignableAgentOptions,
         issues
       );
       if (!selection) return;
@@ -3294,13 +3493,14 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const updatedSummary = buildIssueSummaryForAgent(issue.summary, selection.agentLabel);
+      const agentLabel = inferAssignableAgentLabelFromCommand(selection.agentCommand);
+      const updatedSummary = buildIssueSummaryForAgent(issue.summary, agentLabel);
 
       try {
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: `Assigning ${issue.key} to ${selection.agentLabel}`,
+            title: `Assigning ${issue.key}`,
             cancellable: false
           },
           async () => {
@@ -3308,7 +3508,7 @@ export function activate(context: vscode.ExtensionContext) {
               credentials,
               issue.key,
               updatedSummary,
-              [buildAgentJiraLabel(selection.agentLabel)]
+              [buildAgentJiraLabel(agentLabel)]
             );
             await assignJiraIssueToCurrentUser(credentials, issue.key);
             await transitionJiraIssueToStatus(credentials, issue.key, "In Progress");
@@ -3320,9 +3520,15 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      await launchAgentForJiraItem(repoRoot, selection.agentLabel, issue.key, issue.summary);
+      await launchAgentForJiraItem(
+        repoRoot,
+        agentLabel,
+        issue.key,
+        issue.summary,
+        selection.agentCommand
+      );
       void vscode.window.showInformationMessage(
-        `${issue.key} was assigned to ${credentials.email}, moved to In Progress, and sent to ${selection.agentLabel}.`
+        `${issue.key} was assigned to ${credentials.email}, moved to In Progress, and launched with the selected agent harness command.`
       );
     })
   );
@@ -3539,6 +3745,47 @@ export function activate(context: vscode.ExtensionContext) {
 
       const branchLabel = prBranch ? `'${prBranch}'` : "your feature branch";
 
+      try {
+        await vscode.workspace.saveAll(false);
+        const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+        if (statusOutput.trim().length > 0) {
+          logAlways("[createPullRequest] uncommitted changes detected; running commit flow first");
+          const commitResult = await runCommitChangesFlow(repoRoot, {
+            awaitAgenticHarness: true
+          });
+
+          if (commitResult.kind === "failed") {
+            void vscode.window.showErrorMessage(
+              `Create Pull Request stopped before launch: ${commitResult.message}`
+            );
+            return;
+          }
+
+          if (commitResult.kind === "nothing_committable") {
+            void vscode.window.showWarningMessage(
+              "Only protected .env changes remained uncommitted, so PR creation will continue without a new commit."
+            );
+          } else if (commitResult.kind === "committed") {
+            void vscode.window.showInformationMessage(
+              `Committed changes before opening the pull request: ${commitResult.message}`
+            );
+          }
+
+          if (await hasNonProtectedUncommittedChanges(repoRoot)) {
+            void vscode.window.showErrorMessage(
+              `Create Pull Request stopped because ${branchLabel} still has uncommitted changes after the commit step.`
+            );
+            return;
+          }
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(
+          `Create Pull Request couldn't complete the pre-flight commit step: ${message}`
+        );
+        return;
+      }
+
       runInNewTerminal(
         "Create Pull Request",
         [
@@ -3549,6 +3796,7 @@ export function activate(context: vscode.ExtensionContext) {
           iconPath: new vscode.ThemeIcon("git-pull-request"),
           env: {
             ANTIGRAVITY_DEFAULT_GITHUB_REVIEWER: defaultGithubCodeReviewer,
+            ANTIGRAVITY_SKIP_PRE_PR_COMMIT: "1",
             ...(projectTestingCommand
               ? { ANTIGRAVITY_PROJECT_TESTING_COMMAND: projectTestingCommand }
               : {})
@@ -3587,8 +3835,43 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
 
-        const canProceed = await prepareCommitBeforeCheckout(repoRoot, "main");
-        if (!canProceed) return;
+        await vscode.workspace.saveAll(false);
+        const statusOutput = await execInRepo("git status --porcelain", repoRoot);
+        if (statusOutput.trim().length > 0) {
+          logAlways(
+            "[mergeBranchToMain] uncommitted changes detected; running Agentic Harness commit first"
+          );
+          const commitResult = await runCommitChangesFlow(repoRoot, {
+            awaitAgenticHarness: true,
+            forceAgenticHarness: true
+          });
+
+          if (commitResult.kind === "failed") {
+            void vscode.window.showErrorMessage(
+              `Merge branch to main stopped before launch: ${commitResult.message}`
+            );
+            return;
+          }
+
+          if (commitResult.kind === "committed") {
+            void vscode.window.showInformationMessage(
+              `Committed changes before merging to main: ${commitResult.message}`
+            );
+          }
+
+          const remainingStatusOutput = await execInRepo("git status --porcelain", repoRoot);
+          if (remainingStatusOutput.trim().length > 0) {
+            const branchLabel = `'${currentBranch}'`;
+            const remainingMessage =
+              commitResult.kind === "nothing_committable"
+                ? `${branchLabel} still has changes that were not committed by the Agentic Harness.`
+                : `${branchLabel} still has uncommitted changes after the commit step.`;
+            void vscode.window.showErrorMessage(
+              `Merge branch to main stopped because ${remainingMessage}`
+            );
+            return;
+          }
+        }
 
         const scriptPath = path.join(extensionRoot, "src", "merge_branch_to_main.sh");
         if (!fs.existsSync(scriptPath)) {
@@ -3706,7 +3989,7 @@ export function activate(context: vscode.ExtensionContext) {
             `${quoteShellArg(scriptPath)} ${quoteShellArg(currentBranch)}`
           ],
           {
-            iconPath: new vscode.ThemeIcon("sync", PULL_REMOTE_AND_MERGE_ACTION_COLOR),
+            iconPath: new vscode.ThemeIcon("cloud-download", PULL_REMOTE_AND_MERGE_ACTION_COLOR),
             color: PULL_REMOTE_AND_MERGE_ACTION_COLOR,
             ...(projectTestingCommand
               ? {
