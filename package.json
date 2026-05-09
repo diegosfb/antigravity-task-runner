@@ -2,7 +2,11 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
+<<<<<<< HEAD
   "version": "4.10.3",
+=======
+  "version": "4.9.33",
+>>>>>>> main
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -39,6 +43,7 @@
     "onCommand:antigravity.takeJiraItemAssign",
     "onCommand:antigravity.completeJiraItem",
     "onCommand:antigravity.openSopManual",
+    "onCommand:antigravity.bringSopManualToProject",
     "onCommand:antigravity.openClaudeTerminal",
     "onCommand:antigravity.openOpenClaudeTerminal"
   ],
@@ -212,6 +217,10 @@
         "title": "Antigravity: SOP Manual"
       },
       {
+        "command": "antigravity.bringSopManualToProject",
+        "title": "Bring to Project"
+      },
+      {
         "command": "antigravity.createRepoTag",
         "title": "Antigravity: Create Repo Tag"
       },
@@ -241,7 +250,11 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
+<<<<<<< HEAD
           "name": "Tasky Runner v4.10.3",
+=======
+          "name": "Tasky Runner v4.9.33",
+>>>>>>> main
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -324,6 +337,11 @@
         {
           "command": "antigravity.disablePlugin",
           "when": "view == antigravityView && viewItem == claudePluginEnabled",
+          "group": "navigation"
+        },
+        {
+          "command": "antigravity.bringSopManualToProject",
+          "when": "view == antigravityView && viewItem == antigravitySopManual",
           "group": "navigation"
         }
       ]
@@ -525,6 +543,7 @@
   ],
   "scripts": {
     "compile": "node node_modules/typescript/lib/tsc.js -p ./",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.js\"",
     "test": "npm run compile && node --test tests/*.test.js",
     "create-release": "bash scripts/create-release.sh",
     "sync-view-name": "node src/sync-view-name.js",
@@ -532,8 +551,12 @@
     "bump-version": "./scripts/bump-version.sh"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.19.0",
     "@types/vscode": "^1.98.0",
-    "typescript": "^5.8.3"
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.59.2"
   }
 }

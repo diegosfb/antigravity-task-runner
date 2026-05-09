@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build:
-    name: Lint and Build
+    name: Lint and Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,8 +26,8 @@ jobs:
         run: npm ci
       - name: Lint
         run: npm run lint
-      - name: Build
-        run: npm run build
+      - name: Test
+        run: npm test
 
   audit:
     name: Dependency Audit

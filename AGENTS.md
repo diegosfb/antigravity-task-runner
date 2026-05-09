@@ -27,7 +27,9 @@ This file is the authoritative agent guide for this repository. Prefer it over `
 ## Commands
 
 - Install dependencies: `npm install`
+- Lint source and tests: `npm run lint`
 - Compile extension: `npm run compile`
+- Run tests: `npm test`
 - Sync contributed view name/version metadata: `npm run sync-view-name`
 - Bump extension version without git tag: `npm run bump-version [major|minor|patch]`
 - Create release package and GitHub release: `npm run create-release`
@@ -45,7 +47,6 @@ This file is the authoritative agent guide for this repository. Prefer it over `
 
 ## Validation
 
-- There is currently no canonical automated test command in `package.json`.
-- Minimum validation for extension changes: `npm run compile`.
+- Minimum validation for extension changes: `npm run lint && npm test`.
 - For release changes, also verify `vsce package` or `npm run create-release` as appropriate.
 - For deployment script changes, validate the relevant script arguments and required cloud configuration before pushing.

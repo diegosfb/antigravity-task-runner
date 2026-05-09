@@ -343,7 +343,7 @@ function readSkillsDir(dir) {
 async function readEnabledPluginSkills() {
     try {
         const { stdout, stderr } = await execAsync("claude plugin list 2>&1", { timeout: 8000 });
-        const clean = (stdout || stderr || "").replace(/\x1b\[[0-9;]*[A-Za-z]/g, "");
+        const clean = (stdout || stderr || "").replace(ANSI_CSI_PATTERN, "");
         const skills = [];
         let pluginName = "";
         let marketplace = "";
@@ -401,7 +401,7 @@ function parseAgentsOutput(output) {
 }
 function parsePluginListOutput(output) {
     // Strip ANSI escape codes
-    const clean = output.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
+    const clean = output.replace(ANSI_CSI_PATTERN, "").replace(ANSI_OSC_PATTERN, "");
     // Try JSON first
     const trimmed = clean.trim();
     if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
@@ -446,6 +446,10 @@ function parsePluginListOutput(output) {
     }
     return plugins;
 }
+// eslint-disable-next-line no-control-regex
+const ANSI_CSI_PATTERN = /\x1b\[[0-9;]*[A-Za-z]/g;
+// eslint-disable-next-line no-control-regex
+const ANSI_OSC_PATTERN = /\x1b\][^\x07]*\x07/g;
 function getLinkedFolderItems() {
     const folders = [...TOP_LEVEL_LINKED_FOLDERS];
     const rawAddons = vscode.workspace.getConfiguration("antigravity").get("customAgenticPlatformAddons") || "";
@@ -661,6 +665,7 @@ function getQuickActionItems() {
     items.push(environmentSwitch);
     const sopManual = new NodeItem({ kind: "action", label: "SOP Manual" }, vscode.TreeItemCollapsibleState.None);
     sopManual.iconPath = new vscode.ThemeIcon("repo", SOP_MANUAL_ACTION_COLOR);
+    sopManual.contextValue = "antigravitySopManual";
     sopManual.command = {
         command: "antigravity.openSopManual",
         title: "SOP Manual"

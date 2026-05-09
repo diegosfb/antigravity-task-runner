@@ -680,17 +680,13 @@ export async function searchOpenAssignedJiraIssuesForCurrentUser(
   });
 
   return (response.issues ?? [])
-    .map((issue) => ({
-      ...mapJiraIssueSearchResultToSummary(issue),
-      assigneeAccountId: (issue.fields?.assignee?.accountId ?? "").trim()
-    }))
+    .filter((issue) => (issue.fields?.assignee?.accountId ?? "").trim() === currentUserAccountId)
+    .map(mapJiraIssueSearchResultToSummary)
     .filter(
       (issue) =>
         isProjectIssueSummaryValid(issue, normalizedProjectKey) &&
-        issue.assigneeAccountId === currentUserAccountId &&
         ["To Do", "In Progress"].includes(issue.statusName)
-    )
-    .map(({ assigneeAccountId, ...issue }) => issue);
+    );
 }
 
 export async function assignJiraIssueToCurrentUser(
@@ -813,7 +809,8 @@ export async function transitionJiraIssueToReviewOrDone(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `"${JIRA_STATUS_IN_REVIEW}" is not visible on the Jira board, and moving ${issueKey} to "${JIRA_STATUS_DONE}" failed: ${message}`
+        `"${JIRA_STATUS_IN_REVIEW}" is not visible on the Jira board, and moving ${issueKey} to "${JIRA_STATUS_DONE}" failed: ${message}`,
+        { cause: error }
       );
     }
 
@@ -834,7 +831,8 @@ export async function transitionJiraIssueToReviewOrDone(
     } catch (doneError) {
       const doneMessage = doneError instanceof Error ? doneError.message : String(doneError);
       throw new Error(
-        `Failed to move ${issueKey} to "${JIRA_STATUS_IN_REVIEW}" (${reviewMessage}) and fallback to "${JIRA_STATUS_DONE}" (${doneMessage}).`
+        `Failed to move ${issueKey} to "${JIRA_STATUS_IN_REVIEW}" (${reviewMessage}) and fallback to "${JIRA_STATUS_DONE}" (${doneMessage}).`,
+        { cause: doneError }
       );
     }
 

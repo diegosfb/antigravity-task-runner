@@ -1,17 +1,17 @@
 # CI Workflows
 
-This folder contains GitHub Actions workflows used to validate and secure the project on every push and pull request.
+This folder contains GitHub Actions workflows used to validate, package, and release the project.
 
 ## Why this exists
-- **Consistency**: Ensure linting and builds run the same way for every change.
+- **Consistency**: Ensure validation runs the same way for every change.
 - **Security**: Catch dependency vulnerabilities and accidental secret leaks early.
 - **Stability**: Prevent breaking changes from landing in `main` without validation.
 
 ## What it does
 The `ci.yml` workflow runs four jobs:
 
-1. **Lint and Build**
-   - Installs dependencies, runs TypeScript lint checks, and builds the project.
+1. **Lint and Test**
+   - Installs dependencies, runs `npm run lint`, then runs `npm test`, which compiles the extension and executes the Node test suite.
 2. **Dependency Audit**
    - Runs `npm audit --production` to flag known vulnerabilities.
 3. **Secret Scan**
@@ -19,25 +19,16 @@ The `ci.yml` workflow runs four jobs:
 4. **Dependency Review** (PRs only)
    - Uses GitHub’s dependency review action to detect risky dependency changes.
 
-## Build Artifacts Workflow
+## CD Workflow
 
-`build-artifacts.yml` runs on git tags (`v*`) and builds a single Docker image, then pushes it to:
-- AWS ECR
-- GCP Artifact Registry
+`cd.yml` publishes the VS Code extension to the Marketplace.
 
-Required GitHub secrets:
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `GCP_SERVICE_ACCOUNT_JSON`
+- **Automatic**: Runs on pushed tags matching `v*`.
+- **Manual**: `workflow_dispatch` supports an optional `ref` input for retries or manual publishes.
+- **Validation**: Installs dependencies, runs `npm run lint`, runs `npm test`, packages a `.vsix`, uploads it as a workflow artifact, and publishes it with `@vscode/vsce`.
 
-## Deploy Workflow Secrets
-
-The deploy workflow uses the same credentials as build artifacts:
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `GCP_SERVICE_ACCOUNT_JSON`
-
-The deploy workflow accepts a `version_tag` input. If omitted, it deploys the latest git tag.
+Required GitHub secret:
+- `VSCE_PAT`
 
 ## How to use it
 - **Automatic**: The workflow runs on every push to `main` and every pull request targeting `main`.
