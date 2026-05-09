@@ -108,8 +108,6 @@ type GitExtensionExports = {
   getAPI(version: 1): GitApi;
 };
 
-<<<<<<< HEAD
-=======
 type AssignableAgentOption = {
   label: AssignableAgentLabel;
 };
@@ -126,8 +124,6 @@ function getRepoPackageVersion(repoRoot: string): string | undefined {
     return undefined;
   }
 }
-
->>>>>>> main
 export function activate(context: vscode.ExtensionContext) {
   const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
   const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
