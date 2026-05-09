@@ -862,6 +862,7 @@ function getQuickActionItems(): NodeItem[] {
     vscode.TreeItemCollapsibleState.None
   );
   sopManual.iconPath = new vscode.ThemeIcon("repo", SOP_MANUAL_ACTION_COLOR);
+  sopManual.contextValue = "antigravitySopManual";
   sopManual.command = {
     command: "antigravity.openSopManual",
     title: "SOP Manual"

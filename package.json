@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.9.32",
+  "version": "4.9.33",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -39,6 +39,7 @@
     "onCommand:antigravity.takeJiraItemAssign",
     "onCommand:antigravity.completeJiraItem",
     "onCommand:antigravity.openSopManual",
+    "onCommand:antigravity.bringSopManualToProject",
     "onCommand:antigravity.openClaudeTerminal",
     "onCommand:antigravity.openOpenClaudeTerminal"
   ],
@@ -212,6 +213,10 @@
         "title": "Antigravity: SOP Manual"
       },
       {
+        "command": "antigravity.bringSopManualToProject",
+        "title": "Bring to Project"
+      },
+      {
         "command": "antigravity.createRepoTag",
         "title": "Antigravity: Create Repo Tag"
       },
@@ -241,7 +246,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.9.32",
+          "name": "Tasky Runner v4.9.33",
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -324,6 +329,11 @@
         {
           "command": "antigravity.disablePlugin",
           "when": "view == antigravityView && viewItem == claudePluginEnabled",
+          "group": "navigation"
+        },
+        {
+          "command": "antigravity.bringSopManualToProject",
+          "when": "view == antigravityView && viewItem == antigravitySopManual",
           "group": "navigation"
         }
       ]
