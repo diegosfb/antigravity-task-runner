@@ -3657,17 +3657,31 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.createRepoTagVersion", async () => {
       log(`[createRepoTagVersion] triggered`);
-      const description = await vscode.window.showInputBox({
-        title: "Create Repo Tag Version",
-        prompt: "Add a tag description (optional)"
-      });
-      if (description === undefined) return;
-      const trimmed = description.trim();
-      log(`[createRepoTagVersion] description: "${trimmed}"`);
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      const branch = (await execInRepo("git branch --show-current", repoRoot)).trim();
+      const pkgPath = path.join(repoRoot, "package.json");
+      let label: string;
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as { version?: string };
+        const parts = (pkg.version ?? "0.0.0").split(".").map(Number);
+        parts[2] = (parts[2] ?? 0) + 1;
+        label = `v${parts.join(".")}`;
+      } catch {
+        label = "release";
+      }
+      if (branch && branch !== "main") {
+        label += ` (from ${branch})`;
+      }
+      log(`[createRepoTagVersion] label: "${label}"`);
       const createReleaseBranch = vscode.workspace
         .getConfiguration("antigravity")
         .get<boolean>("createReleaseBranchWhenCreatingReleases") ?? true;
-      await runRepoScript("commit-push-tag", trimmed ? [trimmed] : [], {
+      await runRepoScript("commit-push-tag", [label], {
         scriptDir: path.join(extensionRoot, "src"),
         env: {
           CREATE_RELEASE_BRANCH: createReleaseBranch ? "1" : "0"
