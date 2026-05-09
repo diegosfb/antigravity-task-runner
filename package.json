@@ -39,6 +39,7 @@
     "onCommand:antigravity.takeJiraItemAssign",
     "onCommand:antigravity.completeJiraItem",
     "onCommand:antigravity.openSopManual",
+    "onCommand:antigravity.bringSopManualToProject",
     "onCommand:antigravity.openClaudeTerminal",
     "onCommand:antigravity.openOpenClaudeTerminal"
   ],
@@ -212,6 +213,10 @@
         "title": "Antigravity: SOP Manual"
       },
       {
+        "command": "antigravity.bringSopManualToProject",
+        "title": "Bring to Project"
+      },
+      {
         "command": "antigravity.createRepoTag",
         "title": "Antigravity: Create Repo Tag"
       },
@@ -324,6 +329,11 @@
         {
           "command": "antigravity.disablePlugin",
           "when": "view == antigravityView && viewItem == claudePluginEnabled",
+          "group": "navigation"
+        },
+        {
+          "command": "antigravity.bringSopManualToProject",
+          "when": "view == antigravityView && viewItem == antigravitySopManual",
           "group": "navigation"
         }
       ]

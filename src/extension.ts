@@ -6,7 +6,8 @@ import { exec, spawn } from "child_process";
 import { AntigravityViewProvider } from "./treeProvider";
 import {
   isAutocommitRunning,
-  hasGitHubRemote
+  hasGitHubRemote,
+  getCurrentBranchNameSync
 } from "./git";
 import {
   runInSecondaryTerminal,
@@ -106,6 +107,19 @@ type GitExtensionExports = {
 type AssignableAgentOption = {
   label: AssignableAgentLabel;
 };
+
+function getRepoPackageVersion(repoRoot: string): string | undefined {
+  try {
+    const packageJsonPath = path.join(repoRoot, "package.json");
+    const raw = fs.readFileSync(packageJsonPath, "utf8");
+    const parsed = JSON.parse(raw) as { version?: unknown };
+    return typeof parsed.version === "string" && parsed.version.trim().length > 0
+      ? parsed.version.trim()
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export function activate(context: vscode.ExtensionContext) {
   const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
@@ -652,6 +666,9 @@ export function activate(context: vscode.ExtensionContext) {
       : "";
     return repoOverride || (config.get<string>("sopManualLink") || "").trim();
   };
+
+  const getProjectSopManualPath = (repoRoot: string): string =>
+    path.join(repoRoot, "Resources", "sop.md");
 
   const validateJiraProjectKey = (value: string): string | undefined => {
     const normalized = value.trim().toUpperCase();
@@ -3899,18 +3916,30 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      const tagName = await vscode.window.showInputBox({
-        title: "Create Repo Tag",
-        prompt: "Tag name (e.g. v1.0.0)"
-      });
-      if (!tagName?.trim()) return;
-      const tag = tagName.trim();
+      const version = getRepoPackageVersion(repoRoot);
+      if (!version) {
+        void vscode.window.showErrorMessage(
+          "Could not read the version from package.json for this repository."
+        );
+        return;
+      }
+
+      const tag = `v${version}`;
+      const currentBranch = getCurrentBranchNameSync(repoRoot);
       const message = await vscode.window.showInputBox({
         title: "Create Repo Tag",
-        prompt: "Tag message (optional)"
+        prompt: `Tag notes for ${tag} (optional)`
       });
       if (message === undefined) return;
-      const msg = message.trim() || tag;
+      const notes: string[] = [];
+      const trimmedMessage = message.trim();
+      if (trimmedMessage) {
+        notes.push(trimmedMessage);
+      }
+      if (currentBranch && currentBranch !== "main") {
+        notes.push(`Created from branch: ${currentBranch}`);
+      }
+      const msg = notes.join("\n\n") || tag;
       runInNewTerminal("Antigravity", [
         `cd ${quoteShellArg(repoRoot)}`,
         `git tag -a ${quoteShellArg(tag)} -m ${quoteShellArg(msg)} && git push origin ${quoteShellArg(tag)} && echo "[antigravity] tag ${tag} pushed"`,
@@ -4013,6 +4042,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("antigravity.openSopManual", async () => {
       const rootPath = getRootPath();
       const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
+      const projectSopManualPath = repoRoot ? getProjectSopManualPath(repoRoot) : undefined;
+      if (projectSopManualPath && fs.existsSync(projectSopManualPath)) {
+        await openFile(projectSopManualPath);
+        return;
+      }
+
       const sopManualLink = getSopManualLink(repoRoot);
       if (!sopManualLink) {
         void vscode.window.showErrorMessage(
@@ -4027,6 +4062,38 @@ export function activate(context: vscode.ExtensionContext) {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(`Failed to download SOP manual: ${message}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.bringSopManualToProject", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+      const sopManualLink = getSopManualLink(repoRoot);
+      if (!sopManualLink) {
+        void vscode.window.showErrorMessage(
+          "SOP Manual Link is not set in Antigravity settings or the repository .env file."
+        );
+        return;
+      }
+
+      const projectSopManualPath = getProjectSopManualPath(repoRoot);
+      try {
+        const downloadedPath = await downloadMarkdownToTempFile(sopManualLink, "sop-manual.md");
+        await fs.promises.mkdir(path.dirname(projectSopManualPath), { recursive: true });
+        await fs.promises.copyFile(downloadedPath, projectSopManualPath);
+        void vscode.window.showInformationMessage(
+          `Copied SOP manual to ${projectSopManualPath}.`
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Failed to bring SOP manual to project: ${message}`);
       }
     })
   );
