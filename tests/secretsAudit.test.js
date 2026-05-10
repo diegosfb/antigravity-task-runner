@@ -162,3 +162,32 @@ test("parseGitHubOwnerRepo handles repo names with dots", () => {
   const result = parseGitHubOwnerRepo("https://github.com/org/my-repo.js.git");
   assert.deepEqual(result, { owner: "org", repo: "my-repo.js" });
 });
+
+const { computeDelta } = require("../out/secrets-audit.js");
+
+test("computeDelta returns items in required but not in existing", () => {
+  const required = {
+    production: { secrets: ["DOCKERHUB_TOKEN", "AWS_KEY"], variables: ["APP_URL"] },
+  };
+  const existing = {
+    production: { secrets: ["DOCKERHUB_TOKEN"], variables: [] },
+  };
+  const delta = computeDelta(required, existing);
+  assert.deepEqual(delta["production"].secrets, ["AWS_KEY"]);
+  assert.deepEqual(delta["production"].variables, ["APP_URL"]);
+});
+
+test("computeDelta returns empty when all required exist", () => {
+  const required = { _repo: { secrets: ["ANTHROPIC_API_KEY"], variables: [] } };
+  const existing = { _repo: { secrets: ["ANTHROPIC_API_KEY"], variables: [] } };
+  const delta = computeDelta(required, existing);
+  assert.deepEqual(delta["_repo"].secrets, []);
+  assert.deepEqual(delta["_repo"].variables, []);
+});
+
+test("computeDelta handles environment in required but not in existing", () => {
+  const required = { staging: { secrets: ["MY_SECRET"], variables: [] } };
+  const existing = {};
+  const delta = computeDelta(required, existing);
+  assert.deepEqual(delta["staging"].secrets, ["MY_SECRET"]);
+});

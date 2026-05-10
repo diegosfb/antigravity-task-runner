@@ -113,3 +113,15 @@ export function setGhVariable(name: string, value: string, env: string | null, c
 export function getGitRemoteUrl(repoRoot: string): string {
   return execSync("git remote get-url origin", { cwd: repoRoot, encoding: "utf8" }).trim();
 }
+
+export function computeDelta(required: AuditMap, existing: AuditMap): AuditMap {
+  const delta: AuditMap = {};
+  for (const [env, req] of Object.entries(required)) {
+    const ex = existing[env] ?? { secrets: [], variables: [] };
+    delta[env] = {
+      secrets: req.secrets.filter((s) => !ex.secrets.includes(s)),
+      variables: req.variables.filter((v) => !ex.variables.includes(v)),
+    };
+  }
+  return delta;
+}
