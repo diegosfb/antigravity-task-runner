@@ -90,6 +90,7 @@ import {
   loadProjectTemplates,
   type ProjectTemplate
 } from "./projectTemplates";
+import { runSecretsAudit } from "./secrets-audit";
 
 type GitInputBox = {
   value: string;
@@ -3336,6 +3337,17 @@ export function activate(context: vscode.ExtensionContext) {
       void vscode.window.showInformationMessage(
         `Opened Agentic Harness to update AGENTS.md in ${workspaceDir}.`
       );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.auditSecretsAndVariables", async () => {
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!workspaceRoot) {
+        void vscode.window.showErrorMessage("No workspace folder is open.");
+        return;
+      }
+      await runSecretsAudit(workspaceRoot);
     })
   );
 
