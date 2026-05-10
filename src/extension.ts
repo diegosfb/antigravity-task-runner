@@ -14,6 +14,7 @@ import {
   runInNewTerminal,
   runCommandInTaskTerminal,
   buildAgenticHarnessPromptCommand,
+  buildAgenticHarnessFileCommand,
   buildLightAgenticHarnessPromptCommand,
   runClaudeInitAndUpdateInNewTerminal,
   runCodexInitAndUpdateInNewTerminal,
@@ -82,7 +83,7 @@ import {
 } from "./jiraProjectHarness";
 import { buildMergeReviewPrompt } from "./mergeReviewPrompt";
 import {
-  buildUpdateAgentsMdPrompt,
+  buildUpdateAgentsMdPromptFilePath,
   buildSetupWorkspacePrompt,
   copySetupWorkspaceGuideFiles,
   copySetupWorkspaceSkills,
@@ -3319,8 +3320,8 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const taskName = `Agentic Harness Update AGENTS.md ${Date.now()}`;
-      const prompt = buildUpdateAgentsMdPrompt();
-      const commandLine = buildAgenticHarnessPromptCommand(workspaceDir, prompt, "dangerous");
+      const promptFilePath = buildUpdateAgentsMdPromptFilePath(extensionRoot);
+      const commandLine = buildAgenticHarnessFileCommand(workspaceDir, promptFilePath, "dangerous");
 
       try {
         await runCommandInTaskTerminal(taskName, commandLine, { cwd: workspaceDir });

@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { logAlways } from "./logger";
 import { getAgenticHarnessExecutionCommand, getLightAgenticHarnessExecutionCommand } from "./settings";
-import { buildAgenticHarnessPromptCommandForCommand, type AgenticHarnessPromptMode } from "./agenticHarnessCommand";
+import { buildAgenticHarnessPromptCommandForCommand, buildAgenticHarnessFileCommandForCommand, type AgenticHarnessPromptMode } from "./agenticHarnessCommand";
 import { quoteShellArg } from "./utils";
 
 export const CLAUDE_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
@@ -84,6 +84,22 @@ export function buildAgenticHarnessPromptCommand(
     mode
   );
   logAlways(`[agenticHarness] runString: ${runString}`);
+  return runString;
+}
+
+export function buildAgenticHarnessFileCommand(
+  repoRoot: string,
+  promptFilePath: string,
+  mode: AgenticHarnessPromptMode = "dangerous"
+): string {
+  const command = getAgenticHarnessExecutionCommand();
+  const runString = buildAgenticHarnessFileCommandForCommand(
+    command,
+    repoRoot,
+    promptFilePath,
+    mode
+  );
+  logAlways(`[agenticHarness] runString (file): ${runString}`);
   return runString;
 }
 
