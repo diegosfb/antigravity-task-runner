@@ -93,3 +93,50 @@ test("scanWorkflowFiles deduplicates across multiple files", () => {
   const result = scanWorkflowFiles([fileA, fileB]);
   assert.strictEqual(result["production"].secrets.filter(s => s === "DOCKERHUB_TOKEN").length, 1);
 });
+
+test("scanWorkflowFiles resets env to _repo on new job boundary", () => {
+  const content = `
+jobs:
+  deploy:
+    environment: production
+    steps:
+      - run: echo \${{ secrets.DEPLOY_KEY }}
+  build:
+    steps:
+      - run: echo \${{ secrets.BUILD_TOKEN }}
+`;
+  const result = scanWorkflowFiles([{ name: "multi-job.yml", content }]);
+  assert.ok(result["production"].secrets.includes("DEPLOY_KEY"));
+  assert.ok(result["_repo"].secrets.includes("BUILD_TOKEN"));
+  assert.ok(!result["production"].secrets.includes("BUILD_TOKEN"));
+});
+
+test("scanWorkflowFiles does not treat env block environment as job environment", () => {
+  const content = `
+jobs:
+  build:
+    steps:
+      - run: echo \${{ secrets.REAL_SECRET }}
+        env:
+          environment: staging
+`;
+  const result = scanWorkflowFiles([{ name: "env-block.yml", content }]);
+  const allEnvs = Object.keys(result).filter(k => k !== "_repo");
+  assert.strictEqual(allEnvs.length, 0, "should have no named environments");
+  assert.ok(result["_repo"].secrets.includes("REAL_SECRET"));
+});
+
+test("scanWorkflowFiles handles multi-line environment block", () => {
+  const content = `
+jobs:
+  deploy:
+    environment:
+      name: production
+      url: https://example.com
+    steps:
+      - run: echo \${{ secrets.DEPLOY_TOKEN }}
+`;
+  const result = scanWorkflowFiles([{ name: "multiline-env.yml", content }]);
+  assert.ok(result["production"] !== undefined, "production env should exist");
+  assert.ok(result["production"].secrets.includes("DEPLOY_TOKEN"));
+});
