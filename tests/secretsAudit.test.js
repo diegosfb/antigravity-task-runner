@@ -191,3 +191,20 @@ test("computeDelta handles environment in required but not in existing", () => {
   const delta = computeDelta(required, existing);
   assert.deepEqual(delta["staging"].secrets, ["MY_SECRET"]);
 });
+
+const { getSecretHint } = require("../out/secrets-audit.js");
+
+test("getSecretHint returns hint for DOCKERHUB_TOKEN", () => {
+  const hint = getSecretHint("DOCKERHUB_TOKEN");
+  assert.ok(hint.includes("hub.docker.com"));
+});
+
+test("getSecretHint returns hint for AWS_ACCESS_KEY_ID", () => {
+  const hint = getSecretHint("AWS_ACCESS_KEY_ID");
+  assert.ok(hint.includes("IAM"));
+});
+
+test("getSecretHint returns empty string for unknown name", () => {
+  const hint = getSecretHint("MY_CUSTOM_SECRET");
+  assert.strictEqual(hint, "");
+});

@@ -125,3 +125,20 @@ export function computeDelta(required: AuditMap, existing: AuditMap): AuditMap {
   }
   return delta;
 }
+
+const KNOWN_HINTS: Array<[RegExp, string]> = [
+  [/^DOCKERHUB_/i, "DockerHub — hub.docker.com > Account Settings > Security"],
+  [/^AWS_ACCESS_KEY_ID$/i, "AWS IAM — Console > Users > Security credentials > Access keys"],
+  [/^AWS_SECRET_ACCESS_KEY$/i, "AWS IAM — Console > Users > Security credentials > Access keys"],
+  [/^AWS_ROLE_ARN$|^AWS_/i, "AWS IAM — Console > Roles or IAM Identity Center"],
+  [/^GCP_SA_KEY$|^GOOGLE_CREDENTIALS$|^GCP_/i, "GCP — IAM & Admin > Service Accounts > Keys"],
+  [/^AZURE_/i, "Azure — Portal > App registrations > Certificates & secrets"],
+  [/^RENDER_/i, "Render — dashboard.render.com > Account Settings > API Keys"],
+];
+
+export function getSecretHint(name: string): string {
+  for (const [pattern, hint] of KNOWN_HINTS) {
+    if (pattern.test(name)) return hint;
+  }
+  return "";
+}
