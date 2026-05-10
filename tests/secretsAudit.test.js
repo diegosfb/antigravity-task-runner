@@ -157,3 +157,8 @@ test("parseGitHubOwnerRepo returns null for non-GitHub remote", () => {
   const result = parseGitHubOwnerRepo("https://gitlab.com/myorg/myrepo.git");
   assert.strictEqual(result, null);
 });
+
+test("parseGitHubOwnerRepo handles repo names with dots", () => {
+  const result = parseGitHubOwnerRepo("https://github.com/org/my-repo.js.git");
+  assert.deepEqual(result, { owner: "org", repo: "my-repo.js" });
+});

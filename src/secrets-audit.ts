@@ -87,7 +87,7 @@ export function loadWorkflowFiles(repoRoot: string): WorkflowFile[] {
 }
 
 export function parseGitHubOwnerRepo(remoteUrl: string): { owner: string; repo: string } | null {
-  const httpsMatch = remoteUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)(\.git)?$/);
+  const httpsMatch = remoteUrl.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/);
   if (!httpsMatch) return null;
   return { owner: httpsMatch[1], repo: httpsMatch[2] };
 }
@@ -100,14 +100,14 @@ export function setGhSecret(name: string, value: string, env: string | null, cwd
   const args = ["secret", "set", name];
   if (env) args.push("--env", env);
   const result = spawnSync("gh", args, { cwd, input: value, encoding: "utf8" });
-  if (result.status !== 0) throw new Error(result.stderr?.toString() || "gh secret set failed");
+  if (result.status !== 0) throw new Error(result.error?.message || result.stderr?.toString() || "gh secret set failed");
 }
 
 export function setGhVariable(name: string, value: string, env: string | null, cwd: string): void {
   const args = ["variable", "set", name, "--body", value];
   if (env) args.push("--env", env);
   const result = spawnSync("gh", args, { cwd, encoding: "utf8" });
-  if (result.status !== 0) throw new Error(result.stderr?.toString() || "gh variable set failed");
+  if (result.status !== 0) throw new Error(result.error?.message || result.stderr?.toString() || "gh variable set failed");
 }
 
 export function getGitRemoteUrl(repoRoot: string): string {
