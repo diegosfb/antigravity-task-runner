@@ -140,3 +140,20 @@ jobs:
   assert.ok(result["production"] !== undefined, "production env should exist");
   assert.ok(result["production"].secrets.includes("DEPLOY_TOKEN"));
 });
+
+const { parseGitHubOwnerRepo } = require("../out/secrets-audit.js");
+
+test("parseGitHubOwnerRepo handles HTTPS remote", () => {
+  const result = parseGitHubOwnerRepo("https://github.com/myorg/myrepo.git");
+  assert.deepEqual(result, { owner: "myorg", repo: "myrepo" });
+});
+
+test("parseGitHubOwnerRepo handles SSH remote", () => {
+  const result = parseGitHubOwnerRepo("git@github.com:myorg/myrepo.git");
+  assert.deepEqual(result, { owner: "myorg", repo: "myrepo" });
+});
+
+test("parseGitHubOwnerRepo returns null for non-GitHub remote", () => {
+  const result = parseGitHubOwnerRepo("https://gitlab.com/myorg/myrepo.git");
+  assert.strictEqual(result, null);
+});

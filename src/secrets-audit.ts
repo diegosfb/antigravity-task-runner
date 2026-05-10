@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { execSync, spawnSync } from "child_process";
 
 export type AuditMap = Record<string, { secrets: string[]; variables: string[] }>;
 
@@ -83,4 +84,32 @@ export function loadWorkflowFiles(repoRoot: string): WorkflowFile[] {
       name: f,
       content: fs.readFileSync(path.join(dir, f), "utf8"),
     }));
+}
+
+export function parseGitHubOwnerRepo(remoteUrl: string): { owner: string; repo: string } | null {
+  const httpsMatch = remoteUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)(\.git)?$/);
+  if (!httpsMatch) return null;
+  return { owner: httpsMatch[1], repo: httpsMatch[2] };
+}
+
+export function runGh(args: string, cwd: string): string {
+  return execSync(`gh ${args}`, { cwd, encoding: "utf8" }).trim();
+}
+
+export function setGhSecret(name: string, value: string, env: string | null, cwd: string): void {
+  const args = ["secret", "set", name];
+  if (env) args.push("--env", env);
+  const result = spawnSync("gh", args, { cwd, input: value, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(result.stderr?.toString() || "gh secret set failed");
+}
+
+export function setGhVariable(name: string, value: string, env: string | null, cwd: string): void {
+  const args = ["variable", "set", name, "--body", value];
+  if (env) args.push("--env", env);
+  const result = spawnSync("gh", args, { cwd, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(result.stderr?.toString() || "gh variable set failed");
+}
+
+export function getGitRemoteUrl(repoRoot: string): string {
+  return execSync("git remote get-url origin", { cwd: repoRoot, encoding: "utf8" }).trim();
 }
