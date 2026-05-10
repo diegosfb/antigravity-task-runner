@@ -46,13 +46,15 @@ export function scanWorkflowFiles(files: WorkflowFile[]): AuditMap {
         currentEnv = envInlineMatch[1];
         ensureEnv(result, currentEnv);
       } else if (/^    environment:\s*$/.test(line)) {
-        // Multi-line environment block: look for name: on next line
-        const nextLine = lines[i + 1];
-        if (nextLine) {
-          const nameMatch = nextLine.match(/^\s+name:\s*["']?([^\s"'#]+)["']?/);
+        // Multi-line environment block: scan forward for name: sub-key
+        for (let j = i + 1; j < lines.length; j++) {
+          const subLine = lines[j];
+          if (!/^\s{6,}/.test(subLine)) break; // exited the block
+          const nameMatch = subLine.match(/^\s+name:\s*["']?([^\s"'#]+)["']?/);
           if (nameMatch) {
             currentEnv = nameMatch[1];
             ensureEnv(result, currentEnv);
+            break;
           }
         }
       }
@@ -96,6 +98,12 @@ export function parseGitHubOwnerRepo(remoteUrl: string): { owner: string; repo: 
 
 export function runGh(args: string, cwd: string): string {
   return execSync(`gh ${args}`, { cwd, encoding: "utf8" }).trim();
+}
+
+export function spawnGh(args: string[], cwd: string): string {
+  const result = spawnSync("gh", args, { cwd, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(result.error?.message || result.stderr?.toString() || "gh command failed");
+  return result.stdout.trim();
 }
 
 export function setGhSecret(name: string, value: string, env: string | null, cwd: string): void {
@@ -213,11 +221,11 @@ export async function runSecretsAudit(repoRoot: string): Promise<void> {
     const secrets: string[] = [];
     const variables: string[] = [];
     try {
-      const s = JSON.parse(runGh(`secret list --env "${env}" --json name`, repoRoot)) as { name: string }[];
+      const s = JSON.parse(spawnGh(["secret", "list", "--env", env, "--json", "name"], repoRoot)) as { name: string }[];
       secrets.push(...s.map((x) => x.name));
     } catch { /* env may have no secrets */ }
     try {
-      const v = JSON.parse(runGh(`variable list --env "${env}" --json name`, repoRoot)) as { name: string }[];
+      const v = JSON.parse(spawnGh(["variable", "list", "--env", env, "--json", "name"], repoRoot)) as { name: string }[];
       variables.push(...v.map((x) => x.name));
     } catch { /* env may have no variables */ }
     existing[env] = { secrets, variables };

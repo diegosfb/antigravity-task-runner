@@ -227,6 +227,21 @@ test("buildEnvCommentLines includes the section header", () => {
   assert.ok(lines.includes("# === GitHub Secrets & Variables (auto-audited) ==="));
 });
 
+test("scanWorkflowFiles handles multi-line environment block with url before name", () => {
+  const content = `
+jobs:
+  deploy:
+    environment:
+      url: https://example.com
+      name: production
+    steps:
+      - run: echo \${{ secrets.DEPLOY_KEY }}
+`;
+  const result = scanWorkflowFiles([{ name: "url-first.yml", content }]);
+  assert.ok(result["production"] !== undefined, "production env should exist");
+  assert.ok(result["production"].secrets.includes("DEPLOY_KEY"));
+});
+
 const { writeEnvDocumentation } = require("../out/secrets-audit.js");
 
 test("writeEnvDocumentation calls appendEnvCommentFn for each comment line", () => {
