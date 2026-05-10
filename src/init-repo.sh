@@ -15,11 +15,26 @@ GIT_EMAIL="diegosfb@gmail.com"
 VISIBILITY="${REPO_VISIBILITY:-private}"
 USE_HTTPS="${USE_HTTPS:-1}"
 DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
+REPO_ENVIRONMENTS_RAW="${REPO_ENVIRONMENTS:-dev qa stage prod}"
+read -r -a REPO_ENVIRONMENTS <<< "${REPO_ENVIRONMENTS_RAW//,/ }"
+
+ensure_github_environment() {
+  local repo_full="$1"
+  local environment_name="$2"
+
+  if [[ -z "${environment_name}" ]]; then
+    return
+  fi
+
+  echo "[init-repo] ensuring GitHub environment ${environment_name}"
+  gh api --silent --method PUT "repos/${repo_full}/environments/${environment_name}"
+  echo "Ensured GitHub environment ${environment_name}."
+}
 
 cd "${REPO_ROOT}"
 
 echo "[init-repo] starting in ${REPO_ROOT}"
-echo "[init-repo] repo_name=${REPO_NAME} visibility=${VISIBILITY} default_branch=${DEFAULT_BRANCH} use_https=${USE_HTTPS}"
+echo "[init-repo] repo_name=${REPO_NAME} visibility=${VISIBILITY} default_branch=${DEFAULT_BRANCH} use_https=${USE_HTTPS} environments=${REPO_ENVIRONMENTS[*]}"
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "[init-repo] GitHub CLI not found"
@@ -112,6 +127,13 @@ else
   echo "Created GitHub repository ${REPO_FULL}."
 fi
 
+if [[ "${#REPO_ENVIRONMENTS[@]}" -gt 0 ]]; then
+  echo "[init-repo] ensuring GitHub environments: ${REPO_ENVIRONMENTS[*]}"
+  for environment_name in "${REPO_ENVIRONMENTS[@]}"; do
+    ensure_github_environment "${REPO_FULL}" "${environment_name}"
+  done
+fi
+
 if [[ "${USE_HTTPS}" == "1" ]]; then
   REMOTE_URL="https://github.com/${REPO_FULL}.git"
 else
@@ -137,4 +159,4 @@ echo "[init-repo] pushing branch ${CURRENT_BRANCH} to origin"
 git push -u origin "${CURRENT_BRANCH}"
 
 echo "[init-repo] completed successfully"
-echo "Repository '${REPO_NAME}' initialized and pushed to origin/${CURRENT_BRANCH}."
+echo "Repository '${REPO_NAME}' initialized, environments created, and pushed to origin/${CURRENT_BRANCH}."
