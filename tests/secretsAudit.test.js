@@ -226,3 +226,20 @@ test("buildEnvCommentLines includes the section header", () => {
   const lines = buildEnvCommentLines({ _repo: { secrets: ["MY_KEY"], variables: [] } });
   assert.ok(lines.includes("# === GitHub Secrets & Variables (auto-audited) ==="));
 });
+
+const { writeEnvDocumentation } = require("../out/secrets-audit.js");
+
+test("writeEnvDocumentation calls appendEnvCommentFn for each comment line", () => {
+  const required = {
+    production: { secrets: ["DOCKERHUB_TOKEN"], variables: ["APP_URL"] },
+  };
+  const calls = [];
+  const spy = (filePath, line) => calls.push({ filePath, line });
+  writeEnvDocumentation("/fake/.env", required, spy);
+  const expected = buildEnvCommentLines(required);
+  assert.strictEqual(calls.length, expected.length);
+  for (let i = 0; i < expected.length; i++) {
+    assert.strictEqual(calls[i].filePath, "/fake/.env");
+    assert.strictEqual(calls[i].line, expected[i]);
+  }
+});
