@@ -20,6 +20,7 @@ const agenticHarnessSkill_1 = require("./agenticHarnessSkill");
 const jiraProjectHarness_1 = require("./jiraProjectHarness");
 const mergeReviewPrompt_1 = require("./mergeReviewPrompt");
 const projectTemplates_1 = require("./projectTemplates");
+const secrets_audit_1 = require("./secrets-audit");
 function getRepoPackageVersion(repoRoot) {
     try {
         const packageJsonPath = path.join(repoRoot, "package.json");
@@ -2675,8 +2676,8 @@ function activate(context) {
             return;
         }
         const taskName = `Agentic Harness Update AGENTS.md ${Date.now()}`;
-        const prompt = (0, projectTemplates_1.buildUpdateAgentsMdPrompt)();
-        const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(workspaceDir, prompt, "dangerous");
+        const promptFilePath = (0, projectTemplates_1.buildUpdateAgentsMdPromptFilePath)(extensionRoot);
+        const commandLine = (0, terminal_1.buildAgenticHarnessFileCommand)(workspaceDir, promptFilePath, "dangerous");
         try {
             await (0, terminal_1.runCommandInTaskTerminal)(taskName, commandLine, { cwd: workspaceDir });
         }
@@ -2688,6 +2689,15 @@ function activate(context) {
         }
         (0, logger_1.logAlways)(`[updateWorkspaceAgentsMd] Opened harness for ${agentsFilePath}`);
         void vscode.window.showInformationMessage(`Opened Agentic Harness to update AGENTS.md in ${workspaceDir}.`);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.auditSecretsAndVariables", async () => {
+        (0, logger_1.showOutputChannel)();
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspaceRoot) {
+            void vscode.window.showErrorMessage("No workspace folder is open.");
+            return;
+        }
+        await (0, secrets_audit_1.runSecretsAudit)(workspaceRoot);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.workspaceSetup", async () => {
         (0, logger_1.showOutputChannel)();
@@ -2790,11 +2800,30 @@ function activate(context) {
                 fs.rmSync(gitDir, { recursive: true, force: true });
             }
         }
-        (0, logger_1.logAlways)(`[initRepository] invoking init-repo script from ${path.join(extensionRoot, "src")}`);
+        (0, logger_1.logAlways)(`[initRepository] invoking create-repo and init-repo scripts from ${path.join(extensionRoot, "src")}`);
+        await (0, scripts_1.runRepoScript)("create-repo", [trimmedRepoName], { scriptDir: path.join(extensionRoot, "src") });
         await (0, scripts_1.runRepoScript)("init-repo", [trimmedRepoName], { scriptDir: path.join(extensionRoot, "src") });
-        (0, logger_1.logAlways)("[initRepository] init-repo script invocation completed");
+        (0, logger_1.logAlways)("[initRepository] scripts invocation completed");
         provider.refresh();
         (0, logger_1.logAlways)("[initRepository] tree provider refreshed");
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.initRepositoryConfigUpdate", async () => {
+        (0, logger_1.showOutputChannel)();
+        (0, logger_1.logAlways)(`[initRepositoryConfigUpdate] triggered`);
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            (0, logger_1.logAlways)(`[initRepositoryConfigUpdate] ERROR: rootPath not set`);
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        (0, logger_1.logAlways)(`[initRepositoryConfigUpdate] repoRoot: ${repoRoot}`);
+        (0, logger_1.logAlways)(`[initRepositoryConfigUpdate] invoking init-repo script from ${path.join(extensionRoot, "src")}`);
+        // Passing empty string for repo name to trigger detection in the script
+        await (0, scripts_1.runRepoScript)("init-repo", [""], { scriptDir: path.join(extensionRoot, "src") });
+        (0, logger_1.logAlways)("[initRepositoryConfigUpdate] script invocation completed");
+        provider.refresh();
+        (0, logger_1.logAlways)("[initRepositoryConfigUpdate] tree provider refreshed");
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.commitChanges", async () => {
         (0, logger_1.showOutputChannel)();

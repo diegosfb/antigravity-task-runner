@@ -3466,11 +3466,34 @@ export function activate(context: vscode.ExtensionContext) {
           fs.rmSync(gitDir, { recursive: true, force: true });
         }
       }
-      logAlways(`[initRepository] invoking init-repo script from ${path.join(extensionRoot, "src")}`);
+      logAlways(`[initRepository] invoking create-repo and init-repo scripts from ${path.join(extensionRoot, "src")}`);
+      await runRepoScript("create-repo", [trimmedRepoName], { scriptDir: path.join(extensionRoot, "src") });
       await runRepoScript("init-repo", [trimmedRepoName], { scriptDir: path.join(extensionRoot, "src") });
-      logAlways("[initRepository] init-repo script invocation completed");
+      logAlways("[initRepository] scripts invocation completed");
       provider.refresh();
       logAlways("[initRepository] tree provider refreshed");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.initRepositoryConfigUpdate", async () => {
+      showOutputChannel();
+      logAlways(`[initRepositoryConfigUpdate] triggered`);
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        logAlways(`[initRepositoryConfigUpdate] ERROR: rootPath not set`);
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      logAlways(`[initRepositoryConfigUpdate] repoRoot: ${repoRoot}`);
+      
+      logAlways(`[initRepositoryConfigUpdate] invoking init-repo script from ${path.join(extensionRoot, "src")}`);
+      // Passing empty string for repo name to trigger detection in the script
+      await runRepoScript("init-repo", [""], { scriptDir: path.join(extensionRoot, "src") });
+      logAlways("[initRepositoryConfigUpdate] script invocation completed");
+      provider.refresh();
+      logAlways("[initRepositoryConfigUpdate] tree provider refreshed");
     })
   );
 

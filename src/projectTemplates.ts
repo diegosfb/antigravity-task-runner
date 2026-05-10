@@ -139,8 +139,8 @@ export function buildSetupWorkspacePrompt(
     `Follow these instructions exactly: ${template.instructions}.`,
     `If the target directory does not exist yet, create it first.`,
     `Do not modify files outside "${workspaceDir}".`,
-    `If "${workspaceDir}" already contains project files, stop and explain what you found instead of overwriting anything.`,
-    "Prefer non-interactive commands and finish once the download or extraction is complete."
+    `If "${workspaceDir}" already contains some of the project files, only add the missing ones. Do not overwrite or modify any existing files in "${workspaceDir}".`,
+    "Prefer non-interactive commands and finish once the missing files are extracted or downloaded."
   ].join(" ");
 }
 
