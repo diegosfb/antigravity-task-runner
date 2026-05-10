@@ -82,6 +82,7 @@ import {
 } from "./jiraProjectHarness";
 import { buildMergeReviewPrompt } from "./mergeReviewPrompt";
 import {
+  buildUpdateAgentsMdPrompt,
   buildSetupWorkspacePrompt,
   copySetupWorkspaceGuideFiles,
   copySetupWorkspaceSkills,
@@ -3289,6 +3290,51 @@ export function activate(context: vscode.ExtensionContext) {
       );
       void vscode.window.showInformationMessage(
         `Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}.`
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.updateWorkspaceAgentsMd", async () => {
+      showOutputChannel();
+      logAlways("[updateWorkspaceAgentsMd] Command triggered");
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!workspaceRoot) {
+        logAlways("[updateWorkspaceAgentsMd] ERROR: No workspace folder is open");
+        void vscode.window.showErrorMessage("No workspace folder is open.");
+        return;
+      }
+
+      const repoRoot = workspaceRoot;
+      const workspaceDir = getWorkspaceProjectPath(repoRoot);
+      const agentsFilePath = path.join(workspaceDir, "AGENTS.md");
+
+      if (!fs.existsSync(agentsFilePath)) {
+        logAlways(`[updateWorkspaceAgentsMd] ERROR: Missing AGENTS.md at ${agentsFilePath}`);
+        void vscode.window.showErrorMessage(
+          `AGENTS.md was not found at ${agentsFilePath}. Run Setup Workspace first.`
+        );
+        return;
+      }
+
+      const taskName = `Agentic Harness Update AGENTS.md ${Date.now()}`;
+      const prompt = buildUpdateAgentsMdPrompt();
+      const commandLine = buildAgenticHarnessPromptCommand(workspaceDir, prompt, "dangerous");
+
+      try {
+        await runCommandInTaskTerminal(taskName, commandLine, { cwd: workspaceDir });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[updateWorkspaceAgentsMd] ERROR launching harness: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Failed to launch the Agentic Harness terminal: ${message}`
+        );
+        return;
+      }
+
+      logAlways(`[updateWorkspaceAgentsMd] Opened harness for ${agentsFilePath}`);
+      void vscode.window.showInformationMessage(
+        `Opened Agentic Harness to update AGENTS.md in ${workspaceDir}.`
       );
     })
   );

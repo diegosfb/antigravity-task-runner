@@ -596,6 +596,7 @@ function getQuickActionItems(): NodeItem[] {
     );
     setupWorkspace.tooltip = "A .agent folder already exists in this project.";
   }
+  setupWorkspace.contextValue = "antigravitySetupWorkspaceAction";
   setupWorkspace.command = {
     command: "antigravity.setupWorkspace",
     title: "Setup Workspace"

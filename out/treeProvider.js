@@ -488,6 +488,7 @@ function getQuickActionItems() {
         setupWorkspace.iconPath = new vscode.ThemeIcon("repo-clone", new vscode.ThemeColor("disabledForeground"));
         setupWorkspace.tooltip = "A .agent folder already exists in this project.";
     }
+    setupWorkspace.contextValue = "antigravitySetupWorkspaceAction";
     setupWorkspace.command = {
         command: "antigravity.setupWorkspace",
         title: "Setup Workspace"

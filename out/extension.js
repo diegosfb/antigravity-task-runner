@@ -2657,6 +2657,38 @@ function activate(context) {
         (0, logger_1.logAlways)(`[Setup Workspace] Opened harness for template ${selectedTemplate.name} in ${workspaceDir}`);
         void vscode.window.showInformationMessage(`Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}.`);
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.updateWorkspaceAgentsMd", async () => {
+        (0, logger_1.showOutputChannel)();
+        (0, logger_1.logAlways)("[updateWorkspaceAgentsMd] Command triggered");
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspaceRoot) {
+            (0, logger_1.logAlways)("[updateWorkspaceAgentsMd] ERROR: No workspace folder is open");
+            void vscode.window.showErrorMessage("No workspace folder is open.");
+            return;
+        }
+        const repoRoot = workspaceRoot;
+        const workspaceDir = (0, utils_1.getWorkspaceProjectPath)(repoRoot);
+        const agentsFilePath = path.join(workspaceDir, "AGENTS.md");
+        if (!fs.existsSync(agentsFilePath)) {
+            (0, logger_1.logAlways)(`[updateWorkspaceAgentsMd] ERROR: Missing AGENTS.md at ${agentsFilePath}`);
+            void vscode.window.showErrorMessage(`AGENTS.md was not found at ${agentsFilePath}. Run Setup Workspace first.`);
+            return;
+        }
+        const taskName = `Agentic Harness Update AGENTS.md ${Date.now()}`;
+        const prompt = (0, projectTemplates_1.buildUpdateAgentsMdPrompt)();
+        const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(workspaceDir, prompt, "dangerous");
+        try {
+            await (0, terminal_1.runCommandInTaskTerminal)(taskName, commandLine, { cwd: workspaceDir });
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.logAlways)(`[updateWorkspaceAgentsMd] ERROR launching harness: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to launch the Agentic Harness terminal: ${message}`);
+            return;
+        }
+        (0, logger_1.logAlways)(`[updateWorkspaceAgentsMd] Opened harness for ${agentsFilePath}`);
+        void vscode.window.showInformationMessage(`Opened Agentic Harness to update AGENTS.md in ${workspaceDir}.`);
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.workspaceSetup", async () => {
         (0, logger_1.showOutputChannel)();
         (0, logger_1.logAlways)("[Workspace Setup] Command triggered");

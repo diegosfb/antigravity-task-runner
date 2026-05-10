@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.10.6",
+  "version": "4.10.7",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -35,6 +35,7 @@
     "onCommand:antigravity.feedbackOnPullRequest",
     "onCommand:antigravity.addJiraItem",
     "onCommand:antigravity.setupWorkspace",
+    "onCommand:antigravity.updateWorkspaceAgentsMd",
     "onCommand:antigravity.selectOrCreateJiraProject",
     "onCommand:antigravity.assignJiraItemToAgent",
     "onCommand:antigravity.takeJiraItemAssign",
@@ -214,6 +215,10 @@
         "title": "Antigravity: Setup Workspace"
       },
       {
+        "command": "antigravity.updateWorkspaceAgentsMd",
+        "title": "Antigravity: Update AGENTS.md"
+      },
+      {
         "command": "antigravity.openSopManual",
         "title": "Antigravity: SOP Manual"
       },
@@ -251,7 +256,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.10.6",
+          "name": "Tasky Runner v4.10.7",
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -340,6 +345,11 @@
           "command": "antigravity.bringSopManualToProject",
           "when": "view == antigravityView && viewItem == antigravitySopManual",
           "group": "navigation"
+        },
+        {
+          "command": "antigravity.updateWorkspaceAgentsMd",
+          "when": "view == antigravityView && viewItem == antigravitySetupWorkspaceAction",
+          "group": "navigation@1"
         }
       ]
     },
