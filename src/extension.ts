@@ -84,6 +84,7 @@ import { buildMergeReviewPrompt } from "./mergeReviewPrompt";
 import {
   buildSetupWorkspacePrompt,
   copySetupWorkspaceGuideFiles,
+  ensureSetupWorkspaceDirectories,
   loadProjectTemplates,
   type ProjectTemplate
 } from "./projectTemplates";
@@ -3227,6 +3228,23 @@ export function activate(context: vscode.ExtensionContext) {
       logAlways(
         `[Setup Workspace] guide files ready in ${workspaceDir}: ${
           copiedGuideFiles.length > 0 ? copiedGuideFiles.join(", ") : "already present"
+        }`
+      );
+
+      let createdDirectories: string[];
+      try {
+        createdDirectories = await ensureSetupWorkspaceDirectories(workspaceDir);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[Setup Workspace] ERROR creating support directories: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Failed to create .agent and .claude in ${workspaceDir}: ${message}`
+        );
+        return;
+      }
+      logAlways(
+        `[Setup Workspace] support directories ready in ${workspaceDir}: ${
+          createdDirectories.length > 0 ? createdDirectories.join(", ") : "already present"
         }`
       );
 

@@ -2620,6 +2620,17 @@ function activate(context) {
             return;
         }
         (0, logger_1.logAlways)(`[Setup Workspace] guide files ready in ${workspaceDir}: ${copiedGuideFiles.length > 0 ? copiedGuideFiles.join(", ") : "already present"}`);
+        let createdDirectories;
+        try {
+            createdDirectories = await (0, projectTemplates_1.ensureSetupWorkspaceDirectories)(workspaceDir);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.logAlways)(`[Setup Workspace] ERROR creating support directories: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to create .agent and .claude in ${workspaceDir}: ${message}`);
+            return;
+        }
+        (0, logger_1.logAlways)(`[Setup Workspace] support directories ready in ${workspaceDir}: ${createdDirectories.length > 0 ? createdDirectories.join(", ") : "already present"}`);
         const prompt = (0, projectTemplates_1.buildSetupWorkspacePrompt)(selectedTemplate, workspaceDir);
         const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(workspaceDir, prompt, "dangerous");
         const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;

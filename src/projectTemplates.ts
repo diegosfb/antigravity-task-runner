@@ -54,6 +54,7 @@ export async function loadProjectTemplates(resourcesRoot: string): Promise<Proje
 }
 
 const SETUP_WORKSPACE_GUIDE_FILE_NAMES = ["CLAUDE.md", "AGENTS.md"] as const;
+const SETUP_WORKSPACE_DIRECTORY_NAMES = [".agent", ".claude"] as const;
 
 export async function copySetupWorkspaceGuideFiles(
   resourcesRoot: string,
@@ -76,13 +77,34 @@ export async function copySetupWorkspaceGuideFiles(
   return copiedFiles;
 }
 
+export async function ensureSetupWorkspaceDirectories(projectRoot: string): Promise<string[]> {
+  const createdDirectories: string[] = [];
+  await fs.promises.mkdir(projectRoot, { recursive: true });
+
+  for (const directoryName of SETUP_WORKSPACE_DIRECTORY_NAMES) {
+    const directoryPath = path.join(projectRoot, directoryName);
+    if (fs.existsSync(directoryPath)) {
+      const stats = await fs.promises.stat(directoryPath);
+      if (!stats.isDirectory()) {
+        throw new Error(`${directoryName} exists but is not a directory.`);
+      }
+      continue;
+    }
+
+    await fs.promises.mkdir(directoryPath, { recursive: true });
+    createdDirectories.push(directoryName);
+  }
+
+  return createdDirectories;
+}
+
 export function buildSetupWorkspacePrompt(
   template: ProjectTemplate,
   workspaceDir: string
 ): string {
   return [
     `Set up the workspace by downloading the "${template.name}" project into "${workspaceDir}".`,
-    `The workspace root already contains CLAUDE.md and AGENTS.md guidance files. Follow them while working.`,
+    `The workspace root already contains CLAUDE.md, AGENTS.md, .agent, and .claude. Follow those guides and use those folders while working.`,
     `Use this source URL: ${template.downloadUrl}.`,
     `Follow these instructions exactly: ${template.instructions}.`,
     `If the target directory does not exist yet, create it first.`,

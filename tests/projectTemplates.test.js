@@ -7,6 +7,7 @@ const path = require("node:path");
 const {
   buildSetupWorkspacePrompt,
   copySetupWorkspaceGuideFiles,
+  ensureSetupWorkspaceDirectories,
   normalizeProjectTemplate,
   parseProjectTemplates
 } = require("../out/projectTemplates.js");
@@ -64,7 +65,7 @@ test("buildSetupWorkspacePrompt includes the template details and target path", 
   assert.match(prompt, /https:\/\/github\.com\/diegosfb\/TestService/);
   assert.match(prompt, /Download the latest release source code\./);
   assert.match(prompt, /\/tmp\/workspace/);
-  assert.match(prompt, /CLAUDE\.md and AGENTS\.md guidance files/);
+  assert.match(prompt, /CLAUDE\.md, AGENTS\.md, \.agent, and \.claude/);
   assert.match(prompt, /Do not modify files outside/);
 });
 
@@ -113,4 +114,29 @@ test("copySetupWorkspaceGuideFiles does not overwrite existing project guide fil
     fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8"),
     "# EXISTING AGENTS\n"
   );
+});
+
+test("ensureSetupWorkspaceDirectories creates .agent and .claude in the project root", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
+  const projectRoot = path.join(tempRoot, "workspace");
+
+  const createdDirectories = await ensureSetupWorkspaceDirectories(projectRoot);
+
+  assert.deepEqual(createdDirectories, [".agent", ".claude"]);
+  assert.ok(fs.statSync(path.join(projectRoot, ".agent")).isDirectory());
+  assert.ok(fs.statSync(path.join(projectRoot, ".claude")).isDirectory());
+});
+
+test("ensureSetupWorkspaceDirectories does not recreate existing directories", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
+  const projectRoot = path.join(tempRoot, "workspace");
+
+  fs.mkdirSync(path.join(projectRoot, ".agent"), { recursive: true });
+  fs.mkdirSync(path.join(projectRoot, ".claude"), { recursive: true });
+
+  const createdDirectories = await ensureSetupWorkspaceDirectories(projectRoot);
+
+  assert.deepEqual(createdDirectories, []);
+  assert.ok(fs.statSync(path.join(projectRoot, ".agent")).isDirectory());
+  assert.ok(fs.statSync(path.join(projectRoot, ".claude")).isDirectory());
 });
