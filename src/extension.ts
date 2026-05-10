@@ -83,6 +83,7 @@ import {
 import { buildMergeReviewPrompt } from "./mergeReviewPrompt";
 import {
   buildSetupWorkspacePrompt,
+  copySetupWorkspaceGuideFiles,
   loadProjectTemplates,
   type ProjectTemplate
 } from "./projectTemplates";
@@ -3208,6 +3209,26 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       fs.mkdirSync(workspaceDir, { recursive: true });
+
+      let copiedGuideFiles: string[];
+      try {
+        copiedGuideFiles = await copySetupWorkspaceGuideFiles(
+          path.join(extensionRoot, "Resources"),
+          workspaceDir
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[Setup Workspace] ERROR copying guide files: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Failed to copy CLAUDE.md and AGENTS.md into ${workspaceDir}: ${message}`
+        );
+        return;
+      }
+      logAlways(
+        `[Setup Workspace] guide files ready in ${workspaceDir}: ${
+          copiedGuideFiles.length > 0 ? copiedGuideFiles.join(", ") : "already present"
+        }`
+      );
 
       const prompt = buildSetupWorkspacePrompt(selectedTemplate, workspaceDir);
       const commandLine = buildAgenticHarnessPromptCommand(workspaceDir, prompt, "dangerous");

@@ -2609,6 +2609,17 @@ function activate(context) {
             return;
         }
         fs.mkdirSync(workspaceDir, { recursive: true });
+        let copiedGuideFiles;
+        try {
+            copiedGuideFiles = await (0, projectTemplates_1.copySetupWorkspaceGuideFiles)(path.join(extensionRoot, "Resources"), workspaceDir);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.logAlways)(`[Setup Workspace] ERROR copying guide files: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to copy CLAUDE.md and AGENTS.md into ${workspaceDir}: ${message}`);
+            return;
+        }
+        (0, logger_1.logAlways)(`[Setup Workspace] guide files ready in ${workspaceDir}: ${copiedGuideFiles.length > 0 ? copiedGuideFiles.join(", ") : "already present"}`);
         const prompt = (0, projectTemplates_1.buildSetupWorkspacePrompt)(selectedTemplate, workspaceDir);
         const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(workspaceDir, prompt, "dangerous");
         const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;

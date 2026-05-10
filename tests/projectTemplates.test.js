@@ -1,8 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 
 const {
   buildSetupWorkspacePrompt,
+  copySetupWorkspaceGuideFiles,
   normalizeProjectTemplate,
   parseProjectTemplates
 } = require("../out/projectTemplates.js");
@@ -60,5 +64,53 @@ test("buildSetupWorkspacePrompt includes the template details and target path", 
   assert.match(prompt, /https:\/\/github\.com\/diegosfb\/TestService/);
   assert.match(prompt, /Download the latest release source code\./);
   assert.match(prompt, /\/tmp\/workspace/);
+  assert.match(prompt, /CLAUDE\.md and AGENTS\.md guidance files/);
   assert.match(prompt, /Do not modify files outside/);
+});
+
+test("copySetupWorkspaceGuideFiles copies CLAUDE.md and AGENTS.md into the project root", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
+  const resourcesRoot = path.join(tempRoot, "Resources");
+  const projectRoot = path.join(tempRoot, "workspace");
+
+  fs.mkdirSync(resourcesRoot, { recursive: true });
+  fs.writeFileSync(path.join(resourcesRoot, "CLAUDE.md"), "# CLAUDE\n");
+  fs.writeFileSync(path.join(resourcesRoot, "AGENTS.md"), "# AGENTS\n");
+
+  const copiedFiles = await copySetupWorkspaceGuideFiles(resourcesRoot, projectRoot);
+
+  assert.deepEqual(copiedFiles, ["CLAUDE.md", "AGENTS.md"]);
+  assert.strictEqual(
+    fs.readFileSync(path.join(projectRoot, "CLAUDE.md"), "utf8"),
+    "# CLAUDE\n"
+  );
+  assert.strictEqual(
+    fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8"),
+    "# AGENTS\n"
+  );
+});
+
+test("copySetupWorkspaceGuideFiles does not overwrite existing project guide files", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
+  const resourcesRoot = path.join(tempRoot, "Resources");
+  const projectRoot = path.join(tempRoot, "workspace");
+
+  fs.mkdirSync(resourcesRoot, { recursive: true });
+  fs.mkdirSync(projectRoot, { recursive: true });
+  fs.writeFileSync(path.join(resourcesRoot, "CLAUDE.md"), "# NEW CLAUDE\n");
+  fs.writeFileSync(path.join(resourcesRoot, "AGENTS.md"), "# NEW AGENTS\n");
+  fs.writeFileSync(path.join(projectRoot, "CLAUDE.md"), "# EXISTING CLAUDE\n");
+  fs.writeFileSync(path.join(projectRoot, "AGENTS.md"), "# EXISTING AGENTS\n");
+
+  const copiedFiles = await copySetupWorkspaceGuideFiles(resourcesRoot, projectRoot);
+
+  assert.deepEqual(copiedFiles, []);
+  assert.strictEqual(
+    fs.readFileSync(path.join(projectRoot, "CLAUDE.md"), "utf8"),
+    "# EXISTING CLAUDE\n"
+  );
+  assert.strictEqual(
+    fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8"),
+    "# EXISTING AGENTS\n"
+  );
 });

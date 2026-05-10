@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.normalizeProjectTemplate = normalizeProjectTemplate;
 exports.parseProjectTemplates = parseProjectTemplates;
 exports.loadProjectTemplates = loadProjectTemplates;
+exports.copySetupWorkspaceGuideFiles = copySetupWorkspaceGuideFiles;
 exports.buildSetupWorkspacePrompt = buildSetupWorkspacePrompt;
 const fs = require("fs");
 const path = require("path");
@@ -44,9 +45,25 @@ async function loadProjectTemplates(resourcesRoot) {
     const raw = await fs.promises.readFile(projectTemplatesPath, "utf8");
     return parseProjectTemplates(raw);
 }
+const SETUP_WORKSPACE_GUIDE_FILE_NAMES = ["CLAUDE.md", "AGENTS.md"];
+async function copySetupWorkspaceGuideFiles(resourcesRoot, projectRoot) {
+    const copiedFiles = [];
+    await fs.promises.mkdir(projectRoot, { recursive: true });
+    for (const fileName of SETUP_WORKSPACE_GUIDE_FILE_NAMES) {
+        const sourcePath = path.join(resourcesRoot, fileName);
+        const destinationPath = path.join(projectRoot, fileName);
+        await fs.promises.access(sourcePath, fs.constants.F_OK);
+        if (fs.existsSync(destinationPath))
+            continue;
+        await fs.promises.copyFile(sourcePath, destinationPath);
+        copiedFiles.push(fileName);
+    }
+    return copiedFiles;
+}
 function buildSetupWorkspacePrompt(template, workspaceDir) {
     return [
         `Set up the workspace by downloading the "${template.name}" project into "${workspaceDir}".`,
+        `The workspace root already contains CLAUDE.md and AGENTS.md guidance files. Follow them while working.`,
         `Use this source URL: ${template.downloadUrl}.`,
         `Follow these instructions exactly: ${template.instructions}.`,
         `If the target directory does not exist yet, create it first.`,
