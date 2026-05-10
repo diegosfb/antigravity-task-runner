@@ -1,6 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { execSync, spawnSync } from "child_process";
+import * as vscode from "vscode";
+import { appendEnvComment } from "./utils";
 
 export type AuditMap = Record<string, { secrets: string[]; variables: string[] }>;
 
@@ -156,5 +158,148 @@ export function writeEnvDocumentation(envPath: string, required: AuditMap, appen
   const lines = buildEnvCommentLines(required);
   for (const line of lines) {
     appendEnvCommentFn(envPath, line);
+  }
+}
+
+export async function runSecretsAudit(repoRoot: string): Promise<void> {
+  // Pre-flight checks
+  try { runGh("--version", repoRoot); } catch {
+    void vscode.window.showErrorMessage("gh CLI is required. Install from https://cli.github.com");
+    return;
+  }
+  try { runGh("auth status", repoRoot); } catch {
+    void vscode.window.showErrorMessage("Run `gh auth login` to authenticate with GitHub.");
+    return;
+  }
+
+  let remoteUrl: string;
+  try { remoteUrl = getGitRemoteUrl(repoRoot); } catch {
+    void vscode.window.showErrorMessage("No git remote found. Is this a GitHub repository?");
+    return;
+  }
+
+  const ownerRepo = parseGitHubOwnerRepo(remoteUrl);
+  if (!ownerRepo) {
+    void vscode.window.showErrorMessage("Remote origin is not a GitHub URL.");
+    return;
+  }
+
+  // Load workflow files
+  const workflowFiles = loadWorkflowFiles(repoRoot);
+  if (workflowFiles.length === 0) {
+    void vscode.window.showInformationMessage("No workflow files found in .github/workflows/");
+    return;
+  }
+
+  // Scan for required secrets/variables
+  const required = scanWorkflowFiles(workflowFiles);
+  const totalRequired = Object.values(required).reduce((n, v) => n + v.secrets.length + v.variables.length, 0);
+  if (totalRequired === 0) {
+    void vscode.window.showInformationMessage("No secrets or variables referenced in workflows — nothing to audit.");
+    return;
+  }
+
+  // Discover existing secrets/variables from GitHub
+  const { owner, repo } = ownerRepo;
+  const existing: AuditMap = {};
+
+  let environments: string[] = [];
+  try {
+    const envResp = JSON.parse(runGh(`api repos/${owner}/${repo}/environments`, repoRoot)) as { environments?: { name: string }[] };
+    environments = (envResp.environments ?? []).map((e) => e.name);
+  } catch { /* no environments configured */ }
+
+  for (const env of environments) {
+    const secrets: string[] = [];
+    const variables: string[] = [];
+    try {
+      const s = JSON.parse(runGh(`secret list --env "${env}" --json name`, repoRoot)) as { name: string }[];
+      secrets.push(...s.map((x) => x.name));
+    } catch { /* env may have no secrets */ }
+    try {
+      const v = JSON.parse(runGh(`variable list --env "${env}" --json name`, repoRoot)) as { name: string }[];
+      variables.push(...v.map((x) => x.name));
+    } catch { /* env may have no variables */ }
+    existing[env] = { secrets, variables };
+  }
+
+  // Repo-level
+  const repoSecrets: string[] = [];
+  const repoVars: string[] = [];
+  try {
+    const s = JSON.parse(runGh("secret list --json name", repoRoot)) as { name: string }[];
+    repoSecrets.push(...s.map((x) => x.name));
+  } catch { /* ignore */ }
+  try {
+    const v = JSON.parse(runGh("variable list --json name", repoRoot)) as { name: string }[];
+    repoVars.push(...v.map((x) => x.name));
+  } catch { /* ignore */ }
+  existing["_repo"] = { secrets: repoSecrets, variables: repoVars };
+
+  // Compute delta
+  const delta = computeDelta(required, existing);
+  const missingItems = Object.entries(delta).flatMap(([env, { secrets, variables }]) => [
+    ...secrets.map((s) => ({ env, name: s, type: "secret" as const })),
+    ...variables.map((v) => ({ env, name: v, type: "variable" as const })),
+  ]);
+
+  // Write .env documentation regardless
+  const envPath = path.join(repoRoot, ".env");
+  writeEnvDocumentation(envPath, required, appendEnvComment);
+
+  if (missingItems.length === 0) {
+    void vscode.window.showInformationMessage("✅ All secrets and variables are configured.");
+    return;
+  }
+
+  const envNames = [...new Set(missingItems.map((i) => i.env))].join(", ");
+  const proceed = await vscode.window.showInformationMessage(
+    `Found ${missingItems.length} missing item(s) across environments: ${envNames}. Proceed to set them?`,
+    "Set them",
+    "Skip (document only)"
+  );
+  if (!proceed || proceed === "Skip (document only)") return;
+
+  // Collect values and create
+  let setCount = 0;
+  const skipped: string[] = [];
+
+  for (const item of missingItems) {
+    const hint = item.type === "secret" ? getSecretHint(item.name) : "";
+    const prompt = `Enter value for ${item.type} "${item.name}" — ${item.env === "_repo" ? "repo-level" : `environment "${item.env}"`}`;
+    const placeHolder = hint || undefined;
+
+    const value = await vscode.window.showInputBox({
+      prompt,
+      placeHolder,
+      password: item.type === "secret",
+      ignoreFocusOut: true,
+    });
+
+    if (value === undefined) {
+      skipped.push(`${item.name} / ${item.env}`);
+      continue;
+    }
+
+    try {
+      const envArg = item.env !== "_repo" ? item.env : null;
+      if (item.type === "secret") {
+        setGhSecret(item.name, value, envArg, repoRoot);
+      } else {
+        setGhVariable(item.name, value, envArg, repoRoot);
+      }
+      setCount++;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      void vscode.window.showErrorMessage(`Failed to set ${item.type} "${item.name}": ${msg}`);
+    }
+  }
+
+  if (skipped.length > 0) {
+    void vscode.window.showWarningMessage(
+      `✅ Set ${setCount} of ${missingItems.length} items. Skipped: ${skipped.join(", ")}. Run again to retry.`
+    );
+  } else {
+    void vscode.window.showInformationMessage("✅ All secrets and variables are configured.");
   }
 }
