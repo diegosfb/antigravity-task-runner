@@ -221,7 +221,7 @@
       },
       {
         "command": "antigravity.auditSecretsAndVariables",
-        "title": "Audit Secrets & Variables",
+        "title": "Antigravity: Audit Secrets & Variables",
         "icon": "$(shield-lock)"
       },
       {

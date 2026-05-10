@@ -3342,6 +3342,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.auditSecretsAndVariables", async () => {
+      showOutputChannel();
       const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!workspaceRoot) {
         void vscode.window.showErrorMessage("No workspace folder is open.");
