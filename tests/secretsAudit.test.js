@@ -208,3 +208,21 @@ test("getSecretHint returns empty string for unknown name", () => {
   const hint = getSecretHint("MY_CUSTOM_SECRET");
   assert.strictEqual(hint, "");
 });
+
+const { buildEnvCommentLines } = require("../out/secrets-audit.js");
+
+test("buildEnvCommentLines produces correct comment lines for secrets and variables", () => {
+  const required = {
+    production: { secrets: ["DOCKERHUB_TOKEN"], variables: ["APP_URL"] },
+    _repo: { secrets: ["ANTHROPIC_API_KEY"], variables: [] },
+  };
+  const lines = buildEnvCommentLines(required);
+  assert.ok(lines.includes("# GITHUB_SECRET[production]: DOCKERHUB_TOKEN"));
+  assert.ok(lines.includes("# GITHUB_VARIABLE[production]: APP_URL"));
+  assert.ok(lines.includes("# GITHUB_SECRET[_repo]: ANTHROPIC_API_KEY"));
+});
+
+test("buildEnvCommentLines includes the section header", () => {
+  const lines = buildEnvCommentLines({ _repo: { secrets: ["MY_KEY"], variables: [] } });
+  assert.ok(lines.includes("# === GitHub Secrets & Variables (auto-audited) ==="));
+});

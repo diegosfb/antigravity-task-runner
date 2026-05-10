@@ -142,3 +142,19 @@ export function getSecretHint(name: string): string {
   }
   return "";
 }
+
+export function buildEnvCommentLines(required: AuditMap): string[] {
+  const lines: string[] = ["# === GitHub Secrets & Variables (auto-audited) ==="];
+  for (const [env, { secrets, variables }] of Object.entries(required)) {
+    for (const s of secrets) lines.push(`# GITHUB_SECRET[${env}]: ${s}`);
+    for (const v of variables) lines.push(`# GITHUB_VARIABLE[${env}]: ${v}`);
+  }
+  return lines;
+}
+
+export function writeEnvDocumentation(envPath: string, required: AuditMap, appendEnvCommentFn: (f: string, l: string) => void): void {
+  const lines = buildEnvCommentLines(required);
+  for (const line of lines) {
+    appendEnvCommentFn(envPath, line);
+  }
+}
