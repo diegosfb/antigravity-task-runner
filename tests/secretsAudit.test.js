@@ -47,3 +47,49 @@ test("appendEnvComment creates the file if it does not exist", () => {
     if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
   }
 });
+
+const { scanWorkflowFiles, GITHUB_BUILTIN_SECRETS } = require("../out/secrets-audit.js");
+
+test("scanWorkflowFiles extracts secrets from workflow content", () => {
+  const content = `
+jobs:
+  deploy:
+    environment: production
+    steps:
+      - run: echo \${{ secrets.DOCKERHUB_TOKEN }}
+      - run: echo \${{ vars.APP_URL }}
+`;
+  const result = scanWorkflowFiles([{ name: "deploy.yml", content }]);
+  assert.deepEqual(result["production"].secrets, ["DOCKERHUB_TOKEN"]);
+  assert.deepEqual(result["production"].variables, ["APP_URL"]);
+});
+
+test("scanWorkflowFiles tags secrets with no environment as _repo", () => {
+  const content = `
+jobs:
+  build:
+    steps:
+      - run: echo \${{ secrets.ANTHROPIC_API_KEY }}
+`;
+  const result = scanWorkflowFiles([{ name: "build.yml", content }]);
+  assert.ok(result["_repo"].secrets.includes("ANTHROPIC_API_KEY"));
+});
+
+test("scanWorkflowFiles skips GITHUB_TOKEN", () => {
+  const content = `
+jobs:
+  build:
+    steps:
+      - run: echo \${{ secrets.GITHUB_TOKEN }}
+`;
+  const result = scanWorkflowFiles([{ name: "build.yml", content }]);
+  const allSecrets = Object.values(result).flatMap(v => v.secrets);
+  assert.ok(!allSecrets.includes("GITHUB_TOKEN"));
+});
+
+test("scanWorkflowFiles deduplicates across multiple files", () => {
+  const fileA = { name: "a.yml", content: "jobs:\n  deploy:\n    environment: production\n    steps:\n      - run: echo ${{ secrets.DOCKERHUB_TOKEN }}\n" };
+  const fileB = { name: "b.yml", content: "jobs:\n  deploy:\n    environment: production\n    steps:\n      - run: echo ${{ secrets.DOCKERHUB_TOKEN }}\n" };
+  const result = scanWorkflowFiles([fileA, fileB]);
+  assert.strictEqual(result["production"].secrets.filter(s => s === "DOCKERHUB_TOKEN").length, 1);
+});
