@@ -7,6 +7,7 @@ const path = require("node:path");
 const {
   buildSetupWorkspacePrompt,
   copySetupWorkspaceGuideFiles,
+  copySetupWorkspaceSkills,
   ensureSetupWorkspaceDirectories,
   normalizeProjectTemplate,
   parseProjectTemplates
@@ -66,6 +67,7 @@ test("buildSetupWorkspacePrompt includes the template details and target path", 
   assert.match(prompt, /Download the latest release source code\./);
   assert.match(prompt, /\/tmp\/workspace/);
   assert.match(prompt, /CLAUDE\.md, AGENTS\.md, \.agent, and \.claude/);
+  assert.match(prompt, /jira-project-creation/);
   assert.match(prompt, /Do not modify files outside/);
 });
 
@@ -139,4 +141,51 @@ test("ensureSetupWorkspaceDirectories does not recreate existing directories", a
   assert.deepEqual(createdDirectories, []);
   assert.ok(fs.statSync(path.join(projectRoot, ".agent")).isDirectory());
   assert.ok(fs.statSync(path.join(projectRoot, ".claude")).isDirectory());
+});
+
+test("copySetupWorkspaceSkills copies jira-project-creation into .agent/skills", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
+  const resourcesRoot = path.join(tempRoot, "Resources");
+  const projectRoot = path.join(tempRoot, "workspace");
+  const skillSourceRoot = path.join(resourcesRoot, "jira-project-creation");
+
+  fs.mkdirSync(skillSourceRoot, { recursive: true });
+  fs.writeFileSync(path.join(skillSourceRoot, "SKILL.md"), "# Skill\n");
+
+  const copiedSkills = await copySetupWorkspaceSkills(resourcesRoot, projectRoot);
+
+  assert.deepEqual(copiedSkills, ["jira-project-creation"]);
+  assert.strictEqual(
+    fs.readFileSync(
+      path.join(projectRoot, ".agent", "skills", "jira-project-creation", "SKILL.md"),
+      "utf8"
+    ),
+    "# Skill\n"
+  );
+});
+
+test("copySetupWorkspaceSkills does not overwrite an existing bundled skill", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
+  const resourcesRoot = path.join(tempRoot, "Resources");
+  const projectRoot = path.join(tempRoot, "workspace");
+  const sourceSkillRoot = path.join(resourcesRoot, "jira-project-creation");
+  const existingSkillRoot = path.join(
+    projectRoot,
+    ".agent",
+    "skills",
+    "jira-project-creation"
+  );
+
+  fs.mkdirSync(sourceSkillRoot, { recursive: true });
+  fs.mkdirSync(existingSkillRoot, { recursive: true });
+  fs.writeFileSync(path.join(sourceSkillRoot, "SKILL.md"), "# New Skill\n");
+  fs.writeFileSync(path.join(existingSkillRoot, "SKILL.md"), "# Existing Skill\n");
+
+  const copiedSkills = await copySetupWorkspaceSkills(resourcesRoot, projectRoot);
+
+  assert.deepEqual(copiedSkills, []);
+  assert.strictEqual(
+    fs.readFileSync(path.join(existingSkillRoot, "SKILL.md"), "utf8"),
+    "# Existing Skill\n"
+  );
 });

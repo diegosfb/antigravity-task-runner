@@ -84,6 +84,7 @@ import { buildMergeReviewPrompt } from "./mergeReviewPrompt";
 import {
   buildSetupWorkspacePrompt,
   copySetupWorkspaceGuideFiles,
+  copySetupWorkspaceSkills,
   ensureSetupWorkspaceDirectories,
   loadProjectTemplates,
   type ProjectTemplate
@@ -3245,6 +3246,26 @@ export function activate(context: vscode.ExtensionContext) {
       logAlways(
         `[Setup Workspace] support directories ready in ${workspaceDir}: ${
           createdDirectories.length > 0 ? createdDirectories.join(", ") : "already present"
+        }`
+      );
+
+      let copiedSkills: string[];
+      try {
+        copiedSkills = await copySetupWorkspaceSkills(
+          path.join(extensionRoot, "Resources"),
+          workspaceDir
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[Setup Workspace] ERROR copying bundled skills: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Failed to copy bundled skills into ${path.join(workspaceDir, ".agent", "skills")}: ${message}`
+        );
+        return;
+      }
+      logAlways(
+        `[Setup Workspace] bundled skills ready in ${workspaceDir}: ${
+          copiedSkills.length > 0 ? copiedSkills.join(", ") : "already present"
         }`
       );
 

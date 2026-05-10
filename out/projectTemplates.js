@@ -5,6 +5,7 @@ exports.parseProjectTemplates = parseProjectTemplates;
 exports.loadProjectTemplates = loadProjectTemplates;
 exports.copySetupWorkspaceGuideFiles = copySetupWorkspaceGuideFiles;
 exports.ensureSetupWorkspaceDirectories = ensureSetupWorkspaceDirectories;
+exports.copySetupWorkspaceSkills = copySetupWorkspaceSkills;
 exports.buildSetupWorkspacePrompt = buildSetupWorkspacePrompt;
 const fs = require("fs");
 const path = require("path");
@@ -48,6 +49,7 @@ async function loadProjectTemplates(resourcesRoot) {
 }
 const SETUP_WORKSPACE_GUIDE_FILE_NAMES = ["CLAUDE.md", "AGENTS.md"];
 const SETUP_WORKSPACE_DIRECTORY_NAMES = [".agent", ".claude"];
+const SETUP_WORKSPACE_SKILL_DIRECTORY_NAMES = ["jira-project-creation"];
 async function copySetupWorkspaceGuideFiles(resourcesRoot, projectRoot) {
     const copiedFiles = [];
     await fs.promises.mkdir(projectRoot, { recursive: true });
@@ -79,10 +81,31 @@ async function ensureSetupWorkspaceDirectories(projectRoot) {
     }
     return createdDirectories;
 }
+async function copySetupWorkspaceSkills(resourcesRoot, projectRoot) {
+    const copiedSkills = [];
+    const skillsRoot = path.join(projectRoot, ".agent", "skills");
+    await fs.promises.mkdir(skillsRoot, { recursive: true });
+    for (const skillDirectoryName of SETUP_WORKSPACE_SKILL_DIRECTORY_NAMES) {
+        const sourcePath = path.join(resourcesRoot, skillDirectoryName);
+        const destinationPath = path.join(skillsRoot, skillDirectoryName);
+        await fs.promises.access(sourcePath, fs.constants.F_OK);
+        if (fs.existsSync(destinationPath)) {
+            const stats = await fs.promises.stat(destinationPath);
+            if (!stats.isDirectory()) {
+                throw new Error(`${destinationPath} exists but is not a directory.`);
+            }
+            continue;
+        }
+        await fs.promises.cp(sourcePath, destinationPath, { recursive: true });
+        copiedSkills.push(skillDirectoryName);
+    }
+    return copiedSkills;
+}
 function buildSetupWorkspacePrompt(template, workspaceDir) {
     return [
         `Set up the workspace by downloading the "${template.name}" project into "${workspaceDir}".`,
         `The workspace root already contains CLAUDE.md, AGENTS.md, .agent, and .claude. Follow those guides and use those folders while working.`,
+        `The Jira project creation skill is already available at "${path.join(workspaceDir, ".agent", "skills", "jira-project-creation")}". Reuse it when it helps.`,
         `Use this source URL: ${template.downloadUrl}.`,
         `Follow these instructions exactly: ${template.instructions}.`,
         `If the target directory does not exist yet, create it first.`,

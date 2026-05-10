@@ -55,6 +55,7 @@ export async function loadProjectTemplates(resourcesRoot: string): Promise<Proje
 
 const SETUP_WORKSPACE_GUIDE_FILE_NAMES = ["CLAUDE.md", "AGENTS.md"] as const;
 const SETUP_WORKSPACE_DIRECTORY_NAMES = [".agent", ".claude"] as const;
+const SETUP_WORKSPACE_SKILL_DIRECTORY_NAMES = ["jira-project-creation"] as const;
 
 export async function copySetupWorkspaceGuideFiles(
   resourcesRoot: string,
@@ -98,6 +99,34 @@ export async function ensureSetupWorkspaceDirectories(projectRoot: string): Prom
   return createdDirectories;
 }
 
+export async function copySetupWorkspaceSkills(
+  resourcesRoot: string,
+  projectRoot: string
+): Promise<string[]> {
+  const copiedSkills: string[] = [];
+  const skillsRoot = path.join(projectRoot, ".agent", "skills");
+  await fs.promises.mkdir(skillsRoot, { recursive: true });
+
+  for (const skillDirectoryName of SETUP_WORKSPACE_SKILL_DIRECTORY_NAMES) {
+    const sourcePath = path.join(resourcesRoot, skillDirectoryName);
+    const destinationPath = path.join(skillsRoot, skillDirectoryName);
+
+    await fs.promises.access(sourcePath, fs.constants.F_OK);
+    if (fs.existsSync(destinationPath)) {
+      const stats = await fs.promises.stat(destinationPath);
+      if (!stats.isDirectory()) {
+        throw new Error(`${destinationPath} exists but is not a directory.`);
+      }
+      continue;
+    }
+
+    await fs.promises.cp(sourcePath, destinationPath, { recursive: true });
+    copiedSkills.push(skillDirectoryName);
+  }
+
+  return copiedSkills;
+}
+
 export function buildSetupWorkspacePrompt(
   template: ProjectTemplate,
   workspaceDir: string
@@ -105,6 +134,7 @@ export function buildSetupWorkspacePrompt(
   return [
     `Set up the workspace by downloading the "${template.name}" project into "${workspaceDir}".`,
     `The workspace root already contains CLAUDE.md, AGENTS.md, .agent, and .claude. Follow those guides and use those folders while working.`,
+    `The Jira project creation skill is already available at "${path.join(workspaceDir, ".agent", "skills", "jira-project-creation")}". Reuse it when it helps.`,
     `Use this source URL: ${template.downloadUrl}.`,
     `Follow these instructions exactly: ${template.instructions}.`,
     `If the target directory does not exist yet, create it first.`,

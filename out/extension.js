@@ -2631,6 +2631,17 @@ function activate(context) {
             return;
         }
         (0, logger_1.logAlways)(`[Setup Workspace] support directories ready in ${workspaceDir}: ${createdDirectories.length > 0 ? createdDirectories.join(", ") : "already present"}`);
+        let copiedSkills;
+        try {
+            copiedSkills = await (0, projectTemplates_1.copySetupWorkspaceSkills)(path.join(extensionRoot, "Resources"), workspaceDir);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.logAlways)(`[Setup Workspace] ERROR copying bundled skills: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to copy bundled skills into ${path.join(workspaceDir, ".agent", "skills")}: ${message}`);
+            return;
+        }
+        (0, logger_1.logAlways)(`[Setup Workspace] bundled skills ready in ${workspaceDir}: ${copiedSkills.length > 0 ? copiedSkills.join(", ") : "already present"}`);
         const prompt = (0, projectTemplates_1.buildSetupWorkspacePrompt)(selectedTemplate, workspaceDir);
         const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(workspaceDir, prompt, "dangerous");
         const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;
