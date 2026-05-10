@@ -276,7 +276,7 @@ export async function runSecretsAudit(repoRoot: string): Promise<void> {
       ignoreFocusOut: true,
     });
 
-    if (value === undefined) {
+    if (value === undefined || value === "") {
       skipped.push(`${item.name} / ${item.env}`);
       continue;
     }
@@ -292,6 +292,7 @@ export async function runSecretsAudit(repoRoot: string): Promise<void> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       void vscode.window.showErrorMessage(`Failed to set ${item.type} "${item.name}": ${msg}`);
+      skipped.push(`${item.name} / ${item.env}`);
     }
   }
 
