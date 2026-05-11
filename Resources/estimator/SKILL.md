@@ -3,7 +3,7 @@ name: software-estimation
 description: Software architecture effort estimator. Use this skill whenever a software architect, tech lead, or PM needs to scope work and produce man-hour estimates with skill profile breakdowns. Trigger on phrases like "estimate this", "how long will this take", "how many engineers do I need", "scope this feature", "break down the effort", "give me a man-hour estimate", "what profiles do I need", or any description of a software deliverable that needs a resource forecast. Even when the user describes a feature or project without explicitly asking for an estimate — if they seem to need one, proactively use this skill.
 ---
 
-# Software Estimation
+# Software Estimation v1.2.3
 
 > **Goal**: Produce accurate man-hour estimates and skill profile breakdowns for software work, calibrated against a mid-level engineer baseline.
 
