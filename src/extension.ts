@@ -41,7 +41,6 @@ import {
 } from "./settings";
 import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing } from "./scripts";
 import {
-  buildAgentRunCommand,
   inferAssignableAgentLabelFromCommand,
   type AssignableAgentLabel
 } from "./agentRunCommand";
@@ -2485,9 +2484,16 @@ export function activate(context: vscode.ExtensionContext) {
     agentCommand: string
   ): Promise<void> => {
     const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
-    const command = buildAgentRunCommand(repoRoot, agentLabel, prompt, {
-      customCommand: agentCommand
-    });
+    const promptFilePath = writeAgentPromptFile(
+      `assign-jira-item-to-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      prompt
+    );
+    const command = buildAgenticHarnessFileCommandForCommand(
+      agentCommand,
+      repoRoot,
+      promptFilePath,
+      "dangerous"
+    );
     const lines = command.includes("\n")
       ? [
         `zsh ${quoteShellArg(

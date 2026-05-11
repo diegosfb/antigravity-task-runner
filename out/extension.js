@@ -2026,9 +2026,8 @@ function activate(context) {
     };
     const launchAgentForJiraItem = async (repoRoot, agentLabel, issueKey, issueSummary, agentCommand) => {
         const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
-        const command = (0, agentRunCommand_1.buildAgentRunCommand)(repoRoot, agentLabel, prompt, {
-            customCommand: agentCommand
-        });
+        const promptFilePath = writeAgentPromptFile(`assign-jira-item-to-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, prompt);
+        const command = (0, agenticHarnessCommand_1.buildAgenticHarnessFileCommandForCommand)(agentCommand, repoRoot, promptFilePath, "dangerous");
         const lines = command.includes("\n")
             ? [
                 `zsh ${(0, utils_1.quoteShellArg)(writeAgentLaunchScript(`antigravity-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-jira`, `cd ${(0, utils_1.quoteShellArg)(repoRoot)}\n${command}`))}`
