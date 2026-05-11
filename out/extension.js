@@ -514,6 +514,12 @@ function activate(context) {
         color: var(--vscode-button-foreground);
         background: var(--vscode-button-background);
       }
+      button[type="submit"][data-action="grillMe"] {
+        background: var(--vscode-charts-green, #2ea043);
+      }
+      button[type="submit"][data-action="grillMe"]:hover {
+        background: color-mix(in srgb, var(--vscode-charts-green, #2ea043) 88%, black 12%);
+      }
       button[type="button"] {
         color: var(--vscode-button-secondaryForeground);
         background: var(--vscode-button-secondaryBackground);
@@ -1602,6 +1608,8 @@ function activate(context) {
       .actions { display: flex; justify-content: flex-end; gap: 8px; }
       button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
       button[type="submit"] { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+      button[type="submit"][data-action="grillMe"] { background: var(--vscode-charts-green, #2ea043); }
+      button[type="submit"][data-action="grillMe"]:hover { background: color-mix(in srgb, var(--vscode-charts-green, #2ea043) 88%, black 12%); }
       button[type="button"] { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
     </style>
   </head>
@@ -1760,6 +1768,8 @@ function activate(context) {
       .actions { display: flex; justify-content: flex-end; gap: 8px; }
       button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
       button[type="submit"] { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+      button[type="submit"][data-action="grillMe"] { background: var(--vscode-charts-green, #2ea043); }
+      button[type="submit"][data-action="grillMe"]:hover { background: color-mix(in srgb, var(--vscode-charts-green, #2ea043) 88%, black 12%); }
       button[type="button"] { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
     </style>
   </head>
