@@ -75,11 +75,9 @@ import {
   updateJiraIssueSummaryAndLabels
 } from "./jira";
 import {
-  buildAgenticHarnessSkillTaskPrompt
-} from "./agenticHarnessSkill";
-import {
   buildCreateJiraProjectAgenticHarnessEnvironment,
   buildCreateJiraProjectAgenticHarnessPrompt,
+  copyJiraProjectCreationSkill,
   JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME,
   JIRA_PROJECT_CREATION_SKILL_NAME
 } from "./jiraProjectHarness";
@@ -1714,16 +1712,27 @@ export function activate(context: vscode.ExtensionContext) {
               return;
             }
 
-            const jiraPrompt = buildCreateJiraProjectAgenticHarnessPrompt({
+            try {
+              const copiedSkillPaths = await copyJiraProjectCreationSkill(extensionRoot, repoRoot);
+              logAlways(
+                `[jiraProjectCreate] skill locations ready: ${
+                  copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+                }`
+              );
+              provider.refresh();
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              void panel.webview.postMessage({
+                type: "jiraProjectSetupError",
+                payload: { message: `Failed to prepare the ${JIRA_PROJECT_CREATION_SKILL_NAME} skill: ${message}` }
+              });
+              return;
+            }
+
+            const prompt = buildCreateJiraProjectAgenticHarnessPrompt({
               projectName,
               projectKey,
               description
-            });
-            const prompt = buildAgenticHarnessSkillTaskPrompt({
-              agenticHarnessCommand: getAgenticHarnessExecutionCommand(),
-              skillName: JIRA_PROJECT_CREATION_SKILL_NAME,
-              localSkillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation"),
-              taskPrompt: jiraPrompt
             });
             const envPath = getRepoEnvPath(repoRoot);
             const commandLine = buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous");

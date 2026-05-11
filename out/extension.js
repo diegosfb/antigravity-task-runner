@@ -16,7 +16,6 @@ const agentRunCommand_1 = require("./agentRunCommand");
 const utils_1 = require("./utils");
 const logger_1 = require("./logger");
 const jira_1 = require("./jira");
-const agenticHarnessSkill_1 = require("./agenticHarnessSkill");
 const jiraProjectHarness_1 = require("./jiraProjectHarness");
 const mergeReviewPrompt_1 = require("./mergeReviewPrompt");
 const projectTemplates_1 = require("./projectTemplates");
@@ -1430,16 +1429,23 @@ function activate(context) {
                     });
                     return;
                 }
-                const jiraPrompt = (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessPrompt)({
+                try {
+                    const copiedSkillPaths = await (0, jiraProjectHarness_1.copyJiraProjectCreationSkill)(extensionRoot, repoRoot);
+                    (0, logger_1.logAlways)(`[jiraProjectCreate] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
+                    provider.refresh();
+                }
+                catch (error) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    void panel.webview.postMessage({
+                        type: "jiraProjectSetupError",
+                        payload: { message: `Failed to prepare the ${jiraProjectHarness_1.JIRA_PROJECT_CREATION_SKILL_NAME} skill: ${message}` }
+                    });
+                    return;
+                }
+                const prompt = (0, jiraProjectHarness_1.buildCreateJiraProjectAgenticHarnessPrompt)({
                     projectName,
                     projectKey,
                     description
-                });
-                const prompt = (0, agenticHarnessSkill_1.buildAgenticHarnessSkillTaskPrompt)({
-                    agenticHarnessCommand: (0, settings_1.getAgenticHarnessExecutionCommand)(),
-                    skillName: jiraProjectHarness_1.JIRA_PROJECT_CREATION_SKILL_NAME,
-                    localSkillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation"),
-                    taskPrompt: jiraPrompt
                 });
                 const envPath = getRepoEnvPath(repoRoot);
                 const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "dangerous");
