@@ -1,15 +1,10 @@
 import * as fs from "fs";
 import * as path from "path";
+import { copyBundledSkillToProject } from "./bundledProjectSkill";
 
 export const CLOUD_ARCHITECT_SKILL_NAME = "cloud-architect";
 export const CLOUD_ARCHITECT_REVIEW_PROMPT =
   "use skill cloud-architect to review the infrastructure setup, do a right sizing and propose improvements";
-
-const CLOUD_ARCHITECT_SKILL_SOURCE_DIRECTORY = path.join("Resources", CLOUD_ARCHITECT_SKILL_NAME);
-const CLOUD_ARCHITECT_SKILL_TARGET_DIRECTORIES = [
-  path.join(".agent", "skills"),
-  path.join(".claude", "skills")
-] as const;
 
 const CLOUD_INFRA_DIRECTORY_NAMES = new Set([
   "infra",
@@ -169,44 +164,9 @@ export function hasCloudInfrastructureNeeds(repoRoot: string): boolean {
   return detectCloudInfrastructureSignals(repoRoot, 1).length > 0;
 }
 
-async function ensureDirectoryExists(directoryPath: string): Promise<void> {
-  if (fs.existsSync(directoryPath)) {
-    const stats = await fs.promises.stat(directoryPath);
-    if (!stats.isDirectory()) {
-      throw new Error(`${directoryPath} exists but is not a directory.`);
-    }
-    return;
-  }
-
-  await fs.promises.mkdir(directoryPath, { recursive: true });
-}
-
 export async function copyCloudArchitectSkill(
   extensionRoot: string,
   projectRoot: string
 ): Promise<string[]> {
-  const sourcePath = path.join(extensionRoot, CLOUD_ARCHITECT_SKILL_SOURCE_DIRECTORY);
-  const copiedSkillPaths: string[] = [];
-
-  await fs.promises.access(sourcePath, fs.constants.F_OK);
-
-  for (const relativeDirectory of CLOUD_ARCHITECT_SKILL_TARGET_DIRECTORIES) {
-    const destinationDirectory = path.join(projectRoot, relativeDirectory);
-    const destinationPath = path.join(destinationDirectory, CLOUD_ARCHITECT_SKILL_NAME);
-
-    await ensureDirectoryExists(destinationDirectory);
-
-    if (fs.existsSync(destinationPath)) {
-      const stats = await fs.promises.stat(destinationPath);
-      if (!stats.isDirectory()) {
-        throw new Error(`${destinationPath} exists but is not a directory.`);
-      }
-      continue;
-    }
-
-    await fs.promises.cp(sourcePath, destinationPath, { recursive: true });
-    copiedSkillPaths.push(toRelativePosixPath(projectRoot, destinationPath));
-  }
-
-  return copiedSkillPaths;
+  return copyBundledSkillToProject(extensionRoot, projectRoot, CLOUD_ARCHITECT_SKILL_NAME);
 }

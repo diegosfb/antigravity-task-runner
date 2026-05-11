@@ -22,6 +22,7 @@ const mergeReviewPrompt_1 = require("./mergeReviewPrompt");
 const projectTemplates_1 = require("./projectTemplates");
 const secrets_audit_1 = require("./secrets-audit");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
+const featureEstimator_1 = require("./featureEstimator");
 function getRepoPackageVersion(repoRoot) {
     try {
         const packageJsonPath = path.join(repoRoot, "package.json");
@@ -39,10 +40,12 @@ function activate(context) {
     const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
     const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
     const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+    const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
     context.subscriptions.push(outputChannel);
     (0, logger_1.initLogger)(outputChannel);
     const provider = new treeProvider_1.AntigravityViewProvider();
     const extensionRoot = context.extensionPath;
+    const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(path.join(extensionRoot, "Resources", "feature-estimator-red.svg"));
     (0, logger_1.log)(`[activate] Extension root: ${extensionRoot}`);
     const launchClaudeInit = async (repoRoot, guidelinesFileName = "Project Level CLAUDE.md Guidelines.txt") => {
         (0, logger_1.log)(`[launchClaudeInit] repoRoot: ${repoRoot}`);
@@ -723,6 +726,448 @@ function activate(context) {
         const env = (0, utils_1.parseEnvFile)(getRepoEnvPath(repoRoot));
         return (env.jira_project_key || "").trim().toUpperCase();
     };
+    const buildFeatureEstimatorDetailsFromIssue = (issue) => {
+        const metadata = [issue.issueTypeName, issue.statusName].filter(Boolean).join(", ");
+        return metadata
+            ? `Jira item ${issue.key} (${metadata}): ${issue.summary}`
+            : `Jira item ${issue.key}: ${issue.summary}`;
+    };
+    const renderFeatureEstimatorHtml = (webview, savedProjectKey) => {
+        const nonce = getNonce();
+        const hasSavedProjectKey = savedProjectKey.length > 0;
+        const useJiraByDefault = hasSavedProjectKey;
+        const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+        return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Feature Estimator</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: var(--vscode-font-family);
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+      }
+      form {
+        display: grid;
+        gap: 18px;
+      }
+      .intro {
+        display: grid;
+        gap: 6px;
+      }
+      .mode-list {
+        display: grid;
+        gap: 12px;
+      }
+      .mode-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--vscode-input-border, transparent);
+        background: var(--vscode-sideBar-background);
+      }
+      .mode-card.selected {
+        border-color: var(--vscode-focusBorder);
+        background: var(--vscode-list-hoverBackground);
+      }
+      .mode-card.disabled {
+        opacity: 0.65;
+      }
+      .mode-card input[type="radio"] {
+        margin-top: 3px;
+      }
+      .mode-copy {
+        display: grid;
+        gap: 4px;
+      }
+      .mode-title {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .mode-description,
+      .hint,
+      .status {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        line-height: 1.5;
+      }
+      .status.warning {
+        color: var(--vscode-errorForeground);
+      }
+      .section {
+        display: grid;
+        gap: 8px;
+        padding: 14px;
+        border-radius: 8px;
+        border: 1px solid var(--vscode-input-border, transparent);
+        background: color-mix(in srgb, var(--vscode-editor-background) 92%, var(--vscode-editorWidget-background) 8%);
+      }
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+      }
+      select,
+      textarea,
+      button {
+        font: inherit;
+      }
+      select,
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 6px;
+      }
+      textarea {
+        min-height: 180px;
+        resize: vertical;
+      }
+      .error {
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--vscode-errorForeground);
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      button {
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 14px;
+        cursor: pointer;
+      }
+      button[type="submit"] {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+      }
+      button[type="button"] {
+        color: var(--vscode-button-secondaryForeground);
+        background: var(--vscode-button-secondaryBackground);
+      }
+    </style>
+  </head>
+  <body>
+    <form id="feature-estimator-form">
+      <div class="intro">
+        <div>Estimate a feature from a Jira item in To Do or from a free-form description.</div>
+        <div class="hint">When you click Estimate, Task Runner copies the bundled estimator skill into this project and launches the selected Agentic Harness command from Settings.</div>
+      </div>
+
+      <div class="mode-list">
+        <label class="mode-card${useJiraByDefault ? " selected" : ""}" id="mode-jira-card">
+          <input
+            id="mode-jira"
+            type="radio"
+            name="feature-source"
+            value="jira"${useJiraByDefault ? " checked" : ""}${hasSavedProjectKey ? "" : " disabled"}
+          />
+          <span class="mode-copy">
+            <span class="mode-title">Jira To Do Item</span>
+            <span class="mode-description">Pick a feature from Jira project ${hasSavedProjectKey ? escapeHtml(savedProjectKey) : "setup"} and estimate that backlog item.</span>
+          </span>
+        </label>
+
+        <div class="section" id="jira-section"${useJiraByDefault ? "" : " hidden"}>
+          <label>
+            Jira Item
+            <select id="jira-issue-select">
+              <option value="">${hasSavedProjectKey ? "— Loading To Do Jira items… —" : "— Set JIRA_PROJECT_KEY to use Jira items —"}</option>
+            </select>
+          </label>
+          <div class="hint" id="jira-hint">${hasSavedProjectKey ? `Pick one To Do Jira item from ${escapeHtml(savedProjectKey)}.` : "Set JIRA_PROJECT_KEY in this repository to enable Jira-based estimation."}</div>
+          <div class="status${hasSavedProjectKey ? "" : " warning"}" id="jira-status">${hasSavedProjectKey ? `Loading To Do Jira items from ${escapeHtml(savedProjectKey)}...` : "Jira estimation is unavailable until JIRA_PROJECT_KEY is configured and Jira credentials are available."}</div>
+        </div>
+
+        <label class="mode-card${useJiraByDefault ? "" : " selected"}" id="mode-text-card">
+          <input
+            id="mode-text"
+            type="radio"
+            name="feature-source"
+            value="text"${useJiraByDefault ? "" : " checked"}
+          />
+          <span class="mode-copy">
+            <span class="mode-title">Free Text Description</span>
+            <span class="mode-description">Describe the feature directly when it is not in Jira yet or you want to estimate a draft idea.</span>
+          </span>
+        </label>
+
+        <div class="section" id="text-section"${useJiraByDefault ? " hidden" : ""}>
+          <label>
+            Feature Description
+            <textarea id="feature-description" placeholder="Describe the feature, expected behavior, constraints, integrations, and any assumptions that would affect the estimate."></textarea>
+          </label>
+          <div class="hint">Include enough detail for the estimator skill to assess complexity, hours, and the profiles required.</div>
+        </div>
+      </div>
+
+      <div class="error" id="feature-estimator-error" aria-live="polite"></div>
+
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit">Estimate</button>
+      </div>
+    </form>
+
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const hasSavedProjectKey = ${JSON.stringify(hasSavedProjectKey)};
+      const savedProjectKey = ${JSON.stringify(savedProjectKey)};
+      const form = document.getElementById("feature-estimator-form");
+      const errorMessage = document.getElementById("feature-estimator-error");
+      const cancelButton = document.getElementById("cancel-button");
+      const jiraRadio = document.getElementById("mode-jira");
+      const textRadio = document.getElementById("mode-text");
+      const jiraCard = document.getElementById("mode-jira-card");
+      const textCard = document.getElementById("mode-text-card");
+      const jiraSection = document.getElementById("jira-section");
+      const textSection = document.getElementById("text-section");
+      const jiraIssueSelect = document.getElementById("jira-issue-select");
+      const jiraHint = document.getElementById("jira-hint");
+      const jiraStatus = document.getElementById("jira-status");
+      const featureDescription = document.getElementById("feature-description");
+      const sourceRadios = Array.from(document.querySelectorAll('input[name="feature-source"]'));
+
+      const setJiraCardState = () => {
+        jiraCard.classList.toggle("selected", jiraRadio.checked && !jiraRadio.disabled);
+        jiraCard.classList.toggle("disabled", jiraRadio.disabled);
+        textCard.classList.toggle("selected", textRadio.checked);
+      };
+
+      const syncSourceState = () => {
+        const usingJira = jiraRadio.checked && !jiraRadio.disabled;
+        jiraSection.hidden = !usingJira;
+        textSection.hidden = usingJira;
+        setJiraCardState();
+        errorMessage.textContent = "";
+      };
+
+      const switchToTextIfNeeded = () => {
+        if (jiraRadio.checked && jiraRadio.disabled) {
+          textRadio.checked = true;
+        }
+        syncSourceState();
+      };
+
+      const updateJiraHint = () => {
+        const selected = jiraIssueSelect.options[jiraIssueSelect.selectedIndex];
+        const summary = selected?.dataset.summary || "";
+        const issueType = selected?.dataset.issueType || "";
+        const status = selected?.dataset.status || "";
+
+        jiraHint.textContent = summary
+          ? [summary, [issueType, status].filter(Boolean).join(" • ")].filter(Boolean).join(" • ")
+          : hasSavedProjectKey
+            ? "Pick one To Do Jira item from " + savedProjectKey + "."
+            : "Set JIRA_PROJECT_KEY in this repository to enable Jira-based estimation.";
+      };
+
+      sourceRadios.forEach((radio) => {
+        radio.addEventListener("change", syncSourceState);
+      });
+
+      jiraIssueSelect.addEventListener("change", updateJiraHint);
+
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelFeatureEstimator" });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const usingJira = jiraRadio.checked && !jiraRadio.disabled;
+
+        if (usingJira) {
+          if (!jiraIssueSelect.value) {
+            errorMessage.textContent = "Select a Jira item.";
+            jiraIssueSelect.focus();
+            return;
+          }
+
+          vscode.postMessage({
+            type: "submitFeatureEstimator",
+            payload: {
+              source: "jira",
+              issueKey: jiraIssueSelect.value
+            }
+          });
+          return;
+        }
+
+        const details = featureDescription.value.trim();
+        if (!details) {
+          errorMessage.textContent = "Enter a feature description.";
+          featureDescription.focus();
+          return;
+        }
+
+        vscode.postMessage({
+          type: "submitFeatureEstimator",
+          payload: {
+            source: "text",
+            featureDetails: details
+          }
+        });
+      });
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (!message) return;
+
+        if (message.type === "featureEstimatorError") {
+          errorMessage.textContent = message.payload?.message || "Unable to start the feature estimate.";
+          return;
+        }
+
+        if (message.type === "featureEstimatorJiraLoaded") {
+          const issues = message.payload?.issues || [];
+          const projectKey = message.payload?.projectKey || savedProjectKey;
+
+          jiraIssueSelect.innerHTML = "";
+          if (issues.length === 0) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "— No To Do Jira items found —";
+            jiraIssueSelect.appendChild(option);
+            jiraRadio.disabled = true;
+            jiraStatus.textContent = "No To Do Jira items were found in " + projectKey + ".";
+            jiraStatus.classList.add("warning");
+            updateJiraHint();
+            switchToTextIfNeeded();
+            return;
+          }
+
+          for (const issue of issues) {
+            const option = document.createElement("option");
+            option.value = issue.key;
+            option.textContent = issue.key + "  " + issue.summary;
+            option.dataset.summary = issue.summary || "";
+            option.dataset.issueType = issue.issueTypeName || "";
+            option.dataset.status = issue.statusName || "";
+            jiraIssueSelect.appendChild(option);
+          }
+
+          jiraRadio.disabled = false;
+          jiraIssueSelect.value = issues[0].key;
+          jiraStatus.textContent =
+            "Loaded " + issues.length + " To Do Jira item" + (issues.length === 1 ? "" : "s") + " from " + projectKey + ".";
+          jiraStatus.classList.remove("warning");
+          updateJiraHint();
+          syncSourceState();
+          return;
+        }
+
+        if (message.type === "featureEstimatorJiraError") {
+          const error = message.payload?.message || "Unable to load Jira items for estimation.";
+          jiraIssueSelect.innerHTML = "";
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "— Jira items unavailable —";
+          jiraIssueSelect.appendChild(option);
+          jiraRadio.disabled = true;
+          jiraStatus.textContent = error;
+          jiraStatus.classList.add("warning");
+          updateJiraHint();
+          switchToTextIfNeeded();
+        }
+      });
+
+      setJiraCardState();
+      updateJiraHint();
+      syncSourceState();
+      (jiraRadio.checked && !jiraRadio.disabled ? jiraIssueSelect : featureDescription).focus();
+    </script>
+  </body>
+</html>`;
+    };
+    const showFeatureEstimatorDialog = async (repoRoot) => new Promise((resolve) => {
+        const savedProjectKey = getSavedJiraProjectKey(repoRoot);
+        const panel = vscode.window.createWebviewPanel("featureEstimator", "Feature Estimator", vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = renderFeatureEstimatorHtml(panel.webview, savedProjectKey);
+        let availableIssues = [];
+        if (savedProjectKey) {
+            void (async () => {
+                try {
+                    const credentials = getJiraCredentialsFromEnv(repoRoot);
+                    const issues = await (0, jira_1.searchOpenTodoJiraIssuesForProject)(credentials, savedProjectKey);
+                    availableIssues = issues;
+                    void panel.webview.postMessage({
+                        type: "featureEstimatorJiraLoaded",
+                        payload: {
+                            projectKey: savedProjectKey,
+                            issues
+                        }
+                    });
+                }
+                catch (error) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    void panel.webview.postMessage({
+                        type: "featureEstimatorJiraError",
+                        payload: { message }
+                    });
+                }
+            })();
+        }
+        let settled = false;
+        const resolveOnce = (value) => {
+            if (settled)
+                return;
+            settled = true;
+            resolve(value);
+        };
+        panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelFeatureEstimator") {
+                panel.dispose();
+                return;
+            }
+            if (message.type !== "submitFeatureEstimator")
+                return;
+            const payload = message.payload || {};
+            const source = payload.source === "jira" ? "jira" : "text";
+            if (source === "jira") {
+                const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
+                const issue = availableIssues.find((candidate) => candidate.key === issueKey);
+                if (!issue) {
+                    void panel.webview.postMessage({
+                        type: "featureEstimatorError",
+                        payload: { message: "Select a Jira item." }
+                    });
+                    return;
+                }
+                resolveOnce({ source: "jira", issue });
+                panel.dispose();
+                return;
+            }
+            const featureDetails = typeof payload.featureDetails === "string" ? payload.featureDetails.trim() : "";
+            if (!featureDetails) {
+                void panel.webview.postMessage({
+                    type: "featureEstimatorError",
+                    payload: { message: "Enter a feature description." }
+                });
+                return;
+            }
+            resolveOnce({ source: "text", featureDetails });
+            panel.dispose();
+        }, undefined, context.subscriptions);
+    });
     const getSopManualLink = (repoRoot) => {
         const config = vscode.workspace.getConfiguration("antigravity");
         const repoOverride = repoRoot
@@ -1466,6 +1911,13 @@ function activate(context) {
             mode: 0o700
         });
         return scriptPath;
+    };
+    const writeAgentPromptFile = (filePrefix, prompt) => {
+        const sanitizedPrefix = filePrefix.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "agent-prompt";
+        const promptDirectory = fs.mkdtempSync(path.join(os.tmpdir(), `${sanitizedPrefix}-`));
+        const promptFilePath = path.join(promptDirectory, "prompt.txt");
+        fs.writeFileSync(promptFilePath, prompt, "utf8");
+        return promptFilePath;
     };
     const launchAgentForJiraItem = async (repoRoot, agentLabel, issueKey, issueSummary, agentCommand) => {
         const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
@@ -3303,6 +3755,42 @@ function activate(context) {
         ], {
             iconPath: new vscode.ThemeIcon("cloud", CLOUD_ARCHITECT_ACTION_COLOR),
             color: CLOUD_ARCHITECT_ACTION_COLOR
+        });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.featureEstimator", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const selection = await showFeatureEstimatorDialog(repoRoot);
+        if (!selection)
+            return;
+        try {
+            const copiedSkillPaths = await (0, featureEstimator_1.copyFeatureEstimatorSkill)(extensionRoot, repoRoot);
+            (0, logger_1.logAlways)(`[featureEstimator] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
+            provider.refresh();
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.logAlways)(`[featureEstimator] ERROR preparing skill: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to prepare the estimator skill: ${message}`);
+            return;
+        }
+        const featureDetails = selection.source === "jira"
+            ? buildFeatureEstimatorDetailsFromIssue(selection.issue)
+            : selection.featureDetails;
+        const prompt = (0, featureEstimator_1.buildFeatureEstimatorPrompt)(featureDetails);
+        const promptFilePath = writeAgentPromptFile("feature-estimator", prompt);
+        const commandLine = (0, terminal_1.buildAgenticHarnessFileCommand)(repoRoot, promptFilePath, "prompt");
+        (0, logger_1.logAlways)(`[featureEstimator] launching Agentic Harness for ${selection.source === "jira" ? selection.issue.key : "free-text request"}`);
+        (0, terminal_1.runInPersistentTerminal)("Feature Estimator", [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            commandLine
+        ], {
+            iconPath: FEATURE_ESTIMATOR_ICON_PATH,
+            color: FEATURE_ESTIMATOR_ACTION_COLOR
         });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepoTagVersion", async () => {

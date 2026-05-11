@@ -374,6 +374,9 @@ const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
 const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
 const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(
+  path.resolve(__dirname, "..", "Resources", "feature-estimator-red.svg")
+);
 
 const TOP_LEVEL_LINKED_FOLDERS = [
   { label: "claude", path: path.join(os.homedir(), ".claude") },
@@ -866,6 +869,19 @@ function getQuickActionItems(): NodeItem[] {
       "Looked for directories like infra/terraform/k8s and files such as deploy scripts, docker-compose, and Terraform manifests.";
   }
   items.push(cloudArchitectReview);
+
+  const featureEstimator = new NodeItem(
+    { kind: "action", label: "Feature Estimator" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  featureEstimator.iconPath = FEATURE_ESTIMATOR_ICON_PATH;
+  featureEstimator.command = {
+    command: "antigravity.featureEstimator",
+    title: "Feature Estimator"
+  };
+  featureEstimator.tooltip =
+    "Estimate a feature from a To Do Jira item or a free-form description using the selected Agentic Harness.";
+  items.push(featureEstimator);
 
   const autocommitCheckpoint = new NodeItem(
     { kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" },

@@ -6,13 +6,9 @@ exports.hasCloudInfrastructureNeeds = hasCloudInfrastructureNeeds;
 exports.copyCloudArchitectSkill = copyCloudArchitectSkill;
 const fs = require("fs");
 const path = require("path");
+const bundledProjectSkill_1 = require("./bundledProjectSkill");
 exports.CLOUD_ARCHITECT_SKILL_NAME = "cloud-architect";
 exports.CLOUD_ARCHITECT_REVIEW_PROMPT = "use skill cloud-architect to review the infrastructure setup, do a right sizing and propose improvements";
-const CLOUD_ARCHITECT_SKILL_SOURCE_DIRECTORY = path.join("Resources", exports.CLOUD_ARCHITECT_SKILL_NAME);
-const CLOUD_ARCHITECT_SKILL_TARGET_DIRECTORIES = [
-    path.join(".agent", "skills"),
-    path.join(".claude", "skills")
-];
 const CLOUD_INFRA_DIRECTORY_NAMES = new Set([
     "infra",
     "infrastructure",
@@ -144,34 +140,7 @@ function detectCloudInfrastructureSignals(repoRoot, maxMatches = 5) {
 function hasCloudInfrastructureNeeds(repoRoot) {
     return detectCloudInfrastructureSignals(repoRoot, 1).length > 0;
 }
-async function ensureDirectoryExists(directoryPath) {
-    if (fs.existsSync(directoryPath)) {
-        const stats = await fs.promises.stat(directoryPath);
-        if (!stats.isDirectory()) {
-            throw new Error(`${directoryPath} exists but is not a directory.`);
-        }
-        return;
-    }
-    await fs.promises.mkdir(directoryPath, { recursive: true });
-}
 async function copyCloudArchitectSkill(extensionRoot, projectRoot) {
-    const sourcePath = path.join(extensionRoot, CLOUD_ARCHITECT_SKILL_SOURCE_DIRECTORY);
-    const copiedSkillPaths = [];
-    await fs.promises.access(sourcePath, fs.constants.F_OK);
-    for (const relativeDirectory of CLOUD_ARCHITECT_SKILL_TARGET_DIRECTORIES) {
-        const destinationDirectory = path.join(projectRoot, relativeDirectory);
-        const destinationPath = path.join(destinationDirectory, exports.CLOUD_ARCHITECT_SKILL_NAME);
-        await ensureDirectoryExists(destinationDirectory);
-        if (fs.existsSync(destinationPath)) {
-            const stats = await fs.promises.stat(destinationPath);
-            if (!stats.isDirectory()) {
-                throw new Error(`${destinationPath} exists but is not a directory.`);
-            }
-            continue;
-        }
-        await fs.promises.cp(sourcePath, destinationPath, { recursive: true });
-        copiedSkillPaths.push(toRelativePosixPath(projectRoot, destinationPath));
-    }
-    return copiedSkillPaths;
+    return (0, bundledProjectSkill_1.copyBundledSkillToProject)(extensionRoot, projectRoot, exports.CLOUD_ARCHITECT_SKILL_NAME);
 }
 //# sourceMappingURL=cloudArchitectReview.js.map
