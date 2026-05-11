@@ -102,6 +102,7 @@ import {
   copyFeatureEstimatorSkill
 } from "./featureEstimator";
 import {
+  buildJiraDraftFeatureDetails,
   buildFeatureGrillMePrompt,
   copyGrillMeSkill
 } from "./grillMe";
@@ -1903,6 +1904,15 @@ export function activate(context: vscode.ExtensionContext) {
     return projectKey;
   };
 
+  type CreateJiraItemDialogAction = "create" | "grillMe";
+
+  type CreateJiraItemDialogResult = {
+    action: CreateJiraItemDialogAction;
+    issueType: string;
+    summary: string;
+    description: string;
+  };
+
   const renderCreateJiraItemHtml = (
     webview: vscode.Webview,
     projectKey: string,
@@ -1963,7 +1973,8 @@ export function activate(context: vscode.ExtensionContext) {
       <div class="error" id="error-message"></div>
       <div class="actions">
         <button type="button" id="cancel-button">Cancel</button>
-        <button type="submit">Create</button>
+        <button type="submit" data-action="create">Create</button>
+        <button type="submit" data-action="grillMe">Grill Me</button>
       </div>
     </form>
     <script nonce="${nonce}">
@@ -1989,7 +2000,9 @@ export function activate(context: vscode.ExtensionContext) {
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
+        const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "create";
         const payload = {
+          action,
           issueType: issueTypeSelect.value,
           summary: issueNameInput.value.trim(),
           description: issueDescriptionInput.value.trim()
@@ -2019,7 +2032,7 @@ export function activate(context: vscode.ExtensionContext) {
   const showCreateJiraItemDialog = async (
     projectKey: string,
     issueTypes: JiraIssueType[]
-  ): Promise<{ issueType: string; summary: string; description: string } | undefined> =>
+  ): Promise<CreateJiraItemDialogResult | undefined> =>
     new Promise((resolve) => {
       const panel = vscode.window.createWebviewPanel(
         "createJiraItem",
@@ -2031,7 +2044,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       let settled = false;
       const resolveOnce = (
-        value: { issueType: string; summary: string; description: string } | undefined
+        value: CreateJiraItemDialogResult | undefined
       ) => {
         if (settled) return;
         settled = true;
@@ -2049,6 +2062,8 @@ export function activate(context: vscode.ExtensionContext) {
           if (message.type !== "submitCreateJiraItem") return;
 
           const payload = message.payload || {};
+          const action: CreateJiraItemDialogAction =
+            payload.action === "grillMe" ? "grillMe" : "create";
           const issueType = typeof payload.issueType === "string" ? payload.issueType.trim() : "";
           const summary = typeof payload.summary === "string" ? payload.summary.trim() : "";
           const description =
@@ -2069,7 +2084,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          resolveOnce({ issueType, summary, description });
+          resolveOnce({ action, issueType, summary, description });
           panel.dispose();
         },
         undefined,
@@ -4332,6 +4347,50 @@ export function activate(context: vscode.ExtensionContext) {
 
       const jiraItem = await showCreateJiraItemDialog(projectKey, issueTypes);
       if (!jiraItem) return;
+
+      if (jiraItem.action === "grillMe") {
+        try {
+          const copiedSkillPaths = await copyGrillMeSkill(extensionRoot, repoRoot);
+          logAlways(
+            `[createJiraItemGrillMe] skill locations ready: ${
+              copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+            }`
+          );
+          provider.refresh();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          logAlways(`[createJiraItemGrillMe] ERROR preparing skill: ${message}`);
+          void vscode.window.showErrorMessage(`Failed to prepare the grill-me skill: ${message}`);
+          return;
+        }
+
+        const featureDetails = buildJiraDraftFeatureDetails(
+          projectKey,
+          jiraItem.issueType,
+          jiraItem.summary,
+          jiraItem.description
+        );
+        const prompt = buildFeatureGrillMePrompt(featureDetails);
+        const promptFilePath = writeAgentPromptFile("create-jira-item-grill-me", prompt);
+        const commandLine = buildAgenticHarnessFileCommand(repoRoot, promptFilePath, "prompt");
+
+        logAlways("[createJiraItemGrillMe] launching Agentic Harness for Jira draft review");
+        runInPersistentTerminal(
+          "Create Jira Item Grill Me",
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            commandLine
+          ],
+          {
+            iconPath: FEATURE_ESTIMATOR_ICON_PATH,
+            color: FEATURE_ESTIMATOR_ACTION_COLOR
+          }
+        );
+        void vscode.window.showInformationMessage(
+          `Opened Grill Me for the ${jiraItem.issueType} draft in project ${projectKey}.`
+        );
+        return;
+      }
 
       try {
         const createdIssue = await vscode.window.withProgress(

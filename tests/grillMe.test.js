@@ -6,6 +6,7 @@ const path = require("node:path");
 
 const {
   GRILL_ME_SKILL_NAME,
+  buildJiraDraftFeatureDetails,
   buildFeatureGrillMePrompt,
   copyGrillMeSkill
 } = require("../out/grillMe.js");
@@ -18,6 +19,25 @@ test("buildFeatureGrillMePrompt injects the feature details into the requested r
   assert.equal(
     buildFeatureGrillMePrompt("Jira item TASK-654 (Story, To Do): Add billing approval workflow"),
     "use skill grill-me to review the feature Jira item TASK-654 (Story, To Do): Add billing approval workflow"
+  );
+});
+
+test("buildJiraDraftFeatureDetails formats a Jira draft with description", () => {
+  assert.equal(
+    buildJiraDraftFeatureDetails(
+      "TASK",
+      "Story",
+      "Add billing approval workflow",
+      "Managers need an approval queue before invoices are sent."
+    ),
+    "Jira item draft for project TASK. Item type: Story. Summary: Add billing approval workflow. Description: Managers need an approval queue before invoices are sent."
+  );
+});
+
+test("buildJiraDraftFeatureDetails omits the description when it is blank", () => {
+  assert.equal(
+    buildJiraDraftFeatureDetails("TASK", "Bug", "Fix duplicate webhook retries", ""),
+    "Jira item draft for project TASK. Item type: Bug. Summary: Fix duplicate webhook retries."
   );
 });
 

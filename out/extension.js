@@ -1623,7 +1623,8 @@ function activate(context) {
       <div class="error" id="error-message"></div>
       <div class="actions">
         <button type="button" id="cancel-button">Cancel</button>
-        <button type="submit">Create</button>
+        <button type="submit" data-action="create">Create</button>
+        <button type="submit" data-action="grillMe">Grill Me</button>
       </div>
     </form>
     <script nonce="${nonce}">
@@ -1649,7 +1650,9 @@ function activate(context) {
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
+        const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "create";
         const payload = {
+          action,
           issueType: issueTypeSelect.value,
           summary: issueNameInput.value.trim(),
           description: issueDescriptionInput.value.trim()
@@ -1696,6 +1699,7 @@ function activate(context) {
             if (message.type !== "submitCreateJiraItem")
                 return;
             const payload = message.payload || {};
+            const action = payload.action === "grillMe" ? "grillMe" : "create";
             const issueType = typeof payload.issueType === "string" ? payload.issueType.trim() : "";
             const summary = typeof payload.summary === "string" ? payload.summary.trim() : "";
             const description = typeof payload.description === "string" ? payload.description.trim() : "";
@@ -1713,7 +1717,7 @@ function activate(context) {
                 });
                 return;
             }
-            resolveOnce({ issueType, summary, description });
+            resolveOnce({ action, issueType, summary, description });
             panel.dispose();
         }, undefined, context.subscriptions);
     });
@@ -3521,6 +3525,33 @@ function activate(context) {
         const jiraItem = await showCreateJiraItemDialog(projectKey, issueTypes);
         if (!jiraItem)
             return;
+        if (jiraItem.action === "grillMe") {
+            try {
+                const copiedSkillPaths = await (0, grillMe_1.copyGrillMeSkill)(extensionRoot, repoRoot);
+                (0, logger_1.logAlways)(`[createJiraItemGrillMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
+                provider.refresh();
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                (0, logger_1.logAlways)(`[createJiraItemGrillMe] ERROR preparing skill: ${message}`);
+                void vscode.window.showErrorMessage(`Failed to prepare the grill-me skill: ${message}`);
+                return;
+            }
+            const featureDetails = (0, grillMe_1.buildJiraDraftFeatureDetails)(projectKey, jiraItem.issueType, jiraItem.summary, jiraItem.description);
+            const prompt = (0, grillMe_1.buildFeatureGrillMePrompt)(featureDetails);
+            const promptFilePath = writeAgentPromptFile("create-jira-item-grill-me", prompt);
+            const commandLine = (0, terminal_1.buildAgenticHarnessFileCommand)(repoRoot, promptFilePath, "prompt");
+            (0, logger_1.logAlways)("[createJiraItemGrillMe] launching Agentic Harness for Jira draft review");
+            (0, terminal_1.runInPersistentTerminal)("Create Jira Item Grill Me", [
+                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+                commandLine
+            ], {
+                iconPath: FEATURE_ESTIMATOR_ICON_PATH,
+                color: FEATURE_ESTIMATOR_ACTION_COLOR
+            });
+            void vscode.window.showInformationMessage(`Opened Grill Me for the ${jiraItem.issueType} draft in project ${projectKey}.`);
+            return;
+        }
         try {
             const createdIssue = await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
