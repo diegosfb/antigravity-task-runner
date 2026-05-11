@@ -106,6 +106,10 @@ interface JiraRequestOptions {
   body?: unknown;
 }
 
+type JiraRequestError = Error & {
+  statusCode?: number;
+};
+
 type JiraFieldMetadata = {
   key: string;
   name?: string;
@@ -338,6 +342,21 @@ function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, "");
 }
 
+function createJiraRequestError(statusCode: number, message: string): JiraRequestError {
+  const error = new Error(message) as JiraRequestError;
+  error.statusCode = statusCode;
+  return error;
+}
+
+function getJiraRequestStatusCode(error: unknown): number | undefined {
+  if (!(error instanceof Error)) {
+    return undefined;
+  }
+
+  const { statusCode } = error as JiraRequestError;
+  return typeof statusCode === "number" ? statusCode : undefined;
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -345,6 +364,9 @@ function delay(ms: number): Promise<void> {
 function getAuthHeader(credentials: JiraCredentials): string {
   return `Basic ${Buffer.from(`${credentials.email}:${credentials.apiToken}`).toString("base64")}`;
 }
+
+export const INVALID_JIRA_TOKEN_MESSAGE =
+  "The configured Jira API Token is invalid or expired. Update Antigravity Settings > Jira API Token and try again.";
 
 async function jiraRequest<T>(
   credentials: JiraCredentials,
@@ -410,7 +432,7 @@ async function jiraRequest<T>(
               message = chunks.trim();
             }
           }
-          reject(new Error(message));
+          reject(createJiraRequestError(status, message));
         });
       }
     );
@@ -449,6 +471,18 @@ export async function getJiraCurrentUserAccountId(
     throw new Error("Unable to determine the Jira account ID for the current user.");
   }
   return accountId;
+}
+
+export async function validateJiraCredentials(credentials: JiraCredentials): Promise<void> {
+  try {
+    await getJiraCurrentUserAccountId(credentials);
+  } catch (error) {
+    const statusCode = getJiraRequestStatusCode(error);
+    if (statusCode === 401 || statusCode === 403) {
+      throw new Error(INVALID_JIRA_TOKEN_MESSAGE, { cause: error });
+    }
+    throw error;
+  }
 }
 
 export async function createJiraProject(

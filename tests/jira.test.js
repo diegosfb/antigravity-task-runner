@@ -4,10 +4,12 @@ const http = require("node:http");
 
 const {
   createJiraProject,
+  INVALID_JIRA_TOKEN_MESSAGE,
   searchOpenTodoJiraIssuesForProject,
   searchOpenUnassignedTodoJiraIssuesForAssignment,
   transitionJiraIssueToReviewOrDone,
-  transitionJiraIssueToStatus
+  transitionJiraIssueToStatus,
+  validateJiraCredentials
 } = require("../out/jira.js");
 
 function readJsonBody(request) {
@@ -22,6 +24,67 @@ function readJsonBody(request) {
     });
   });
 }
+
+test("validateJiraCredentials accepts a valid Jira API token", async (t) => {
+  let capturedAuthorizationHeader = null;
+
+  const server = http.createServer((request, response) => {
+    if (request.url === "/rest/api/3/myself" && request.method === "GET") {
+      capturedAuthorizationHeader = request.headers.authorization;
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ accountId: "account-123" }));
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ errorMessages: ["Unexpected endpoint"] }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  await validateJiraCredentials({
+    baseUrl: `http://127.0.0.1:${port}`,
+    email: "person@example.com",
+    apiToken: "secret-token"
+  });
+
+  assert.equal(
+    capturedAuthorizationHeader,
+    `Basic ${Buffer.from("person@example.com:secret-token").toString("base64")}`
+  );
+});
+
+test("validateJiraCredentials tells the user to update settings when the Jira API token is invalid", async (t) => {
+  const server = http.createServer((request, response) => {
+    if (request.url === "/rest/api/3/myself" && request.method === "GET") {
+      response.writeHead(401, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ errorMessages: ["Unauthorized"] }));
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ errorMessages: ["Unexpected endpoint"] }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  await assert.rejects(
+    () =>
+      validateJiraCredentials({
+        baseUrl: `http://127.0.0.1:${port}`,
+        email: "person@example.com",
+        apiToken: "stale-token"
+      }),
+    (error) => {
+      assert.equal(error.message, INVALID_JIRA_TOKEN_MESSAGE);
+      return true;
+    }
+  );
+});
 
 test("createJiraProject creates and configures a team-managed kanban Jira software project", async (t) => {
   let capturedCreateRequest = null;
