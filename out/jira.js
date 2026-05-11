@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.INVALID_JIRA_TOKEN_MESSAGE = void 0;
 exports.getJiraCurrentUserAccountId = getJiraCurrentUserAccountId;
+exports.validateJiraCredentials = validateJiraCredentials;
 exports.createJiraProject = createJiraProject;
 exports.getJiraProjects = getJiraProjects;
 exports.searchOpenUnassignedJiraIssues = searchOpenUnassignedJiraIssues;
@@ -64,12 +66,25 @@ function isProvidedJiraField(fieldKey, field) {
 function normalizeBaseUrl(baseUrl) {
     return baseUrl.trim().replace(/\/+$/, "");
 }
+function createJiraRequestError(statusCode, message) {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
+}
+function getJiraRequestStatusCode(error) {
+    if (!(error instanceof Error)) {
+        return undefined;
+    }
+    const { statusCode } = error;
+    return typeof statusCode === "number" ? statusCode : undefined;
+}
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 function getAuthHeader(credentials) {
     return `Basic ${Buffer.from(`${credentials.email}:${credentials.apiToken}`).toString("base64")}`;
 }
+exports.INVALID_JIRA_TOKEN_MESSAGE = "The configured Jira API Token is invalid or expired. Update Antigravity Settings > Jira API Token and try again.";
 async function jiraRequest(credentials, options) {
     const baseUrl = normalizeBaseUrl(credentials.baseUrl);
     const url = new URL(options.apiPath, `${baseUrl}/`);
@@ -125,7 +140,7 @@ async function jiraRequest(credentials, options) {
                         message = chunks.trim();
                     }
                 }
-                reject(new Error(message));
+                reject(createJiraRequestError(status, message));
             });
         });
         request.on("error", (error) => reject(error));
@@ -159,6 +174,18 @@ async function getJiraCurrentUserAccountId(credentials) {
         throw new Error("Unable to determine the Jira account ID for the current user.");
     }
     return accountId;
+}
+async function validateJiraCredentials(credentials) {
+    try {
+        await getJiraCurrentUserAccountId(credentials);
+    }
+    catch (error) {
+        const statusCode = getJiraRequestStatusCode(error);
+        if (statusCode === 401 || statusCode === 403) {
+            throw new Error(exports.INVALID_JIRA_TOKEN_MESSAGE, { cause: error });
+        }
+        throw error;
+    }
 }
 async function createJiraProject(credentials, details) {
     const leadAccountId = await getJiraCurrentUserAccountId(credentials);

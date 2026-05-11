@@ -683,11 +683,14 @@ function activate(context) {
             if (savedProjectKey) {
                 void (async () => {
                     try {
-                        const credentials = getJiraCredentialsFromEnv(repoRoot);
+                        const credentials = await resolveValidatedJiraCredentials(repoRoot);
                         const issues = await (0, jira_1.searchOpenUnassignedTodoJiraIssuesForProject)(credentials, savedProjectKey);
                         void panel.webview.postMessage({ type: "jiraIssuesLoaded", payload: { issues } });
                     }
-                    catch {
+                    catch (error) {
+                        if (error instanceof Error && isJiraCredentialsConfigurationMessage(error.message)) {
+                            await showJiraCredentialsValidationError(error);
+                        }
                         void panel.webview.postMessage({ type: "jiraIssuesError" });
                     }
                 })();
@@ -758,6 +761,37 @@ function activate(context) {
             throw new Error(`Missing Jira credentials in Antigravity Settings: ${missing.join(", ")}.`);
         }
         return { baseUrl, email, apiToken };
+    };
+    const isJiraCredentialsConfigurationMessage = (message) => message === jira_1.INVALID_JIRA_TOKEN_MESSAGE ||
+        message.startsWith("Missing Jira credentials in Antigravity Settings:");
+    const showJiraCredentialsValidationError = async (error) => {
+        const rawMessage = error instanceof Error ? error.message : String(error);
+        const message = isJiraCredentialsConfigurationMessage(rawMessage)
+            ? rawMessage
+            : `Failed to validate Jira credentials: ${rawMessage}`;
+        if (message === jira_1.INVALID_JIRA_TOKEN_MESSAGE) {
+            const selection = await vscode.window.showErrorMessage(message, "Open Settings");
+            if (selection === "Open Settings") {
+                await vscode.commands.executeCommand("antigravity.openSettings");
+            }
+            return message;
+        }
+        await vscode.window.showErrorMessage(message);
+        return message;
+    };
+    const resolveValidatedJiraCredentials = async (repoRoot) => {
+        const credentials = getJiraCredentialsFromEnv(repoRoot);
+        await (0, jira_1.validateJiraCredentials)(credentials);
+        return credentials;
+    };
+    const getValidatedJiraCredentials = async (repoRoot) => {
+        try {
+            return await resolveValidatedJiraCredentials(repoRoot);
+        }
+        catch (error) {
+            await showJiraCredentialsValidationError(error);
+            return undefined;
+        }
     };
     const getSavedJiraProjectKey = (repoRoot) => {
         const env = (0, utils_1.parseEnvFile)(getRepoEnvPath(repoRoot));
@@ -1144,7 +1178,7 @@ function activate(context) {
         if (savedProjectKey) {
             void (async () => {
                 try {
-                    const credentials = getJiraCredentialsFromEnv(repoRoot);
+                    const credentials = await resolveValidatedJiraCredentials(repoRoot);
                     const issues = await (0, jira_1.searchOpenTodoJiraIssuesForProject)(credentials, savedProjectKey);
                     availableIssues = issues;
                     void panel.webview.postMessage({
@@ -1156,7 +1190,11 @@ function activate(context) {
                     });
                 }
                 catch (error) {
-                    const message = error instanceof Error ? error.message : String(error);
+                    const message = error instanceof Error && isJiraCredentialsConfigurationMessage(error.message)
+                        ? await showJiraCredentialsValidationError(error)
+                        : error instanceof Error
+                            ? error.message
+                            : String(error);
                     void panel.webview.postMessage({
                         type: "featureEstimatorJiraError",
                         payload: { message }
@@ -1455,6 +1493,17 @@ function activate(context) {
                     void panel.webview.postMessage({
                         type: "jiraProjectSetupError",
                         payload: { message: keyError }
+                    });
+                    return;
+                }
+                try {
+                    await (0, jira_1.validateJiraCredentials)(credentials);
+                }
+                catch (error) {
+                    const message = await showJiraCredentialsValidationError(error);
+                    void panel.webview.postMessage({
+                        type: "jiraProjectSetupError",
+                        payload: { message }
                     });
                     return;
                 }
@@ -3491,13 +3540,8 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        let credentials;
-        try {
-            credentials = getJiraCredentialsFromEnv(repoRoot);
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(message);
+        const credentials = await getValidatedJiraCredentials(repoRoot);
+        if (!credentials) {
             return;
         }
         const projectKey = await ensureSavedJiraProjectKey(repoRoot, credentials);
@@ -3513,13 +3557,8 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        let credentials;
-        try {
-            credentials = getJiraCredentialsFromEnv(repoRoot);
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(message);
+        const credentials = await getValidatedJiraCredentials(repoRoot);
+        if (!credentials) {
             return;
         }
         const projectKey = await ensureSavedJiraProjectKey(repoRoot, credentials);
@@ -3600,14 +3639,9 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        let credentials;
         const projectKey = getSavedJiraProjectKey(repoRoot);
-        try {
-            credentials = getJiraCredentialsFromEnv(repoRoot);
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(message);
+        const credentials = await getValidatedJiraCredentials(repoRoot);
+        if (!credentials) {
             return;
         }
         if (!projectKey) {
@@ -3673,14 +3707,9 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        let credentials;
         const projectKey = getSavedJiraProjectKey(repoRoot);
-        try {
-            credentials = getJiraCredentialsFromEnv(repoRoot);
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(message);
+        const credentials = await getValidatedJiraCredentials(repoRoot);
+        if (!credentials) {
             return;
         }
         if (!projectKey) {
@@ -3769,14 +3798,9 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        let credentials;
         const projectKey = getSavedJiraProjectKey(repoRoot);
-        try {
-            credentials = getJiraCredentialsFromEnv(repoRoot);
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(message);
+        const credentials = await getValidatedJiraCredentials(repoRoot);
+        if (!credentials) {
             return;
         }
         if (!projectKey) {
