@@ -2,7 +2,7 @@
 
 This file is the authoritative agent guide for this repository. Prefer it over `CLAUDE.md` and any generic agent defaults when they conflict.
 
-## Project Description
+## Project Description  v1.2.3
 
 
 ## Maintenance Rule
