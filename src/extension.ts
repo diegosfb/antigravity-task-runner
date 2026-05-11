@@ -106,6 +106,7 @@ import {
   buildFeatureGrillMePrompt,
   copyGrillMeSkill
 } from "./grillMe";
+import { buildAgenticHarnessFileCommandForCommand } from "./agenticHarnessCommand";
 import {
   UPDATE_GITHUB_ACTIONS_PROMPT,
   UPDATE_TESTS_PROMPT
@@ -1913,6 +1914,14 @@ export function activate(context: vscode.ExtensionContext) {
     description: string;
   };
 
+  type AssignJiraItemToAgentDialogAction = "assign" | "grillMe";
+
+  type AssignJiraItemToAgentDialogResult = {
+    action: AssignJiraItemToAgentDialogAction;
+    issueKey: string;
+    agentCommand: string;
+  };
+
   const renderCreateJiraItemHtml = (
     webview: vscode.Webview,
     projectKey: string,
@@ -2156,10 +2165,12 @@ export function activate(context: vscode.ExtensionContext) {
         <select id="issue-select"></select>
         <span class="hint" id="issue-hint"></span>
       </label>
+      <div class="hint">Assign updates the Jira item and launches the selected agent. Grill Me reviews the selected Jira item with the same harness command without changing Jira first.</div>
       <div class="error" id="error-message"></div>
       <div class="actions">
         <button type="button" id="cancel-button">Cancel</button>
-        <button type="submit">Assign</button>
+        <button type="submit" data-action="assign">Assign</button>
+        <button type="submit" data-action="grillMe">Grill Me</button>
       </div>
     </form>
     <script nonce="${nonce}">
@@ -2223,6 +2234,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
+        const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "assign";
         if (!agentCommandInput.value.trim()) {
           errorMessage.textContent = "Enter an agent harness command.";
           agentCommandInput.focus();
@@ -2236,6 +2248,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.postMessage({
           type: "submitAssignJiraItemToAgent",
           payload: {
+            action,
             issueKey: issueSelect.value,
             agentCommand: agentCommandInput.value.trim()
           }
@@ -2276,10 +2289,7 @@ export function activate(context: vscode.ExtensionContext) {
   const showAssignJiraItemToAgentDialog = async (
     projectKey: string,
     issues: JiraIssueSummary[]
-  ): Promise<{
-    issueKey: string;
-    agentCommand: string;
-  } | undefined> =>
+  ): Promise<AssignJiraItemToAgentDialogResult | undefined> =>
     new Promise((resolve) => {
       const initialAgentCommand = getAgenticHarnessExecutionCommand();
       const agentCommandOptions = getAssignableAgentCommandOptions();
@@ -2299,10 +2309,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       let settled = false;
       const resolveOnce = (
-        value: {
-          issueKey: string;
-          agentCommand: string;
-        } | undefined
+        value: AssignJiraItemToAgentDialogResult | undefined
       ) => {
         if (settled) return;
         settled = true;
@@ -2320,6 +2327,8 @@ export function activate(context: vscode.ExtensionContext) {
           if (message.type !== "submitAssignJiraItemToAgent") return;
 
           const payload = message.payload || {};
+          const action: AssignJiraItemToAgentDialogAction =
+            payload.action === "grillMe" ? "grillMe" : "assign";
           const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
           const agentCommand =
             typeof payload.agentCommand === "string" ? payload.agentCommand.trim() : "";
@@ -2341,6 +2350,7 @@ export function activate(context: vscode.ExtensionContext) {
           }
 
           resolveOnce({
+            action,
             issueKey,
             agentCommand
           });
@@ -4578,6 +4588,53 @@ export function activate(context: vscode.ExtensionContext) {
       const issue = issues.find((candidate) => candidate.key === selection.issueKey);
       if (!issue) {
         void vscode.window.showErrorMessage("The selected Jira item is no longer available.");
+        return;
+      }
+
+      if (selection.action === "grillMe") {
+        try {
+          const copiedSkillPaths = await copyGrillMeSkill(extensionRoot, repoRoot);
+          logAlways(
+            `[assignJiraItemToAgentGrillMe] skill locations ready: ${
+              copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+            }`
+          );
+          provider.refresh();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          logAlways(`[assignJiraItemToAgentGrillMe] ERROR preparing skill: ${message}`);
+          void vscode.window.showErrorMessage(`Failed to prepare the grill-me skill: ${message}`);
+          return;
+        }
+
+        const featureDetails = buildFeatureEstimatorDetailsFromIssue(issue);
+        const prompt = buildFeatureGrillMePrompt(featureDetails);
+        const promptFilePath = writeAgentPromptFile("assign-jira-item-grill-me", prompt);
+        const commandLine = buildAgenticHarnessFileCommandForCommand(
+          selection.agentCommand,
+          repoRoot,
+          promptFilePath,
+          "prompt"
+        );
+        logAlways(`[assignJiraItemToAgentGrillMe] runString (file): ${commandLine}`);
+
+        logAlways(
+          `[assignJiraItemToAgentGrillMe] launching Agentic Harness for ${issue.key} with selected command`
+        );
+        runInPersistentTerminal(
+          "Assign Jira Item Grill Me",
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            commandLine
+          ],
+          {
+            iconPath: FEATURE_ESTIMATOR_ICON_PATH,
+            color: FEATURE_ESTIMATOR_ACTION_COLOR
+          }
+        );
+        void vscode.window.showInformationMessage(
+          `Opened Grill Me for Jira item ${issue.key} with the selected agent harness command.`
+        );
         return;
       }
 
