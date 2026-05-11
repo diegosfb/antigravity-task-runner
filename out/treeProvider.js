@@ -10,6 +10,7 @@ const util_1 = require("util");
 const utils_1 = require("./utils");
 const git_1 = require("./git");
 const terminal_1 = require("./terminal");
+const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
 class NodeItem extends vscode.TreeItem {
     constructor(payload, collapsibleState) {
@@ -284,6 +285,7 @@ const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
 const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
+const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
 const TOP_LEVEL_LINKED_FOLDERS = [
     { label: "claude", path: path.join(os.homedir(), ".claude") },
     { label: "codex", path: path.join(os.homedir(), ".codex") }
@@ -469,6 +471,10 @@ function getQuickActionItems() {
     const items = [];
     const rootPath = (0, utils_1.getRootPath)();
     const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : undefined;
+    const cloudInfrastructureSignals = repoRoot
+        ? (0, cloudArchitectReview_1.detectCloudInfrastructureSignals)(repoRoot, 3)
+        : [];
+    const hasCloudInfrastructure = cloudInfrastructureSignals.length > 0;
     const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
     const currentBranch = hasRepo && repoRoot ? (0, git_1.getCurrentBranchNameSync)(repoRoot) : undefined;
     const autocommitRunning = repoRoot ? (0, git_1.isAutocommitRunning)(repoRoot) : false;
@@ -646,6 +652,23 @@ function getQuickActionItems() {
         title: "Increment Patch Version"
     };
     items.push(incrementPatch);
+    const cloudArchitectReview = new NodeItem({ kind: "action", label: "Cloud Architect Review" }, vscode.TreeItemCollapsibleState.None);
+    if (hasCloudInfrastructure) {
+        cloudArchitectReview.iconPath = new vscode.ThemeIcon("cloud", CLOUD_ARCHITECT_ACTION_COLOR);
+        cloudArchitectReview.command = {
+            command: "antigravity.cloudArchitectReview",
+            title: "Cloud Architect Review"
+        };
+        cloudArchitectReview.tooltip =
+            `Detected cloud infrastructure signals: ${cloudInfrastructureSignals.join(", ")}`;
+    }
+    else {
+        cloudArchitectReview.iconPath = new vscode.ThemeIcon("cloud", new vscode.ThemeColor("disabledForeground"));
+        cloudArchitectReview.tooltip =
+            `Disabled because no cloud infrastructure signals were detected in this project. ` +
+                "Looked for directories like infra/terraform/k8s and files such as deploy scripts, docker-compose, and Terraform manifests.";
+    }
+    items.push(cloudArchitectReview);
     const autocommitCheckpoint = new NodeItem({ kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" }, vscode.TreeItemCollapsibleState.None);
     if (!autocommitRunning && !hasGitHub) {
         autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", new vscode.ThemeColor("disabledForeground"));

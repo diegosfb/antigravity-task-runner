@@ -144,6 +144,11 @@ export function buildSetupWorkspacePrompt(
   ].join(" ");
 }
 
+export function buildUpdateAgentsMdPrompt(): string {
+  const promptPath = path.resolve(__dirname, "..", "Resources", "prompts", "update-agents-md.md");
+  return fs.readFileSync(promptPath, "utf8").trim();
+}
+
 export function buildUpdateAgentsMdPromptFilePath(extensionRoot: string): string {
   return path.join(extensionRoot, "Resources", "prompts", "update-agents-md.md");
 }

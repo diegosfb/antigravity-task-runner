@@ -7,6 +7,7 @@ exports.copySetupWorkspaceGuideFiles = copySetupWorkspaceGuideFiles;
 exports.ensureSetupWorkspaceDirectories = ensureSetupWorkspaceDirectories;
 exports.copySetupWorkspaceSkills = copySetupWorkspaceSkills;
 exports.buildSetupWorkspacePrompt = buildSetupWorkspacePrompt;
+exports.buildUpdateAgentsMdPrompt = buildUpdateAgentsMdPrompt;
 exports.buildUpdateAgentsMdPromptFilePath = buildUpdateAgentsMdPromptFilePath;
 const fs = require("fs");
 const path = require("path");
@@ -114,6 +115,10 @@ function buildSetupWorkspacePrompt(template, workspaceDir) {
         `If "${workspaceDir}" already contains some of the project files, only add the missing ones. Do not overwrite or modify any existing files in "${workspaceDir}".`,
         "Prefer non-interactive commands and finish once the missing files are extracted or downloaded."
     ].join(" ");
+}
+function buildUpdateAgentsMdPrompt() {
+    const promptPath = path.resolve(__dirname, "..", "Resources", "prompts", "update-agents-md.md");
+    return fs.readFileSync(promptPath, "utf8").trim();
 }
 function buildUpdateAgentsMdPromptFilePath(extensionRoot) {
     return path.join(extensionRoot, "Resources", "prompts", "update-agents-md.md");

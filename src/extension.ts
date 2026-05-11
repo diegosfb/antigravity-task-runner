@@ -11,13 +11,14 @@ import {
 } from "./git";
 import {
   runInSecondaryTerminal,
-  runInNewTerminal,
+  runInPersistentTerminal,
   runCommandInTaskTerminal,
   buildAgenticHarnessPromptCommand,
   buildAgenticHarnessFileCommand,
   buildLightAgenticHarnessPromptCommand,
-  runClaudeInitAndUpdateInNewTerminal,
-  runCodexInitAndUpdateInNewTerminal,
+  runClaudeInitAndUpdateInPersistentTerminal,
+  runCodexInitAndUpdateInPersistentTerminal,
+  getAgentTerminalName,
   CLAUDE_ACTION_COLOR
 } from "./terminal";
 import {
@@ -92,6 +93,11 @@ import {
   type ProjectTemplate
 } from "./projectTemplates";
 import { runSecretsAudit } from "./secrets-audit";
+import {
+  CLOUD_ARCHITECT_REVIEW_PROMPT,
+  copyCloudArchitectSkill,
+  detectCloudInfrastructureSignals
+} from "./cloudArchitectReview";
 
 type GitInputBox = {
   value: string;
@@ -134,6 +140,7 @@ function getRepoPackageVersion(repoRoot: string): string | undefined {
 export function activate(context: vscode.ExtensionContext) {
   const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
   const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
+  const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
   context.subscriptions.push(outputChannel);
   initLogger(outputChannel);
 
@@ -154,7 +161,7 @@ export function activate(context: vscode.ExtensionContext) {
       ? fs.readFileSync(guidelinesFile, "utf8").trim()
       : "/init";
     log(`[launchClaudeInit] launching Claude init terminal`);
-    await runClaudeInitAndUpdateInNewTerminal(repoRoot, prompt);
+    await runClaudeInitAndUpdateInPersistentTerminal(repoRoot, prompt);
     log(`[launchClaudeInit] done`);
   };
 
@@ -169,7 +176,7 @@ export function activate(context: vscode.ExtensionContext) {
       ? fs.readFileSync(guidelinesFile, "utf8").trim()
       : "/init";
     log(`[launchAgentInit] launching Codex init terminal`);
-    await runCodexInitAndUpdateInNewTerminal(repoRoot, prompt);
+    await runCodexInitAndUpdateInPersistentTerminal(repoRoot, prompt);
     log(`[launchAgentInit] done`);
   };
 
@@ -1838,7 +1845,7 @@ export function activate(context: vscode.ExtensionContext) {
         )}`
       ]
       : [`cd ${quoteShellArg(repoRoot)}`, command];
-    runInNewTerminal(
+    runInPersistentTerminal(
       `${agentLabel}: ${issueKey}`,
       lines,
       {
@@ -2736,7 +2743,7 @@ export function activate(context: vscode.ExtensionContext) {
       log(`[runClaudeAgent] repoRoot: ${repoRoot}`);
       const runString = `claude --agent ${quoteShellArg(agentName)}`;
       logAlways(`[runClaudeAgent] runString: ${runString}`);
-      runInNewTerminal(`Agent: ${agentName}`, [
+      runInPersistentTerminal(`Agent: ${agentName}`, [
         `cd ${quoteShellArg(repoRoot)}`,
         runString
       ], {
@@ -3023,7 +3030,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
         }
-        runInNewTerminal("Claude", [`cd ${quoteShellArg(repoRoot)}`, "claude"], {
+        runInPersistentTerminal(getAgentTerminalName(), [`cd ${quoteShellArg(repoRoot)}`, "claude"], {
           iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
           color: CLAUDE_ACTION_COLOR
         });
@@ -3042,7 +3049,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      runInNewTerminal("Ollama Claude", [`cd ${quoteShellArg(repoRoot)}`, "ollama launch claude"], {
+      runInPersistentTerminal(getAgentTerminalName(), [`cd ${quoteShellArg(repoRoot)}`, "ollama launch claude"], {
         iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
         color: CLAUDE_ACTION_COLOR
       });
@@ -3057,7 +3064,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      runInNewTerminal("OpenClaude", [`cd ${quoteShellArg(repoRoot)}`, "openclaude"], {
+      runInPersistentTerminal(getAgentTerminalName(), [`cd ${quoteShellArg(repoRoot)}`, "openclaude"], {
         iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
         color: CLAUDE_ACTION_COLOR
       });
@@ -4124,6 +4131,61 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.cloudArchitectReview", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+      const cloudInfrastructureSignals = detectCloudInfrastructureSignals(repoRoot, 3);
+      if (cloudInfrastructureSignals.length === 0) {
+        void vscode.window.showInformationMessage(
+          "Cloud Architect Review stays visible for this project, but it is disabled until cloud infrastructure signals are detected."
+        );
+        return;
+      }
+
+      try {
+        const copiedSkillPaths = await copyCloudArchitectSkill(extensionRoot, repoRoot);
+        logAlways(
+          `[cloudArchitectReview] skill locations ready: ${
+            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          }`
+        );
+        provider.refresh();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[cloudArchitectReview] ERROR preparing skill: ${message}`);
+        void vscode.window.showErrorMessage(`Failed to prepare the cloud-architect skill: ${message}`);
+        return;
+      }
+
+      const commandLine = buildAgenticHarnessPromptCommand(
+        repoRoot,
+        CLOUD_ARCHITECT_REVIEW_PROMPT,
+        "prompt"
+      );
+
+      logAlways(
+        `[cloudArchitectReview] launching Agentic Harness with signals: ${cloudInfrastructureSignals.join(", ")}`
+      );
+      runInPersistentTerminal(
+        "Cloud Architect Review",
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          commandLine
+        ],
+        {
+          iconPath: new vscode.ThemeIcon("cloud", CLOUD_ARCHITECT_ACTION_COLOR),
+          color: CLOUD_ARCHITECT_ACTION_COLOR
+        }
+      );
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.createRepoTagVersion", async () => {
       log(`[createRepoTagVersion] triggered`);
       const rootPath = getRootPath();
@@ -4183,7 +4245,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      runInNewTerminal(
+      runInPersistentTerminal(
         "Create Feature Branch",
         [
           `cd ${quoteShellArg(repoRoot)}`,
@@ -4265,7 +4327,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      runInNewTerminal(
+      runInPersistentTerminal(
         "Create Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
@@ -4360,7 +4422,7 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
 
-        runInNewTerminal(
+        runInPersistentTerminal(
           "Merge Branch to Main",
           [
             `cd ${quoteShellArg(repoRoot)}`,
@@ -4409,7 +4471,7 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
 
-        runInNewTerminal(
+        runInPersistentTerminal(
           "Checkout Branch",
           [
             `cd ${quoteShellArg(repoRoot)}`,
@@ -4461,7 +4523,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         const projectTestingCommand = getProjectTestingCommand();
 
-        runInNewTerminal(
+        runInPersistentTerminal(
           "Pull Remote and Merge",
           [
             `cd ${quoteShellArg(repoRoot)}`,
@@ -4529,7 +4591,7 @@ export function activate(context: vscode.ExtensionContext) {
         });
 
         logAlways("[agenticReviewOfMerge] delegating review to Agentic Harness");
-        runInNewTerminal(
+        runInPersistentTerminal(
           "Agentic Review of Merge",
           [
             `cd ${quoteShellArg(repoRoot)}`,
@@ -4572,7 +4634,7 @@ export function activate(context: vscode.ExtensionContext) {
       ].join(" ");
 
       logAlways("[setFeatureFlag] delegating to Agentic Harness");
-      runInNewTerminal(
+      runInPersistentTerminal(
         "Set Feature Flags",
         [
           `cd ${quoteShellArg(repoRoot)}`,
@@ -4615,7 +4677,7 @@ export function activate(context: vscode.ExtensionContext) {
         const selectedBranch = await showReviewPullRequestDialog(branches);
         if (!selectedBranch) return;
 
-        runInNewTerminal(
+        runInPersistentTerminal(
           "Review Pull Request",
           [
             `cd ${quoteShellArg(repoRoot)}`,
@@ -4648,7 +4710,7 @@ export function activate(context: vscode.ExtensionContext) {
         );
         return;
       }
-      runInNewTerminal(
+      runInPersistentTerminal(
         "Agentic Harness Approve Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
@@ -4702,7 +4764,7 @@ export function activate(context: vscode.ExtensionContext) {
         notes.push(`Created from branch: ${currentBranch}`);
       }
       const msg = notes.join("\n\n") || tag;
-      runInNewTerminal("Antigravity", [
+      runInPersistentTerminal("Antigravity", [
         `cd ${quoteShellArg(repoRoot)}`,
         `git tag -a ${quoteShellArg(tag)} -m ${quoteShellArg(msg)} && git push origin ${quoteShellArg(tag)} && echo "[antigravity] tag ${tag} pushed"`,
       ]);

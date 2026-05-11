@@ -1,26 +1,30 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CLAUDE_ACTION_COLOR = void 0;
+exports.getAgentTerminalName = getAgentTerminalName;
 exports.runInSecondaryTerminal = runInSecondaryTerminal;
-exports.runInNewTerminal = runInNewTerminal;
+exports.runInPersistentTerminal = runInPersistentTerminal;
 exports.runCommandInTaskTerminal = runCommandInTaskTerminal;
 exports.buildAgenticHarnessPromptCommand = buildAgenticHarnessPromptCommand;
 exports.buildAgenticHarnessFileCommand = buildAgenticHarnessFileCommand;
 exports.buildLightAgenticHarnessPromptCommand = buildLightAgenticHarnessPromptCommand;
-exports.runClaudeInitAndUpdateInNewTerminal = runClaudeInitAndUpdateInNewTerminal;
-exports.runCodexInitAndUpdateInNewTerminal = runCodexInitAndUpdateInNewTerminal;
-exports.runClaudePromptInNewTerminal = runClaudePromptInNewTerminal;
+exports.runClaudeInitAndUpdateInPersistentTerminal = runClaudeInitAndUpdateInPersistentTerminal;
+exports.runCodexInitAndUpdateInPersistentTerminal = runCodexInitAndUpdateInPersistentTerminal;
+exports.runClaudePromptInPersistentTerminal = runClaudePromptInPersistentTerminal;
 const vscode = require("vscode");
 const logger_1 = require("./logger");
 const settings_1 = require("./settings");
 const agenticHarnessCommand_1 = require("./agenticHarnessCommand");
 const utils_1 = require("./utils");
 exports.CLAUDE_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
-function getOrCreateTerminal(name) {
+function getOrCreateTerminal(name, options = {}) {
     const existing = vscode.window.terminals.find((t) => t.name === name);
     if (existing)
         return existing;
-    return vscode.window.createTerminal({ name });
+    return vscode.window.createTerminal({ name, ...options });
+}
+function getAgentTerminalName() {
+    return "Antigravity Agent";
 }
 function getTerminalName() {
     return (vscode.workspace.getConfiguration("antigravity").get("terminalName") ||
@@ -34,8 +38,8 @@ async function runInSecondaryTerminal(lines) {
     }
     return true;
 }
-function runInNewTerminal(name, lines, options = {}) {
-    const terminal = vscode.window.createTerminal({ name, ...options });
+function runInPersistentTerminal(name, lines, options = {}) {
+    const terminal = getOrCreateTerminal(name, options);
     terminal.show();
     for (const line of lines) {
         terminal.sendText(line, true);
@@ -51,7 +55,7 @@ async function runCommandInTaskTerminal(name, commandLine, options = {}) {
     }));
     task.presentationOptions = {
         reveal: vscode.TaskRevealKind.Always,
-        panel: vscode.TaskPanelKind.Dedicated,
+        panel: vscode.TaskPanelKind.Shared,
         focus: true,
         clear: false,
         showReuseMessage: false
@@ -76,19 +80,19 @@ function buildLightAgenticHarnessPromptCommand(repoRoot, prompt, mode = "dangero
     (0, logger_1.logAlways)(`[lightAgenticHarness] runString: ${runString}`);
     return runString;
 }
-async function runClaudeInitAndUpdateInNewTerminal(repoRoot, prompt) {
+async function runClaudeInitAndUpdateInPersistentTerminal(repoRoot, prompt) {
     const commands = [
         `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
         buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous")
     ];
-    runInNewTerminal("Agentic Harness Init", commands, {
+    runInPersistentTerminal(getAgentTerminalName(), commands, {
         iconPath: new vscode.ThemeIcon("robot", exports.CLAUDE_ACTION_COLOR),
         color: exports.CLAUDE_ACTION_COLOR
     });
 }
-async function runCodexInitAndUpdateInNewTerminal(repoRoot, prompt) {
+async function runCodexInitAndUpdateInPersistentTerminal(repoRoot, prompt) {
     const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
-    runInNewTerminal("Codex Init", [
+    runInPersistentTerminal(getAgentTerminalName(), [
         `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
         `codex -C ${(0, utils_1.quoteShellArg)(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${(0, utils_1.quoteShellArg)(trustOverride)} ${(0, utils_1.quoteShellArg)(prompt)}`
     ], {
@@ -96,8 +100,8 @@ async function runCodexInitAndUpdateInNewTerminal(repoRoot, prompt) {
         color: exports.CLAUDE_ACTION_COLOR
     });
 }
-function runClaudePromptInNewTerminal(repoRoot, prompt) {
-    runInNewTerminal("Agentic Harness", [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, buildAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")], {
+function runClaudePromptInPersistentTerminal(repoRoot, prompt) {
+    runInPersistentTerminal(getAgentTerminalName(), [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, buildAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")], {
         iconPath: new vscode.ThemeIcon("robot", exports.CLAUDE_ACTION_COLOR),
         color: exports.CLAUDE_ACTION_COLOR
     });

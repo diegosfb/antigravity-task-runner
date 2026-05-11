@@ -199,6 +199,7 @@ If `ANTHROPIC_BASE_URL` points to `localhost` but `tool-run.litellm-openai` is m
 | `Increment Major Version` | Runs the version bump script with `major`. | Use it for a breaking-release version bump. | Always |
 | `Increment Minor Version` | Runs the version bump script with `minor`. | Use it for a backward-compatible feature release. | Always |
 | `Increment Patch Version` | Runs the version bump script with `patch`. | Use it for a bug-fix or small maintenance release. | Always |
+| `Cloud Architect Review` | Copies the bundled `cloud-architect` skill into the project’s `.agent/skills` and `.claude/skills`, then launches the selected Agentic Harness in prompt mode with the infrastructure review prompt. It stays visible but is disabled when the repo does not appear to contain cloud infrastructure. | Use it when the repository includes deployment or infrastructure files and you want an agent to review sizing and cloud setup choices. | Always, but disabled when no cloud infrastructure signals are detected |
 | `Autocommit Start` | Starts the autocommit background workflow. | Use it when you want periodic automated checkpoints. A GitHub remote must already exist. | When autocommit is not already running |
 | `Autocommit Stop` | Stops the autocommit background workflow. | Use it when you no longer want automated checkpoints. | When autocommit is already running |
 | `Revert Changes` | Runs the autocommit revert script. | Use it to roll back the current autocommit change set. | Only when autocommit is already running |

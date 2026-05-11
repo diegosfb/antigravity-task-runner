@@ -76,7 +76,7 @@ test("buildUpdateAgentsMdPrompt includes the progressive disclosure refactor ste
   const prompt = buildUpdateAgentsMdPrompt();
 
   assert.match(prompt, /progressive disclosure principles/);
-  assert.match(prompt, /\*\*Find contradictions\*\*/);
+  assert.match(prompt, /\*\*Resolve contradictions\*\*/);
   assert.match(prompt, /\*\*Identify the essentials\*\*/);
   assert.match(prompt, /\*\*Group the rest\*\*/);
   assert.match(prompt, /\*\*Create the file structure\*\*/);
