@@ -26,7 +26,6 @@ As a rule of thumb, save repo-specific behavior in Workspace settings and person
 | `antigravity.workspaceProjectPath` | `Workspace Setup`, environment/config scripts | Folder where workspace files are extracted or downloaded. Relative values are resolved from the repo root. |
 | `antigravity.workflowsFolder` | `Workflows` section | Base folder searched for workflow markdown before Task Runner falls back to bundled workflows. |
 | `antigravity.customAgenticPlatformAddons` | Linked folders section | Extra local folder to show in the sidebar so you can browse custom shared assets. |
-| `antigravity.sopManualLink` | `SOP Manual` | Markdown URL downloaded by the SOP Manual action. If `SOP_MANUAL_LINK` exists in the repo `.env`, that repo value overrides this setting. |
 | `antigravity.antigravityWorkspaceProject` | `Update Agentic Workspace` | Local folder path where the `antigravity-workspace` repo should live when Task Runner refreshes shared workspace assets. This is an advanced setting and is usually edited only in raw settings. |
 
 ### Build, Git, and terminal behavior
@@ -62,12 +61,10 @@ As a rule of thumb, save repo-specific behavior in Workspace settings and person
 | `antigravity.lightAgenticHarnessExecutionCommand` | Lightweight agentic actions | Lighter or cheaper harness command used for smaller prompt-driven tasks. If `Use Agent for Github Repository Management` is enabled, `Commit` uses this lighter harness path. |
 | `antigravity.lightAgenticHarnessExecutionCommands` | Settings command picker | Saved list of selectable light harness commands. Edit it when you want different quick-select options in the settings UI. |
 
-### Fallback sources and setup repos
+### Setup repos
 
 | Setting | Used by | What it controls |
 | --- | --- | --- |
-| `antigravity.scriptFallbackBaseUrl` | Missing repo scripts | Base URL Task Runner uses to download a script when `./scripts/<name>.sh` is missing locally. |
-| `antigravity.configFallbackBaseUrl` | Environment/config downloads | Base URL Task Runner uses to download missing config files such as `DEV-settings.yaml` or `.env`. |
 | `antigravity.claudeSetupGithub` | `Update Agentic Setup` | GitHub repo URL used when refreshing Claude setup files. This is an advanced setup value. |
 | `antigravity.geminiSetupGithub` | `Update Agentic Setup` | GitHub repo URL used when refreshing Gemini setup files. This is an advanced setup value. |
 | `antigravity.codexSetupGithub` | `Update Agentic Setup` | GitHub repo URL used when refreshing Codex setup files. This is an advanced setup value. |

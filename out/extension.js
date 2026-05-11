@@ -1248,13 +1248,6 @@ function activate(context) {
             panel.dispose();
         }, undefined, context.subscriptions);
     });
-    const getSopManualLink = (repoRoot) => {
-        const config = vscode.workspace.getConfiguration("antigravity");
-        const repoOverride = repoRoot
-            ? ((0, utils_1.parseEnvFile)(getRepoEnvPath(repoRoot)).sop_manual_link || "").trim()
-            : "";
-        return repoOverride || (config.get("sopManualLink") || "").trim();
-    };
     const getProjectSopManualPath = (repoRoot) => path.join(repoRoot, "Resources", "sop.md");
     const validateJiraProjectKey = (value) => {
         const normalized = value.trim().toUpperCase();
@@ -4475,11 +4468,11 @@ function activate(context) {
         });
         if (!selection)
             return;
-        // Ensure switch-env.sh is present, downloading from Script Fallback Base URL if missing.
+        // Ensure switch-env.sh is present, downloading from the built-in GitHub fallback if missing.
         const scriptPath = await (0, scripts_1.ensureScriptFile)(repoRoot, "switch-env.sh", path.join(workspaceDir, "scripts"));
         if (!scriptPath)
             return;
-        // Offer to download missing config files from Config Fallback Base URL.
+        // Offer to download missing config files from the built-in GitHub fallback.
         // Files live in workspace/config/ so pass workspaceDir as the root.
         const settingsFileName = `${selection.value.toLowerCase()}-settings.yaml`;
         await (0, scripts_1.downloadConfigFileIfMissing)(workspaceDir, settingsFileName);
@@ -4498,16 +4491,13 @@ function activate(context) {
             await (0, scripts_1.openFile)(projectSopManualPath);
             return;
         }
-        const sopManualLink = getSopManualLink(repoRoot);
         try {
-            const localPath = sopManualLink
-                ? await (0, scripts_1.downloadMarkdownToTempFile)(sopManualLink, "sop-manual.md")
-                : await resourceProvider.ensureFile("sop.md");
+            const localPath = await resourceProvider.ensureFile("sop.md");
             await (0, scripts_1.openFile)(localPath);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to download SOP manual: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to open SOP manual: ${message}`);
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.bringSopManualToProject", async () => {
@@ -4517,12 +4507,9 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        const sopManualLink = getSopManualLink(repoRoot);
         const projectSopManualPath = getProjectSopManualPath(repoRoot);
         try {
-            const downloadedPath = sopManualLink
-                ? await (0, scripts_1.downloadMarkdownToTempFile)(sopManualLink, "sop-manual.md")
-                : await resourceProvider.ensureFile("sop.md");
+            const downloadedPath = await resourceProvider.ensureFile("sop.md");
             await fs.promises.mkdir(path.dirname(projectSopManualPath), { recursive: true });
             await fs.promises.copyFile(downloadedPath, projectSopManualPath);
             void vscode.window.showInformationMessage(`Copied SOP manual to ${projectSopManualPath}.`);

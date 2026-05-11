@@ -388,16 +388,6 @@
           "default": "\"{agentFile}\"",
           "description": "Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders."
         },
-        "antigravity.scriptFallbackBaseUrl": {
-          "type": "string",
-          "default": "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts",
-          "description": "Base URL used to download missing scripts when ./scripts/<name>.sh is not present. Supports GitHub blob URLs and raw GitHub base URLs."
-        },
-        "antigravity.configFallbackBaseUrl": {
-          "type": "string",
-          "default": "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config",
-          "description": "Base URL used to download missing config files (e.g. DEV-settings.yaml, .env)."
-        },
         "antigravity.jiraBaseUrl": {
           "type": "string",
           "default": "",
@@ -427,11 +417,6 @@
           "type": "string",
           "default": "/Users/diego.brihuega/.gemini",
           "description": "Base folder used to resolve Claude workflows. The extension checks both <folder>/workflows/<name>/WORKFLOW.md and <folder>/<name>/WORKFLOW.md before falling back to bundled workflows."
-        },
-        "antigravity.sopManualLink": {
-          "type": "string",
-          "default": "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7",
-          "description": "Markdown URL used by the SOP Manual quick action."
         },
         "antigravity.autoUpdateClaudeMd": {
           "type": "boolean",
