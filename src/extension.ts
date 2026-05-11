@@ -462,6 +462,12 @@ export function activate(context: vscode.ExtensionContext) {
         color: var(--vscode-button-foreground);
         background: var(--vscode-button-background);
       }
+      button[type="submit"][data-action="estimate"] {
+        background: var(--vscode-charts-green, #2ea043);
+      }
+      button[type="submit"][data-action="estimate"]:hover {
+        background: color-mix(in srgb, var(--vscode-charts-green, #2ea043) 88%, black 12%);
+      }
       button[type="button"] {
         color: var(--vscode-button-secondaryForeground);
         background: var(--vscode-button-secondaryBackground);
