@@ -10,6 +10,7 @@ const util_1 = require("util");
 const utils_1 = require("./utils");
 const git_1 = require("./git");
 const terminal_1 = require("./terminal");
+const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
 class NodeItem extends vscode.TreeItem {
     constructor(payload, collapsibleState) {
@@ -93,6 +94,9 @@ class AntigravityViewProvider {
         }
         if (element.kind === "category" && element.label === "PR Reviewer") {
             return getPrReviewerItems();
+        }
+        if (element.kind === "category" && element.label === "Update Project Config") {
+            return getUpdateProjectConfigItems();
         }
         if (element.kind === "folder" && element.label === "Claude Plugins") {
             return this.getClaudePluginItems();
@@ -284,6 +288,10 @@ const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
 const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
+const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
+const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(path.resolve(__dirname, "..", "Resources", "feature-estimator-red.svg"));
 const TOP_LEVEL_LINKED_FOLDERS = [
     { label: "claude", path: path.join(os.homedir(), ".claude") },
     { label: "codex", path: path.join(os.homedir(), ".codex") }
@@ -469,6 +477,10 @@ function getQuickActionItems() {
     const items = [];
     const rootPath = (0, utils_1.getRootPath)();
     const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : undefined;
+    const cloudInfrastructureSignals = repoRoot
+        ? (0, cloudArchitectReview_1.detectCloudInfrastructureSignals)(repoRoot, 3)
+        : [];
+    const hasCloudInfrastructure = cloudInfrastructureSignals.length > 0;
     const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
     const currentBranch = hasRepo && repoRoot ? (0, git_1.getCurrentBranchNameSync)(repoRoot) : undefined;
     const autocommitRunning = repoRoot ? (0, git_1.isAutocommitRunning)(repoRoot) : false;
@@ -482,6 +494,23 @@ function getQuickActionItems() {
             .replace(/^['"]|['"]$/g, "")
             .toUpperCase()
         : "";
+    const setupWorkspace = new NodeItem({ kind: "action", label: "Setup Workspace" }, vscode.TreeItemCollapsibleState.None);
+    setupWorkspace.iconPath = new vscode.ThemeIcon("repo-clone", QUICK_ACTION_COLOR);
+    if (hasAgentFolder) {
+        setupWorkspace.iconPath = new vscode.ThemeIcon("repo-clone", new vscode.ThemeColor("disabledForeground"));
+        setupWorkspace.tooltip = "A .agent folder already exists in this project.";
+    }
+    setupWorkspace.contextValue = hasRepo ? "antigravitySetupWorkspaceActionWithRepo" : "antigravitySetupWorkspaceAction";
+    setupWorkspace.command = {
+        command: "antigravity.setupWorkspace",
+        title: "Setup Workspace"
+    };
+    items.push(setupWorkspace);
+    const updateProjectConfig = new NodeItem({ kind: "category", label: "Update Project Config" }, vscode.TreeItemCollapsibleState.Collapsed);
+    updateProjectConfig.iconPath = new vscode.ThemeIcon("settings-gear", UPDATE_PROJECT_CONFIG_ACTION_COLOR);
+    updateProjectConfig.tooltip =
+        "Expand to update project configuration with the selected Agentic Harness.";
+    items.push(updateProjectConfig);
     const workspaceSetup = new NodeItem({ kind: "action", label: "Workspace Setup" }, vscode.TreeItemCollapsibleState.None);
     workspaceSetup.iconPath = new vscode.ThemeIcon("run-all", QUICK_ACTION_COLOR);
     if (hasAgentFolder) {
@@ -634,6 +663,41 @@ function getQuickActionItems() {
         title: "Increment Patch Version"
     };
     items.push(incrementPatch);
+    const cloudArchitectReview = new NodeItem({ kind: "action", label: "Cloud Architect Review" }, vscode.TreeItemCollapsibleState.None);
+    if (hasCloudInfrastructure) {
+        cloudArchitectReview.iconPath = new vscode.ThemeIcon("cloud", CLOUD_ARCHITECT_ACTION_COLOR);
+        cloudArchitectReview.command = {
+            command: "antigravity.cloudArchitectReview",
+            title: "Cloud Architect Review"
+        };
+        cloudArchitectReview.tooltip =
+            `Detected cloud infrastructure signals: ${cloudInfrastructureSignals.join(", ")}`;
+    }
+    else {
+        cloudArchitectReview.iconPath = new vscode.ThemeIcon("cloud", new vscode.ThemeColor("disabledForeground"));
+        cloudArchitectReview.tooltip =
+            `Disabled because no cloud infrastructure signals were detected in this project. ` +
+                "Looked for directories like infra/terraform/k8s and files such as deploy scripts, docker-compose, and Terraform manifests.";
+    }
+    items.push(cloudArchitectReview);
+    const featureEstimator = new NodeItem({ kind: "action", label: "Feature Estimator" }, vscode.TreeItemCollapsibleState.None);
+    featureEstimator.iconPath = FEATURE_ESTIMATOR_ICON_PATH;
+    featureEstimator.command = {
+        command: "antigravity.featureEstimator",
+        title: "Feature Estimator"
+    };
+    featureEstimator.tooltip =
+        "Estimate a feature from a To Do Jira item or a free-form description using the selected Agentic Harness.";
+    items.push(featureEstimator);
+    const explainMe = new NodeItem({ kind: "action", label: "Explain Me" }, vscode.TreeItemCollapsibleState.None);
+    explainMe.iconPath = new vscode.ThemeIcon("comment-discussion", EXPLAIN_ME_ACTION_COLOR);
+    explainMe.command = {
+        command: "antigravity.explainMe",
+        title: "Explain Me"
+    };
+    explainMe.tooltip =
+        "Copy the bundled explain-me skill into the project and ask the selected Agentic Harness to explain the whole solution and the latest uncommitted changes.";
+    items.push(explainMe);
     const autocommitCheckpoint = new NodeItem({ kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" }, vscode.TreeItemCollapsibleState.None);
     if (!autocommitRunning && !hasGitHub) {
         autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", new vscode.ThemeColor("disabledForeground"));
@@ -656,13 +720,6 @@ function getQuickActionItems() {
         };
         items.push(revertChanges);
     }
-    const environmentSwitch = new NodeItem({ kind: "action", label: "Environment Switch" }, vscode.TreeItemCollapsibleState.None);
-    environmentSwitch.iconPath = new vscode.ThemeIcon("sync", QUICK_ACTION_COLOR);
-    environmentSwitch.command = {
-        command: "antigravity.switchEnvironment",
-        title: "Switch Environment"
-    };
-    items.push(environmentSwitch);
     const sopManual = new NodeItem({ kind: "action", label: "SOP Manual" }, vscode.TreeItemCollapsibleState.None);
     sopManual.iconPath = new vscode.ThemeIcon("repo", SOP_MANUAL_ACTION_COLOR);
     sopManual.contextValue = "antigravitySopManual";
@@ -672,6 +729,33 @@ function getQuickActionItems() {
     };
     items.push(sopManual);
     return items;
+}
+function getUpdateProjectConfigItems() {
+    const updateGithubActions = new NodeItem({ kind: "action", label: "Update Github Actions" }, vscode.TreeItemCollapsibleState.None);
+    updateGithubActions.iconPath = new vscode.ThemeIcon("github-action", UPDATE_PROJECT_CONFIG_ACTION_COLOR);
+    updateGithubActions.command = {
+        command: "antigravity.updateGithubActions",
+        title: "Update Github Actions"
+    };
+    updateGithubActions.tooltip =
+        "Run the selected Agentic Harness with the GitHub Actions update prompt.";
+    const updateTests = new NodeItem({ kind: "action", label: "Update Tests" }, vscode.TreeItemCollapsibleState.None);
+    updateTests.iconPath = new vscode.ThemeIcon("beaker", UPDATE_PROJECT_CONFIG_ACTION_COLOR);
+    updateTests.command = {
+        command: "antigravity.updateTests",
+        title: "Update Tests"
+    };
+    updateTests.tooltip =
+        "Run the selected Agentic Harness with the test and Postman script update prompt.";
+    const updateAgentsMd = new NodeItem({ kind: "action", label: "Update AGENTS.md" }, vscode.TreeItemCollapsibleState.None);
+    updateAgentsMd.iconPath = new vscode.ThemeIcon("note", UPDATE_PROJECT_CONFIG_ACTION_COLOR);
+    updateAgentsMd.command = {
+        command: "antigravity.updateWorkspaceAgentsMd",
+        title: "Update AGENTS.md"
+    };
+    updateAgentsMd.tooltip =
+        "Open the selected Agentic Harness with the progressive-disclosure AGENTS.md update prompt.";
+    return [updateGithubActions, updateTests, updateAgentsMd];
 }
 function getPrReviewerItems() {
     const reviewPullRequest = new NodeItem({ kind: "action", label: "Review a Pull Request" }, vscode.TreeItemCollapsibleState.None);

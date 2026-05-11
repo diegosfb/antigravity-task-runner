@@ -185,6 +185,16 @@ export function upsertEnvFileValue(filePath: string, key: string, value: string)
   fs.writeFileSync(filePath, `${rewritten.join("\n")}\n`, "utf8");
 }
 
+export function appendEnvComment(filePath: string, line: string): void {
+  const trimmedLine = line.trim();
+  if (!trimmedLine) return;
+  const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
+  const lines = existing.split(/\r?\n/);
+  if (lines.some((l) => l.trim() === trimmedLine)) return;
+  const separator = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
+  fs.writeFileSync(filePath, `${existing}${separator}${trimmedLine}\n`, "utf8");
+}
+
 export async function waitForUrlReady(
   url: string,
   timeoutMs = 30000,

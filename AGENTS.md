@@ -1,52 +1,45 @@
 # AGENTS.md
 
-This file is the authoritative agent guide for this repository. Prefer it over `CLAUDE.md` and any generic agent defaults when they conflict.
+A VS Code extension that lets teams browse and run Antigravity AI agents and workflows directly from the sidebar.
 
-## Project Description
+## Current Focus
 
+- Improving agent prompt autonomy and non-interactive execution.
+- Standardizing AGENTS.md across projects using progressive disclosure.
 
-## Maintenance Rule
+## Recent Changes
 
-- Keep this file short and project-specific, roughly 50 to 100 lines.
-- Do not pad it with generic coding advice.
-- Regularly update `Project Description`, `Current Focus`, `Recent Changes`, and `Commands` so the file reflects the repo as it exists now.
-
-## Commits
-
-- This project explicitly authorizes Claude Code, Gemini, Codex, and similar agents to commit after each meaningful unit of work without waiting for an explicit user request.
-- Agents should also push those commits regularly when the change is in a safe, shareable state.
-
-## Working Rules
-
-- Before making non-trivial code changes, confirm product requirements, technical requirements, engineering principles, and hard constraints with the user when they are unclear.
-- Make the smallest coherent change that satisfies the request and fits the existing extension architecture.
-- Do not revert user changes you did not make.
-- Warn immediately if you detect a secret, token, password, or credential in the repo.
-- Never commit secrets or `config/.env`; use `config/.env.example` as the safe reference.
+- Created default GitHub environments on repo init (`setupWorkspace`).
+- Loaded Update AGENTS.md prompt from file instead of inline string.
+- Added Audit Secrets & Variables to Setup Workspace right-click menu.
 
 ## Commands
 
-- Install dependencies: `npm install`
-- Lint source and tests: `npm run lint`
-- Compile extension: `npm run compile`
-- Run tests: `npm test`
-- Sync contributed view name/version metadata: `npm run sync-view-name`
-- Bump extension version without git tag: `npm run bump-version [major|minor|patch]`
-- Create release package and GitHub release: `npm run create-release`
-- Direct VSIX packaging path used by release flow: `vsce package`
+| Task | Command |
+|------|---------|
+| Install | `npm install` |
+| Compile | `npm run compile` |
+| Lint | `npm run lint` |
+| Test | `npm test` |
+| Sync view name/version | `npm run sync-view-name` |
+| Bump version | `npm run bump-version [major\|minor\|patch]` |
+| Release | `npm run create-release` |
 
-## Operational Scripts
+Minimum validation before any PR: `npm run lint && npm test`.
+Release (`npm run create-release`) bumps the patch version, compiles, packages the VSIX, commits, pushes, and creates a GitHub release automatically.
 
-- Build deployable container artifacts: `./scripts/build-artifacts.sh <tag>`
-- Create or update infrastructure: `./scripts/create-infra.sh`
-- Switch active environment: `./scripts/switch-env.sh`
-- Deploy to AWS App Runner: `./scripts/deploy-aws-apprunner.sh [tag]`
-- Deploy to GCP Cloud Run: `./scripts/deploy-gcp-cloudrun.sh [tag]`
-- Check cloud deployment status: `./scripts/check-aws-deployment.sh` and `./scripts/check-gcp-deployment.sh`
-- Build and tag versioned artifacts: `./scripts/build-version.sh`
+## Commit Authorization
 
-## Validation
+This project explicitly authorizes Claude Code, Gemini, Codex, and similar agents to commit after each meaningful unit of work without waiting for an explicit user request. Push when the change is in a safe, shareable state.
 
-- Minimum validation for extension changes: `npm run lint && npm test`.
-- For release changes, also verify `vsce package` or `npm run create-release` as appropriate.
-- For deployment script changes, validate the relevant script arguments and required cloud configuration before pushing.
+## Working Rules
+
+- Make the smallest coherent change that satisfies the request and fits the existing extension architecture.
+- Do not revert user changes you did not make.
+- Never commit `config/.env`; use `config/.env.example` as the safe reference.
+- Warn immediately if you detect a secret, token, password, or credential in the repo.
+
+## Details
+
+- [Deployment & Infrastructure Scripts](docs/agents/deployment.md)
+- [Extended Validation & Guards](docs/agents/working-rules.md)

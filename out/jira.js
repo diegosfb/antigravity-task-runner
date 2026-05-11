@@ -4,6 +4,7 @@ exports.getJiraCurrentUserAccountId = getJiraCurrentUserAccountId;
 exports.createJiraProject = createJiraProject;
 exports.getJiraProjects = getJiraProjects;
 exports.searchOpenUnassignedJiraIssues = searchOpenUnassignedJiraIssues;
+exports.searchOpenTodoJiraIssuesForProject = searchOpenTodoJiraIssuesForProject;
 exports.searchOpenUnassignedTodoJiraIssuesForProject = searchOpenUnassignedTodoJiraIssuesForProject;
 exports.searchOpenUnassignedTodoJiraIssuesForAssignment = searchOpenUnassignedTodoJiraIssuesForAssignment;
 exports.searchOpenAssignedJiraIssuesForCurrentUser = searchOpenAssignedJiraIssuesForCurrentUser;
@@ -221,6 +222,21 @@ async function searchOpenUnassignedTodoJiraIssueSearchResultsForProject(credenti
         issues: response.issues ?? [],
         normalizedProjectKey
     };
+}
+async function searchOpenTodoJiraIssuesForProject(credentials, projectKey) {
+    const normalizedProjectKey = projectKey.trim().toUpperCase();
+    const response = await jiraRequest(credentials, {
+        method: "POST",
+        apiPath: "/rest/api/3/search/jql",
+        body: {
+            fields: ["summary", "issuetype", "project", "status"],
+            jql: `project = "${normalizedProjectKey}" AND statusCategory = "To Do" ORDER BY updated DESC`,
+            maxResults: 100
+        }
+    });
+    return (response.issues ?? [])
+        .map(mapJiraIssueSearchResultToSummary)
+        .filter((issue) => isProjectIssueSummaryValid(issue, normalizedProjectKey));
 }
 function mapJiraIssueSearchResultToSummary(issue) {
     return {

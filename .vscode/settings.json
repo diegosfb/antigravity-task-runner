@@ -32,5 +32,6 @@
     "opencode run -m ollama/qwen3-coder:480b-cloud",
     "opencode run -m ollama/gpt-oss:20-cloud"
   ],
-  "antigravity.buildCommand": "npm run bump-version patch && npm run compile && vsce package"
+  "antigravity.buildCommand": "npm run bump-version patch && npm run compile && vsce package",
+  "postman.settings.dotenv-detection-notification-visibility": false
 }

@@ -11,6 +11,7 @@ exports.findNestedGitFolders = findNestedGitFolders;
 exports.listInfrastructureYamlFiles = listInfrastructureYamlFiles;
 exports.parseEnvFile = parseEnvFile;
 exports.upsertEnvFileValue = upsertEnvFileValue;
+exports.appendEnvComment = appendEnvComment;
 exports.waitForUrlReady = waitForUrlReady;
 exports.waitForFileExists = waitForFileExists;
 const vscode = require("vscode");
@@ -197,6 +198,17 @@ function upsertEnvFileValue(filePath, key, value) {
         rewritten.push(nextLine);
     }
     fs.writeFileSync(filePath, `${rewritten.join("\n")}\n`, "utf8");
+}
+function appendEnvComment(filePath, line) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine)
+        return;
+    const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
+    const lines = existing.split(/\r?\n/);
+    if (lines.some((l) => l.trim() === trimmedLine))
+        return;
+    const separator = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
+    fs.writeFileSync(filePath, `${existing}${separator}${trimmedLine}\n`, "utf8");
 }
 async function waitForUrlReady(url, timeoutMs = 30000, intervalMs = 1000) {
     const client = url.startsWith("https") ? https : http;

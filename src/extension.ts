@@ -11,12 +11,14 @@ import {
 } from "./git";
 import {
   runInSecondaryTerminal,
-  runInNewTerminal,
+  runInPersistentTerminal,
   runCommandInTaskTerminal,
   buildAgenticHarnessPromptCommand,
+  buildAgenticHarnessFileCommand,
   buildLightAgenticHarnessPromptCommand,
-  runClaudeInitAndUpdateInNewTerminal,
-  runCodexInitAndUpdateInNewTerminal,
+  runClaudeInitAndUpdateInPersistentTerminal,
+  runCodexInitAndUpdateInPersistentTerminal,
+  getAgentTerminalName,
   CLAUDE_ACTION_COLOR
 } from "./terminal";
 import {
@@ -63,6 +65,7 @@ import {
   JiraIssueSummary,
   JiraIssueType,
   getJiraIssueTypes,
+  searchOpenTodoJiraIssuesForProject,
   searchOpenUnassignedTodoJiraIssuesForAssignment,
   searchOpenUnassignedTodoJiraIssuesForProject,
   assignJiraIssueToCurrentUser,
@@ -72,15 +75,46 @@ import {
   updateJiraIssueSummaryAndLabels
 } from "./jira";
 import {
-  buildAgenticHarnessSkillTaskPrompt
-} from "./agenticHarnessSkill";
-import {
   buildCreateJiraProjectAgenticHarnessEnvironment,
   buildCreateJiraProjectAgenticHarnessPrompt,
+  copyJiraProjectCreationSkill,
   JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME,
   JIRA_PROJECT_CREATION_SKILL_NAME
 } from "./jiraProjectHarness";
 import { buildMergeReviewPrompt } from "./mergeReviewPrompt";
+import {
+  buildUpdateAgentsMdPromptFilePath,
+  buildSetupWorkspacePrompt,
+  copySetupWorkspaceGuideFiles,
+  copySetupWorkspaceSkills,
+  ensureSetupWorkspaceDirectories,
+  loadProjectTemplates,
+  type ProjectTemplate
+} from "./projectTemplates";
+import { runSecretsAudit } from "./secrets-audit";
+import {
+  CLOUD_ARCHITECT_REVIEW_PROMPT,
+  copyCloudArchitectSkill,
+  detectCloudInfrastructureSignals
+} from "./cloudArchitectReview";
+import {
+  buildFeatureEstimatorPrompt,
+  copyFeatureEstimatorSkill
+} from "./featureEstimator";
+import {
+  buildJiraDraftFeatureDetails,
+  buildFeatureGrillMePrompt,
+  copyGrillMeSkill
+} from "./grillMe";
+import { buildAgenticHarnessFileCommandForCommand } from "./agenticHarnessCommand";
+import {
+  UPDATE_GITHUB_ACTIONS_PROMPT,
+  UPDATE_TESTS_PROMPT
+} from "./updateProjectConfig";
+import {
+  EXPLAIN_ME_PROMPT,
+  copyExplainMeSkill
+} from "./explainMe";
 
 type GitInputBox = {
   value: string;
@@ -108,12 +142,6 @@ type GitExtensionExports = {
   getAPI(version: 1): GitApi;
 };
 
-<<<<<<< HEAD
-=======
-type AssignableAgentOption = {
-  label: AssignableAgentLabel;
-};
-
 function getRepoPackageVersion(repoRoot: string): string | undefined {
   try {
     const packageJsonPath = path.join(repoRoot, "package.json");
@@ -126,16 +154,21 @@ function getRepoPackageVersion(repoRoot: string): string | undefined {
     return undefined;
   }
 }
-
->>>>>>> main
 export function activate(context: vscode.ExtensionContext) {
   const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
   const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
+  const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+  const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
+  const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+  const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
   context.subscriptions.push(outputChannel);
   initLogger(outputChannel);
 
   const provider = new AntigravityViewProvider();
   const extensionRoot = context.extensionPath;
+  const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(
+    path.join(extensionRoot, "Resources", "feature-estimator-red.svg")
+  );
   log(`[activate] Extension root: ${extensionRoot}`);
   const launchClaudeInit = async (
     repoRoot: string,
@@ -151,7 +184,7 @@ export function activate(context: vscode.ExtensionContext) {
       ? fs.readFileSync(guidelinesFile, "utf8").trim()
       : "/init";
     log(`[launchClaudeInit] launching Claude init terminal`);
-    await runClaudeInitAndUpdateInNewTerminal(repoRoot, prompt);
+    await runClaudeInitAndUpdateInPersistentTerminal(repoRoot, prompt);
     log(`[launchClaudeInit] done`);
   };
 
@@ -166,8 +199,38 @@ export function activate(context: vscode.ExtensionContext) {
       ? fs.readFileSync(guidelinesFile, "utf8").trim()
       : "/init";
     log(`[launchAgentInit] launching Codex init terminal`);
-    await runCodexInitAndUpdateInNewTerminal(repoRoot, prompt);
+    await runCodexInitAndUpdateInPersistentTerminal(repoRoot, prompt);
     log(`[launchAgentInit] done`);
+  };
+
+  const launchUpdateProjectConfigPrompt = (
+    logKey: string,
+    terminalName: string,
+    prompt: string,
+    iconId: string,
+    successMessage: string
+  ): void => {
+    log(`[${logKey}] triggered`);
+    const rootPath = getRootPath();
+    if (!rootPath) {
+      void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+      return;
+    }
+    const repoRoot = getRepoRoot(rootPath);
+
+    logAlways(`[${logKey}] delegating to Agentic Harness`);
+    runInPersistentTerminal(
+      terminalName,
+      [
+        `cd ${quoteShellArg(repoRoot)}`,
+        buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous")
+      ],
+      {
+        iconPath: new vscode.ThemeIcon(iconId, UPDATE_PROJECT_CONFIG_ACTION_COLOR),
+        color: UPDATE_PROJECT_CONFIG_ACTION_COLOR
+      }
+    );
+    void vscode.window.showInformationMessage(successMessage);
   };
 
   const refreshAutocommitUiWhenStateChanges = (
@@ -306,6 +369,270 @@ export function activate(context: vscode.ExtensionContext) {
     return undefined;
   };
 
+  const escapeHtml = (value: string): string =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const renderSetupWorkspaceHtml = (
+    webview: vscode.Webview,
+    workspaceDir: string,
+    projectTemplates: ProjectTemplate[]
+  ): string => {
+    const nonce = getNonce();
+    const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+    const templateCards = projectTemplates
+      .map((template, index) => {
+        const checked = index === 0 ? " checked" : "";
+        const selectedClass = index === 0 ? " selected" : "";
+        const descriptionHtml = escapeHtml(template.description).replace(/\n/g, "<br />");
+        return `
+          <label class="template-card${selectedClass}">
+            <input type="radio" name="project-template" value="${escapeHtml(template.name)}"${checked} />
+            <span class="template-copy">
+              <span class="template-name">${escapeHtml(template.name)}</span>
+              <span class="template-description">${descriptionHtml}</span>
+            </span>
+          </label>
+        `;
+      })
+      .join("");
+
+    return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Setup Workspace</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: var(--vscode-font-family);
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+      }
+      form {
+        display: grid;
+        gap: 16px;
+      }
+      .intro {
+        display: grid;
+        gap: 6px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+      }
+      .workspace-path {
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 12px;
+        color: var(--vscode-textPreformat-foreground);
+        background: var(--vscode-textCodeBlock-background);
+        border-radius: 6px;
+        padding: 10px 12px;
+        overflow-wrap: anywhere;
+      }
+      .template-list {
+        display: grid;
+        gap: 10px;
+      }
+      .template-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--vscode-input-border, transparent);
+        background: var(--vscode-sideBar-background);
+        cursor: pointer;
+      }
+      .template-card.selected {
+        border-color: var(--vscode-focusBorder);
+        background: var(--vscode-list-hoverBackground);
+      }
+      .template-card input {
+        margin-top: 3px;
+      }
+      .template-copy {
+        display: grid;
+        gap: 6px;
+      }
+      .template-name {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .template-description {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        line-height: 1.5;
+      }
+      .error {
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--vscode-errorForeground);
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 4px;
+      }
+      button {
+        font: inherit;
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 14px;
+        cursor: pointer;
+      }
+      button[type="submit"] {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+      }
+      button[type="submit"][data-action="estimate"] {
+        background: var(--vscode-charts-green, #2ea043);
+      }
+      button[type="submit"][data-action="estimate"]:hover {
+        background: color-mix(in srgb, var(--vscode-charts-green, #2ea043) 88%, black 12%);
+      }
+      button[type="button"] {
+        color: var(--vscode-button-secondaryForeground);
+        background: var(--vscode-button-secondaryBackground);
+      }
+    </style>
+  </head>
+  <body>
+    <form id="setup-workspace-form">
+      <div class="intro">
+        <div>Select a project template to download into the configured workspace path.</div>
+        <div class="hint">After you click Setup, the selected Agentic Harness command from Settings will be launched to perform the download.</div>
+        <div class="workspace-path">${escapeHtml(workspaceDir)}</div>
+      </div>
+
+      <div class="template-list">
+        ${templateCards}
+      </div>
+
+      <div id="setup-workspace-error" class="error" aria-live="polite"></div>
+
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit">Setup</button>
+      </div>
+    </form>
+
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const form = document.getElementById("setup-workspace-form");
+      const errorMessage = document.getElementById("setup-workspace-error");
+      const cancelButton = document.getElementById("cancel-button");
+      const cards = Array.from(document.querySelectorAll(".template-card"));
+      const radios = Array.from(document.querySelectorAll('input[name="project-template"]'));
+
+      const syncSelectedState = () => {
+        cards.forEach((card) => {
+          const radio = card.querySelector('input[name="project-template"]');
+          card.classList.toggle("selected", Boolean(radio && radio.checked));
+        });
+      };
+
+      radios.forEach((radio) => {
+        radio.addEventListener("change", syncSelectedState);
+      });
+
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelSetupWorkspace" });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const selected = radios.find((radio) => radio.checked);
+        if (!selected) {
+          errorMessage.textContent = "Select a project type.";
+          return;
+        }
+        errorMessage.textContent = "";
+        vscode.postMessage({
+          type: "submitSetupWorkspace",
+          payload: { templateName: selected.value }
+        });
+      });
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (message?.type === "setupWorkspaceError") {
+          errorMessage.textContent =
+            message.payload?.message || "Unable to start workspace setup.";
+        }
+      });
+
+      syncSelectedState();
+    </script>
+  </body>
+</html>`;
+  };
+
+  const showSetupWorkspaceDialog = async (
+    workspaceDir: string,
+    projectTemplates: ProjectTemplate[]
+  ): Promise<ProjectTemplate | undefined> =>
+    new Promise((resolve) => {
+      const panel = vscode.window.createWebviewPanel(
+        "setupWorkspace",
+        "Setup Workspace",
+        vscode.ViewColumn.Active,
+        { enableScripts: true }
+      );
+      panel.webview.html = renderSetupWorkspaceHtml(panel.webview, workspaceDir, projectTemplates);
+
+      let settled = false;
+      const resolveOnce = (value: ProjectTemplate | undefined) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
+      panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          if (!message) return;
+          if (message.type === "cancelSetupWorkspace") {
+            panel.dispose();
+            return;
+          }
+          if (message.type !== "submitSetupWorkspace") return;
+
+          const payload = message.payload || {};
+          const templateName =
+            typeof payload.templateName === "string" ? payload.templateName.trim() : "";
+          const selectedTemplate = projectTemplates.find(
+            (projectTemplate) => projectTemplate.name === templateName
+          );
+
+          if (!selectedTemplate) {
+            void panel.webview.postMessage({
+              type: "setupWorkspaceError",
+              payload: { message: "Select a project type." }
+            });
+            return;
+          }
+
+          resolveOnce(selectedTemplate);
+          panel.dispose();
+        },
+        undefined,
+        context.subscriptions
+      );
+    });
+
   const renderCreateFeatureBranchHtml = (webview: vscode.Webview, hasJiraProject: boolean): string => {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -389,6 +716,12 @@ export function activate(context: vscode.ExtensionContext) {
       button[type="submit"] {
         color: var(--vscode-button-foreground);
         background: var(--vscode-button-background);
+      }
+      button[type="submit"][data-action="grillMe"] {
+        background: var(--vscode-charts-green, #2ea043);
+      }
+      button[type="submit"][data-action="grillMe"]:hover {
+        background: color-mix(in srgb, var(--vscode-charts-green, #2ea043) 88%, black 12%);
       }
       button[type="button"] {
         color: var(--vscode-button-secondaryForeground);
@@ -657,6 +990,486 @@ export function activate(context: vscode.ExtensionContext) {
     const env = parseEnvFile(getRepoEnvPath(repoRoot));
     return (env.jira_project_key || "").trim().toUpperCase();
   };
+
+  type FeatureEstimatorDialogAction = "estimate" | "grillMe";
+
+  type FeatureEstimatorDialogResult =
+    | { action: FeatureEstimatorDialogAction; source: "jira"; issue: JiraIssueSummary }
+    | { action: FeatureEstimatorDialogAction; source: "text"; featureDetails: string };
+
+  const buildFeatureEstimatorDetailsFromIssue = (issue: JiraIssueSummary): string => {
+    const metadata = [issue.issueTypeName, issue.statusName].filter(Boolean).join(", ");
+    return metadata
+      ? `Jira item ${issue.key} (${metadata}): ${issue.summary}`
+      : `Jira item ${issue.key}: ${issue.summary}`;
+  };
+
+  const renderFeatureEstimatorHtml = (
+    webview: vscode.Webview,
+    savedProjectKey: string
+  ): string => {
+    const nonce = getNonce();
+    const hasSavedProjectKey = savedProjectKey.length > 0;
+    const useJiraByDefault = hasSavedProjectKey;
+    const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
+
+    return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Feature Estimator</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: var(--vscode-font-family);
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        color: var(--vscode-foreground);
+        background: var(--vscode-editor-background);
+      }
+      form {
+        display: grid;
+        gap: 18px;
+      }
+      .intro {
+        display: grid;
+        gap: 6px;
+      }
+      .mode-list {
+        display: grid;
+        gap: 12px;
+      }
+      .mode-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--vscode-input-border, transparent);
+        background: var(--vscode-sideBar-background);
+      }
+      .mode-card.selected {
+        border-color: var(--vscode-focusBorder);
+        background: var(--vscode-list-hoverBackground);
+      }
+      .mode-card.disabled {
+        opacity: 0.65;
+      }
+      .mode-card input[type="radio"] {
+        margin-top: 3px;
+      }
+      .mode-copy {
+        display: grid;
+        gap: 4px;
+      }
+      .mode-title {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .mode-description,
+      .hint,
+      .status {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        line-height: 1.5;
+      }
+      .status.warning {
+        color: var(--vscode-errorForeground);
+      }
+      .section {
+        display: grid;
+        gap: 8px;
+        padding: 14px;
+        border-radius: 8px;
+        border: 1px solid var(--vscode-input-border, transparent);
+        background: color-mix(in srgb, var(--vscode-editor-background) 92%, var(--vscode-editorWidget-background) 8%);
+      }
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+      }
+      select,
+      textarea,
+      button {
+        font: inherit;
+      }
+      select,
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 6px;
+      }
+      textarea {
+        min-height: 180px;
+        resize: vertical;
+      }
+      .error {
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--vscode-errorForeground);
+      }
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      button {
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 14px;
+        cursor: pointer;
+      }
+      button[type="submit"] {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+      }
+      button[type="button"] {
+        color: var(--vscode-button-secondaryForeground);
+        background: var(--vscode-button-secondaryBackground);
+      }
+    </style>
+  </head>
+  <body>
+    <form id="feature-estimator-form">
+      <div class="intro">
+        <div>Estimate a feature from a Jira item in To Do or from a free-form description.</div>
+        <div class="hint">When you click Estimate, Task Runner copies the bundled estimator skill into this project and launches the selected Agentic Harness command from Settings. When you click Grill Me, it copies the bundled grill-me skill and launches a feature review prompt with the same selected Jira item or text description.</div>
+      </div>
+
+      <div class="mode-list">
+        <label class="mode-card${useJiraByDefault ? " selected" : ""}" id="mode-jira-card">
+          <input
+            id="mode-jira"
+            type="radio"
+            name="feature-source"
+            value="jira"${useJiraByDefault ? " checked" : ""}${hasSavedProjectKey ? "" : " disabled"}
+          />
+          <span class="mode-copy">
+            <span class="mode-title">Jira To Do Item</span>
+            <span class="mode-description">Pick a feature from Jira project ${hasSavedProjectKey ? escapeHtml(savedProjectKey) : "setup"} and work from that backlog item.</span>
+          </span>
+        </label>
+
+        <div class="section" id="jira-section"${useJiraByDefault ? "" : " hidden"}>
+          <label>
+            Jira Item
+            <select id="jira-issue-select">
+              <option value="">${hasSavedProjectKey ? "— Loading To Do Jira items… —" : "— Set JIRA_PROJECT_KEY to use Jira items —"}</option>
+            </select>
+          </label>
+          <div class="hint" id="jira-hint">${hasSavedProjectKey ? `Pick one To Do Jira item from ${escapeHtml(savedProjectKey)}.` : "Set JIRA_PROJECT_KEY in this repository to enable Jira-based estimation."}</div>
+          <div class="status${hasSavedProjectKey ? "" : " warning"}" id="jira-status">${hasSavedProjectKey ? `Loading To Do Jira items from ${escapeHtml(savedProjectKey)}...` : "Jira estimation is unavailable until JIRA_PROJECT_KEY is configured and Jira credentials are available."}</div>
+        </div>
+
+        <label class="mode-card${useJiraByDefault ? "" : " selected"}" id="mode-text-card">
+          <input
+            id="mode-text"
+            type="radio"
+            name="feature-source"
+            value="text"${useJiraByDefault ? "" : " checked"}
+          />
+          <span class="mode-copy">
+            <span class="mode-title">Free Text Description</span>
+            <span class="mode-description">Describe the feature directly when it is not in Jira yet or you want to estimate or review a draft idea.</span>
+          </span>
+        </label>
+
+        <div class="section" id="text-section"${useJiraByDefault ? " hidden" : ""}>
+          <label>
+            Feature Description
+            <textarea id="feature-description" placeholder="Describe the feature, expected behavior, constraints, integrations, and any assumptions that would affect the estimate."></textarea>
+          </label>
+          <div class="hint">Include enough detail for the selected skill to assess the feature, whether you want an estimate or a deeper review.</div>
+        </div>
+      </div>
+
+      <div class="error" id="feature-estimator-error" aria-live="polite"></div>
+
+      <div class="actions">
+        <button type="button" id="cancel-button">Cancel</button>
+        <button type="submit" data-action="estimate">Estimate</button>
+        <button type="submit" data-action="grillMe">Grill Me</button>
+      </div>
+    </form>
+
+    <script nonce="${nonce}">
+      const vscode = acquireVsCodeApi();
+      const hasSavedProjectKey = ${JSON.stringify(hasSavedProjectKey)};
+      const savedProjectKey = ${JSON.stringify(savedProjectKey)};
+      const form = document.getElementById("feature-estimator-form");
+      const errorMessage = document.getElementById("feature-estimator-error");
+      const cancelButton = document.getElementById("cancel-button");
+      const jiraRadio = document.getElementById("mode-jira");
+      const textRadio = document.getElementById("mode-text");
+      const jiraCard = document.getElementById("mode-jira-card");
+      const textCard = document.getElementById("mode-text-card");
+      const jiraSection = document.getElementById("jira-section");
+      const textSection = document.getElementById("text-section");
+      const jiraIssueSelect = document.getElementById("jira-issue-select");
+      const jiraHint = document.getElementById("jira-hint");
+      const jiraStatus = document.getElementById("jira-status");
+      const featureDescription = document.getElementById("feature-description");
+      const sourceRadios = Array.from(document.querySelectorAll('input[name="feature-source"]'));
+
+      const setJiraCardState = () => {
+        jiraCard.classList.toggle("selected", jiraRadio.checked && !jiraRadio.disabled);
+        jiraCard.classList.toggle("disabled", jiraRadio.disabled);
+        textCard.classList.toggle("selected", textRadio.checked);
+      };
+
+      const syncSourceState = () => {
+        const usingJira = jiraRadio.checked && !jiraRadio.disabled;
+        jiraSection.hidden = !usingJira;
+        textSection.hidden = usingJira;
+        setJiraCardState();
+        errorMessage.textContent = "";
+      };
+
+      const switchToTextIfNeeded = () => {
+        if (jiraRadio.checked && jiraRadio.disabled) {
+          textRadio.checked = true;
+        }
+        syncSourceState();
+      };
+
+      const updateJiraHint = () => {
+        const selected = jiraIssueSelect.options[jiraIssueSelect.selectedIndex];
+        const summary = selected?.dataset.summary || "";
+        const issueType = selected?.dataset.issueType || "";
+        const status = selected?.dataset.status || "";
+
+        jiraHint.textContent = summary
+          ? [summary, [issueType, status].filter(Boolean).join(" • ")].filter(Boolean).join(" • ")
+          : hasSavedProjectKey
+            ? "Pick one To Do Jira item from " + savedProjectKey + "."
+            : "Set JIRA_PROJECT_KEY in this repository to enable Jira-based estimation.";
+      };
+
+      sourceRadios.forEach((radio) => {
+        radio.addEventListener("change", syncSourceState);
+      });
+
+      jiraIssueSelect.addEventListener("change", updateJiraHint);
+
+      cancelButton.addEventListener("click", () => {
+        vscode.postMessage({ type: "cancelFeatureEstimator" });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const usingJira = jiraRadio.checked && !jiraRadio.disabled;
+        const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "estimate";
+
+        if (usingJira) {
+          if (!jiraIssueSelect.value) {
+            errorMessage.textContent = "Select a Jira item.";
+            jiraIssueSelect.focus();
+            return;
+          }
+
+          vscode.postMessage({
+            type: "submitFeatureEstimator",
+            payload: {
+              action,
+              source: "jira",
+              issueKey: jiraIssueSelect.value
+            }
+          });
+          return;
+        }
+
+        const details = featureDescription.value.trim();
+        if (!details) {
+          errorMessage.textContent = "Enter a feature description.";
+          featureDescription.focus();
+          return;
+        }
+
+        vscode.postMessage({
+          type: "submitFeatureEstimator",
+          payload: {
+            action,
+            source: "text",
+            featureDetails: details
+          }
+        });
+      });
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (!message) return;
+
+        if (message.type === "featureEstimatorError") {
+          errorMessage.textContent = message.payload?.message || "Unable to start this feature action.";
+          return;
+        }
+
+        if (message.type === "featureEstimatorJiraLoaded") {
+          const issues = message.payload?.issues || [];
+          const projectKey = message.payload?.projectKey || savedProjectKey;
+
+          jiraIssueSelect.innerHTML = "";
+          if (issues.length === 0) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "— No To Do Jira items found —";
+            jiraIssueSelect.appendChild(option);
+            jiraRadio.disabled = true;
+            jiraStatus.textContent = "No To Do Jira items were found in " + projectKey + ".";
+            jiraStatus.classList.add("warning");
+            updateJiraHint();
+            switchToTextIfNeeded();
+            return;
+          }
+
+          for (const issue of issues) {
+            const option = document.createElement("option");
+            option.value = issue.key;
+            option.textContent = issue.key + "  " + issue.summary;
+            option.dataset.summary = issue.summary || "";
+            option.dataset.issueType = issue.issueTypeName || "";
+            option.dataset.status = issue.statusName || "";
+            jiraIssueSelect.appendChild(option);
+          }
+
+          jiraRadio.disabled = false;
+          jiraIssueSelect.value = issues[0].key;
+          jiraStatus.textContent =
+            "Loaded " + issues.length + " To Do Jira item" + (issues.length === 1 ? "" : "s") + " from " + projectKey + ".";
+          jiraStatus.classList.remove("warning");
+          updateJiraHint();
+          syncSourceState();
+          return;
+        }
+
+        if (message.type === "featureEstimatorJiraError") {
+          const error = message.payload?.message || "Unable to load Jira items for estimation.";
+          jiraIssueSelect.innerHTML = "";
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "— Jira items unavailable —";
+          jiraIssueSelect.appendChild(option);
+          jiraRadio.disabled = true;
+          jiraStatus.textContent = error;
+          jiraStatus.classList.add("warning");
+          updateJiraHint();
+          switchToTextIfNeeded();
+        }
+      });
+
+      setJiraCardState();
+      updateJiraHint();
+      syncSourceState();
+      (jiraRadio.checked && !jiraRadio.disabled ? jiraIssueSelect : featureDescription).focus();
+    </script>
+  </body>
+</html>`;
+  };
+
+  const showFeatureEstimatorDialog = async (
+    repoRoot: string
+  ): Promise<FeatureEstimatorDialogResult | undefined> =>
+    new Promise((resolve) => {
+      const savedProjectKey = getSavedJiraProjectKey(repoRoot);
+      const panel = vscode.window.createWebviewPanel(
+        "featureEstimator",
+        "Feature Estimator",
+        vscode.ViewColumn.Active,
+        { enableScripts: true }
+      );
+      panel.webview.html = renderFeatureEstimatorHtml(panel.webview, savedProjectKey);
+
+      let availableIssues: JiraIssueSummary[] = [];
+
+      if (savedProjectKey) {
+        void (async () => {
+          try {
+            const credentials = getJiraCredentialsFromEnv(repoRoot);
+            const issues = await searchOpenTodoJiraIssuesForProject(credentials, savedProjectKey);
+            availableIssues = issues;
+            void panel.webview.postMessage({
+              type: "featureEstimatorJiraLoaded",
+              payload: {
+                projectKey: savedProjectKey,
+                issues
+              }
+            });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void panel.webview.postMessage({
+              type: "featureEstimatorJiraError",
+              payload: { message }
+            });
+          }
+        })();
+      }
+
+      let settled = false;
+      const resolveOnce = (value: FeatureEstimatorDialogResult | undefined) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
+      panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          if (!message) return;
+          if (message.type === "cancelFeatureEstimator") {
+            panel.dispose();
+            return;
+          }
+          if (message.type !== "submitFeatureEstimator") return;
+
+          const payload = message.payload || {};
+          const action: FeatureEstimatorDialogAction =
+            payload.action === "grillMe" ? "grillMe" : "estimate";
+          const source = payload.source === "jira" ? "jira" : "text";
+
+          if (source === "jira") {
+            const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
+            const issue = availableIssues.find((candidate) => candidate.key === issueKey);
+
+            if (!issue) {
+              void panel.webview.postMessage({
+                type: "featureEstimatorError",
+                payload: { message: "Select a Jira item." }
+              });
+              return;
+            }
+
+            resolveOnce({ action, source: "jira", issue });
+            panel.dispose();
+            return;
+          }
+
+          const featureDetails =
+            typeof payload.featureDetails === "string" ? payload.featureDetails.trim() : "";
+          if (!featureDetails) {
+            void panel.webview.postMessage({
+              type: "featureEstimatorError",
+              payload: { message: "Enter a feature description." }
+            });
+            return;
+          }
+
+          resolveOnce({ action, source: "text", featureDetails });
+          panel.dispose();
+        },
+        undefined,
+        context.subscriptions
+      );
+    });
 
   const getSopManualLink = (repoRoot?: string): string => {
     const config = vscode.workspace.getConfiguration("antigravity");
@@ -942,16 +1755,27 @@ export function activate(context: vscode.ExtensionContext) {
               return;
             }
 
-            const jiraPrompt = buildCreateJiraProjectAgenticHarnessPrompt({
+            try {
+              const copiedSkillPaths = await copyJiraProjectCreationSkill(extensionRoot, repoRoot);
+              logAlways(
+                `[jiraProjectCreate] skill locations ready: ${
+                  copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+                }`
+              );
+              provider.refresh();
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              void panel.webview.postMessage({
+                type: "jiraProjectSetupError",
+                payload: { message: `Failed to prepare the ${JIRA_PROJECT_CREATION_SKILL_NAME} skill: ${message}` }
+              });
+              return;
+            }
+
+            const prompt = buildCreateJiraProjectAgenticHarnessPrompt({
               projectName,
               projectKey,
               description
-            });
-            const prompt = buildAgenticHarnessSkillTaskPrompt({
-              agenticHarnessCommand: getAgenticHarnessExecutionCommand(),
-              skillName: JIRA_PROJECT_CREATION_SKILL_NAME,
-              localSkillSourcePath: path.join(extensionRoot, "Resources", "jira-project-creation"),
-              taskPrompt: jiraPrompt
             });
             const envPath = getRepoEnvPath(repoRoot);
             const commandLine = buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous");
@@ -1087,6 +1911,23 @@ export function activate(context: vscode.ExtensionContext) {
     return projectKey;
   };
 
+  type CreateJiraItemDialogAction = "create" | "grillMe";
+
+  type CreateJiraItemDialogResult = {
+    action: CreateJiraItemDialogAction;
+    issueType: string;
+    summary: string;
+    description: string;
+  };
+
+  type AssignJiraItemToAgentDialogAction = "assign" | "grillMe";
+
+  type AssignJiraItemToAgentDialogResult = {
+    action: AssignJiraItemToAgentDialogAction;
+    issueKey: string;
+    agentCommand: string;
+  };
+
   const renderCreateJiraItemHtml = (
     webview: vscode.Webview,
     projectKey: string,
@@ -1125,6 +1966,8 @@ export function activate(context: vscode.ExtensionContext) {
       .actions { display: flex; justify-content: flex-end; gap: 8px; }
       button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
       button[type="submit"] { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+      button[type="submit"][data-action="grillMe"] { background: var(--vscode-charts-green, #2ea043); }
+      button[type="submit"][data-action="grillMe"]:hover { background: color-mix(in srgb, var(--vscode-charts-green, #2ea043) 88%, black 12%); }
       button[type="button"] { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
     </style>
   </head>
@@ -1147,7 +1990,8 @@ export function activate(context: vscode.ExtensionContext) {
       <div class="error" id="error-message"></div>
       <div class="actions">
         <button type="button" id="cancel-button">Cancel</button>
-        <button type="submit">Create</button>
+        <button type="submit" data-action="create">Create</button>
+        <button type="submit" data-action="grillMe">Grill Me</button>
       </div>
     </form>
     <script nonce="${nonce}">
@@ -1173,7 +2017,9 @@ export function activate(context: vscode.ExtensionContext) {
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
+        const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "create";
         const payload = {
+          action,
           issueType: issueTypeSelect.value,
           summary: issueNameInput.value.trim(),
           description: issueDescriptionInput.value.trim()
@@ -1203,7 +2049,7 @@ export function activate(context: vscode.ExtensionContext) {
   const showCreateJiraItemDialog = async (
     projectKey: string,
     issueTypes: JiraIssueType[]
-  ): Promise<{ issueType: string; summary: string; description: string } | undefined> =>
+  ): Promise<CreateJiraItemDialogResult | undefined> =>
     new Promise((resolve) => {
       const panel = vscode.window.createWebviewPanel(
         "createJiraItem",
@@ -1215,7 +2061,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       let settled = false;
       const resolveOnce = (
-        value: { issueType: string; summary: string; description: string } | undefined
+        value: CreateJiraItemDialogResult | undefined
       ) => {
         if (settled) return;
         settled = true;
@@ -1233,6 +2079,8 @@ export function activate(context: vscode.ExtensionContext) {
           if (message.type !== "submitCreateJiraItem") return;
 
           const payload = message.payload || {};
+          const action: CreateJiraItemDialogAction =
+            payload.action === "grillMe" ? "grillMe" : "create";
           const issueType = typeof payload.issueType === "string" ? payload.issueType.trim() : "";
           const summary = typeof payload.summary === "string" ? payload.summary.trim() : "";
           const description =
@@ -1253,7 +2101,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          resolveOnce({ issueType, summary, description });
+          resolveOnce({ action, issueType, summary, description });
           panel.dispose();
         },
         undefined,
@@ -1306,6 +2154,8 @@ export function activate(context: vscode.ExtensionContext) {
       .actions { display: flex; justify-content: flex-end; gap: 8px; }
       button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
       button[type="submit"] { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+      button[type="submit"][data-action="grillMe"] { background: var(--vscode-charts-green, #2ea043); }
+      button[type="submit"][data-action="grillMe"]:hover { background: color-mix(in srgb, var(--vscode-charts-green, #2ea043) 88%, black 12%); }
       button[type="button"] { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
     </style>
   </head>
@@ -1325,10 +2175,12 @@ export function activate(context: vscode.ExtensionContext) {
         <select id="issue-select"></select>
         <span class="hint" id="issue-hint"></span>
       </label>
+      <div class="hint">Assign updates the Jira item and launches the selected agent. Grill Me reviews the selected Jira item with the same harness command without changing Jira first.</div>
       <div class="error" id="error-message"></div>
       <div class="actions">
         <button type="button" id="cancel-button">Cancel</button>
-        <button type="submit">Assign</button>
+        <button type="submit" data-action="assign">Assign</button>
+        <button type="submit" data-action="grillMe">Grill Me</button>
       </div>
     </form>
     <script nonce="${nonce}">
@@ -1392,6 +2244,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
+        const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "assign";
         if (!agentCommandInput.value.trim()) {
           errorMessage.textContent = "Enter an agent harness command.";
           agentCommandInput.focus();
@@ -1405,6 +2258,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.postMessage({
           type: "submitAssignJiraItemToAgent",
           payload: {
+            action,
             issueKey: issueSelect.value,
             agentCommand: agentCommandInput.value.trim()
           }
@@ -1445,10 +2299,7 @@ export function activate(context: vscode.ExtensionContext) {
   const showAssignJiraItemToAgentDialog = async (
     projectKey: string,
     issues: JiraIssueSummary[]
-  ): Promise<{
-    issueKey: string;
-    agentCommand: string;
-  } | undefined> =>
+  ): Promise<AssignJiraItemToAgentDialogResult | undefined> =>
     new Promise((resolve) => {
       const initialAgentCommand = getAgenticHarnessExecutionCommand();
       const agentCommandOptions = getAssignableAgentCommandOptions();
@@ -1468,10 +2319,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       let settled = false;
       const resolveOnce = (
-        value: {
-          issueKey: string;
-          agentCommand: string;
-        } | undefined
+        value: AssignJiraItemToAgentDialogResult | undefined
       ) => {
         if (settled) return;
         settled = true;
@@ -1489,6 +2337,8 @@ export function activate(context: vscode.ExtensionContext) {
           if (message.type !== "submitAssignJiraItemToAgent") return;
 
           const payload = message.payload || {};
+          const action: AssignJiraItemToAgentDialogAction =
+            payload.action === "grillMe" ? "grillMe" : "assign";
           const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
           const agentCommand =
             typeof payload.agentCommand === "string" ? payload.agentCommand.trim() : "";
@@ -1510,6 +2360,7 @@ export function activate(context: vscode.ExtensionContext) {
           }
 
           resolveOnce({
+            action,
             issueKey,
             agentCommand
           });
@@ -1556,6 +2407,15 @@ export function activate(context: vscode.ExtensionContext) {
     return scriptPath;
   };
 
+  const writeAgentPromptFile = (filePrefix: string, prompt: string): string => {
+    const sanitizedPrefix =
+      filePrefix.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "agent-prompt";
+    const promptDirectory = fs.mkdtempSync(path.join(os.tmpdir(), `${sanitizedPrefix}-`));
+    const promptFilePath = path.join(promptDirectory, "prompt.txt");
+    fs.writeFileSync(promptFilePath, prompt, "utf8");
+    return promptFilePath;
+  };
+
   const launchAgentForJiraItem = async (
     repoRoot: string,
     agentLabel: AssignableAgentLabel,
@@ -1577,7 +2437,7 @@ export function activate(context: vscode.ExtensionContext) {
         )}`
       ]
       : [`cd ${quoteShellArg(repoRoot)}`, command];
-    runInNewTerminal(
+    runInPersistentTerminal(
       `${agentLabel}: ${issueKey}`,
       lines,
       {
@@ -2475,7 +3335,7 @@ export function activate(context: vscode.ExtensionContext) {
       log(`[runClaudeAgent] repoRoot: ${repoRoot}`);
       const runString = `claude --agent ${quoteShellArg(agentName)}`;
       logAlways(`[runClaudeAgent] runString: ${runString}`);
-      runInNewTerminal(`Agent: ${agentName}`, [
+      runInPersistentTerminal(`Agent: ${agentName}`, [
         `cd ${quoteShellArg(repoRoot)}`,
         runString
       ], {
@@ -2762,7 +3622,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
         }
-        runInNewTerminal("Claude", [`cd ${quoteShellArg(repoRoot)}`, "claude"], {
+        runInPersistentTerminal(getAgentTerminalName(), [`cd ${quoteShellArg(repoRoot)}`, "claude"], {
           iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
           color: CLAUDE_ACTION_COLOR
         });
@@ -2781,7 +3641,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      runInNewTerminal("Ollama Claude", [`cd ${quoteShellArg(repoRoot)}`, "ollama launch claude"], {
+      runInPersistentTerminal(getAgentTerminalName(), [`cd ${quoteShellArg(repoRoot)}`, "ollama launch claude"], {
         iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
         color: CLAUDE_ACTION_COLOR
       });
@@ -2796,7 +3656,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const repoRoot = getRepoRoot(rootPath);
-      runInNewTerminal("OpenClaude", [`cd ${quoteShellArg(repoRoot)}`, "openclaude"], {
+      runInPersistentTerminal(getAgentTerminalName(), [`cd ${quoteShellArg(repoRoot)}`, "openclaude"], {
         iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
         color: CLAUDE_ACTION_COLOR
       });
@@ -2908,6 +3768,187 @@ export function activate(context: vscode.ExtensionContext) {
         undefined,
         context.subscriptions
       );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.setupWorkspace", async () => {
+      showOutputChannel();
+      logAlways("[Setup Workspace] Command triggered");
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!workspaceRoot) {
+        logAlways("[Setup Workspace] ERROR: No workspace folder is open");
+        void vscode.window.showErrorMessage("No workspace folder is open.");
+        return;
+      }
+
+      const repoRoot = workspaceRoot;
+      const workspaceDir = getWorkspaceProjectPath(repoRoot);
+      logAlways(`[Setup Workspace] workspaceDir: ${workspaceDir}`);
+
+      let projectTemplates: ProjectTemplate[];
+      try {
+        projectTemplates = await loadProjectTemplates(path.join(extensionRoot, "Resources"));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[Setup Workspace] ERROR loading templates: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Unable to load Resources/project-templates.json: ${message}`
+        );
+        return;
+      }
+
+      if (projectTemplates.length === 0) {
+        logAlways("[Setup Workspace] ERROR: No valid project templates found");
+        void vscode.window.showErrorMessage(
+          "Resources/project-templates.json does not contain any valid project templates."
+        );
+        return;
+      }
+
+      const selectedTemplate = await showSetupWorkspaceDialog(workspaceDir, projectTemplates);
+      if (!selectedTemplate) {
+        logAlways("[Setup Workspace] Selection cancelled");
+        return;
+      }
+
+      fs.mkdirSync(workspaceDir, { recursive: true });
+
+      let copiedGuideFiles: string[];
+      try {
+        copiedGuideFiles = await copySetupWorkspaceGuideFiles(
+          path.join(extensionRoot, "Resources"),
+          workspaceDir
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[Setup Workspace] ERROR copying guide files: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Failed to copy CLAUDE.md and AGENTS.md into ${workspaceDir}: ${message}`
+        );
+        return;
+      }
+      logAlways(
+        `[Setup Workspace] guide files ready in ${workspaceDir}: ${
+          copiedGuideFiles.length > 0 ? copiedGuideFiles.join(", ") : "already present"
+        }`
+      );
+
+      let createdDirectories: string[];
+      try {
+        createdDirectories = await ensureSetupWorkspaceDirectories(workspaceDir);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[Setup Workspace] ERROR creating support directories: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Failed to create .agent and .claude in ${workspaceDir}: ${message}`
+        );
+        return;
+      }
+      logAlways(
+        `[Setup Workspace] support directories ready in ${workspaceDir}: ${
+          createdDirectories.length > 0 ? createdDirectories.join(", ") : "already present"
+        }`
+      );
+
+      let copiedSkills: string[];
+      try {
+        copiedSkills = await copySetupWorkspaceSkills(
+          path.join(extensionRoot, "Resources"),
+          workspaceDir
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[Setup Workspace] ERROR copying bundled skills: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Failed to copy bundled skills into ${path.join(workspaceDir, ".agent", "skills")}: ${message}`
+        );
+        return;
+      }
+      logAlways(
+        `[Setup Workspace] bundled skills ready in ${workspaceDir}: ${
+          copiedSkills.length > 0 ? copiedSkills.join(", ") : "already present"
+        }`
+      );
+
+      const prompt = buildSetupWorkspacePrompt(selectedTemplate, workspaceDir);
+      const commandLine = buildAgenticHarnessPromptCommand(workspaceDir, prompt, "dangerous");
+      const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;
+
+      try {
+        await runCommandInTaskTerminal(taskName, commandLine, { cwd: workspaceDir });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[Setup Workspace] ERROR launching harness: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Failed to launch the Agentic Harness terminal: ${message}`
+        );
+        return;
+      }
+
+      logAlways(
+        `[Setup Workspace] Opened harness for template ${selectedTemplate.name} in ${workspaceDir}`
+      );
+      void vscode.window.showInformationMessage(
+        `Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}.`
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.updateWorkspaceAgentsMd", async () => {
+      showOutputChannel();
+      logAlways("[updateWorkspaceAgentsMd] Command triggered");
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!workspaceRoot) {
+        logAlways("[updateWorkspaceAgentsMd] ERROR: No workspace folder is open");
+        void vscode.window.showErrorMessage("No workspace folder is open.");
+        return;
+      }
+
+      const repoRoot = workspaceRoot;
+      const workspaceDir = getWorkspaceProjectPath(repoRoot);
+      const agentsFilePath = path.join(workspaceDir, "AGENTS.md");
+
+      if (!fs.existsSync(agentsFilePath)) {
+        logAlways(`[updateWorkspaceAgentsMd] ERROR: Missing AGENTS.md at ${agentsFilePath}`);
+        void vscode.window.showErrorMessage(
+          `AGENTS.md was not found at ${agentsFilePath}. Run Setup Workspace first.`
+        );
+        return;
+      }
+
+      const taskName = `Agentic Harness Update AGENTS.md ${Date.now()}`;
+      const promptFilePath = buildUpdateAgentsMdPromptFilePath(extensionRoot);
+      const commandLine = buildAgenticHarnessFileCommand(workspaceDir, promptFilePath, "dangerous");
+
+      try {
+        await runCommandInTaskTerminal(taskName, commandLine, { cwd: workspaceDir });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[updateWorkspaceAgentsMd] ERROR launching harness: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Failed to launch the Agentic Harness terminal: ${message}`
+        );
+        return;
+      }
+
+      logAlways(`[updateWorkspaceAgentsMd] Opened harness for ${agentsFilePath}`);
+      void vscode.window.showInformationMessage(
+        `Opened Agentic Harness to update AGENTS.md in ${workspaceDir}.`
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.auditSecretsAndVariables", async () => {
+      showOutputChannel();
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!workspaceRoot) {
+        void vscode.window.showErrorMessage("No workspace folder is open.");
+        return;
+      }
+      await runSecretsAudit(workspaceRoot);
     })
   );
 
@@ -3024,11 +4065,34 @@ export function activate(context: vscode.ExtensionContext) {
           fs.rmSync(gitDir, { recursive: true, force: true });
         }
       }
-      logAlways(`[initRepository] invoking init-repo script from ${path.join(extensionRoot, "src")}`);
+      logAlways(`[initRepository] invoking create-repo and init-repo scripts from ${path.join(extensionRoot, "src")}`);
+      await runRepoScript("create-repo", [trimmedRepoName], { scriptDir: path.join(extensionRoot, "src") });
       await runRepoScript("init-repo", [trimmedRepoName], { scriptDir: path.join(extensionRoot, "src") });
-      logAlways("[initRepository] init-repo script invocation completed");
+      logAlways("[initRepository] scripts invocation completed");
       provider.refresh();
       logAlways("[initRepository] tree provider refreshed");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.initRepositoryConfigUpdate", async () => {
+      showOutputChannel();
+      logAlways(`[initRepositoryConfigUpdate] triggered`);
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        logAlways(`[initRepositoryConfigUpdate] ERROR: rootPath not set`);
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      logAlways(`[initRepositoryConfigUpdate] repoRoot: ${repoRoot}`);
+      
+      logAlways(`[initRepositoryConfigUpdate] invoking init-repo script from ${path.join(extensionRoot, "src")}`);
+      // Passing empty string for repo name to trigger detection in the script
+      await runRepoScript("init-repo", [""], { scriptDir: path.join(extensionRoot, "src") });
+      logAlways("[initRepositoryConfigUpdate] script invocation completed");
+      provider.refresh();
+      logAlways("[initRepositoryConfigUpdate] tree provider refreshed");
     })
   );
 
@@ -3304,6 +4368,50 @@ export function activate(context: vscode.ExtensionContext) {
       const jiraItem = await showCreateJiraItemDialog(projectKey, issueTypes);
       if (!jiraItem) return;
 
+      if (jiraItem.action === "grillMe") {
+        try {
+          const copiedSkillPaths = await copyGrillMeSkill(extensionRoot, repoRoot);
+          logAlways(
+            `[createJiraItemGrillMe] skill locations ready: ${
+              copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+            }`
+          );
+          provider.refresh();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          logAlways(`[createJiraItemGrillMe] ERROR preparing skill: ${message}`);
+          void vscode.window.showErrorMessage(`Failed to prepare the grill-me skill: ${message}`);
+          return;
+        }
+
+        const featureDetails = buildJiraDraftFeatureDetails(
+          projectKey,
+          jiraItem.issueType,
+          jiraItem.summary,
+          jiraItem.description
+        );
+        const prompt = buildFeatureGrillMePrompt(featureDetails);
+        const promptFilePath = writeAgentPromptFile("create-jira-item-grill-me", prompt);
+        const commandLine = buildAgenticHarnessFileCommand(repoRoot, promptFilePath, "prompt");
+
+        logAlways("[createJiraItemGrillMe] launching Agentic Harness for Jira draft review");
+        runInPersistentTerminal(
+          "Create Jira Item Grill Me",
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            commandLine
+          ],
+          {
+            iconPath: FEATURE_ESTIMATOR_ICON_PATH,
+            color: FEATURE_ESTIMATOR_ACTION_COLOR
+          }
+        );
+        void vscode.window.showInformationMessage(
+          `Opened Grill Me for the ${jiraItem.issueType} draft in project ${projectKey}.`
+        );
+        return;
+      }
+
       try {
         const createdIssue = await vscode.window.withProgress(
           {
@@ -3493,6 +4601,53 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      if (selection.action === "grillMe") {
+        try {
+          const copiedSkillPaths = await copyGrillMeSkill(extensionRoot, repoRoot);
+          logAlways(
+            `[assignJiraItemToAgentGrillMe] skill locations ready: ${
+              copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+            }`
+          );
+          provider.refresh();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          logAlways(`[assignJiraItemToAgentGrillMe] ERROR preparing skill: ${message}`);
+          void vscode.window.showErrorMessage(`Failed to prepare the grill-me skill: ${message}`);
+          return;
+        }
+
+        const featureDetails = buildFeatureEstimatorDetailsFromIssue(issue);
+        const prompt = buildFeatureGrillMePrompt(featureDetails);
+        const promptFilePath = writeAgentPromptFile("assign-jira-item-grill-me", prompt);
+        const commandLine = buildAgenticHarnessFileCommandForCommand(
+          selection.agentCommand,
+          repoRoot,
+          promptFilePath,
+          "prompt"
+        );
+        logAlways(`[assignJiraItemToAgentGrillMe] runString (file): ${commandLine}`);
+
+        logAlways(
+          `[assignJiraItemToAgentGrillMe] launching Agentic Harness for ${issue.key} with selected command`
+        );
+        runInPersistentTerminal(
+          "Assign Jira Item Grill Me",
+          [
+            `cd ${quoteShellArg(repoRoot)}`,
+            commandLine
+          ],
+          {
+            iconPath: FEATURE_ESTIMATOR_ICON_PATH,
+            color: FEATURE_ESTIMATOR_ACTION_COLOR
+          }
+        );
+        void vscode.window.showInformationMessage(
+          `Opened Grill Me for Jira item ${issue.key} with the selected agent harness command.`
+        );
+        return;
+      }
+
       const agentLabel = inferAssignableAgentLabelFromCommand(selection.agentCommand);
       const updatedSummary = buildIssueSummaryForAgent(issue.summary, agentLabel);
 
@@ -3659,19 +4814,200 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.cloudArchitectReview", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+      const cloudInfrastructureSignals = detectCloudInfrastructureSignals(repoRoot, 3);
+      if (cloudInfrastructureSignals.length === 0) {
+        void vscode.window.showInformationMessage(
+          "Cloud Architect Review stays visible for this project, but it is disabled until cloud infrastructure signals are detected."
+        );
+        return;
+      }
+
+      try {
+        const copiedSkillPaths = await copyCloudArchitectSkill(extensionRoot, repoRoot);
+        logAlways(
+          `[cloudArchitectReview] skill locations ready: ${
+            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          }`
+        );
+        provider.refresh();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[cloudArchitectReview] ERROR preparing skill: ${message}`);
+        void vscode.window.showErrorMessage(`Failed to prepare the cloud-architect skill: ${message}`);
+        return;
+      }
+
+      const commandLine = buildAgenticHarnessPromptCommand(
+        repoRoot,
+        CLOUD_ARCHITECT_REVIEW_PROMPT,
+        "prompt"
+      );
+
+      logAlways(
+        `[cloudArchitectReview] launching Agentic Harness with signals: ${cloudInfrastructureSignals.join(", ")}`
+      );
+      runInPersistentTerminal(
+        "Cloud Architect Review",
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          commandLine
+        ],
+        {
+          iconPath: new vscode.ThemeIcon("cloud", CLOUD_ARCHITECT_ACTION_COLOR),
+          color: CLOUD_ARCHITECT_ACTION_COLOR
+        }
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.featureEstimator", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+      const selection = await showFeatureEstimatorDialog(repoRoot);
+      if (!selection) return;
+
+      const featureDetails =
+        selection.source === "jira"
+          ? buildFeatureEstimatorDetailsFromIssue(selection.issue)
+          : selection.featureDetails;
+      const isGrillMeAction = selection.action === "grillMe";
+      const actionKey = isGrillMeAction ? "featureGrillMe" : "featureEstimator";
+      const skillDisplayName = isGrillMeAction ? "grill-me" : "estimator";
+      const prompt = isGrillMeAction
+        ? buildFeatureGrillMePrompt(featureDetails)
+        : buildFeatureEstimatorPrompt(featureDetails);
+      const promptFilePath = writeAgentPromptFile(
+        isGrillMeAction ? "feature-grill-me" : "feature-estimator",
+        prompt
+      );
+      const terminalName = isGrillMeAction ? "Feature Grill Me" : "Feature Estimator";
+
+      try {
+        const copiedSkillPaths = isGrillMeAction
+          ? await copyGrillMeSkill(extensionRoot, repoRoot)
+          : await copyFeatureEstimatorSkill(extensionRoot, repoRoot);
+        logAlways(
+          `[${actionKey}] skill locations ready: ${
+            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          }`
+        );
+        provider.refresh();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[${actionKey}] ERROR preparing skill: ${message}`);
+        void vscode.window.showErrorMessage(`Failed to prepare the ${skillDisplayName} skill: ${message}`);
+        return;
+      }
+
+      const commandLine = buildAgenticHarnessFileCommand(repoRoot, promptFilePath, "prompt");
+
+      logAlways(
+        `[${actionKey}] launching Agentic Harness for ${
+          selection.source === "jira" ? selection.issue.key : "free-text request"
+        }`
+      );
+      runInPersistentTerminal(
+        terminalName,
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          commandLine
+        ],
+        {
+          iconPath: FEATURE_ESTIMATOR_ICON_PATH,
+          color: FEATURE_ESTIMATOR_ACTION_COLOR
+        }
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.explainMe", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+
+      try {
+        const copiedSkillPaths = await copyExplainMeSkill(extensionRoot, repoRoot);
+        logAlways(
+          `[explainMe] skill locations ready: ${
+            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          }`
+        );
+        provider.refresh();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[explainMe] ERROR preparing skill: ${message}`);
+        void vscode.window.showErrorMessage(`Failed to prepare the explain-me skill: ${message}`);
+        return;
+      }
+
+      const commandLine = buildAgenticHarnessPromptCommand(
+        repoRoot,
+        EXPLAIN_ME_PROMPT,
+        "prompt"
+      );
+
+      logAlways("[explainMe] launching Agentic Harness for project explanation");
+      runInPersistentTerminal(
+        "Explain Me",
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          commandLine
+        ],
+        {
+          iconPath: new vscode.ThemeIcon("comment-discussion", EXPLAIN_ME_ACTION_COLOR),
+          color: EXPLAIN_ME_ACTION_COLOR
+        }
+      );
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.createRepoTagVersion", async () => {
       log(`[createRepoTagVersion] triggered`);
-      const description = await vscode.window.showInputBox({
-        title: "Create Repo Tag Version",
-        prompt: "Add a tag description (optional)"
-      });
-      if (description === undefined) return;
-      const trimmed = description.trim();
-      log(`[createRepoTagVersion] description: "${trimmed}"`);
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      const branch = (await execInRepo("git branch --show-current", repoRoot)).trim();
+      const pkgPath = path.join(repoRoot, "package.json");
+      let label: string;
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as { version?: string };
+        const parts = (pkg.version ?? "0.0.0").split(".").map(Number);
+        parts[2] = (parts[2] ?? 0) + 1;
+        label = `v${parts.join(".")}`;
+      } catch {
+        label = "release";
+      }
+      if (branch && branch !== "main") {
+        label += ` (from ${branch})`;
+      }
+      log(`[createRepoTagVersion] label: "${label}"`);
       const createReleaseBranch = vscode.workspace
         .getConfiguration("antigravity")
         .get<boolean>("createReleaseBranchWhenCreatingReleases") ?? true;
-      await runRepoScript("commit-push-tag", trimmed ? [trimmed] : [], {
+      await runRepoScript("commit-push-tag", [label], {
         scriptDir: path.join(extensionRoot, "src"),
         env: {
           CREATE_RELEASE_BRANCH: createReleaseBranch ? "1" : "0"
@@ -3704,7 +5040,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      runInNewTerminal(
+      runInPersistentTerminal(
         "Create Feature Branch",
         [
           `cd ${quoteShellArg(repoRoot)}`,
@@ -3786,7 +5122,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      runInNewTerminal(
+      runInPersistentTerminal(
         "Create Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
@@ -3881,7 +5217,7 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
 
-        runInNewTerminal(
+        runInPersistentTerminal(
           "Merge Branch to Main",
           [
             `cd ${quoteShellArg(repoRoot)}`,
@@ -3930,7 +5266,7 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
 
-        runInNewTerminal(
+        runInPersistentTerminal(
           "Checkout Branch",
           [
             `cd ${quoteShellArg(repoRoot)}`,
@@ -3982,7 +5318,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         const projectTestingCommand = getProjectTestingCommand();
 
-        runInNewTerminal(
+        runInPersistentTerminal(
           "Pull Remote and Merge",
           [
             `cd ${quoteShellArg(repoRoot)}`,
@@ -4050,7 +5386,7 @@ export function activate(context: vscode.ExtensionContext) {
         });
 
         logAlways("[agenticReviewOfMerge] delegating review to Agentic Harness");
-        runInNewTerminal(
+        runInPersistentTerminal(
           "Agentic Review of Merge",
           [
             `cd ${quoteShellArg(repoRoot)}`,
@@ -4093,7 +5429,7 @@ export function activate(context: vscode.ExtensionContext) {
       ].join(" ");
 
       logAlways("[setFeatureFlag] delegating to Agentic Harness");
-      runInNewTerminal(
+      runInPersistentTerminal(
         "Set Feature Flags",
         [
           `cd ${quoteShellArg(repoRoot)}`,
@@ -4105,6 +5441,30 @@ export function activate(context: vscode.ExtensionContext) {
         }
       );
       void vscode.window.showInformationMessage("Opened Feature Flag setup terminal.");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.updateGithubActions", async () => {
+      launchUpdateProjectConfigPrompt(
+        "updateGithubActions",
+        "Update Github Actions",
+        UPDATE_GITHUB_ACTIONS_PROMPT,
+        "github-action",
+        "Opened GitHub Actions update terminal."
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.updateTests", async () => {
+      launchUpdateProjectConfigPrompt(
+        "updateTests",
+        "Update Tests",
+        UPDATE_TESTS_PROMPT,
+        "beaker",
+        "Opened test update terminal."
+      );
     })
   );
 
@@ -4136,7 +5496,7 @@ export function activate(context: vscode.ExtensionContext) {
         const selectedBranch = await showReviewPullRequestDialog(branches);
         if (!selectedBranch) return;
 
-        runInNewTerminal(
+        runInPersistentTerminal(
           "Review Pull Request",
           [
             `cd ${quoteShellArg(repoRoot)}`,
@@ -4169,7 +5529,7 @@ export function activate(context: vscode.ExtensionContext) {
         );
         return;
       }
-      runInNewTerminal(
+      runInPersistentTerminal(
         "Agentic Harness Approve Pull Request",
         [
           `cd ${quoteShellArg(repoRoot)}`,
@@ -4223,7 +5583,7 @@ export function activate(context: vscode.ExtensionContext) {
         notes.push(`Created from branch: ${currentBranch}`);
       }
       const msg = notes.join("\n\n") || tag;
-      runInNewTerminal("Antigravity", [
+      runInPersistentTerminal("Antigravity", [
         `cd ${quoteShellArg(repoRoot)}`,
         `git tag -a ${quoteShellArg(tag)} -m ${quoteShellArg(msg)} && git push origin ${quoteShellArg(tag)} && echo "[antigravity] tag ${tag} pushed"`,
       ]);

@@ -537,6 +537,26 @@ async function searchOpenUnassignedTodoJiraIssueSearchResultsForProject(
   };
 }
 
+export async function searchOpenTodoJiraIssuesForProject(
+  credentials: JiraCredentials,
+  projectKey: string
+): Promise<JiraIssueSummary[]> {
+  const normalizedProjectKey = projectKey.trim().toUpperCase();
+  const response = await jiraRequest<{ issues?: JiraIssueSearchResult[] }>(credentials, {
+    method: "POST",
+    apiPath: "/rest/api/3/search/jql",
+    body: {
+      fields: ["summary", "issuetype", "project", "status"],
+      jql: `project = "${normalizedProjectKey}" AND statusCategory = "To Do" ORDER BY updated DESC`,
+      maxResults: 100
+    }
+  });
+
+  return (response.issues ?? [])
+    .map(mapJiraIssueSearchResultToSummary)
+    .filter((issue) => isProjectIssueSummaryValid(issue, normalizedProjectKey));
+}
+
 function mapJiraIssueSearchResultToSummary(issue: JiraIssueSearchResult): JiraIssueSummary {
   return {
     id: (issue.id ?? "").trim(),

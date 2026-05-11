@@ -39,3 +39,42 @@ export function buildAgenticHarnessPromptCommandForCommand(
 
   return `${trimmedCommand} ${quoteShellArg(prompt)}`;
 }
+
+/**
+ * Builds the agentic harness command using a prompt stored in a file.
+ * This avoids shell-escaping issues with long, multi-line prompts and allows
+ * the prompt to be edited without recompiling the extension.
+ *
+ * For claude: uses --print "$(cat <file>)"
+ * For codex:  uses file redirect (- < <file>)
+ * For others: falls back to "$(cat <file>)" command substitution
+ */
+export function buildAgenticHarnessFileCommandForCommand(
+  command: string,
+  repoRoot: string,
+  promptFilePath: string,
+  mode: AgenticHarnessPromptMode = "dangerous"
+): string {
+  const trimmedCommand = command.trim();
+  const executableName = getExecutableName(trimmedCommand);
+  const quotedFile = quoteShellArg(promptFilePath);
+
+  if (executableName === "claude") {
+    if (mode === "dangerous") {
+      return `${trimmedCommand} --dangerously-skip-permissions --print "$(cat ${quotedFile})"`;
+    }
+    return `${trimmedCommand} "$(cat ${quotedFile})"`;
+  }
+
+  if (executableName === "codex") {
+    const codexBaseCommand = /\bcodex\s+exec\b/.test(trimmedCommand)
+      ? trimmedCommand
+      : trimmedCommand.replace(/\bcodex\b/, "codex exec");
+    const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
+
+    return `${codexBaseCommand} --full-auto -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} - < ${quotedFile}`;
+  }
+
+  // Generic fallback: inject file contents via command substitution
+  return `${trimmedCommand} "$(cat ${quotedFile})"`;
+}

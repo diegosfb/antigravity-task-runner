@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner add tests/secretsAudit.test.js)",
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner commit -m \"test: strengthen appendEnvComment test assertions and cleanup\")",
+      "Bash(node -e ' *)",
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner add src/secrets-audit.ts tests/secretsAudit.test.js)",
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner commit -m \"feat: add GitHub remote parsing and gh CLI runner\")",
+      "Bash(grep -E \"\\(extension\\\\.ts|package\\\\.json\\)$\")",
+      "Bash(node --test tests/*.test.js)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('package.json', 'utf8'\\)\\); console.log\\('JSON valid'\\)\")",
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner log --oneline 14ab7e9..e1b2221)",
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner log --oneline -5)",
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner log --oneline 9250fe5..e1b2221)",
+      "Bash(node --test /Users/diego.brihuega/Documents/Projects/antigravity-task-runner/tests/*.test.js)",
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner log --oneline 2eb74dd..HEAD)",
+      "Bash(git -C /Users/diego.brihuega/Documents/Projects/antigravity-task-runner commit -m ' *)",
+      "Bash(npm --prefix /Users/diego.brihuega/Documents/Projects/antigravity-task-runner run compile)",
+      "Bash(git merge *)",
+      "Bash(git branch *)"
+    ]
+  }
+}

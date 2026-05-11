@@ -4,6 +4,7 @@ const http = require("node:http");
 
 const {
   createJiraProject,
+  searchOpenTodoJiraIssuesForProject,
   searchOpenUnassignedTodoJiraIssuesForAssignment,
   transitionJiraIssueToReviewOrDone,
   transitionJiraIssueToStatus
@@ -733,6 +734,82 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out blocked and of
     "issuelinks"
   ]);
   assert.match(capturedSearchRequest.jql, /^project = "TASK" AND assignee IS EMPTY AND statusCategory = "To Do"/);
+});
+
+test("searchOpenTodoJiraIssuesForProject returns all To Do issues for the selected project", async (t) => {
+  let capturedSearchRequest = null;
+
+  const server = http.createServer(async (request, response) => {
+    if (request.url === "/rest/api/3/search/jql" && request.method === "POST") {
+      capturedSearchRequest = await readJsonBody(request);
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          issues: [
+            {
+              id: "30001",
+              key: "TASK-31",
+              fields: {
+                summary: "Assigned To Do issue",
+                issuetype: { name: "Story" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "To Do" }
+              }
+            },
+            {
+              id: "30002",
+              key: "TASK-32",
+              fields: {
+                summary: "Unassigned To Do issue",
+                issuetype: { name: "Task" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "To Do" }
+              }
+            },
+            {
+              id: "30003",
+              key: "OTHER-33",
+              fields: {
+                summary: "To Do issue from another project",
+                issuetype: { name: "Task" },
+                project: { key: "OTHER", name: "Other Project" },
+                status: { name: "To Do" }
+              }
+            }
+          ]
+        })
+      );
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: "Not found" }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  const issues = await searchOpenTodoJiraIssuesForProject(
+    {
+      baseUrl: `http://127.0.0.1:${port}`,
+      email: "person@example.com",
+      apiToken: "secret-token"
+    },
+    "TASK"
+  );
+
+  assert.deepEqual(
+    issues.map((issue) => issue.key),
+    ["TASK-31", "TASK-32"]
+  );
+  assert.deepEqual(capturedSearchRequest.fields, [
+    "summary",
+    "issuetype",
+    "project",
+    "status"
+  ]);
+  assert.match(capturedSearchRequest.jql, /^project = "TASK" AND statusCategory = "To Do"/);
 });
 
 test("searchOpenUnassignedTodoJiraIssuesForAssignment reloads missing blocker statuses before filtering", async (t) => {

@@ -2,11 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-<<<<<<< HEAD
-  "version": "4.10.3",
-=======
-  "version": "4.9.33",
->>>>>>> main
+  "version": "4.10.27",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -21,31 +17,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onView:antigravityView",
-    "onCommand:antigravity.openSettings",
-    "onCommand:antigravity.openHelpDoc",
-    "onCommand:antigravity.openAgent",
-    "onCommand:antigravity.runAgent",
-    "onCommand:antigravity.runWorkflow",
-    "onCommand:antigravity.createFeatureBranch",
-    "onCommand:antigravity.createPullRequest",
-    "onCommand:antigravity.mergeBranchToMain",
-    "onCommand:antigravity.checkoutMain",
-    "onCommand:antigravity.setFeatureFlag",
-    "onCommand:antigravity.agenticReviewOfMerge",
-    "onCommand:antigravity.reviewPullRequest",
-    "onCommand:antigravity.approvePullRequest",
-    "onCommand:antigravity.feedbackOnPullRequest",
-    "onCommand:antigravity.addJiraItem",
-    "onCommand:antigravity.selectOrCreateJiraProject",
-    "onCommand:antigravity.assignJiraItemToAgent",
-    "onCommand:antigravity.takeJiraItemAssign",
-    "onCommand:antigravity.completeJiraItem",
-    "onCommand:antigravity.openSopManual",
-    "onCommand:antigravity.bringSopManualToProject",
-    "onCommand:antigravity.openClaudeTerminal",
-    "onCommand:antigravity.openOpenClaudeTerminal"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -213,6 +185,19 @@
         "title": "Antigravity: Add Jira Item"
       },
       {
+        "command": "antigravity.setupWorkspace",
+        "title": "Antigravity: Setup Workspace"
+      },
+      {
+        "command": "antigravity.updateWorkspaceAgentsMd",
+        "title": "Antigravity: Update AGENTS.md"
+      },
+      {
+        "command": "antigravity.auditSecretsAndVariables",
+        "title": "Antigravity: Audit Secrets & Variables",
+        "icon": "$(shield-lock)"
+      },
+      {
         "command": "antigravity.openSopManual",
         "title": "Antigravity: SOP Manual"
       },
@@ -235,6 +220,14 @@
       {
         "command": "antigravity.diffMergeFiles",
         "title": "DiffMerge files"
+      },
+      {
+        "command": "antigravity.initRepository",
+        "title": "Init Repository"
+      },
+      {
+        "command": "antigravity.initRepositoryConfigUpdate",
+        "title": "Init Repo"
       }
     ],
     "viewsContainers": {
@@ -250,11 +243,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-<<<<<<< HEAD
-          "name": "Tasky Runner v4.10.3",
-=======
-          "name": "Tasky Runner v4.9.33",
->>>>>>> main
+          "name": "Tasky Runner v4.10.27",
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -343,6 +332,16 @@
           "command": "antigravity.bringSopManualToProject",
           "when": "view == antigravityView && viewItem == antigravitySopManual",
           "group": "navigation"
+        },
+        {
+          "command": "antigravity.auditSecretsAndVariables",
+          "when": "view == antigravityView && viewItem =~ /antigravitySetupWorkspaceAction/",
+          "group": "navigation@2"
+        },
+        {
+          "command": "antigravity.initRepositoryConfigUpdate",
+          "when": "view == antigravityView && viewItem == antigravitySetupWorkspaceActionWithRepo",
+          "group": "navigation@3"
         }
       ]
     },
