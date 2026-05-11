@@ -48,7 +48,7 @@ test("appendEnvComment creates the file if it does not exist", () => {
   }
 });
 
-const { scanWorkflowFiles, GITHUB_BUILTIN_SECRETS } = require("../out/secrets-audit.js");
+const { scanWorkflowFiles } = require("../out/secrets-audit.js");
 
 test("scanWorkflowFiles extracts secrets from workflow content", () => {
   const content = `

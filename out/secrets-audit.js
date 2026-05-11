@@ -40,16 +40,16 @@ function scanWorkflowFiles(files) {
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             // Detect new job boundary (2-space indent + identifier + colon, nothing else)
-            if (/^  [\w-]+:\s*$/.test(line)) {
+            if (/^ {2}[\w-]+:\s*$/.test(line)) {
                 currentEnv = "_repo";
             }
             // Detect job-level environment declaration (exactly 4 spaces indent)
-            const envInlineMatch = line.match(/^    environment:\s*["']?([^\s"'#]+)["']?/);
+            const envInlineMatch = line.match(/^ {4}environment:\s*["']?([^\s"'#]+)["']?/);
             if (envInlineMatch) {
                 currentEnv = envInlineMatch[1];
                 ensureEnv(result, currentEnv);
             }
-            else if (/^    environment:\s*$/.test(line)) {
+            else if (/^ {4}environment:\s*$/.test(line)) {
                 // Multi-line environment block: scan forward for name: sub-key
                 for (let j = i + 1; j < lines.length; j++) {
                     const subLine = lines[j];

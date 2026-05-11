@@ -374,6 +374,7 @@ const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
 const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
 const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
 const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(
   path.resolve(__dirname, "..", "Resources", "feature-estimator-red.svg")
 );
@@ -882,6 +883,19 @@ function getQuickActionItems(): NodeItem[] {
   featureEstimator.tooltip =
     "Estimate a feature from a To Do Jira item or a free-form description using the selected Agentic Harness.";
   items.push(featureEstimator);
+
+  const explainMe = new NodeItem(
+    { kind: "action", label: "Explain Me" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  explainMe.iconPath = new vscode.ThemeIcon("comment-discussion", EXPLAIN_ME_ACTION_COLOR);
+  explainMe.command = {
+    command: "antigravity.explainMe",
+    title: "Explain Me"
+  };
+  explainMe.tooltip =
+    "Copy the bundled explain-me skill into the project and ask the selected Agentic Harness to explain the whole solution and the latest uncommitted changes.";
+  items.push(explainMe);
 
   const autocommitCheckpoint = new NodeItem(
     { kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" },

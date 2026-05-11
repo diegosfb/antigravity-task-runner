@@ -103,6 +103,10 @@ import {
   buildFeatureEstimatorPrompt,
   copyFeatureEstimatorSkill
 } from "./featureEstimator";
+import {
+  EXPLAIN_ME_PROMPT,
+  copyExplainMeSkill
+} from "./explainMe";
 
 type GitInputBox = {
   value: string;
@@ -147,6 +151,7 @@ export function activate(context: vscode.ExtensionContext) {
   const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
   const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
   const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
+  const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
   context.subscriptions.push(outputChannel);
   initLogger(outputChannel);
 
@@ -4724,6 +4729,52 @@ export function activate(context: vscode.ExtensionContext) {
         {
           iconPath: FEATURE_ESTIMATOR_ICON_PATH,
           color: FEATURE_ESTIMATOR_ACTION_COLOR
+        }
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.explainMe", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+
+      try {
+        const copiedSkillPaths = await copyExplainMeSkill(extensionRoot, repoRoot);
+        logAlways(
+          `[explainMe] skill locations ready: ${
+            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          }`
+        );
+        provider.refresh();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[explainMe] ERROR preparing skill: ${message}`);
+        void vscode.window.showErrorMessage(`Failed to prepare the explain-me skill: ${message}`);
+        return;
+      }
+
+      const commandLine = buildAgenticHarnessPromptCommand(
+        repoRoot,
+        EXPLAIN_ME_PROMPT,
+        "prompt"
+      );
+
+      logAlways("[explainMe] launching Agentic Harness for project explanation");
+      runInPersistentTerminal(
+        "Explain Me",
+        [
+          `cd ${quoteShellArg(repoRoot)}`,
+          commandLine
+        ],
+        {
+          iconPath: new vscode.ThemeIcon("comment-discussion", EXPLAIN_ME_ACTION_COLOR),
+          color: EXPLAIN_ME_ACTION_COLOR
         }
       );
     })

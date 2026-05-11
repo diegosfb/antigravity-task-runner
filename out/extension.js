@@ -23,6 +23,7 @@ const projectTemplates_1 = require("./projectTemplates");
 const secrets_audit_1 = require("./secrets-audit");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const featureEstimator_1 = require("./featureEstimator");
+const explainMe_1 = require("./explainMe");
 function getRepoPackageVersion(repoRoot) {
     try {
         const packageJsonPath = path.join(repoRoot, "package.json");
@@ -41,6 +42,7 @@ function activate(context) {
     const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
     const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
     const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
+    const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
     context.subscriptions.push(outputChannel);
     (0, logger_1.initLogger)(outputChannel);
     const provider = new treeProvider_1.AntigravityViewProvider();
@@ -3791,6 +3793,34 @@ function activate(context) {
         ], {
             iconPath: FEATURE_ESTIMATOR_ICON_PATH,
             color: FEATURE_ESTIMATOR_ACTION_COLOR
+        });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.explainMe", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        try {
+            const copiedSkillPaths = await (0, explainMe_1.copyExplainMeSkill)(extensionRoot, repoRoot);
+            (0, logger_1.logAlways)(`[explainMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
+            provider.refresh();
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            (0, logger_1.logAlways)(`[explainMe] ERROR preparing skill: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to prepare the explain-me skill: ${message}`);
+            return;
+        }
+        const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, explainMe_1.EXPLAIN_ME_PROMPT, "prompt");
+        (0, logger_1.logAlways)("[explainMe] launching Agentic Harness for project explanation");
+        (0, terminal_1.runInPersistentTerminal)("Explain Me", [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            commandLine
+        ], {
+            iconPath: new vscode.ThemeIcon("comment-discussion", EXPLAIN_ME_ACTION_COLOR),
+            color: EXPLAIN_ME_ACTION_COLOR
         });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepoTagVersion", async () => {
