@@ -140,7 +140,7 @@ function detectCloudInfrastructureSignals(repoRoot, maxMatches = 5) {
 function hasCloudInfrastructureNeeds(repoRoot) {
     return detectCloudInfrastructureSignals(repoRoot, 1).length > 0;
 }
-async function copyCloudArchitectSkill(extensionRoot, projectRoot) {
-    return (0, bundledProjectSkill_1.copyBundledSkillToProject)(extensionRoot, projectRoot, exports.CLOUD_ARCHITECT_SKILL_NAME);
+async function copyCloudArchitectSkill(extensionRoot, projectRoot, resourceProvider) {
+    return (0, bundledProjectSkill_1.copyBundledSkillToProject)(extensionRoot, projectRoot, exports.CLOUD_ARCHITECT_SKILL_NAME, exports.CLOUD_ARCHITECT_SKILL_NAME, resourceProvider);
 }
 //# sourceMappingURL=cloudArchitectReview.js.map

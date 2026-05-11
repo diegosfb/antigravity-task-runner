@@ -1,4 +1,5 @@
 import { copyBundledSkillToProject } from "./bundledProjectSkill";
+import type { ResourceProvider } from "./resourceProvider";
 
 export const FEATURE_ESTIMATOR_SKILL_NAME = "estimator";
 
@@ -8,7 +9,14 @@ export function buildFeatureEstimatorPrompt(featureDetails: string): string {
 
 export async function copyFeatureEstimatorSkill(
   extensionRoot: string,
-  projectRoot: string
+  projectRoot: string,
+  resourceProvider?: ResourceProvider
 ): Promise<string[]> {
-  return copyBundledSkillToProject(extensionRoot, projectRoot, FEATURE_ESTIMATOR_SKILL_NAME);
+  return copyBundledSkillToProject(
+    extensionRoot,
+    projectRoot,
+    FEATURE_ESTIMATOR_SKILL_NAME,
+    FEATURE_ESTIMATOR_SKILL_NAME,
+    resourceProvider
+  );
 }

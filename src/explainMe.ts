@@ -1,4 +1,5 @@
 import { copyBundledSkillToProject } from "./bundledProjectSkill";
+import type { ResourceProvider } from "./resourceProvider";
 
 export const EXPLAIN_ME_SKILL_NAME = "explain-me";
 export const EXPLAIN_ME_PROMPT =
@@ -6,7 +7,14 @@ export const EXPLAIN_ME_PROMPT =
 
 export async function copyExplainMeSkill(
   extensionRoot: string,
-  projectRoot: string
+  projectRoot: string,
+  resourceProvider?: ResourceProvider
 ): Promise<string[]> {
-  return copyBundledSkillToProject(extensionRoot, projectRoot, EXPLAIN_ME_SKILL_NAME);
+  return copyBundledSkillToProject(
+    extensionRoot,
+    projectRoot,
+    EXPLAIN_ME_SKILL_NAME,
+    EXPLAIN_ME_SKILL_NAME,
+    resourceProvider
+  );
 }

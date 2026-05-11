@@ -33,7 +33,7 @@ function buildCreateJiraProjectAgenticHarnessPrompt(details) {
     ];
     return instructions.join(" ");
 }
-async function copyJiraProjectCreationSkill(extensionRoot, projectRoot) {
-    return (0, bundledProjectSkill_1.copyBundledSkillToProject)(extensionRoot, projectRoot, exports.JIRA_PROJECT_CREATION_SKILL_NAME);
+async function copyJiraProjectCreationSkill(extensionRoot, projectRoot, resourceProvider) {
+    return (0, bundledProjectSkill_1.copyBundledSkillToProject)(extensionRoot, projectRoot, exports.JIRA_PROJECT_CREATION_SKILL_NAME, exports.JIRA_PROJECT_CREATION_SKILL_NAME, resourceProvider);
 }
 //# sourceMappingURL=jiraProjectHarness.js.map

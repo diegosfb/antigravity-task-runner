@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { createFileSystemResourceProvider } from "./resourceProvider";
 
 export interface ProjectTemplate {
   name: string;
@@ -47,9 +48,11 @@ export function parseProjectTemplates(raw: string): ProjectTemplate[] {
     .filter((entry): entry is ProjectTemplate => Boolean(entry));
 }
 
-export async function loadProjectTemplates(resourcesRoot: string): Promise<ProjectTemplate[]> {
-  const projectTemplatesPath = path.join(resourcesRoot, "project-templates.json");
-  const raw = await fs.promises.readFile(projectTemplatesPath, "utf8");
+export async function loadProjectTemplates(
+  resourcesRoot: string,
+  resourceProvider = createFileSystemResourceProvider(resourcesRoot)
+): Promise<ProjectTemplate[]> {
+  const raw = await resourceProvider.readTextFile("project-templates.json");
   return parseProjectTemplates(raw);
 }
 
@@ -59,16 +62,16 @@ const SETUP_WORKSPACE_SKILL_DIRECTORY_NAMES = ["jira-project-creation"] as const
 
 export async function copySetupWorkspaceGuideFiles(
   resourcesRoot: string,
-  projectRoot: string
+  projectRoot: string,
+  resourceProvider = createFileSystemResourceProvider(resourcesRoot)
 ): Promise<string[]> {
   const copiedFiles: string[] = [];
   await fs.promises.mkdir(projectRoot, { recursive: true });
 
   for (const fileName of SETUP_WORKSPACE_GUIDE_FILE_NAMES) {
-    const sourcePath = path.join(resourcesRoot, fileName);
+    const sourcePath = await resourceProvider.ensureFile(fileName);
     const destinationPath = path.join(projectRoot, fileName);
 
-    await fs.promises.access(sourcePath, fs.constants.F_OK);
     if (fs.existsSync(destinationPath)) continue;
 
     await fs.promises.copyFile(sourcePath, destinationPath);
@@ -101,17 +104,17 @@ export async function ensureSetupWorkspaceDirectories(projectRoot: string): Prom
 
 export async function copySetupWorkspaceSkills(
   resourcesRoot: string,
-  projectRoot: string
+  projectRoot: string,
+  resourceProvider = createFileSystemResourceProvider(resourcesRoot)
 ): Promise<string[]> {
   const copiedSkills: string[] = [];
   const skillsRoot = path.join(projectRoot, ".agent", "skills");
   await fs.promises.mkdir(skillsRoot, { recursive: true });
 
   for (const skillDirectoryName of SETUP_WORKSPACE_SKILL_DIRECTORY_NAMES) {
-    const sourcePath = path.join(resourcesRoot, skillDirectoryName);
+    const sourcePath = await resourceProvider.ensureDirectory(skillDirectoryName);
     const destinationPath = path.join(skillsRoot, skillDirectoryName);
 
-    await fs.promises.access(sourcePath, fs.constants.F_OK);
     if (fs.existsSync(destinationPath)) {
       const stats = await fs.promises.stat(destinationPath);
       if (!stats.isDirectory()) {
@@ -144,11 +147,16 @@ export function buildSetupWorkspacePrompt(
   ].join(" ");
 }
 
-export function buildUpdateAgentsMdPrompt(): string {
-  const promptPath = path.resolve(__dirname, "..", "Resources", "prompts", "update-agents-md.md");
-  return fs.readFileSync(promptPath, "utf8").trim();
+export async function buildUpdateAgentsMdPrompt(
+  resourcesRoot = path.resolve(__dirname, "..", "Resources"),
+  resourceProvider = createFileSystemResourceProvider(resourcesRoot)
+): Promise<string> {
+  return (await resourceProvider.readTextFile(path.join("prompts", "update-agents-md.md"))).trim();
 }
 
-export function buildUpdateAgentsMdPromptFilePath(extensionRoot: string): string {
-  return path.join(extensionRoot, "Resources", "prompts", "update-agents-md.md");
+export async function buildUpdateAgentsMdPromptFilePath(
+  extensionRoot: string,
+  resourceProvider = createFileSystemResourceProvider(path.join(extensionRoot, "Resources"))
+): Promise<string> {
+  return resourceProvider.ensureFile(path.join("prompts", "update-agents-md.md"));
 }

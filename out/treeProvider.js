@@ -696,7 +696,7 @@ function getQuickActionItems() {
         title: "Explain Me"
     };
     explainMe.tooltip =
-        "Copy the bundled explain-me skill into the project and ask the selected Agentic Harness to explain the whole solution and the latest uncommitted changes.";
+        "Download the latest explain-me skill into the project and ask the selected Agentic Harness to explain the whole solution and the latest uncommitted changes.";
     items.push(explainMe);
     const autocommitCheckpoint = new NodeItem({ kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" }, vscode.TreeItemCollapsibleState.None);
     if (!autocommitRunning && !hasGitHub) {

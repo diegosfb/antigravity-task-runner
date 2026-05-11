@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { createFileSystemResourceProvider } from "./resourceProvider";
 
 const PROJECT_SKILL_TARGET_DIRECTORIES = [
   path.join(".agent", "skills"),
@@ -26,12 +27,14 @@ export async function copyBundledSkillToProject(
   extensionRoot: string,
   projectRoot: string,
   skillName: string,
-  sourceRelativeDirectory = path.join("Resources", skillName)
+  sourceRelativeDirectory = skillName,
+  resourceProvider = createFileSystemResourceProvider(path.join(extensionRoot, "Resources"))
 ): Promise<string[]> {
-  const sourcePath = path.join(extensionRoot, sourceRelativeDirectory);
+  const normalizedSourceDirectory = sourceRelativeDirectory
+    .replace(/^Resources[\\/]/, "")
+    .replace(/\\/g, "/");
+  const sourcePath = await resourceProvider.ensureDirectory(normalizedSourceDirectory);
   const copiedSkillPaths: string[] = [];
-
-  await fs.promises.access(sourcePath, fs.constants.F_OK);
 
   for (const relativeDirectory of PROJECT_SKILL_TARGET_DIRECTORIES) {
     const destinationDirectory = path.join(projectRoot, relativeDirectory);

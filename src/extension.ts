@@ -107,6 +107,7 @@ import {
   copyGrillMeSkill
 } from "./grillMe";
 import { buildAgenticHarnessFileCommandForCommand } from "./agenticHarnessCommand";
+import { createGitHubResourceProvider } from "./resourceProvider";
 import {
   UPDATE_GITHUB_ACTIONS_PROMPT,
   UPDATE_TESTS_PROMPT
@@ -166,6 +167,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   const provider = new AntigravityViewProvider();
   const extensionRoot = context.extensionPath;
+  const resourceProvider = createGitHubResourceProvider();
   const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(
     path.join(extensionRoot, "Resources", "feature-estimator-red.svg")
   );
@@ -1143,7 +1145,7 @@ export function activate(context: vscode.ExtensionContext) {
     <form id="feature-estimator-form">
       <div class="intro">
         <div>Estimate a feature from a Jira item in To Do or from a free-form description.</div>
-        <div class="hint">When you click Estimate, Task Runner copies the bundled estimator skill into this project and launches the selected Agentic Harness command from Settings. When you click Grill Me, it copies the bundled grill-me skill and launches a feature review prompt with the same selected Jira item or text description.</div>
+        <div class="hint">When you click Estimate, Task Runner downloads the latest estimator skill into this project from the Task Runner GitHub Resources folder and launches the selected Agentic Harness command from Settings. When you click Grill Me, it downloads the latest grill-me skill and launches a feature review prompt with the same selected Jira item or text description.</div>
       </div>
 
       <div class="mode-list">
@@ -1756,7 +1758,11 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             try {
-              const copiedSkillPaths = await copyJiraProjectCreationSkill(extensionRoot, repoRoot);
+              const copiedSkillPaths = await copyJiraProjectCreationSkill(
+                extensionRoot,
+                repoRoot,
+                resourceProvider
+              );
               logAlways(
                 `[jiraProjectCreate] skill locations ready: ${
                   copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
@@ -3308,10 +3314,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.openHelpDoc", async () => {
-      const helpDocPath = path.join(extensionRoot, "Resources", "help.md");
-      if (!fs.existsSync(helpDocPath)) {
+      let helpDocPath: string;
+      try {
+        helpDocPath = await resourceProvider.ensureFile("help.md");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(
-          "Help document not found in the installed Task Runner extension files."
+          `Failed to download the Task Runner help document: ${message}`
         );
         return;
       }
@@ -3788,7 +3797,10 @@ export function activate(context: vscode.ExtensionContext) {
 
       let projectTemplates: ProjectTemplate[];
       try {
-        projectTemplates = await loadProjectTemplates(path.join(extensionRoot, "Resources"));
+        projectTemplates = await loadProjectTemplates(
+          path.join(extensionRoot, "Resources"),
+          resourceProvider
+        );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logAlways(`[Setup Workspace] ERROR loading templates: ${message}`);
@@ -3818,7 +3830,8 @@ export function activate(context: vscode.ExtensionContext) {
       try {
         copiedGuideFiles = await copySetupWorkspaceGuideFiles(
           path.join(extensionRoot, "Resources"),
-          workspaceDir
+          workspaceDir,
+          resourceProvider
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -3855,7 +3868,8 @@ export function activate(context: vscode.ExtensionContext) {
       try {
         copiedSkills = await copySetupWorkspaceSkills(
           path.join(extensionRoot, "Resources"),
-          workspaceDir
+          workspaceDir,
+          resourceProvider
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -3919,7 +3933,10 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const taskName = `Agentic Harness Update AGENTS.md ${Date.now()}`;
-      const promptFilePath = buildUpdateAgentsMdPromptFilePath(extensionRoot);
+      const promptFilePath = await buildUpdateAgentsMdPromptFilePath(
+        extensionRoot,
+        resourceProvider
+      );
       const commandLine = buildAgenticHarnessFileCommand(workspaceDir, promptFilePath, "dangerous");
 
       try {
@@ -4370,7 +4387,11 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (jiraItem.action === "grillMe") {
         try {
-          const copiedSkillPaths = await copyGrillMeSkill(extensionRoot, repoRoot);
+          const copiedSkillPaths = await copyGrillMeSkill(
+            extensionRoot,
+            repoRoot,
+            resourceProvider
+          );
           logAlways(
             `[createJiraItemGrillMe] skill locations ready: ${
               copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
@@ -4603,7 +4624,11 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (selection.action === "grillMe") {
         try {
-          const copiedSkillPaths = await copyGrillMeSkill(extensionRoot, repoRoot);
+          const copiedSkillPaths = await copyGrillMeSkill(
+            extensionRoot,
+            repoRoot,
+            resourceProvider
+          );
           logAlways(
             `[assignJiraItemToAgentGrillMe] skill locations ready: ${
               copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
@@ -4831,7 +4856,11 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       try {
-        const copiedSkillPaths = await copyCloudArchitectSkill(extensionRoot, repoRoot);
+        const copiedSkillPaths = await copyCloudArchitectSkill(
+          extensionRoot,
+          repoRoot,
+          resourceProvider
+        );
         logAlways(
           `[cloudArchitectReview] skill locations ready: ${
             copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
@@ -4898,8 +4927,8 @@ export function activate(context: vscode.ExtensionContext) {
 
       try {
         const copiedSkillPaths = isGrillMeAction
-          ? await copyGrillMeSkill(extensionRoot, repoRoot)
-          : await copyFeatureEstimatorSkill(extensionRoot, repoRoot);
+          ? await copyGrillMeSkill(extensionRoot, repoRoot, resourceProvider)
+          : await copyFeatureEstimatorSkill(extensionRoot, repoRoot, resourceProvider);
         logAlways(
           `[${actionKey}] skill locations ready: ${
             copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
@@ -4945,7 +4974,11 @@ export function activate(context: vscode.ExtensionContext) {
       const repoRoot = getRepoRoot(rootPath);
 
       try {
-        const copiedSkillPaths = await copyExplainMeSkill(extensionRoot, repoRoot);
+        const copiedSkillPaths = await copyExplainMeSkill(
+          extensionRoot,
+          repoRoot,
+          resourceProvider
+        );
         logAlways(
           `[explainMe] skill locations ready: ${
             copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
@@ -5692,15 +5725,10 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const sopManualLink = getSopManualLink(repoRoot);
-      if (!sopManualLink) {
-        void vscode.window.showErrorMessage(
-          "SOP Manual Link is not set in Antigravity settings or the repository .env file."
-        );
-        return;
-      }
-
       try {
-        const localPath = await downloadMarkdownToTempFile(sopManualLink, "sop-manual.md");
+        const localPath = sopManualLink
+          ? await downloadMarkdownToTempFile(sopManualLink, "sop-manual.md")
+          : await resourceProvider.ensureFile("sop.md");
         await openFile(localPath);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -5719,16 +5747,11 @@ export function activate(context: vscode.ExtensionContext) {
 
       const repoRoot = getRepoRoot(rootPath);
       const sopManualLink = getSopManualLink(repoRoot);
-      if (!sopManualLink) {
-        void vscode.window.showErrorMessage(
-          "SOP Manual Link is not set in Antigravity settings or the repository .env file."
-        );
-        return;
-      }
-
       const projectSopManualPath = getProjectSopManualPath(repoRoot);
       try {
-        const downloadedPath = await downloadMarkdownToTempFile(sopManualLink, "sop-manual.md");
+        const downloadedPath = sopManualLink
+          ? await downloadMarkdownToTempFile(sopManualLink, "sop-manual.md")
+          : await resourceProvider.ensureFile("sop.md");
         await fs.promises.mkdir(path.dirname(projectSopManualPath), { recursive: true });
         await fs.promises.copyFile(downloadedPath, projectSopManualPath);
         void vscode.window.showInformationMessage(

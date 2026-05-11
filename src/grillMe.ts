@@ -1,4 +1,5 @@
 import { copyBundledSkillToProject } from "./bundledProjectSkill";
+import type { ResourceProvider } from "./resourceProvider";
 
 export const GRILL_ME_SKILL_NAME = "grill-me";
 
@@ -26,7 +27,14 @@ export function buildJiraDraftFeatureDetails(
 
 export async function copyGrillMeSkill(
   extensionRoot: string,
-  projectRoot: string
+  projectRoot: string,
+  resourceProvider?: ResourceProvider
 ): Promise<string[]> {
-  return copyBundledSkillToProject(extensionRoot, projectRoot, GRILL_ME_SKILL_NAME);
+  return copyBundledSkillToProject(
+    extensionRoot,
+    projectRoot,
+    GRILL_ME_SKILL_NAME,
+    GRILL_ME_SKILL_NAME,
+    resourceProvider
+  );
 }

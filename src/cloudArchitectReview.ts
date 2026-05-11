@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { copyBundledSkillToProject } from "./bundledProjectSkill";
+import type { ResourceProvider } from "./resourceProvider";
 
 export const CLOUD_ARCHITECT_SKILL_NAME = "cloud-architect";
 export const CLOUD_ARCHITECT_REVIEW_PROMPT =
@@ -166,7 +167,14 @@ export function hasCloudInfrastructureNeeds(repoRoot: string): boolean {
 
 export async function copyCloudArchitectSkill(
   extensionRoot: string,
-  projectRoot: string
+  projectRoot: string,
+  resourceProvider?: ResourceProvider
 ): Promise<string[]> {
-  return copyBundledSkillToProject(extensionRoot, projectRoot, CLOUD_ARCHITECT_SKILL_NAME);
+  return copyBundledSkillToProject(
+    extensionRoot,
+    projectRoot,
+    CLOUD_ARCHITECT_SKILL_NAME,
+    CLOUD_ARCHITECT_SKILL_NAME,
+    resourceProvider
+  );
 }

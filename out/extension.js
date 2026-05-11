@@ -24,6 +24,7 @@ const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const featureEstimator_1 = require("./featureEstimator");
 const grillMe_1 = require("./grillMe");
 const agenticHarnessCommand_1 = require("./agenticHarnessCommand");
+const resourceProvider_1 = require("./resourceProvider");
 const updateProjectConfig_1 = require("./updateProjectConfig");
 const explainMe_1 = require("./explainMe");
 function getRepoPackageVersion(repoRoot) {
@@ -50,6 +51,7 @@ function activate(context) {
     (0, logger_1.initLogger)(outputChannel);
     const provider = new treeProvider_1.AntigravityViewProvider();
     const extensionRoot = context.extensionPath;
+    const resourceProvider = (0, resourceProvider_1.createGitHubResourceProvider)();
     const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(path.join(extensionRoot, "Resources", "feature-estimator-red.svg"));
     (0, logger_1.log)(`[activate] Extension root: ${extensionRoot}`);
     const launchClaudeInit = async (repoRoot, guidelinesFileName = "Project Level CLAUDE.md Guidelines.txt") => {
@@ -902,7 +904,7 @@ function activate(context) {
     <form id="feature-estimator-form">
       <div class="intro">
         <div>Estimate a feature from a Jira item in To Do or from a free-form description.</div>
-        <div class="hint">When you click Estimate, Task Runner copies the bundled estimator skill into this project and launches the selected Agentic Harness command from Settings. When you click Grill Me, it copies the bundled grill-me skill and launches a feature review prompt with the same selected Jira item or text description.</div>
+        <div class="hint">When you click Estimate, Task Runner downloads the latest estimator skill into this project from the Task Runner GitHub Resources folder and launches the selected Agentic Harness command from Settings. When you click Grill Me, it downloads the latest grill-me skill and launches a feature review prompt with the same selected Jira item or text description.</div>
       </div>
 
       <div class="mode-list">
@@ -1457,7 +1459,7 @@ function activate(context) {
                     return;
                 }
                 try {
-                    const copiedSkillPaths = await (0, jiraProjectHarness_1.copyJiraProjectCreationSkill)(extensionRoot, repoRoot);
+                    const copiedSkillPaths = await (0, jiraProjectHarness_1.copyJiraProjectCreationSkill)(extensionRoot, repoRoot, resourceProvider);
                     (0, logger_1.logAlways)(`[jiraProjectCreate] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
                     provider.refresh();
                 }
@@ -2698,9 +2700,13 @@ function activate(context) {
         }, undefined, context.subscriptions);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openHelpDoc", async () => {
-        const helpDocPath = path.join(extensionRoot, "Resources", "help.md");
-        if (!fs.existsSync(helpDocPath)) {
-            void vscode.window.showErrorMessage("Help document not found in the installed Task Runner extension files.");
+        let helpDocPath;
+        try {
+            helpDocPath = await resourceProvider.ensureFile("help.md");
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to download the Task Runner help document: ${message}`);
             return;
         }
         await vscode.commands.executeCommand("markdown.showPreview", vscode.Uri.file(helpDocPath));
@@ -3106,7 +3112,7 @@ function activate(context) {
         (0, logger_1.logAlways)(`[Setup Workspace] workspaceDir: ${workspaceDir}`);
         let projectTemplates;
         try {
-            projectTemplates = await (0, projectTemplates_1.loadProjectTemplates)(path.join(extensionRoot, "Resources"));
+            projectTemplates = await (0, projectTemplates_1.loadProjectTemplates)(path.join(extensionRoot, "Resources"), resourceProvider);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -3127,7 +3133,7 @@ function activate(context) {
         fs.mkdirSync(workspaceDir, { recursive: true });
         let copiedGuideFiles;
         try {
-            copiedGuideFiles = await (0, projectTemplates_1.copySetupWorkspaceGuideFiles)(path.join(extensionRoot, "Resources"), workspaceDir);
+            copiedGuideFiles = await (0, projectTemplates_1.copySetupWorkspaceGuideFiles)(path.join(extensionRoot, "Resources"), workspaceDir, resourceProvider);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -3149,7 +3155,7 @@ function activate(context) {
         (0, logger_1.logAlways)(`[Setup Workspace] support directories ready in ${workspaceDir}: ${createdDirectories.length > 0 ? createdDirectories.join(", ") : "already present"}`);
         let copiedSkills;
         try {
-            copiedSkills = await (0, projectTemplates_1.copySetupWorkspaceSkills)(path.join(extensionRoot, "Resources"), workspaceDir);
+            copiedSkills = await (0, projectTemplates_1.copySetupWorkspaceSkills)(path.join(extensionRoot, "Resources"), workspaceDir, resourceProvider);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -3191,7 +3197,7 @@ function activate(context) {
             return;
         }
         const taskName = `Agentic Harness Update AGENTS.md ${Date.now()}`;
-        const promptFilePath = (0, projectTemplates_1.buildUpdateAgentsMdPromptFilePath)(extensionRoot);
+        const promptFilePath = await (0, projectTemplates_1.buildUpdateAgentsMdPromptFilePath)(extensionRoot, resourceProvider);
         const commandLine = (0, terminal_1.buildAgenticHarnessFileCommand)(workspaceDir, promptFilePath, "dangerous");
         try {
             await (0, terminal_1.runCommandInTaskTerminal)(taskName, commandLine, { cwd: workspaceDir });
@@ -3544,7 +3550,7 @@ function activate(context) {
             return;
         if (jiraItem.action === "grillMe") {
             try {
-                const copiedSkillPaths = await (0, grillMe_1.copyGrillMeSkill)(extensionRoot, repoRoot);
+                const copiedSkillPaths = await (0, grillMe_1.copyGrillMeSkill)(extensionRoot, repoRoot, resourceProvider);
                 (0, logger_1.logAlways)(`[createJiraItemGrillMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
                 provider.refresh();
             }
@@ -3709,7 +3715,7 @@ function activate(context) {
         }
         if (selection.action === "grillMe") {
             try {
-                const copiedSkillPaths = await (0, grillMe_1.copyGrillMeSkill)(extensionRoot, repoRoot);
+                const copiedSkillPaths = await (0, grillMe_1.copyGrillMeSkill)(extensionRoot, repoRoot, resourceProvider);
                 (0, logger_1.logAlways)(`[assignJiraItemToAgentGrillMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
                 provider.refresh();
             }
@@ -3853,7 +3859,7 @@ function activate(context) {
             return;
         }
         try {
-            const copiedSkillPaths = await (0, cloudArchitectReview_1.copyCloudArchitectSkill)(extensionRoot, repoRoot);
+            const copiedSkillPaths = await (0, cloudArchitectReview_1.copyCloudArchitectSkill)(extensionRoot, repoRoot, resourceProvider);
             (0, logger_1.logAlways)(`[cloudArchitectReview] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
             provider.refresh();
         }
@@ -3896,8 +3902,8 @@ function activate(context) {
         const terminalName = isGrillMeAction ? "Feature Grill Me" : "Feature Estimator";
         try {
             const copiedSkillPaths = isGrillMeAction
-                ? await (0, grillMe_1.copyGrillMeSkill)(extensionRoot, repoRoot)
-                : await (0, featureEstimator_1.copyFeatureEstimatorSkill)(extensionRoot, repoRoot);
+                ? await (0, grillMe_1.copyGrillMeSkill)(extensionRoot, repoRoot, resourceProvider)
+                : await (0, featureEstimator_1.copyFeatureEstimatorSkill)(extensionRoot, repoRoot, resourceProvider);
             (0, logger_1.logAlways)(`[${actionKey}] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
             provider.refresh();
         }
@@ -3925,7 +3931,7 @@ function activate(context) {
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         try {
-            const copiedSkillPaths = await (0, explainMe_1.copyExplainMeSkill)(extensionRoot, repoRoot);
+            const copiedSkillPaths = await (0, explainMe_1.copyExplainMeSkill)(extensionRoot, repoRoot, resourceProvider);
             (0, logger_1.logAlways)(`[explainMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
             provider.refresh();
         }
@@ -4469,12 +4475,10 @@ function activate(context) {
             return;
         }
         const sopManualLink = getSopManualLink(repoRoot);
-        if (!sopManualLink) {
-            void vscode.window.showErrorMessage("SOP Manual Link is not set in Antigravity settings or the repository .env file.");
-            return;
-        }
         try {
-            const localPath = await (0, scripts_1.downloadMarkdownToTempFile)(sopManualLink, "sop-manual.md");
+            const localPath = sopManualLink
+                ? await (0, scripts_1.downloadMarkdownToTempFile)(sopManualLink, "sop-manual.md")
+                : await resourceProvider.ensureFile("sop.md");
             await (0, scripts_1.openFile)(localPath);
         }
         catch (error) {
@@ -4490,13 +4494,11 @@ function activate(context) {
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         const sopManualLink = getSopManualLink(repoRoot);
-        if (!sopManualLink) {
-            void vscode.window.showErrorMessage("SOP Manual Link is not set in Antigravity settings or the repository .env file.");
-            return;
-        }
         const projectSopManualPath = getProjectSopManualPath(repoRoot);
         try {
-            const downloadedPath = await (0, scripts_1.downloadMarkdownToTempFile)(sopManualLink, "sop-manual.md");
+            const downloadedPath = sopManualLink
+                ? await (0, scripts_1.downloadMarkdownToTempFile)(sopManualLink, "sop-manual.md")
+                : await resourceProvider.ensureFile("sop.md");
             await fs.promises.mkdir(path.dirname(projectSopManualPath), { recursive: true });
             await fs.promises.copyFile(downloadedPath, projectSopManualPath);
             void vscode.window.showInformationMessage(`Copied SOP manual to ${projectSopManualPath}.`);

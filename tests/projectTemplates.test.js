@@ -72,8 +72,8 @@ test("buildSetupWorkspacePrompt includes the template details and target path", 
   assert.match(prompt, /Do not modify files outside/);
 });
 
-test("buildUpdateAgentsMdPrompt includes the progressive disclosure refactor steps", () => {
-  const prompt = buildUpdateAgentsMdPrompt();
+test("buildUpdateAgentsMdPrompt includes the progressive disclosure refactor steps", async () => {
+  const prompt = await buildUpdateAgentsMdPrompt();
 
   assert.match(prompt, /progressive disclosure principles/);
   assert.match(prompt, /\*\*Resolve contradictions\*\*/);

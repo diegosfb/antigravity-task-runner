@@ -1,4 +1,5 @@
 import { copyBundledSkillToProject } from "./bundledProjectSkill";
+import type { ResourceProvider } from "./resourceProvider";
 
 export const JIRA_COMPANY_MANAGED_WORKFLOW_SCHEME =
   "DSFB: Software Simplified Workflow Scheme";
@@ -50,11 +51,14 @@ export function buildCreateJiraProjectAgenticHarnessPrompt(
 
 export async function copyJiraProjectCreationSkill(
   extensionRoot: string,
-  projectRoot: string
+  projectRoot: string,
+  resourceProvider?: ResourceProvider
 ): Promise<string[]> {
   return copyBundledSkillToProject(
     extensionRoot,
     projectRoot,
-    JIRA_PROJECT_CREATION_SKILL_NAME
+    JIRA_PROJECT_CREATION_SKILL_NAME,
+    JIRA_PROJECT_CREATION_SKILL_NAME,
+    resourceProvider
   );
 }

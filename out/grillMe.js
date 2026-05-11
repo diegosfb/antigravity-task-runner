@@ -21,7 +21,7 @@ function buildJiraDraftFeatureDetails(projectKey, issueType, summary, descriptio
     }
     return lines.join(" ");
 }
-async function copyGrillMeSkill(extensionRoot, projectRoot) {
-    return (0, bundledProjectSkill_1.copyBundledSkillToProject)(extensionRoot, projectRoot, exports.GRILL_ME_SKILL_NAME);
+async function copyGrillMeSkill(extensionRoot, projectRoot, resourceProvider) {
+    return (0, bundledProjectSkill_1.copyBundledSkillToProject)(extensionRoot, projectRoot, exports.GRILL_ME_SKILL_NAME, exports.GRILL_ME_SKILL_NAME, resourceProvider);
 }
 //# sourceMappingURL=grillMe.js.map

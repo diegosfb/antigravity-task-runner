@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.copyBundledSkillToProject = copyBundledSkillToProject;
 const fs = require("fs");
 const path = require("path");
+const resourceProvider_1 = require("./resourceProvider");
 const PROJECT_SKILL_TARGET_DIRECTORIES = [
     path.join(".agent", "skills"),
     path.join(".claude", "skills")
@@ -20,10 +21,12 @@ async function ensureDirectoryExists(directoryPath) {
     }
     await fs.promises.mkdir(directoryPath, { recursive: true });
 }
-async function copyBundledSkillToProject(extensionRoot, projectRoot, skillName, sourceRelativeDirectory = path.join("Resources", skillName)) {
-    const sourcePath = path.join(extensionRoot, sourceRelativeDirectory);
+async function copyBundledSkillToProject(extensionRoot, projectRoot, skillName, sourceRelativeDirectory = skillName, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(path.join(extensionRoot, "Resources"))) {
+    const normalizedSourceDirectory = sourceRelativeDirectory
+        .replace(/^Resources[\\/]/, "")
+        .replace(/\\/g, "/");
+    const sourcePath = await resourceProvider.ensureDirectory(normalizedSourceDirectory);
     const copiedSkillPaths = [];
-    await fs.promises.access(sourcePath, fs.constants.F_OK);
     for (const relativeDirectory of PROJECT_SKILL_TARGET_DIRECTORIES) {
         const destinationDirectory = path.join(projectRoot, relativeDirectory);
         const destinationPath = path.join(destinationDirectory, skillName);

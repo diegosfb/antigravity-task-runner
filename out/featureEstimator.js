@@ -8,7 +8,7 @@ exports.FEATURE_ESTIMATOR_SKILL_NAME = "estimator";
 function buildFeatureEstimatorPrompt(featureDetails) {
     return `use skill estimator to estimate the complexity of this feature ${featureDetails.trim()} estimating the man hours required and the skills/profiles required. Also do a breakdown of hours per skill/profile required`;
 }
-async function copyFeatureEstimatorSkill(extensionRoot, projectRoot) {
-    return (0, bundledProjectSkill_1.copyBundledSkillToProject)(extensionRoot, projectRoot, exports.FEATURE_ESTIMATOR_SKILL_NAME);
+async function copyFeatureEstimatorSkill(extensionRoot, projectRoot, resourceProvider) {
+    return (0, bundledProjectSkill_1.copyBundledSkillToProject)(extensionRoot, projectRoot, exports.FEATURE_ESTIMATOR_SKILL_NAME, exports.FEATURE_ESTIMATOR_SKILL_NAME, resourceProvider);
 }
 //# sourceMappingURL=featureEstimator.js.map

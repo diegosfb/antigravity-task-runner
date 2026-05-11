@@ -11,6 +11,7 @@ exports.buildUpdateAgentsMdPrompt = buildUpdateAgentsMdPrompt;
 exports.buildUpdateAgentsMdPromptFilePath = buildUpdateAgentsMdPromptFilePath;
 const fs = require("fs");
 const path = require("path");
+const resourceProvider_1 = require("./resourceProvider");
 function readTrimmedString(value) {
     return typeof value === "string" ? value.trim() : "";
 }
@@ -44,21 +45,19 @@ function parseProjectTemplates(raw) {
         .map((entry) => normalizeProjectTemplate(entry))
         .filter((entry) => Boolean(entry));
 }
-async function loadProjectTemplates(resourcesRoot) {
-    const projectTemplatesPath = path.join(resourcesRoot, "project-templates.json");
-    const raw = await fs.promises.readFile(projectTemplatesPath, "utf8");
+async function loadProjectTemplates(resourcesRoot, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(resourcesRoot)) {
+    const raw = await resourceProvider.readTextFile("project-templates.json");
     return parseProjectTemplates(raw);
 }
 const SETUP_WORKSPACE_GUIDE_FILE_NAMES = ["CLAUDE.md", "AGENTS.md"];
 const SETUP_WORKSPACE_DIRECTORY_NAMES = [".agent", ".claude"];
 const SETUP_WORKSPACE_SKILL_DIRECTORY_NAMES = ["jira-project-creation"];
-async function copySetupWorkspaceGuideFiles(resourcesRoot, projectRoot) {
+async function copySetupWorkspaceGuideFiles(resourcesRoot, projectRoot, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(resourcesRoot)) {
     const copiedFiles = [];
     await fs.promises.mkdir(projectRoot, { recursive: true });
     for (const fileName of SETUP_WORKSPACE_GUIDE_FILE_NAMES) {
-        const sourcePath = path.join(resourcesRoot, fileName);
+        const sourcePath = await resourceProvider.ensureFile(fileName);
         const destinationPath = path.join(projectRoot, fileName);
-        await fs.promises.access(sourcePath, fs.constants.F_OK);
         if (fs.existsSync(destinationPath))
             continue;
         await fs.promises.copyFile(sourcePath, destinationPath);
@@ -83,14 +82,13 @@ async function ensureSetupWorkspaceDirectories(projectRoot) {
     }
     return createdDirectories;
 }
-async function copySetupWorkspaceSkills(resourcesRoot, projectRoot) {
+async function copySetupWorkspaceSkills(resourcesRoot, projectRoot, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(resourcesRoot)) {
     const copiedSkills = [];
     const skillsRoot = path.join(projectRoot, ".agent", "skills");
     await fs.promises.mkdir(skillsRoot, { recursive: true });
     for (const skillDirectoryName of SETUP_WORKSPACE_SKILL_DIRECTORY_NAMES) {
-        const sourcePath = path.join(resourcesRoot, skillDirectoryName);
+        const sourcePath = await resourceProvider.ensureDirectory(skillDirectoryName);
         const destinationPath = path.join(skillsRoot, skillDirectoryName);
-        await fs.promises.access(sourcePath, fs.constants.F_OK);
         if (fs.existsSync(destinationPath)) {
             const stats = await fs.promises.stat(destinationPath);
             if (!stats.isDirectory()) {
@@ -116,11 +114,10 @@ function buildSetupWorkspacePrompt(template, workspaceDir) {
         "Prefer non-interactive commands and finish once the missing files are extracted or downloaded."
     ].join(" ");
 }
-function buildUpdateAgentsMdPrompt() {
-    const promptPath = path.resolve(__dirname, "..", "Resources", "prompts", "update-agents-md.md");
-    return fs.readFileSync(promptPath, "utf8").trim();
+async function buildUpdateAgentsMdPrompt(resourcesRoot = path.resolve(__dirname, "..", "Resources"), resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(resourcesRoot)) {
+    return (await resourceProvider.readTextFile(path.join("prompts", "update-agents-md.md"))).trim();
 }
-function buildUpdateAgentsMdPromptFilePath(extensionRoot) {
-    return path.join(extensionRoot, "Resources", "prompts", "update-agents-md.md");
+async function buildUpdateAgentsMdPromptFilePath(extensionRoot, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(path.join(extensionRoot, "Resources"))) {
+    return resourceProvider.ensureFile(path.join("prompts", "update-agents-md.md"));
 }
 //# sourceMappingURL=projectTemplates.js.map
