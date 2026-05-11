@@ -21,7 +21,7 @@ scope: infrastructure
 output-format: architecture
 ---
 
-# Cloud Architect
+# Cloud Architect v1.2.3
 
 Senior cloud architect specializing in multi-cloud strategies, migration patterns, cost optimization, and cloud-native architectures across AWS, Azure, and GCP.
 

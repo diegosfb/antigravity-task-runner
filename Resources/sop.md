@@ -1,4 +1,4 @@
-# diegosfb SDLC SOP
+# diegosfb SDLC SOP  v1.2.3
 
 > This SOP defines the standard workflow for creating branches, opening pull
 > requests, merging approved work, validating changes in QA, and releasing work
