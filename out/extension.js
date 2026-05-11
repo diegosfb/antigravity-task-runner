@@ -23,6 +23,7 @@ const projectTemplates_1 = require("./projectTemplates");
 const secrets_audit_1 = require("./secrets-audit");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const featureEstimator_1 = require("./featureEstimator");
+const grillMe_1 = require("./grillMe");
 const explainMe_1 = require("./explainMe");
 function getRepoPackageVersion(repoRoot) {
     try {
@@ -869,7 +870,7 @@ function activate(context) {
     <form id="feature-estimator-form">
       <div class="intro">
         <div>Estimate a feature from a Jira item in To Do or from a free-form description.</div>
-        <div class="hint">When you click Estimate, Task Runner copies the bundled estimator skill into this project and launches the selected Agentic Harness command from Settings.</div>
+        <div class="hint">When you click Estimate, Task Runner copies the bundled estimator skill into this project and launches the selected Agentic Harness command from Settings. When you click Grill Me, it copies the bundled grill-me skill and launches a feature review prompt with the same selected Jira item or text description.</div>
       </div>
 
       <div class="mode-list">
@@ -882,7 +883,7 @@ function activate(context) {
           />
           <span class="mode-copy">
             <span class="mode-title">Jira To Do Item</span>
-            <span class="mode-description">Pick a feature from Jira project ${hasSavedProjectKey ? escapeHtml(savedProjectKey) : "setup"} and estimate that backlog item.</span>
+            <span class="mode-description">Pick a feature from Jira project ${hasSavedProjectKey ? escapeHtml(savedProjectKey) : "setup"} and work from that backlog item.</span>
           </span>
         </label>
 
@@ -906,7 +907,7 @@ function activate(context) {
           />
           <span class="mode-copy">
             <span class="mode-title">Free Text Description</span>
-            <span class="mode-description">Describe the feature directly when it is not in Jira yet or you want to estimate a draft idea.</span>
+            <span class="mode-description">Describe the feature directly when it is not in Jira yet or you want to estimate or review a draft idea.</span>
           </span>
         </label>
 
@@ -915,7 +916,7 @@ function activate(context) {
             Feature Description
             <textarea id="feature-description" placeholder="Describe the feature, expected behavior, constraints, integrations, and any assumptions that would affect the estimate."></textarea>
           </label>
-          <div class="hint">Include enough detail for the estimator skill to assess complexity, hours, and the profiles required.</div>
+          <div class="hint">Include enough detail for the selected skill to assess the feature, whether you want an estimate or a deeper review.</div>
         </div>
       </div>
 
@@ -923,7 +924,8 @@ function activate(context) {
 
       <div class="actions">
         <button type="button" id="cancel-button">Cancel</button>
-        <button type="submit">Estimate</button>
+        <button type="submit" data-action="estimate">Estimate</button>
+        <button type="submit" data-action="grillMe">Grill Me</button>
       </div>
     </form>
 
@@ -993,6 +995,7 @@ function activate(context) {
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         const usingJira = jiraRadio.checked && !jiraRadio.disabled;
+        const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "estimate";
 
         if (usingJira) {
           if (!jiraIssueSelect.value) {
@@ -1004,6 +1007,7 @@ function activate(context) {
           vscode.postMessage({
             type: "submitFeatureEstimator",
             payload: {
+              action,
               source: "jira",
               issueKey: jiraIssueSelect.value
             }
@@ -1021,6 +1025,7 @@ function activate(context) {
         vscode.postMessage({
           type: "submitFeatureEstimator",
           payload: {
+            action,
             source: "text",
             featureDetails: details
           }
@@ -1032,7 +1037,7 @@ function activate(context) {
         if (!message) return;
 
         if (message.type === "featureEstimatorError") {
-          errorMessage.textContent = message.payload?.message || "Unable to start the feature estimate.";
+          errorMessage.textContent = message.payload?.message || "Unable to start this feature action.";
           return;
         }
 
@@ -1143,6 +1148,7 @@ function activate(context) {
             if (message.type !== "submitFeatureEstimator")
                 return;
             const payload = message.payload || {};
+            const action = payload.action === "grillMe" ? "grillMe" : "estimate";
             const source = payload.source === "jira" ? "jira" : "text";
             if (source === "jira") {
                 const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
@@ -1154,7 +1160,7 @@ function activate(context) {
                     });
                     return;
                 }
-                resolveOnce({ source: "jira", issue });
+                resolveOnce({ action, source: "jira", issue });
                 panel.dispose();
                 return;
             }
@@ -1166,7 +1172,7 @@ function activate(context) {
                 });
                 return;
             }
-            resolveOnce({ source: "text", featureDetails });
+            resolveOnce({ action, source: "text", featureDetails });
             panel.dispose();
         }, undefined, context.subscriptions);
     });
@@ -3769,25 +3775,33 @@ function activate(context) {
         const selection = await showFeatureEstimatorDialog(repoRoot);
         if (!selection)
             return;
+        const featureDetails = selection.source === "jira"
+            ? buildFeatureEstimatorDetailsFromIssue(selection.issue)
+            : selection.featureDetails;
+        const isGrillMeAction = selection.action === "grillMe";
+        const actionKey = isGrillMeAction ? "featureGrillMe" : "featureEstimator";
+        const skillDisplayName = isGrillMeAction ? "grill-me" : "estimator";
+        const prompt = isGrillMeAction
+            ? (0, grillMe_1.buildFeatureGrillMePrompt)(featureDetails)
+            : (0, featureEstimator_1.buildFeatureEstimatorPrompt)(featureDetails);
+        const promptFilePath = writeAgentPromptFile(isGrillMeAction ? "feature-grill-me" : "feature-estimator", prompt);
+        const terminalName = isGrillMeAction ? "Feature Grill Me" : "Feature Estimator";
         try {
-            const copiedSkillPaths = await (0, featureEstimator_1.copyFeatureEstimatorSkill)(extensionRoot, repoRoot);
-            (0, logger_1.logAlways)(`[featureEstimator] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
+            const copiedSkillPaths = isGrillMeAction
+                ? await (0, grillMe_1.copyGrillMeSkill)(extensionRoot, repoRoot)
+                : await (0, featureEstimator_1.copyFeatureEstimatorSkill)(extensionRoot, repoRoot);
+            (0, logger_1.logAlways)(`[${actionKey}] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`);
             provider.refresh();
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logAlways)(`[featureEstimator] ERROR preparing skill: ${message}`);
-            void vscode.window.showErrorMessage(`Failed to prepare the estimator skill: ${message}`);
+            (0, logger_1.logAlways)(`[${actionKey}] ERROR preparing skill: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to prepare the ${skillDisplayName} skill: ${message}`);
             return;
         }
-        const featureDetails = selection.source === "jira"
-            ? buildFeatureEstimatorDetailsFromIssue(selection.issue)
-            : selection.featureDetails;
-        const prompt = (0, featureEstimator_1.buildFeatureEstimatorPrompt)(featureDetails);
-        const promptFilePath = writeAgentPromptFile("feature-estimator", prompt);
         const commandLine = (0, terminal_1.buildAgenticHarnessFileCommand)(repoRoot, promptFilePath, "prompt");
-        (0, logger_1.logAlways)(`[featureEstimator] launching Agentic Harness for ${selection.source === "jira" ? selection.issue.key : "free-text request"}`);
-        (0, terminal_1.runInPersistentTerminal)("Feature Estimator", [
+        (0, logger_1.logAlways)(`[${actionKey}] launching Agentic Harness for ${selection.source === "jira" ? selection.issue.key : "free-text request"}`);
+        (0, terminal_1.runInPersistentTerminal)(terminalName, [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
             commandLine
         ], {
