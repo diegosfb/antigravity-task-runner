@@ -23,6 +23,7 @@ const secrets_audit_1 = require("./secrets-audit");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const featureEstimator_1 = require("./featureEstimator");
 const grillMe_1 = require("./grillMe");
+const updateProjectConfig_1 = require("./updateProjectConfig");
 const explainMe_1 = require("./explainMe");
 function getRepoPackageVersion(repoRoot) {
     try {
@@ -43,6 +44,7 @@ function activate(context) {
     const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
     const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
     const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+    const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
     context.subscriptions.push(outputChannel);
     (0, logger_1.initLogger)(outputChannel);
     const provider = new treeProvider_1.AntigravityViewProvider();
@@ -73,6 +75,24 @@ function activate(context) {
         (0, logger_1.log)(`[launchAgentInit] launching Codex init terminal`);
         await (0, terminal_1.runCodexInitAndUpdateInPersistentTerminal)(repoRoot, prompt);
         (0, logger_1.log)(`[launchAgentInit] done`);
+    };
+    const launchUpdateProjectConfigPrompt = (logKey, terminalName, prompt, iconId, successMessage) => {
+        (0, logger_1.log)(`[${logKey}] triggered`);
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        (0, logger_1.logAlways)(`[${logKey}] delegating to Agentic Harness`);
+        (0, terminal_1.runInPersistentTerminal)(terminalName, [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "dangerous")
+        ], {
+            iconPath: new vscode.ThemeIcon(iconId, UPDATE_PROJECT_CONFIG_ACTION_COLOR),
+            color: UPDATE_PROJECT_CONFIG_ACTION_COLOR
+        });
+        void vscode.window.showInformationMessage(successMessage);
     };
     const refreshAutocommitUiWhenStateChanges = (repoRoot, expectedRunningState, attemptsRemaining = 20) => {
         provider.refresh();
@@ -4189,6 +4209,12 @@ function activate(context) {
             color: terminal_1.CLAUDE_ACTION_COLOR
         });
         void vscode.window.showInformationMessage("Opened Feature Flag setup terminal.");
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.updateGithubActions", async () => {
+        launchUpdateProjectConfigPrompt("updateGithubActions", "Update Github Actions", updateProjectConfig_1.UPDATE_GITHUB_ACTIONS_PROMPT, "github-action", "Opened GitHub Actions update terminal.");
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.updateTests", async () => {
+        launchUpdateProjectConfigPrompt("updateTests", "Update Tests", updateProjectConfig_1.UPDATE_TESTS_PROMPT, "beaker", "Opened test update terminal.");
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.reviewPullRequest", async () => {
         (0, logger_1.log)("[reviewPullRequest] triggered");

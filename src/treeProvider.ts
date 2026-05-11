@@ -147,6 +147,10 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
       return getPrReviewerItems();
     }
 
+    if (element.kind === "category" && element.label === "Update Project Config") {
+      return getUpdateProjectConfigItems();
+    }
+
     if (element.kind === "folder" && element.label === "Claude Plugins") {
       return this.getClaudePluginItems();
     }
@@ -375,6 +379,7 @@ const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
 const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
 const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
 const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
 const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(
   path.resolve(__dirname, "..", "Resources", "feature-estimator-red.svg")
 );
@@ -614,6 +619,18 @@ function getQuickActionItems(): NodeItem[] {
     title: "Setup Workspace"
   };
   items.push(setupWorkspace);
+
+  const updateProjectConfig = new NodeItem(
+    { kind: "category", label: "Update Project Config" },
+    vscode.TreeItemCollapsibleState.Collapsed
+  );
+  updateProjectConfig.iconPath = new vscode.ThemeIcon(
+    "settings-gear",
+    UPDATE_PROJECT_CONFIG_ACTION_COLOR
+  );
+  updateProjectConfig.tooltip =
+    "Expand to update project configuration with the selected Agentic Harness.";
+  items.push(updateProjectConfig);
 
   const workspaceSetup = new NodeItem(
     { kind: "action", label: "Workspace Setup" },
@@ -939,6 +956,37 @@ function getQuickActionItems(): NodeItem[] {
   items.push(sopManual);
 
   return items;
+}
+
+function getUpdateProjectConfigItems(): NodeItem[] {
+  const updateGithubActions = new NodeItem(
+    { kind: "action", label: "Update Github Actions" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  updateGithubActions.iconPath = new vscode.ThemeIcon(
+    "github-action",
+    UPDATE_PROJECT_CONFIG_ACTION_COLOR
+  );
+  updateGithubActions.command = {
+    command: "antigravity.updateGithubActions",
+    title: "Update Github Actions"
+  };
+  updateGithubActions.tooltip =
+    "Run the selected Agentic Harness with the GitHub Actions update prompt.";
+
+  const updateTests = new NodeItem(
+    { kind: "action", label: "Update Tests" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  updateTests.iconPath = new vscode.ThemeIcon("beaker", UPDATE_PROJECT_CONFIG_ACTION_COLOR);
+  updateTests.command = {
+    command: "antigravity.updateTests",
+    title: "Update Tests"
+  };
+  updateTests.tooltip =
+    "Run the selected Agentic Harness with the test and Postman script update prompt.";
+
+  return [updateGithubActions, updateTests];
 }
 
 function getPrReviewerItems(): NodeItem[] {

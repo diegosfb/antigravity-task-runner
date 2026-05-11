@@ -106,6 +106,10 @@ import {
   copyGrillMeSkill
 } from "./grillMe";
 import {
+  UPDATE_GITHUB_ACTIONS_PROMPT,
+  UPDATE_TESTS_PROMPT
+} from "./updateProjectConfig";
+import {
   EXPLAIN_ME_PROMPT,
   copyExplainMeSkill
 } from "./explainMe";
@@ -154,6 +158,7 @@ export function activate(context: vscode.ExtensionContext) {
   const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
   const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
   const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+  const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
   context.subscriptions.push(outputChannel);
   initLogger(outputChannel);
 
@@ -194,6 +199,36 @@ export function activate(context: vscode.ExtensionContext) {
     log(`[launchAgentInit] launching Codex init terminal`);
     await runCodexInitAndUpdateInPersistentTerminal(repoRoot, prompt);
     log(`[launchAgentInit] done`);
+  };
+
+  const launchUpdateProjectConfigPrompt = (
+    logKey: string,
+    terminalName: string,
+    prompt: string,
+    iconId: string,
+    successMessage: string
+  ): void => {
+    log(`[${logKey}] triggered`);
+    const rootPath = getRootPath();
+    if (!rootPath) {
+      void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+      return;
+    }
+    const repoRoot = getRepoRoot(rootPath);
+
+    logAlways(`[${logKey}] delegating to Agentic Harness`);
+    runInPersistentTerminal(
+      terminalName,
+      [
+        `cd ${quoteShellArg(repoRoot)}`,
+        buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous")
+      ],
+      {
+        iconPath: new vscode.ThemeIcon(iconId, UPDATE_PROJECT_CONFIG_ACTION_COLOR),
+        color: UPDATE_PROJECT_CONFIG_ACTION_COLOR
+      }
+    );
+    void vscode.window.showInformationMessage(successMessage);
   };
 
   const refreshAutocommitUiWhenStateChanges = (
@@ -5280,6 +5315,30 @@ export function activate(context: vscode.ExtensionContext) {
         }
       );
       void vscode.window.showInformationMessage("Opened Feature Flag setup terminal.");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.updateGithubActions", async () => {
+      launchUpdateProjectConfigPrompt(
+        "updateGithubActions",
+        "Update Github Actions",
+        UPDATE_GITHUB_ACTIONS_PROMPT,
+        "github-action",
+        "Opened GitHub Actions update terminal."
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.updateTests", async () => {
+      launchUpdateProjectConfigPrompt(
+        "updateTests",
+        "Update Tests",
+        UPDATE_TESTS_PROMPT,
+        "beaker",
+        "Opened test update terminal."
+      );
     })
   );
 
