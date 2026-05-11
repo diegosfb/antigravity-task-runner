@@ -205,7 +205,6 @@ If `ANTHROPIC_BASE_URL` points to `localhost` but `tool-run.litellm-openai` is m
 | `Autocommit Start` | Starts the autocommit background workflow. | Use it when you want periodic automated checkpoints. A GitHub remote must already exist. | When autocommit is not already running |
 | `Autocommit Stop` | Stops the autocommit background workflow. | Use it when you no longer want automated checkpoints. | When autocommit is already running |
 | `Revert Changes` | Runs the autocommit revert script. | Use it to roll back the current autocommit change set. | Only when autocommit is already running |
-| `Environment Switch` | Prompts for `DEV`, `QA`, `UAT`, or `PROD`, makes sure the switch script exists, offers to download missing config files, and then runs the environment switch script. | Use it when you need the workspace config moved to a different environment profile. | Always |
 | `SOP Manual` | Downloads the configured SOP markdown file to a temp file and opens it in VS Code. | Use it when you need the current SOP reference while working in the repo. | Always |
 
 ## Dynamic Sections
@@ -232,6 +231,6 @@ If `ANTHROPIC_BASE_URL` points to `localhost` but `tool-run.litellm-openai` is m
 ## Practical Reading Of The Sidebar
 
 - The first block is for Claude launch and build/test commands.
-- The middle block is for repo setup, Git flow, Jira flow, versioning, autocommit, and environment management.
+- The middle block is for repo setup, Git flow, Jira flow, versioning, autocommit, and project helper actions.
 - The lower block is for reusable assets: plugins, agents, skills, workflows, and linked folders.
 - If an item looks gray or does not appear, Task Runner is usually waiting on a missing prerequisite such as Git initialization, a GitHub remote, Jira setup, or a config value in settings.

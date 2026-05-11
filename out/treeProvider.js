@@ -711,13 +711,6 @@ function getQuickActionItems() {
         };
         items.push(revertChanges);
     }
-    const environmentSwitch = new NodeItem({ kind: "action", label: "Environment Switch" }, vscode.TreeItemCollapsibleState.None);
-    environmentSwitch.iconPath = new vscode.ThemeIcon("sync", QUICK_ACTION_COLOR);
-    environmentSwitch.command = {
-        command: "antigravity.switchEnvironment",
-        title: "Switch Environment"
-    };
-    items.push(environmentSwitch);
     const sopManual = new NodeItem({ kind: "action", label: "SOP Manual" }, vscode.TreeItemCollapsibleState.None);
     sopManual.iconPath = new vscode.ThemeIcon("repo", SOP_MANUAL_ACTION_COLOR);
     sopManual.contextValue = "antigravitySopManual";
