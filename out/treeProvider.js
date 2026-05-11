@@ -747,7 +747,15 @@ function getUpdateProjectConfigItems() {
     };
     updateTests.tooltip =
         "Run the selected Agentic Harness with the test and Postman script update prompt.";
-    return [updateGithubActions, updateTests];
+    const updateAgentsMd = new NodeItem({ kind: "action", label: "Update AGENTS.md" }, vscode.TreeItemCollapsibleState.None);
+    updateAgentsMd.iconPath = new vscode.ThemeIcon("note", UPDATE_PROJECT_CONFIG_ACTION_COLOR);
+    updateAgentsMd.command = {
+        command: "antigravity.updateWorkspaceAgentsMd",
+        title: "Update AGENTS.md"
+    };
+    updateAgentsMd.tooltip =
+        "Open the selected Agentic Harness with the progressive-disclosure AGENTS.md update prompt.";
+    return [updateGithubActions, updateTests, updateAgentsMd];
 }
 function getPrReviewerItems() {
     const reviewPullRequest = new NodeItem({ kind: "action", label: "Review a Pull Request" }, vscode.TreeItemCollapsibleState.None);

@@ -334,11 +334,6 @@
           "group": "navigation"
         },
         {
-          "command": "antigravity.updateWorkspaceAgentsMd",
-          "when": "view == antigravityView && viewItem =~ /antigravitySetupWorkspaceAction/",
-          "group": "navigation@1"
-        },
-        {
           "command": "antigravity.auditSecretsAndVariables",
           "when": "view == antigravityView && viewItem =~ /antigravitySetupWorkspaceAction/",
           "group": "navigation@2"
