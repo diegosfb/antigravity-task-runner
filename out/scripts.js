@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.downloadInfrastructureFileIfMissing = downloadInfrastructureFileIfMissing;
 exports.downloadConfigFileIfMissing = downloadConfigFileIfMissing;
+exports.downloadFile = downloadFile;
 exports.ensureScriptFile = ensureScriptFile;
 exports.runRepoScript = runRepoScript;
 exports.openFile = openFile;
@@ -35,13 +36,10 @@ function buildScriptUrl(baseUrl, scriptFileName) {
     return `${url}/scripts/${scriptFileName}`;
 }
 function getScriptFallbackUrl(scriptFileName) {
-    const config = vscode.workspace.getConfiguration("antigravity");
-    const baseUrl = config.get("scriptFallbackBaseUrl") || SCRIPT_FALLBACK_BASE_URL;
-    return buildScriptUrl(baseUrl, scriptFileName);
+    return buildScriptUrl(SCRIPT_FALLBACK_BASE_URL, scriptFileName);
 }
 function getConfigFallbackUrl(fileName) {
-    const config = vscode.workspace.getConfiguration("antigravity");
-    let baseUrl = config.get("configFallbackBaseUrl") || CONFIG_FALLBACK_BASE_URL;
+    let baseUrl = CONFIG_FALLBACK_BASE_URL;
     if (baseUrl.includes("github.com/") && !baseUrl.includes("raw.githubusercontent.com")) {
         baseUrl = baseUrl
             .replace("https://github.com/", "https://raw.githubusercontent.com/")
@@ -75,7 +73,7 @@ async function downloadInfrastructureFileIfMissing(repoRoot, settingsFileName) {
     const localPath = path.join(repoRoot, infraRef);
     if (fs.existsSync(localPath))
         return;
-    // Strip leading "config/" — configFallbackBaseUrl already points to the config directory.
+    // Strip leading "config/" — the fallback base URL already points to the config directory.
     const urlRelativePath = infraRef.replace(/^config\//, "");
     const url = getConfigFallbackUrl(urlRelativePath);
     const answer = await vscode.window.showWarningMessage(`Infrastructure file ${infraRef} is missing. Download from ${url}?`, "Yes", "No");

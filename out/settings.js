@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_GITHUB_CODE_REVIEWER = exports.DEFAULT_SOP_MANUAL_LINK = exports.LOCAL_LITELLM_READY_URL = void 0;
+exports.DEFAULT_GITHUB_CODE_REVIEWER = exports.LOCAL_LITELLM_READY_URL = void 0;
 exports.isLocalLiteLLMBaseUrl = isLocalLiteLLMBaseUrl;
 exports.readClaudeAnthropicBaseUrl = readClaudeAnthropicBaseUrl;
 exports.normalizeStringArray = normalizeStringArray;
@@ -22,7 +22,6 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 exports.LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
-exports.DEFAULT_SOP_MANUAL_LINK = "https://drive.google.com/uc?export=download&id=1P_dIVo6sHwymQeU71QdwOpIqHyVtdlX7";
 exports.DEFAULT_GITHUB_CODE_REVIEWER = "@diegosfb";
 function isLocalLiteLLMBaseUrl(baseUrl) {
     if (!baseUrl)
@@ -225,13 +224,6 @@ function getExtensionSettingsFields() {
             value: config.get("workflowsFolder") || ""
         },
         {
-            key: "sopManualLink",
-            label: "SOP Manual Link",
-            description: "Editable markdown URL used by the SOP Manual quick action. If SOP_MANUAL_LINK is set in the repository .env file, it overrides this setting.",
-            placeholder: "https://example.com/sop-manual.md",
-            value: config.get("sopManualLink") || exports.DEFAULT_SOP_MANUAL_LINK
-        },
-        {
             key: "terminalName",
             label: "Workflow Terminal Name",
             description: "Terminal name used when running workflow scripts.",
@@ -279,20 +271,6 @@ function getExtensionSettingsFields() {
             description: 'Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders.',
             placeholder: '"{agentFile}"',
             value: config.get("antigravityArgs") || ""
-        },
-        {
-            key: "scriptFallbackBaseUrl",
-            label: "Script Fallback Base URL",
-            description: "Base URL used to download missing scripts when ./scripts/<name>.sh is not present.",
-            placeholder: "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts",
-            value: config.get("scriptFallbackBaseUrl") || ""
-        },
-        {
-            key: "configFallbackBaseUrl",
-            label: "Config Fallback Base URL",
-            description: "Base URL used to download missing config files (e.g. DEV-settings.yaml, .env).",
-            placeholder: "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config",
-            value: config.get("configFallbackBaseUrl") || ""
         },
         {
             key: "jiraBaseUrl",

@@ -39,7 +39,7 @@ import {
   isLocalLiteLLMBaseUrl,
   LOCAL_LITELLM_READY_URL
 } from "./settings";
-import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing, downloadMarkdownToTempFile } from "./scripts";
+import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing } from "./scripts";
 import {
   buildAgentRunCommand,
   inferAssignableAgentLabelFromCommand,
@@ -1524,14 +1524,6 @@ export function activate(context: vscode.ExtensionContext) {
         context.subscriptions
       );
     });
-
-  const getSopManualLink = (repoRoot?: string): string => {
-    const config = vscode.workspace.getConfiguration("antigravity");
-    const repoOverride = repoRoot
-      ? (parseEnvFile(getRepoEnvPath(repoRoot)).sop_manual_link || "").trim()
-      : "";
-    return repoOverride || (config.get<string>("sopManualLink") || "").trim();
-  };
 
   const getProjectSopManualPath = (repoRoot: string): string =>
     path.join(repoRoot, "Resources", "sop.md");
@@ -5737,11 +5729,11 @@ export function activate(context: vscode.ExtensionContext) {
       );
       if (!selection) return;
 
-      // Ensure switch-env.sh is present, downloading from Script Fallback Base URL if missing.
+      // Ensure switch-env.sh is present, downloading from the built-in GitHub fallback if missing.
       const scriptPath = await ensureScriptFile(repoRoot, "switch-env.sh", path.join(workspaceDir, "scripts"));
       if (!scriptPath) return;
 
-      // Offer to download missing config files from Config Fallback Base URL.
+      // Offer to download missing config files from the built-in GitHub fallback.
       // Files live in workspace/config/ so pass workspaceDir as the root.
       const settingsFileName = `${selection.value.toLowerCase()}-settings.yaml`;
       await downloadConfigFileIfMissing(workspaceDir, settingsFileName);
@@ -5765,15 +5757,12 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const sopManualLink = getSopManualLink(repoRoot);
       try {
-        const localPath = sopManualLink
-          ? await downloadMarkdownToTempFile(sopManualLink, "sop-manual.md")
-          : await resourceProvider.ensureFile("sop.md");
+        const localPath = await resourceProvider.ensureFile("sop.md");
         await openFile(localPath);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(`Failed to download SOP manual: ${message}`);
+        void vscode.window.showErrorMessage(`Failed to open SOP manual: ${message}`);
       }
     })
   );
@@ -5787,12 +5776,9 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const repoRoot = getRepoRoot(rootPath);
-      const sopManualLink = getSopManualLink(repoRoot);
       const projectSopManualPath = getProjectSopManualPath(repoRoot);
       try {
-        const downloadedPath = sopManualLink
-          ? await downloadMarkdownToTempFile(sopManualLink, "sop-manual.md")
-          : await resourceProvider.ensureFile("sop.md");
+        const downloadedPath = await resourceProvider.ensureFile("sop.md");
         await fs.promises.mkdir(path.dirname(projectSopManualPath), { recursive: true });
         await fs.promises.copyFile(downloadedPath, projectSopManualPath);
         void vscode.window.showInformationMessage(

@@ -28,14 +28,11 @@ function buildScriptUrl(baseUrl: string, scriptFileName: string): string {
 }
 
 function getScriptFallbackUrl(scriptFileName: string): string {
-  const config = vscode.workspace.getConfiguration("antigravity");
-  const baseUrl = config.get<string>("scriptFallbackBaseUrl") || SCRIPT_FALLBACK_BASE_URL;
-  return buildScriptUrl(baseUrl, scriptFileName);
+  return buildScriptUrl(SCRIPT_FALLBACK_BASE_URL, scriptFileName);
 }
 
 function getConfigFallbackUrl(fileName: string): string {
-  const config = vscode.workspace.getConfiguration("antigravity");
-  let baseUrl = config.get<string>("configFallbackBaseUrl") || CONFIG_FALLBACK_BASE_URL;
+  let baseUrl = CONFIG_FALLBACK_BASE_URL;
   if (baseUrl.includes("github.com/") && !baseUrl.includes("raw.githubusercontent.com")) {
     baseUrl = baseUrl
       .replace("https://github.com/", "https://raw.githubusercontent.com/")
@@ -72,7 +69,7 @@ export async function downloadInfrastructureFileIfMissing(
   const localPath = path.join(repoRoot, infraRef);
   if (fs.existsSync(localPath)) return;
 
-  // Strip leading "config/" — configFallbackBaseUrl already points to the config directory.
+  // Strip leading "config/" — the fallback base URL already points to the config directory.
   const urlRelativePath = infraRef.replace(/^config\//, "");
   const url = getConfigFallbackUrl(urlRelativePath);
 
@@ -124,7 +121,7 @@ export async function downloadConfigFileIfMissing(
   }
 }
 
-function downloadFile(url: string, destination: string): Promise<void> {
+export function downloadFile(url: string, destination: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const client = url.startsWith("https://") ? https : http;
     const request = client.get(url, (response) => {
