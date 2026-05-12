@@ -8,6 +8,7 @@ exports.getToolRunCommand = getToolRunCommand;
 exports.getRouterSettings = getRouterSettings;
 exports.loadOpenRouterConfig = loadOpenRouterConfig;
 exports.loadClaudeSettings = loadClaudeSettings;
+exports.getNonce = getNonce;
 exports.getAgenticHarnessExecutionCommand = getAgenticHarnessExecutionCommand;
 exports.getLightAgenticHarnessExecutionCommand = getLightAgenticHarnessExecutionCommand;
 exports.getDefaultGithubCodeReviewer = getDefaultGithubCodeReviewer;
@@ -22,7 +23,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 exports.LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
-exports.DEFAULT_GITHUB_CODE_REVIEWER = "@diegosfb";
+exports.DEFAULT_GITHUB_CODE_REVIEWER = "";
 function isLocalLiteLLMBaseUrl(baseUrl) {
     if (!baseUrl)
         return false;
@@ -220,7 +221,7 @@ function getExtensionSettingsFields() {
             key: "workflowsFolder",
             label: "Antigravity Workflows Folder",
             description: "Base folder used to look up Claude workflows. The extension checks both <folder>/workflows/<name>/WORKFLOW.md and <folder>/<name>/WORKFLOW.md before falling back to bundled workflows.",
-            placeholder: "/Users/diego.brihuega/.gemini",
+            placeholder: "~/.gemini",
             value: config.get("workflowsFolder") || ""
         },
         {

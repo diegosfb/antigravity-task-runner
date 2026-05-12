@@ -2,12 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildAgenticHarnessPromptCommandForCommand = buildAgenticHarnessPromptCommandForCommand;
 exports.buildAgenticHarnessFileCommandForCommand = buildAgenticHarnessFileCommandForCommand;
-function quoteShellArg(value) {
-    return `"${value.replace(/["\\$`]/g, "\\$&")}"`;
-}
+const shellUtils_1 = require("./shellUtils");
 function buildCodexTrustArgs(repoRoot) {
     const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
-    return `-C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)}`;
+    return `-C ${(0, shellUtils_1.quoteShellArg)(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${(0, shellUtils_1.quoteShellArg)(trustOverride)}`;
 }
 function buildCodexExecBaseCommand(command) {
     return /\bcodex\s+exec\b/.test(command)
@@ -29,12 +27,6 @@ function buildGeminiUnattendedBaseCommand(command) {
     return /(?:^|\s)--yolo(?:\s|$)/.test(command)
         ? command
         : command.replace(/\bgemini\b/, "gemini --yolo");
-}
-function getExecutableName(command) {
-    const firstToken = command.trim().split(/\s+/)[0] || "";
-    const normalized = firstToken.replace(/\\/g, "/");
-    const basename = normalized.split("/").pop() || normalized;
-    return basename.toLowerCase();
 }
 const HARNESS_BASE_COMMAND_BUILDERS = {
     claude(command, _repoRoot, mode) {
@@ -63,7 +55,7 @@ const HARNESS_BASE_COMMAND_BUILDERS = {
 };
 function buildAgenticHarnessBaseCommand(command, repoRoot, mode) {
     const trimmedCommand = command.trim();
-    const executableName = getExecutableName(trimmedCommand);
+    const executableName = (0, shellUtils_1.getExecutableName)(trimmedCommand);
     const buildBaseCommand = HARNESS_BASE_COMMAND_BUILDERS[executableName];
     return buildBaseCommand ? buildBaseCommand(trimmedCommand, repoRoot, mode) : trimmedCommand;
 }
@@ -72,11 +64,11 @@ function buildAgenticHarnessCommandForArgument(command, repoRoot, promptArgument
     return `${baseCommand} ${promptArgument}`;
 }
 function buildPromptArgumentFromFile(promptFilePath) {
-    const quotedFile = quoteShellArg(promptFilePath);
+    const quotedFile = (0, shellUtils_1.quoteShellArg)(promptFilePath);
     return `"$(cat ${quotedFile})"`;
 }
 function buildAgenticHarnessPromptCommandForCommand(command, repoRoot, prompt, mode = "unattended") {
-    return buildAgenticHarnessCommandForArgument(command, repoRoot, quoteShellArg(prompt), mode);
+    return buildAgenticHarnessCommandForArgument(command, repoRoot, (0, shellUtils_1.quoteShellArg)(prompt), mode);
 }
 /**
  * Builds the agentic harness command using a prompt stored in a file.

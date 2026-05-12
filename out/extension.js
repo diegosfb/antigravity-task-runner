@@ -148,14 +148,6 @@ function activate(context) {
             prefix: "hotfix"
         }
     ];
-    const getNonce = () => {
-        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        let nonce = "";
-        for (let i = 0; i < 32; i += 1) {
-            nonce += chars[Math.floor(Math.random() * chars.length)];
-        }
-        return nonce;
-    };
     const normalizeBranchSegment = (value) => value
         .trim()
         .toLowerCase()
@@ -203,7 +195,7 @@ function activate(context) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
     const renderSetupWorkspaceHtml = (webview, workspaceDir, projectTemplates) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         const templateCards = projectTemplates
             .map((template, index) => {
@@ -434,7 +426,7 @@ function activate(context) {
         }, undefined, context.subscriptions);
     });
     const renderCreateFeatureBranchHtml = (webview, hasJiraProject) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         const branchTypeData = branchTypes.map((option) => ({
             label: option.label,
@@ -804,7 +796,7 @@ function activate(context) {
             : `Jira item ${issue.key}: ${issue.summary}`;
     };
     const renderFeatureEstimatorHtml = (webview, savedProjectKey) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const hasSavedProjectKey = savedProjectKey.length > 0;
         const useJiraByDefault = hasSavedProjectKey;
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -1259,7 +1251,7 @@ function activate(context) {
         return undefined;
     };
     const renderJiraProjectSetupHtml = (webview, projects) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         const projectOptions = projects.map((project) => ({
             key: project.key,
@@ -1620,7 +1612,7 @@ function activate(context) {
         return projectKey;
     };
     const renderCreateJiraItemHtml = (webview, projectKey, issueTypes) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         return `<!DOCTYPE html>
 <html lang="en">
@@ -1775,7 +1767,7 @@ function activate(context) {
         }, undefined, context.subscriptions);
     });
     const renderAssignJiraItemToAgentHtml = (webview, projectKey, issues, initialAgentCommand, agentCommandOptions) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         const issueOptions = issues.map((issue) => ({
             key: issue.key,
@@ -2002,10 +1994,13 @@ function activate(context) {
     };
     const buildAgentJiraLabel = (agentLabel) => `developed-by-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
     const buildJiraAgentPrompt = (issueKey, summary, agentLabel) => {
-        const jiraAccessInstructions = agentLabel === "Codex"
-            ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as diegosfb@gmail.com, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using diegosfb@gmail.com. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as diegosfb@gmail.com, then continue with the MCP-backed Jira actions. Inspect Jira item ${issueKey}, add each assumption as a Jira comment line beginning with "AGENT ASSUMTION:", add a final Jira comment beginning with "AGENT SOLUTION:", and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead by using Jira MCP actions.`
+        const jiraEmail = (vscode.workspace
+            .getConfiguration("antigravity")
+            .get("jiraEmail") || "").trim();
+        const jiraAccessInstructions = agentLabel === "Codex" && jiraEmail
+            ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as ${jiraEmail}, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using ${jiraEmail}. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as ${jiraEmail}, then continue with the MCP-backed Jira actions. Inspect Jira item ${issueKey}, add each assumption as a Jira comment line beginning with "AGENT ASSUMPTION:", add a final Jira comment beginning with "AGENT SOLUTION:", and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead by using Jira MCP actions.`
             : "";
-        return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+        return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMPTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
     };
     const writeAgentLaunchScript = (scriptPrefix, command) => {
         const sanitizedPrefix = scriptPrefix.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "agent-launch";
@@ -2374,7 +2369,7 @@ function activate(context) {
         });
     };
     const renderReviewPullRequestHtml = (webview, branches) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         return `<!DOCTYPE html>
 <html lang="en">
@@ -2523,7 +2518,7 @@ function activate(context) {
         }, undefined, context.subscriptions);
     });
     const renderCheckoutBranchHtml = (webview, currentBranch, branches) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         return `<!DOCTYPE html>
 <html lang="en">

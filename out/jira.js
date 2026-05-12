@@ -27,9 +27,9 @@ const JIRA_STATUS_TO_DO = "To Do";
 const JIRA_STATUS_IN_PROGRESS = "In Progress";
 const JIRA_STATUS_IN_REVIEW = "In Review";
 const JIRA_STATUS_DONE = "Done";
-const TEAM_MANAGED_MEMBER_GROUPS = ["jira-users-diegosfb"];
+const TEAM_MANAGED_MEMBER_GROUPS = [];
 const TEAM_MANAGED_ADMIN_GROUPS = ["site-admins"];
-const TEAM_MANAGED_ACCESS_WARNING = "Jira still requires a manual access-level check so the project is limited to jira-users-diegosfb, Diego Fernandez, and site-admins.";
+const TEAM_MANAGED_ACCESS_WARNING = "Jira still requires a manual access-level check. Verify project member and admin roles in your Jira settings.";
 const TEAM_MANAGED_BOARD_WARNING_PREFIX = 'The Jira project was created, but the extension could not automatically configure the board columns so "In Review" appears between "In Progress" and "Done"';
 function normalizeFieldName(fieldKey, field) {
     return (field?.name || fieldKey).trim().toLowerCase();
@@ -492,10 +492,10 @@ async function syncTeamManagedProjectActors(credentials, projectKey, currentUser
             memberRoleCandidates[0];
         const warnings = [];
         if (!adminRole) {
-            warnings.push("Jira did not expose an administrator role for the new project, so Diego Fernandez and site-admins could not be pinned to the expected admin role automatically.");
+            warnings.push("Jira did not expose an administrator role for the new project, so site-admins could not be pinned to the expected admin role automatically.");
         }
         if (!memberRole) {
-            warnings.push("Jira did not expose a member role for the new project, so jira-users-diegosfb could not be pinned to the expected member role automatically.");
+            warnings.push("Jira did not expose a member role for the new project, so the member group could not be pinned to the expected member role automatically.");
         }
         const shouldClearUnmatchedRoles = Boolean(adminRole && memberRole);
         for (const role of configurableRoles) {

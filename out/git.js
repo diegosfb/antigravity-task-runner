@@ -48,7 +48,7 @@ function commitCheckpoint(repoRoot) {
     const timestamp = new Date().toISOString();
     const msg = `[AGENTIC DEV CHECKPOINT] ${timestamp}`;
     const cmd = [
-        `cd "${repoRoot}"`,
+        `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
         `git add -A`,
         `git diff --cached --quiet || git commit -m "${msg.replace(/"/g, '\\"')}"`,
         `git push`

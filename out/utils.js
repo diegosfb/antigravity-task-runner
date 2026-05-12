@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getExecutableName = exports.quoteShellArg = void 0;
 exports.getRootPath = getRootPath;
 exports.getRepoRoot = getRepoRoot;
 exports.getWorkspaceRoot = getWorkspaceRoot;
 exports.getWorkspaceProjectPath = getWorkspaceProjectPath;
 exports.getAntigravityHomePath = getAntigravityHomePath;
 exports.safeReadDir = safeReadDir;
-exports.quoteShellArg = quoteShellArg;
 exports.findNestedGitFolders = findNestedGitFolders;
 exports.listInfrastructureYamlFiles = listInfrastructureYamlFiles;
 exports.parseEnvFile = parseEnvFile;
@@ -70,9 +70,9 @@ async function safeReadDir(dirPath) {
         return [];
     }
 }
-function quoteShellArg(value) {
-    return `"${value.replace(/"/g, '\\"')}"`;
-}
+var shellUtils_1 = require("./shellUtils");
+Object.defineProperty(exports, "quoteShellArg", { enumerable: true, get: function () { return shellUtils_1.quoteShellArg; } });
+Object.defineProperty(exports, "getExecutableName", { enumerable: true, get: function () { return shellUtils_1.getExecutableName; } });
 const SKIP_DIRS = new Set(["node_modules", ".git"]);
 function findNestedGitFolders(rootDir) {
     const results = [];

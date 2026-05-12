@@ -1,6 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AntigravityViewProvider = exports.NodeItem = void 0;
+exports.shouldHideAntigravityEntry = shouldHideAntigravityEntry;
+exports.missingRootItem = missingRootItem;
+exports.emptyItem = emptyItem;
+exports.readSkillsDir = readSkillsDir;
+exports.parseAgentsOutput = parseAgentsOutput;
+exports.parsePluginListOutput = parsePluginListOutput;
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
@@ -487,12 +493,7 @@ function getQuickActionItems() {
     const hasAgentFolder = repoRoot ? fs.existsSync(path.join((0, utils_1.getWorkspaceProjectPath)(repoRoot), ".agent")) : false;
     const hasGitHub = repoRoot ? (0, git_1.hasGitHubRemoteSync)(repoRoot) : false;
     const savedJiraProjectKey = repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
-        ? (fs
-            .readFileSync(path.join(repoRoot, ".env"), "utf8")
-            .match(/^\s*JIRA_PROJECT_KEY\s*=\s*([^\r\n#]+)/m)?.[1] ?? "")
-            .trim()
-            .replace(/^['"]|['"]$/g, "")
-            .toUpperCase()
+        ? ((0, utils_1.parseEnvFile)(path.join(repoRoot, ".env")).jira_project_key ?? "").toUpperCase()
         : "";
     const setupWorkspace = new NodeItem({ kind: "action", label: "Setup Workspace" }, vscode.TreeItemCollapsibleState.None);
     setupWorkspace.iconPath = new vscode.ThemeIcon("debug-continue", QUICK_ACTION_COLOR);
