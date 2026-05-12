@@ -139,23 +139,20 @@ async function copySetupWorkspaceSkills(resourcesRoot, projectRoot, resourceProv
     return copiedSkills;
 }
 function buildSetupWorkspacePrompt(template, workspaceDir, options = {}) {
-    const workspaceSupportSummary = options.createCodexHarnessLinks
-        ? "CLAUDE.md, AGENTS.md, .agent, .claude, and .codex"
-        : "CLAUDE.md, AGENTS.md, .agent, and .claude";
-    const harnessLinkSummary = options.createCodexHarnessLinks
-        ? ".claude/skills, .claude/agents, .codex/skills, and .codex/agents already point into .agent"
-        : ".claude/skills and .claude/agents already point into .agent";
+    const codexCompatibilityInstruction = options.createCodexHarnessLinks
+        ? "If local agent harness folders are needed for this workspace, include Codex compatibility by linking .codex/skills and .codex/agents into .agent."
+        : "";
     return [
         `Set up the workspace by downloading the "${template.name}" project into "${workspaceDir}".`,
-        `The workspace root already contains ${workspaceSupportSummary}. ${harnessLinkSummary}. Follow those guides and use those folders while working.`,
-        `The Jira project creation skill is already available at "${path.join(workspaceDir, ".agent", "skills", "jira-project-creation")}". Reuse it when it helps.`,
         `Use this source URL: ${template.downloadUrl}.`,
         `Follow these instructions exactly: ${template.instructions}.`,
         `If the target directory does not exist yet, create it first.`,
+        "Do not assume AGENTS.md, CLAUDE.md, .agent, .claude, or .codex already exist. Only create them if the selected setup actually requires them.",
+        codexCompatibilityInstruction,
         `Do not modify files outside "${workspaceDir}".`,
         `If "${workspaceDir}" already contains some of the project files, only add the missing ones. Do not overwrite or modify any existing files in "${workspaceDir}".`,
         "Prefer non-interactive commands and finish once the missing files are extracted or downloaded."
-    ].join(" ");
+    ].filter(Boolean).join(" ");
 }
 async function buildUpdateAgentsMdPrompt(resourcesRoot = path.resolve(__dirname, "..", "Resources"), resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(resourcesRoot)) {
     return (await resourceProvider.readTextFile(path.join("prompts", "update-agents-md.md"))).trim();

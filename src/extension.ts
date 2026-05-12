@@ -86,9 +86,6 @@ import { buildMergeReviewPrompt } from "./mergeReviewPrompt";
 import {
   buildUpdateAgentsMdPromptFilePath,
   buildSetupWorkspacePrompt,
-  copySetupWorkspaceGuideFiles,
-  copySetupWorkspaceSkills,
-  ensureSetupWorkspaceDirectories,
   loadProjectTemplates,
   type ProjectTemplate
 } from "./projectTemplates";
@@ -3956,67 +3953,6 @@ export function activate(context: vscode.ExtensionContext) {
 
       fs.mkdirSync(workspaceDir, { recursive: true });
 
-      let copiedGuideFiles: string[];
-      try {
-        copiedGuideFiles = await copySetupWorkspaceGuideFiles(
-          path.join(extensionRoot, "Resources"),
-          workspaceDir,
-          resourceProvider
-        );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logAlways(`[Setup Workspace] ERROR copying guide files: ${message}`);
-        void vscode.window.showErrorMessage(
-          `Failed to copy CLAUDE.md and AGENTS.md into ${workspaceDir}: ${message}`
-        );
-        return;
-      }
-      logAlways(
-        `[Setup Workspace] guide files ready in ${workspaceDir}: ${
-          copiedGuideFiles.length > 0 ? copiedGuideFiles.join(", ") : "already present"
-        }`
-      );
-
-      let createdSupportPaths: string[];
-      try {
-        createdSupportPaths = await ensureSetupWorkspaceDirectories(workspaceDir, {
-          createCodexHarnessLinks
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logAlways(`[Setup Workspace] ERROR preparing support folders: ${message}`);
-        void vscode.window.showErrorMessage(
-          `Failed to prepare workspace support folders in ${workspaceDir}: ${message}`
-        );
-        return;
-      }
-      logAlways(
-        `[Setup Workspace] support folders ready in ${workspaceDir}: ${
-          createdSupportPaths.length > 0 ? createdSupportPaths.join(", ") : "already present"
-        }`
-      );
-
-      let copiedSkills: string[];
-      try {
-        copiedSkills = await copySetupWorkspaceSkills(
-          path.join(extensionRoot, "Resources"),
-          workspaceDir,
-          resourceProvider
-        );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logAlways(`[Setup Workspace] ERROR copying bundled skills: ${message}`);
-        void vscode.window.showErrorMessage(
-          `Failed to copy bundled skills into ${path.join(workspaceDir, ".agent", "skills")}: ${message}`
-        );
-        return;
-      }
-      logAlways(
-        `[Setup Workspace] bundled skills ready in ${workspaceDir}: ${
-          copiedSkills.length > 0 ? copiedSkills.join(", ") : "already present"
-        }`
-      );
-
       const prompt = buildSetupWorkspacePrompt(selectedTemplate, workspaceDir, {
         createCodexHarnessLinks
       });
@@ -4063,7 +3999,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (!fs.existsSync(agentsFilePath)) {
         logAlways(`[updateWorkspaceAgentsMd] ERROR: Missing AGENTS.md at ${agentsFilePath}`);
         void vscode.window.showErrorMessage(
-          `AGENTS.md was not found at ${agentsFilePath}. Run Setup Workspace first.`
+          `AGENTS.md was not found at ${agentsFilePath}. Create or restore it before running Update AGENTS.md.`
         );
         return;
       }

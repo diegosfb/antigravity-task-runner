@@ -72,10 +72,10 @@ test("buildSetupWorkspacePrompt includes the template details and target path", 
   assert.match(prompt, /https:\/\/github\.com\/diegosfb\/TestService/);
   assert.match(prompt, /Download the latest release source code\./);
   assert.match(prompt, /\/tmp\/workspace/);
-  assert.match(prompt, /CLAUDE\.md, AGENTS\.md, \.agent, and \.claude/);
-  assert.match(prompt, /\.claude\/skills and \.claude\/agents already point into \.agent/);
-  assert.match(prompt, /jira-project-creation/);
   assert.match(prompt, /Do not modify files outside/);
+  assert.match(prompt, /Do not assume AGENTS\.md, CLAUDE\.md, \.agent, \.claude, or \.codex already exist/);
+  assert.doesNotMatch(prompt, /CLAUDE\.md, AGENTS\.md, \.agent, and \.claude/);
+  assert.doesNotMatch(prompt, /jira-project-creation/);
 });
 
 test("buildSetupWorkspacePrompt mentions Codex compatibility links when requested", () => {
@@ -90,8 +90,7 @@ test("buildSetupWorkspacePrompt mentions Codex compatibility links when requeste
     { createCodexHarnessLinks: true }
   );
 
-  assert.match(prompt, /CLAUDE\.md, AGENTS\.md, \.agent, \.claude, and \.codex/);
-  assert.match(prompt, /\.codex\/skills, and \.codex\/agents already point into \.agent/);
+  assert.match(prompt, /include Codex compatibility by linking \.codex\/skills and \.codex\/agents into \.agent/);
 });
 
 test("buildUpdateAgentsMdPrompt includes the progressive disclosure refactor steps", async () => {
