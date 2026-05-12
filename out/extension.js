@@ -4277,13 +4277,14 @@ function activate(context) {
             "Do not alter existing flags or unrelated code."
         ].join(" ");
         (0, logger_1.logAlways)("[setFeatureFlag] delegating to Agentic Harness");
-        (0, terminal_1.runInPersistentTerminal)("Set Feature Flags", [
-            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "dangerous")
-        ], {
-            iconPath: new vscode.ThemeIcon("symbol-boolean", terminal_1.CLAUDE_ACTION_COLOR),
-            color: terminal_1.CLAUDE_ACTION_COLOR
-        });
+        try {
+            await (0, terminal_1.runCommandInTaskTerminal)("Set Feature Flags", (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "dangerous"), { cwd: repoRoot });
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Set Feature Flag failed: ${message}`);
+            return;
+        }
         void vscode.window.showInformationMessage("Opened Feature Flag setup terminal.");
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.updateGithubActions", async () => {

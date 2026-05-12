@@ -5457,17 +5457,17 @@ export function activate(context: vscode.ExtensionContext) {
       ].join(" ");
 
       logAlways("[setFeatureFlag] delegating to Agentic Harness");
-      runInPersistentTerminal(
-        "Set Feature Flags",
-        [
-          `cd ${quoteShellArg(repoRoot)}`,
-          buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous")
-        ],
-        {
-          iconPath: new vscode.ThemeIcon("symbol-boolean", CLAUDE_ACTION_COLOR),
-          color: CLAUDE_ACTION_COLOR
-        }
-      );
+      try {
+        await runCommandInTaskTerminal(
+          "Set Feature Flags",
+          buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous"),
+          { cwd: repoRoot }
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Set Feature Flag failed: ${message}`);
+        return;
+      }
       void vscode.window.showInformationMessage("Opened Feature Flag setup terminal.");
     })
   );
