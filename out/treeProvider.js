@@ -511,17 +511,6 @@ function getQuickActionItems() {
     updateProjectConfig.tooltip =
         "Expand to update project configuration with the selected Agentic Harness.";
     items.push(updateProjectConfig);
-    const workspaceSetup = new NodeItem({ kind: "action", label: "Workspace Setup" }, vscode.TreeItemCollapsibleState.None);
-    workspaceSetup.iconPath = new vscode.ThemeIcon("run-all", QUICK_ACTION_COLOR);
-    if (hasAgentFolder) {
-        workspaceSetup.iconPath = new vscode.ThemeIcon("run-all", new vscode.ThemeColor("disabledForeground"));
-        workspaceSetup.tooltip = "A .agent folder already exists in this project.";
-    }
-    workspaceSetup.command = {
-        command: "antigravity.workspaceSetup",
-        title: "Run Workspace Setup"
-    };
-    items.push(workspaceSetup);
     const assignJiraItemToAgent = new NodeItem({ kind: "action", label: "Assign Jira Item to Agent" }, vscode.TreeItemCollapsibleState.None);
     assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
     if (!savedJiraProjectKey) {
