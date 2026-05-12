@@ -50,8 +50,44 @@ async function loadProjectTemplates(resourcesRoot, resourceProvider = (0, resour
     return parseProjectTemplates(raw);
 }
 const SETUP_WORKSPACE_GUIDE_FILE_NAMES = ["CLAUDE.md", "AGENTS.md"];
-const SETUP_WORKSPACE_DIRECTORY_NAMES = [".agent", ".claude"];
+const SETUP_WORKSPACE_BASE_DIRECTORY_NAMES = [".agent", ".claude"];
+const SETUP_WORKSPACE_HARNESS_LINK_NAMES = ["skills", "agents"];
 const SETUP_WORKSPACE_SKILL_DIRECTORY_NAMES = ["jira-project-creation"];
+async function pathExistsIncludingSymlinks(targetPath) {
+    try {
+        await fs.promises.lstat(targetPath);
+        return true;
+    }
+    catch (error) {
+        if (error.code === "ENOENT")
+            return false;
+        throw error;
+    }
+}
+async function ensureSetupWorkspaceDirectory(projectRoot, directoryName) {
+    const directoryPath = path.join(projectRoot, directoryName);
+    if (await pathExistsIncludingSymlinks(directoryPath)) {
+        const stats = await fs.promises.stat(directoryPath);
+        if (!stats.isDirectory()) {
+            throw new Error(`${directoryName} exists but is not a directory.`);
+        }
+        return false;
+    }
+    await fs.promises.mkdir(directoryPath, { recursive: true });
+    return true;
+}
+async function ensureSetupWorkspaceHarnessLinks(projectRoot, harnessDirectoryName) {
+    const createdPaths = [];
+    const harnessDirectoryPath = path.join(projectRoot, harnessDirectoryName);
+    for (const linkName of SETUP_WORKSPACE_HARNESS_LINK_NAMES) {
+        const linkPath = path.join(harnessDirectoryPath, linkName);
+        if (await pathExistsIncludingSymlinks(linkPath))
+            continue;
+        await fs.promises.symlink(path.join("..", ".agent", linkName), linkPath);
+        createdPaths.push(`${harnessDirectoryName}/${linkName}`);
+    }
+    return createdPaths;
+}
 async function copySetupWorkspaceGuideFiles(resourcesRoot, projectRoot, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(resourcesRoot)) {
     const copiedFiles = [];
     await fs.promises.mkdir(projectRoot, { recursive: true });
@@ -65,22 +101,23 @@ async function copySetupWorkspaceGuideFiles(resourcesRoot, projectRoot, resource
     }
     return copiedFiles;
 }
-async function ensureSetupWorkspaceDirectories(projectRoot) {
-    const createdDirectories = [];
+async function ensureSetupWorkspaceDirectories(projectRoot, options = {}) {
+    const createdPaths = [];
     await fs.promises.mkdir(projectRoot, { recursive: true });
-    for (const directoryName of SETUP_WORKSPACE_DIRECTORY_NAMES) {
-        const directoryPath = path.join(projectRoot, directoryName);
-        if (fs.existsSync(directoryPath)) {
-            const stats = await fs.promises.stat(directoryPath);
-            if (!stats.isDirectory()) {
-                throw new Error(`${directoryName} exists but is not a directory.`);
-            }
-            continue;
-        }
-        await fs.promises.mkdir(directoryPath, { recursive: true });
-        createdDirectories.push(directoryName);
+    const directoryNames = [...SETUP_WORKSPACE_BASE_DIRECTORY_NAMES];
+    if (options.createCodexHarnessLinks) {
+        directoryNames.push(".codex");
     }
-    return createdDirectories;
+    for (const directoryName of directoryNames) {
+        if (await ensureSetupWorkspaceDirectory(projectRoot, directoryName)) {
+            createdPaths.push(directoryName);
+        }
+    }
+    createdPaths.push(...await ensureSetupWorkspaceHarnessLinks(projectRoot, ".claude"));
+    if (options.createCodexHarnessLinks) {
+        createdPaths.push(...await ensureSetupWorkspaceHarnessLinks(projectRoot, ".codex"));
+    }
+    return createdPaths;
 }
 async function copySetupWorkspaceSkills(resourcesRoot, projectRoot, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(resourcesRoot)) {
     const copiedSkills = [];
@@ -101,10 +138,16 @@ async function copySetupWorkspaceSkills(resourcesRoot, projectRoot, resourceProv
     }
     return copiedSkills;
 }
-function buildSetupWorkspacePrompt(template, workspaceDir) {
+function buildSetupWorkspacePrompt(template, workspaceDir, options = {}) {
+    const workspaceSupportSummary = options.createCodexHarnessLinks
+        ? "CLAUDE.md, AGENTS.md, .agent, .claude, and .codex"
+        : "CLAUDE.md, AGENTS.md, .agent, and .claude";
+    const harnessLinkSummary = options.createCodexHarnessLinks
+        ? ".claude/skills, .claude/agents, .codex/skills, and .codex/agents already point into .agent"
+        : ".claude/skills and .claude/agents already point into .agent";
     return [
         `Set up the workspace by downloading the "${template.name}" project into "${workspaceDir}".`,
-        `The workspace root already contains CLAUDE.md, AGENTS.md, .agent, and .claude. Follow those guides and use those folders while working.`,
+        `The workspace root already contains ${workspaceSupportSummary}. ${harnessLinkSummary}. Follow those guides and use those folders while working.`,
         `The Jira project creation skill is already available at "${path.join(workspaceDir, ".agent", "skills", "jira-project-creation")}". Reuse it when it helps.`,
         `Use this source URL: ${template.downloadUrl}.`,
         `Follow these instructions exactly: ${template.instructions}.`,

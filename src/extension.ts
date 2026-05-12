@@ -41,7 +41,6 @@ import {
 } from "./settings";
 import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing } from "./scripts";
 import {
-  buildAgentRunCommand,
   inferAssignableAgentLabelFromCommand,
   type AssignableAgentLabel
 } from "./agentRunCommand";
@@ -381,10 +380,16 @@ export function activate(context: vscode.ExtensionContext) {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
+  type SetupWorkspaceSelection = {
+    template: ProjectTemplate;
+    createCodexHarnessLinks: boolean;
+  };
+
   const renderSetupWorkspaceHtml = (
     webview: vscode.Webview,
     workspaceDir: string,
-    projectTemplates: ProjectTemplate[]
+    projectTemplates: ProjectTemplate[],
+    defaultCreateCodexHarnessLinks: boolean
   ): string => {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -447,6 +452,32 @@ export function activate(context: vscode.ExtensionContext) {
       .template-list {
         display: grid;
         gap: 10px;
+      }
+      .option-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--vscode-input-border, transparent);
+        background: var(--vscode-sideBar-background);
+      }
+      .option-card input {
+        margin-top: 3px;
+      }
+      .option-copy {
+        display: grid;
+        gap: 4px;
+      }
+      .option-name {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .option-description {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        line-height: 1.5;
       }
       .template-card {
         display: grid;
@@ -525,6 +556,20 @@ export function activate(context: vscode.ExtensionContext) {
         ${templateCards}
       </div>
 
+      <label class="option-card">
+        <input
+          type="checkbox"
+          id="create-codex-harness-links"${defaultCreateCodexHarnessLinks ? " checked" : ""}
+        />
+        <span class="option-copy">
+          <span class="option-name">Create Codex compatibility links</span>
+          <span class="option-description">
+            Adds <code>.codex/skills</code> and <code>.codex/agents</code> symlinks to
+            <code>.agent</code> so bundled skills are available when this workspace is run with Codex.
+          </span>
+        </span>
+      </label>
+
       <div id="setup-workspace-error" class="error" aria-live="polite"></div>
 
       <div class="actions">
@@ -538,6 +583,7 @@ export function activate(context: vscode.ExtensionContext) {
       const form = document.getElementById("setup-workspace-form");
       const errorMessage = document.getElementById("setup-workspace-error");
       const cancelButton = document.getElementById("cancel-button");
+      const codexHarnessCheckbox = document.getElementById("create-codex-harness-links");
       const cards = Array.from(document.querySelectorAll(".template-card"));
       const radios = Array.from(document.querySelectorAll('input[name="project-template"]'));
 
@@ -566,7 +612,12 @@ export function activate(context: vscode.ExtensionContext) {
         errorMessage.textContent = "";
         vscode.postMessage({
           type: "submitSetupWorkspace",
-          payload: { templateName: selected.value }
+          payload: {
+            templateName: selected.value,
+            createCodexHarnessLinks: Boolean(
+              codexHarnessCheckbox && codexHarnessCheckbox.checked
+            )
+          }
         });
       });
 
@@ -586,8 +637,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   const showSetupWorkspaceDialog = async (
     workspaceDir: string,
-    projectTemplates: ProjectTemplate[]
-  ): Promise<ProjectTemplate | undefined> =>
+    projectTemplates: ProjectTemplate[],
+    defaultCreateCodexHarnessLinks: boolean
+  ): Promise<SetupWorkspaceSelection | undefined> =>
     new Promise((resolve) => {
       const panel = vscode.window.createWebviewPanel(
         "setupWorkspace",
@@ -595,10 +647,15 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.ViewColumn.Active,
         { enableScripts: true }
       );
-      panel.webview.html = renderSetupWorkspaceHtml(panel.webview, workspaceDir, projectTemplates);
+      panel.webview.html = renderSetupWorkspaceHtml(
+        panel.webview,
+        workspaceDir,
+        projectTemplates,
+        defaultCreateCodexHarnessLinks
+      );
 
       let settled = false;
-      const resolveOnce = (value: ProjectTemplate | undefined) => {
+      const resolveOnce = (value: SetupWorkspaceSelection | undefined) => {
         if (settled) return;
         settled = true;
         resolve(value);
@@ -617,6 +674,7 @@ export function activate(context: vscode.ExtensionContext) {
           const payload = message.payload || {};
           const templateName =
             typeof payload.templateName === "string" ? payload.templateName.trim() : "";
+          const createCodexHarnessLinks = Boolean(payload.createCodexHarnessLinks);
           const selectedTemplate = projectTemplates.find(
             (projectTemplate) => projectTemplate.name === templateName
           );
@@ -629,7 +687,10 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          resolveOnce(selectedTemplate);
+          resolveOnce({
+            template: selectedTemplate,
+            createCodexHarnessLinks
+          });
           panel.dispose();
         },
         undefined,
@@ -2485,9 +2546,16 @@ export function activate(context: vscode.ExtensionContext) {
     agentCommand: string
   ): Promise<void> => {
     const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
-    const command = buildAgentRunCommand(repoRoot, agentLabel, prompt, {
-      customCommand: agentCommand
-    });
+    const promptFilePath = writeAgentPromptFile(
+      `assign-jira-item-to-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      prompt
+    );
+    const command = buildAgenticHarnessFileCommandForCommand(
+      agentCommand,
+      repoRoot,
+      promptFilePath,
+      "dangerous"
+    );
     const lines = command.includes("\n")
       ? [
         `zsh ${quoteShellArg(
@@ -3873,11 +3941,18 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const selectedTemplate = await showSetupWorkspaceDialog(workspaceDir, projectTemplates);
-      if (!selectedTemplate) {
+      const defaultCreateCodexHarnessLinks =
+        getAgenticHarnessExecutionCommand().trim().toLowerCase().startsWith("codex");
+      const selection = await showSetupWorkspaceDialog(
+        workspaceDir,
+        projectTemplates,
+        defaultCreateCodexHarnessLinks
+      );
+      if (!selection) {
         logAlways("[Setup Workspace] Selection cancelled");
         return;
       }
+      const { template: selectedTemplate, createCodexHarnessLinks } = selection;
 
       fs.mkdirSync(workspaceDir, { recursive: true });
 
@@ -3902,20 +3977,22 @@ export function activate(context: vscode.ExtensionContext) {
         }`
       );
 
-      let createdDirectories: string[];
+      let createdSupportPaths: string[];
       try {
-        createdDirectories = await ensureSetupWorkspaceDirectories(workspaceDir);
+        createdSupportPaths = await ensureSetupWorkspaceDirectories(workspaceDir, {
+          createCodexHarnessLinks
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        logAlways(`[Setup Workspace] ERROR creating support directories: ${message}`);
+        logAlways(`[Setup Workspace] ERROR preparing support folders: ${message}`);
         void vscode.window.showErrorMessage(
-          `Failed to create .agent and .claude in ${workspaceDir}: ${message}`
+          `Failed to prepare workspace support folders in ${workspaceDir}: ${message}`
         );
         return;
       }
       logAlways(
-        `[Setup Workspace] support directories ready in ${workspaceDir}: ${
-          createdDirectories.length > 0 ? createdDirectories.join(", ") : "already present"
+        `[Setup Workspace] support folders ready in ${workspaceDir}: ${
+          createdSupportPaths.length > 0 ? createdSupportPaths.join(", ") : "already present"
         }`
       );
 
@@ -3940,7 +4017,9 @@ export function activate(context: vscode.ExtensionContext) {
         }`
       );
 
-      const prompt = buildSetupWorkspacePrompt(selectedTemplate, workspaceDir);
+      const prompt = buildSetupWorkspacePrompt(selectedTemplate, workspaceDir, {
+        createCodexHarnessLinks
+      });
       const commandLine = buildAgenticHarnessPromptCommand(workspaceDir, prompt, "dangerous");
       const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;
 
@@ -3956,10 +4035,12 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       logAlways(
-        `[Setup Workspace] Opened harness for template ${selectedTemplate.name} in ${workspaceDir}`
+        `[Setup Workspace] Opened harness for template ${selectedTemplate.name} in ${workspaceDir}` +
+        `${createCodexHarnessLinks ? " with Codex compatibility links." : ""}`
       );
       void vscode.window.showInformationMessage(
-        `Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}.`
+        `Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}` +
+        `${createCodexHarnessLinks ? " with Codex compatibility links." : "."}`
       );
     })
   );
