@@ -1,5 +1,11 @@
 export type AgenticHarnessPromptMode = "dangerous" | "prompt";
 
+type HarnessBaseCommandBuilder = (
+  command: string,
+  repoRoot: string,
+  mode: AgenticHarnessPromptMode
+) => string;
+
 function quoteShellArg(value: string): string {
   return `"${value.replace(/["\\$`]/g, "\\$&")}"`;
 }
@@ -42,62 +48,82 @@ function getExecutableName(command: string): string {
   return basename.toLowerCase();
 }
 
+const HARNESS_BASE_COMMAND_BUILDERS: Record<string, HarnessBaseCommandBuilder> = {
+  claude(command, _repoRoot, mode) {
+    if (mode === "dangerous") {
+      return `${command} --dangerously-skip-permissions --print`;
+    }
+    return command;
+  },
+
+  codex(command, repoRoot, mode) {
+    const codexTrustArgs = buildCodexTrustArgs(repoRoot);
+
+    if (mode === "dangerous") {
+      return `${buildCodexExecBaseCommand(command)} --full-auto ${codexTrustArgs}`;
+    }
+
+    return `${buildCodexPromptBaseCommand(command)} ${codexTrustArgs}`;
+  },
+
+  opencode(command, _repoRoot, mode) {
+    return mode === "dangerous"
+      ? buildOpenCodeDangerousBaseCommand(command)
+      : buildOpenCodePromptBaseCommand(command);
+  },
+
+  gemini(command, _repoRoot, mode) {
+    return mode === "dangerous"
+      ? buildGeminiDangerousBaseCommand(command)
+      : command;
+  }
+};
+
+function buildAgenticHarnessBaseCommand(
+  command: string,
+  repoRoot: string,
+  mode: AgenticHarnessPromptMode
+): string {
+  const trimmedCommand = command.trim();
+  const executableName = getExecutableName(trimmedCommand);
+  const buildBaseCommand = HARNESS_BASE_COMMAND_BUILDERS[executableName];
+  return buildBaseCommand ? buildBaseCommand(trimmedCommand, repoRoot, mode) : trimmedCommand;
+}
+
+function buildAgenticHarnessCommandForArgument(
+  command: string,
+  repoRoot: string,
+  promptArgument: string,
+  mode: AgenticHarnessPromptMode
+): string {
+  const baseCommand = buildAgenticHarnessBaseCommand(command, repoRoot, mode);
+  return `${baseCommand} ${promptArgument}`;
+}
+
+function buildPromptArgumentFromFile(promptFilePath: string): string {
+  const quotedFile = quoteShellArg(promptFilePath);
+  return `"$(cat ${quotedFile})"`;
+}
+
 export function buildAgenticHarnessPromptCommandForCommand(
   command: string,
   repoRoot: string,
   prompt: string,
   mode: AgenticHarnessPromptMode = "dangerous"
 ): string {
-  const trimmedCommand = command.trim();
-  const executableName = getExecutableName(trimmedCommand);
-
-  if (executableName === "claude") {
-    if (mode === "dangerous") {
-      return `${trimmedCommand} --dangerously-skip-permissions --print ${quoteShellArg(prompt)}`;
-    }
-    return `${trimmedCommand} ${quoteShellArg(prompt)}`;
-  }
-
-  if (executableName === "codex") {
-    const codexTrustArgs = buildCodexTrustArgs(repoRoot);
-
-    if (mode === "prompt") {
-      return `${buildCodexPromptBaseCommand(trimmedCommand)} ${codexTrustArgs} ${quoteShellArg(prompt)}`;
-    }
-
-    return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} ${quoteShellArg(prompt)}`;
-  }
-
-  if (executableName === "opencode") {
-    const baseCommand = mode === "dangerous"
-      ? buildOpenCodeDangerousBaseCommand(trimmedCommand)
-      : buildOpenCodePromptBaseCommand(trimmedCommand);
-    return `${baseCommand} ${quoteShellArg(prompt)}`;
-  }
-
-  if (executableName === "gemini") {
-    const baseCommand = mode === "dangerous"
-      ? buildGeminiDangerousBaseCommand(trimmedCommand)
-      : trimmedCommand;
-    return `${baseCommand} ${quoteShellArg(prompt)}`;
-  }
-
-  return `${trimmedCommand} ${quoteShellArg(prompt)}`;
+  return buildAgenticHarnessCommandForArgument(
+    command,
+    repoRoot,
+    quoteShellArg(prompt),
+    mode
+  );
 }
 
 /**
  * Builds the agentic harness command using a prompt stored in a file.
- * This avoids shell-escaping issues with long, multi-line prompts and allows
- * the prompt to be edited without recompiling the extension.
- *
- * For claude: uses --print "$(cat <file>)"
- * For codex dangerous mode: uses file redirect (- < <file>)
- * For codex prompt mode: passes "$(cat <file>)" as the prompt argument
- * For opencode dangerous mode: uses `run` and passes "$(cat <file>)" as the prompt argument
- * For opencode prompt mode: removes `run` and passes "$(cat <file>)" as the prompt argument
- * For gemini dangerous mode: adds `--yolo` and passes "$(cat <file>)" as the prompt argument
- * For gemini prompt mode: passes "$(cat <file>)" as the prompt argument
- * For others: falls back to "$(cat <file>)" command substitution
+ * This mirrors the normal prompt builder but injects `$(cat <file>)` as the
+ * prompt argument so long, multi-line prompts do not need to be shell-escaped
+ * inline by the caller.
  */
 export function buildAgenticHarnessFileCommandForCommand(
   command: string,
@@ -105,41 +131,10 @@ export function buildAgenticHarnessFileCommandForCommand(
   promptFilePath: string,
   mode: AgenticHarnessPromptMode = "dangerous"
 ): string {
-  const trimmedCommand = command.trim();
-  const executableName = getExecutableName(trimmedCommand);
-  const quotedFile = quoteShellArg(promptFilePath);
-
-  if (executableName === "claude") {
-    if (mode === "dangerous") {
-      return `${trimmedCommand} --dangerously-skip-permissions --print "$(cat ${quotedFile})"`;
-    }
-    return `${trimmedCommand} "$(cat ${quotedFile})"`;
-  }
-
-  if (executableName === "codex") {
-    const codexTrustArgs = buildCodexTrustArgs(repoRoot);
-
-    if (mode === "prompt") {
-      return `${buildCodexPromptBaseCommand(trimmedCommand)} ${codexTrustArgs} "$(cat ${quotedFile})"`;
-    }
-
-    return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} - < ${quotedFile}`;
-  }
-
-  if (executableName === "opencode") {
-    const baseCommand = mode === "dangerous"
-      ? buildOpenCodeDangerousBaseCommand(trimmedCommand)
-      : buildOpenCodePromptBaseCommand(trimmedCommand);
-    return `${baseCommand} "$(cat ${quotedFile})"`;
-  }
-
-  if (executableName === "gemini") {
-    const baseCommand = mode === "dangerous"
-      ? buildGeminiDangerousBaseCommand(trimmedCommand)
-      : trimmedCommand;
-    return `${baseCommand} "$(cat ${quotedFile})"`;
-  }
-
-  // Generic fallback: inject file contents via command substitution
-  return `${trimmedCommand} "$(cat ${quotedFile})"`;
+  return buildAgenticHarnessCommandForArgument(
+    command,
+    repoRoot,
+    buildPromptArgumentFromFile(promptFilePath),
+    mode
+  );
 }

@@ -138,7 +138,7 @@ test("buildAgenticHarnessFileCommandForCommand keeps codex dangerous mode in exe
   );
 
   assert.match(command, /^codex exec --full-auto -C "\/tmp\/repo"/);
-  assert.match(command, /- < "\/tmp\/prompt\.txt"$/);
+  assert.match(command, /"\$\(cat "\/tmp\/prompt\.txt"\)"$/);
 });
 
 test("buildAgenticHarnessFileCommandForCommand removes opencode run in prompt mode", () => {
