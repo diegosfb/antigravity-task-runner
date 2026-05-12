@@ -90,7 +90,7 @@ function activate(context) {
         (0, logger_1.logAlways)(`[${logKey}] delegating to Agentic Harness`);
         (0, terminal_1.runInPersistentTerminal)(terminalName, [
             `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "dangerous")
+            (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt")
         ], {
             iconPath: new vscode.ThemeIcon(iconId, UPDATE_PROJECT_CONFIG_ACTION_COLOR),
             color: UPDATE_PROJECT_CONFIG_ACTION_COLOR
@@ -4247,7 +4247,7 @@ function activate(context) {
             (0, logger_1.logAlways)("[agenticReviewOfMerge] delegating review to Agentic Harness");
             (0, terminal_1.runInPersistentTerminal)("Agentic Review of Merge", [
                 `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt)
+                (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt")
             ], {
                 iconPath: new vscode.ThemeIcon("warning", new vscode.ThemeColor("terminal.ansiRed")),
                 color: new vscode.ThemeColor("terminal.ansiRed")
@@ -4278,7 +4278,7 @@ function activate(context) {
         ].join(" ");
         (0, logger_1.logAlways)("[setFeatureFlag] delegating to Agentic Harness");
         try {
-            await (0, terminal_1.runCommandInTaskTerminal)("Set Feature Flags", (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "dangerous"), { cwd: repoRoot });
+            await (0, terminal_1.runCommandInTaskTerminal)("Set Feature Flags", (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "prompt"), { cwd: repoRoot });
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);

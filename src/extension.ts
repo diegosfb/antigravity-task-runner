@@ -224,7 +224,7 @@ export function activate(context: vscode.ExtensionContext) {
       terminalName,
       [
         `cd ${quoteShellArg(repoRoot)}`,
-        buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous")
+        buildAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")
       ],
       {
         iconPath: new vscode.ThemeIcon(iconId, UPDATE_PROJECT_CONFIG_ACTION_COLOR),
@@ -5418,7 +5418,7 @@ export function activate(context: vscode.ExtensionContext) {
           "Agentic Review of Merge",
           [
             `cd ${quoteShellArg(repoRoot)}`,
-            buildAgenticHarnessPromptCommand(repoRoot, prompt)
+            buildAgenticHarnessPromptCommand(repoRoot, prompt, "prompt")
           ],
           {
             iconPath: new vscode.ThemeIcon("warning", new vscode.ThemeColor("terminal.ansiRed")),
@@ -5460,7 +5460,7 @@ export function activate(context: vscode.ExtensionContext) {
       try {
         await runCommandInTaskTerminal(
           "Set Feature Flags",
-          buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous"),
+          buildAgenticHarnessPromptCommand(repoRoot, prompt, "prompt"),
           { cwd: repoRoot }
         );
       } catch (error) {
