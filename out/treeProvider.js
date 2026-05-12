@@ -495,9 +495,9 @@ function getQuickActionItems() {
             .toUpperCase()
         : "";
     const setupWorkspace = new NodeItem({ kind: "action", label: "Setup Workspace" }, vscode.TreeItemCollapsibleState.None);
-    setupWorkspace.iconPath = new vscode.ThemeIcon("repo-clone", QUICK_ACTION_COLOR);
+    setupWorkspace.iconPath = new vscode.ThemeIcon("debug-continue", QUICK_ACTION_COLOR);
     if (hasAgentFolder) {
-        setupWorkspace.iconPath = new vscode.ThemeIcon("repo-clone", new vscode.ThemeColor("disabledForeground"));
+        setupWorkspace.iconPath = new vscode.ThemeIcon("debug-continue", new vscode.ThemeColor("disabledForeground"));
         setupWorkspace.tooltip = "A .agent folder already exists in this project.";
     }
     setupWorkspace.contextValue = hasRepo ? "antigravitySetupWorkspaceActionWithRepo" : "antigravitySetupWorkspaceAction";
