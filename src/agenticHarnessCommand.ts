@@ -19,6 +19,22 @@ function buildCodexPromptBaseCommand(command: string): string {
   return command.replace(/\bcodex\s+exec\b/, "codex").trim();
 }
 
+function buildOpenCodeDangerousBaseCommand(command: string): string {
+  return /\bopencode\s+run\b/.test(command)
+    ? command
+    : command.replace(/\bopencode\b/, "opencode run");
+}
+
+function buildOpenCodePromptBaseCommand(command: string): string {
+  return command.replace(/\bopencode\s+run\b/, "opencode").trim();
+}
+
+function buildGeminiDangerousBaseCommand(command: string): string {
+  return /(?:^|\s)--yolo(?:\s|$)/.test(command)
+    ? command
+    : command.replace(/\bgemini\b/, "gemini --yolo");
+}
+
 function getExecutableName(command: string): string {
   const firstToken = command.trim().split(/\s+/)[0] || "";
   const normalized = firstToken.replace(/\\/g, "/");
@@ -52,8 +68,18 @@ export function buildAgenticHarnessPromptCommandForCommand(
     return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} ${quoteShellArg(prompt)}`;
   }
 
-  if (executableName === "opencode" || executableName === "gemini") {
-    return `${trimmedCommand} ${quoteShellArg(prompt)}`;
+  if (executableName === "opencode") {
+    const baseCommand = mode === "dangerous"
+      ? buildOpenCodeDangerousBaseCommand(trimmedCommand)
+      : buildOpenCodePromptBaseCommand(trimmedCommand);
+    return `${baseCommand} ${quoteShellArg(prompt)}`;
+  }
+
+  if (executableName === "gemini") {
+    const baseCommand = mode === "dangerous"
+      ? buildGeminiDangerousBaseCommand(trimmedCommand)
+      : trimmedCommand;
+    return `${baseCommand} ${quoteShellArg(prompt)}`;
   }
 
   return `${trimmedCommand} ${quoteShellArg(prompt)}`;
@@ -67,7 +93,10 @@ export function buildAgenticHarnessPromptCommandForCommand(
  * For claude: uses --print "$(cat <file>)"
  * For codex dangerous mode: uses file redirect (- < <file>)
  * For codex prompt mode: passes "$(cat <file>)" as the prompt argument
- * For opencode/gemini: passes "$(cat <file>)" as the prompt argument
+ * For opencode dangerous mode: uses `run` and passes "$(cat <file>)" as the prompt argument
+ * For opencode prompt mode: removes `run` and passes "$(cat <file>)" as the prompt argument
+ * For gemini dangerous mode: adds `--yolo` and passes "$(cat <file>)" as the prompt argument
+ * For gemini prompt mode: passes "$(cat <file>)" as the prompt argument
  * For others: falls back to "$(cat <file>)" command substitution
  */
 export function buildAgenticHarnessFileCommandForCommand(
@@ -97,8 +126,18 @@ export function buildAgenticHarnessFileCommandForCommand(
     return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} - < ${quotedFile}`;
   }
 
-  if (executableName === "opencode" || executableName === "gemini") {
-    return `${trimmedCommand} "$(cat ${quotedFile})"`;
+  if (executableName === "opencode") {
+    const baseCommand = mode === "dangerous"
+      ? buildOpenCodeDangerousBaseCommand(trimmedCommand)
+      : buildOpenCodePromptBaseCommand(trimmedCommand);
+    return `${baseCommand} "$(cat ${quotedFile})"`;
+  }
+
+  if (executableName === "gemini") {
+    const baseCommand = mode === "dangerous"
+      ? buildGeminiDangerousBaseCommand(trimmedCommand)
+      : trimmedCommand;
+    return `${baseCommand} "$(cat ${quotedFile})"`;
   }
 
   // Generic fallback: inject file contents via command substitution

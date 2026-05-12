@@ -43,5 +43,5 @@ test("Gemini Jira command uses the gemini harness directly", () => {
     "work on Jira Item TEST-4 - Example summary"
   );
 
-  assert.equal(command, 'gemini "work on Jira Item TEST-4 - Example summary"');
+  assert.equal(command, 'gemini --yolo "work on Jira Item TEST-4 - Example summary"');
 });

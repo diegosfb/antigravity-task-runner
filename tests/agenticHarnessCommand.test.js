@@ -60,7 +60,7 @@ test("buildAgenticHarnessPromptCommandForCommand keeps codex dangerous mode in e
   assert.match(command, /"create the jira project"$/);
 });
 
-test("buildAgenticHarnessPromptCommandForCommand keeps opencode commands simple", () => {
+test("buildAgenticHarnessPromptCommandForCommand removes opencode run in prompt mode", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
     "opencode run -m ollama/qwen3-coder:30b",
     "/tmp/repo",
@@ -68,18 +68,18 @@ test("buildAgenticHarnessPromptCommandForCommand keeps opencode commands simple"
     "prompt"
   );
 
-  assert.equal(command, 'opencode run -m ollama/qwen3-coder:30b "create the jira project"');
+  assert.equal(command, 'opencode -m ollama/qwen3-coder:30b "create the jira project"');
 });
 
-test("buildAgenticHarnessPromptCommandForCommand keeps opencode dangerous mode simple", () => {
+test("buildAgenticHarnessPromptCommandForCommand adds opencode run in dangerous mode", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
-    "opencode run",
+    "opencode -m ollama/qwen3-coder:30b",
     "/tmp/repo",
     "create the jira project",
     "dangerous"
   );
 
-  assert.equal(command, 'opencode run "create the jira project"');
+  assert.equal(command, 'opencode run -m ollama/qwen3-coder:30b "create the jira project"');
 });
 
 test("buildAgenticHarnessPromptCommandForCommand keeps gemini prompt mode simple", () => {
@@ -93,15 +93,15 @@ test("buildAgenticHarnessPromptCommandForCommand keeps gemini prompt mode simple
   assert.equal(command, 'gemini "create the jira project"');
 });
 
-test("buildAgenticHarnessPromptCommandForCommand keeps gemini dangerous mode simple", () => {
+test("buildAgenticHarnessPromptCommandForCommand adds gemini yolo in dangerous mode", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
-    "gemini",
+    "gemini --model gemini-2.5-pro",
     "/tmp/repo",
     "create the jira project",
     "dangerous"
   );
 
-  assert.equal(command, 'gemini "create the jira project"');
+  assert.equal(command, 'gemini --yolo --model gemini-2.5-pro "create the jira project"');
 });
 
 test("buildAgenticHarnessPromptCommandForCommand supports codex commands with extra args", () => {
@@ -141,7 +141,7 @@ test("buildAgenticHarnessFileCommandForCommand keeps codex dangerous mode in exe
   assert.match(command, /- < "\/tmp\/prompt\.txt"$/);
 });
 
-test("buildAgenticHarnessFileCommandForCommand keeps opencode prompt mode simple", () => {
+test("buildAgenticHarnessFileCommandForCommand removes opencode run in prompt mode", () => {
   const command = buildAgenticHarnessFileCommandForCommand(
     "opencode run -m ollama/qwen3-coder:30b",
     "/tmp/repo",
@@ -149,18 +149,18 @@ test("buildAgenticHarnessFileCommandForCommand keeps opencode prompt mode simple
     "prompt"
   );
 
-  assert.equal(command, 'opencode run -m ollama/qwen3-coder:30b "$(cat "/tmp/prompt.txt")"');
+  assert.equal(command, 'opencode -m ollama/qwen3-coder:30b "$(cat "/tmp/prompt.txt")"');
 });
 
-test("buildAgenticHarnessFileCommandForCommand keeps opencode dangerous mode simple", () => {
+test("buildAgenticHarnessFileCommandForCommand adds opencode run in dangerous mode", () => {
   const command = buildAgenticHarnessFileCommandForCommand(
-    "opencode run",
+    "opencode -m ollama/qwen3-coder:30b",
     "/tmp/repo",
     "/tmp/prompt.txt",
     "dangerous"
   );
 
-  assert.equal(command, 'opencode run "$(cat "/tmp/prompt.txt")"');
+  assert.equal(command, 'opencode run -m ollama/qwen3-coder:30b "$(cat "/tmp/prompt.txt")"');
 });
 
 test("buildAgenticHarnessFileCommandForCommand keeps gemini prompt mode simple", () => {
@@ -174,15 +174,15 @@ test("buildAgenticHarnessFileCommandForCommand keeps gemini prompt mode simple",
   assert.equal(command, 'gemini "$(cat "/tmp/prompt.txt")"');
 });
 
-test("buildAgenticHarnessFileCommandForCommand keeps gemini dangerous mode simple", () => {
+test("buildAgenticHarnessFileCommandForCommand adds gemini yolo in dangerous mode", () => {
   const command = buildAgenticHarnessFileCommandForCommand(
-    "gemini",
+    "gemini --model gemini-2.5-pro",
     "/tmp/repo",
     "/tmp/prompt.txt",
     "dangerous"
   );
 
-  assert.equal(command, 'gemini "$(cat "/tmp/prompt.txt")"');
+  assert.equal(command, 'gemini --yolo --model gemini-2.5-pro "$(cat "/tmp/prompt.txt")"');
 });
 
 test("buildAgenticHarnessPromptCommandForCommand escapes codex dangerous prompts for the shell", () => {
