@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  buildAgenticHarnessFileCommandForCommand,
   buildAgenticHarnessPromptCommandForCommand
 } = require("../out/agenticHarnessCommand.js");
 
@@ -27,12 +28,28 @@ test("buildAgenticHarnessPromptCommandForCommand keeps claude prompt mode behavi
   assert.equal(command, 'claude "create the jira project"');
 });
 
-test("buildAgenticHarnessPromptCommandForCommand uses codex exec with trust overrides", () => {
+test("buildAgenticHarnessPromptCommandForCommand keeps codex prompt mode interactive", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
     "codex",
     "/tmp/repo",
     "create the jira project",
     "prompt"
+  );
+
+  assert.match(command, /^codex -C "\/tmp\/repo"/);
+  assert.match(command, /trust_level=\\"trusted\\"/);
+  assert.match(command, /projects\.\\"\/tmp\/repo\\"\.\w+=\\"trusted\\"/);
+  assert.doesNotMatch(command, /\bcodex exec\b/);
+  assert.doesNotMatch(command, /--full-auto/);
+  assert.match(command, /"create the jira project"$/);
+});
+
+test("buildAgenticHarnessPromptCommandForCommand keeps codex dangerous mode in exec full-auto", () => {
+  const command = buildAgenticHarnessPromptCommandForCommand(
+    "codex",
+    "/tmp/repo",
+    "create the jira project",
+    "dangerous"
   );
 
   assert.match(command, /^codex exec --full-auto -C "\/tmp\/repo"/);
@@ -61,7 +78,33 @@ test("buildAgenticHarnessPromptCommandForCommand supports codex commands with ex
     "prompt"
   );
 
-  assert.match(command, /^codex exec --model gpt-5\.5-codex --full-auto -C "\/tmp\/repo"/);
+  assert.match(command, /^codex --model gpt-5\.5-codex -C "\/tmp\/repo"/);
+});
+
+test("buildAgenticHarnessFileCommandForCommand keeps codex prompt mode interactive", () => {
+  const command = buildAgenticHarnessFileCommandForCommand(
+    "codex",
+    "/tmp/repo",
+    "/tmp/prompt.txt",
+    "prompt"
+  );
+
+  assert.match(command, /^codex -C "\/tmp\/repo"/);
+  assert.doesNotMatch(command, /\bcodex exec\b/);
+  assert.doesNotMatch(command, /--full-auto/);
+  assert.match(command, /"\$\(cat "\/tmp\/prompt\.txt"\)"$/);
+});
+
+test("buildAgenticHarnessFileCommandForCommand keeps codex dangerous mode in exec full-auto", () => {
+  const command = buildAgenticHarnessFileCommandForCommand(
+    "codex",
+    "/tmp/repo",
+    "/tmp/prompt.txt",
+    "dangerous"
+  );
+
+  assert.match(command, /^codex exec --full-auto -C "\/tmp\/repo"/);
+  assert.match(command, /- < "\/tmp\/prompt\.txt"$/);
 });
 
 test("buildAgenticHarnessPromptCommandForCommand supports full executable paths", () => {

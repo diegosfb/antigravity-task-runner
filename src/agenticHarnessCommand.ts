@@ -4,6 +4,21 @@ function quoteShellArg(value: string): string {
   return `"${value.replace(/"/g, '\\"')}"`;
 }
 
+function buildCodexTrustArgs(repoRoot: string): string {
+  const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
+  return `-C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)}`;
+}
+
+function buildCodexExecBaseCommand(command: string): string {
+  return /\bcodex\s+exec\b/.test(command)
+    ? command
+    : command.replace(/\bcodex\b/, "codex exec");
+}
+
+function buildCodexPromptBaseCommand(command: string): string {
+  return command.replace(/\bcodex\s+exec\b/, "codex").trim();
+}
+
 function getExecutableName(command: string): string {
   const firstToken = command.trim().split(/\s+/)[0] || "";
   const normalized = firstToken.replace(/\\/g, "/");
@@ -28,13 +43,15 @@ export function buildAgenticHarnessPromptCommandForCommand(
   }
 
   if (executableName === "codex") {
-    const codexBaseCommand = /\bcodex\s+exec\b/.test(trimmedCommand)
-      ? trimmedCommand
-      : trimmedCommand.replace(/\bcodex\b/, "codex exec");
-    const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
+    const codexTrustArgs = buildCodexTrustArgs(repoRoot);
+
+    if (mode === "prompt") {
+      return `${buildCodexPromptBaseCommand(trimmedCommand)} ${codexTrustArgs} ${quoteShellArg(prompt)}`;
+    }
+
     const heredocMarker = "ANTIGRAVITY_HARNESS_PROMPT_EOF";
 
-    return `${codexBaseCommand} --full-auto -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} - <<'${heredocMarker}'\n${prompt}\n${heredocMarker}`;
+    return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} - <<'${heredocMarker}'\n${prompt}\n${heredocMarker}`;
   }
 
   return `${trimmedCommand} ${quoteShellArg(prompt)}`;
@@ -46,7 +63,8 @@ export function buildAgenticHarnessPromptCommandForCommand(
  * the prompt to be edited without recompiling the extension.
  *
  * For claude: uses --print "$(cat <file>)"
- * For codex:  uses file redirect (- < <file>)
+ * For codex dangerous mode: uses file redirect (- < <file>)
+ * For codex prompt mode: passes "$(cat <file>)" as the prompt argument
  * For others: falls back to "$(cat <file>)" command substitution
  */
 export function buildAgenticHarnessFileCommandForCommand(
@@ -67,12 +85,13 @@ export function buildAgenticHarnessFileCommandForCommand(
   }
 
   if (executableName === "codex") {
-    const codexBaseCommand = /\bcodex\s+exec\b/.test(trimmedCommand)
-      ? trimmedCommand
-      : trimmedCommand.replace(/\bcodex\b/, "codex exec");
-    const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
+    const codexTrustArgs = buildCodexTrustArgs(repoRoot);
 
-    return `${codexBaseCommand} --full-auto -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} - < ${quotedFile}`;
+    if (mode === "prompt") {
+      return `${buildCodexPromptBaseCommand(trimmedCommand)} ${codexTrustArgs} "$(cat ${quotedFile})"`;
+    }
+
+    return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} - < ${quotedFile}`;
   }
 
   // Generic fallback: inject file contents via command substitution
