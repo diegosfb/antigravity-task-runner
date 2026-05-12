@@ -13,7 +13,10 @@ function getOrCreateTerminal(name: string, options: Omit<vscode.TerminalOptions,
 }
 
 export function getAgentTerminalName(): string {
-  return "Antigravity Agent";
+  return (
+    vscode.workspace.getConfiguration("antigravity").get<string>("agentTerminalName") ||
+    "Antigravity Agent"
+  );
 }
 
 function getTerminalName(): string {
@@ -141,18 +144,14 @@ export async function runCodexInitAndUpdateInPersistentTerminal(
   repoRoot: string,
   prompt: string
 ): Promise<void> {
-  const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
-  runInPersistentTerminal(
-    getAgentTerminalName(),
-    [
-      `cd ${quoteShellArg(repoRoot)}`,
-      `codex -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} ${quoteShellArg(prompt)}`
-    ],
-    {
-      iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
-      color: CLAUDE_ACTION_COLOR
-    }
-  );
+  const commands = [
+    `cd ${quoteShellArg(repoRoot)}`,
+    buildAgenticHarnessPromptCommandForCommand("codex", repoRoot, prompt, "unattended")
+  ];
+  runInPersistentTerminal(getAgentTerminalName(), commands, {
+    iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
+    color: CLAUDE_ACTION_COLOR
+  });
 }
 
 export function runClaudePromptInPersistentTerminal(repoRoot: string, prompt: string): void {

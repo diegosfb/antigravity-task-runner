@@ -56,9 +56,7 @@ export async function safeReadDir(dirPath: string): Promise<fs.Dirent[]> {
   }
 }
 
-export function quoteShellArg(value: string): string {
-  return `"${value.replace(/"/g, '\\"')}"`;
-}
+export { quoteShellArg, getExecutableName } from "./shellUtils";
 
 const SKIP_DIRS = new Set(["node_modules", ".git"]);
 

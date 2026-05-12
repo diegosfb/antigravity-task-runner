@@ -474,7 +474,7 @@ test("createJiraProject creates and configures a team-managed kanban Jira softwa
   assert.equal(createdProject.warnings.length, 1);
   assert.ok(
     createdProject.warnings.includes(
-      "Jira still requires a manual access-level check so the project is limited to jira-users-diegosfb, Diego Fernandez, and site-admins."
+      "Jira still requires a manual access-level check. Verify project member and admin roles in your Jira settings."
     )
   );
 
@@ -507,10 +507,6 @@ test("createJiraProject creates and configures a team-managed kanban Jira softwa
     {
       path: "/rest/api/3/project/TASK/role/1001",
       body: { user: ["lead-account-id"] }
-    },
-    {
-      path: "/rest/api/3/project/TASK/role/1002",
-      body: { group: ["jira-users-diegosfb"] }
     }
   ]);
 
@@ -1312,7 +1308,7 @@ test("createJiraProject warns when Jira rejects the board column update", async 
   assert.equal(createdProject.key, "TASK");
   assert.ok(
     createdProject.warnings.includes(
-      "Jira still requires a manual access-level check so the project is limited to jira-users-diegosfb, Diego Fernandez, and site-admins."
+      "Jira still requires a manual access-level check. Verify project member and admin roles in your Jira settings."
     )
   );
   assert.ok(

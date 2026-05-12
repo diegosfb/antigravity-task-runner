@@ -1,4 +1,5 @@
 import { buildAgenticHarnessPromptCommandForCommand } from "./agenticHarnessCommand";
+import { quoteShellArg, getExecutableName } from "./shellUtils";
 
 export type AssignableAgentLabel =
   | "Antigravity"
@@ -7,16 +8,6 @@ export type AssignableAgentLabel =
   | "Gemini"
   | "OpenCode"
   | "Qwen Code";
-
-function quoteShellArg(value: string): string {
-  return `"${value.replace(/["\\$`]/g, "\\$&")}"`;
-}
-
-function getExecutableName(command: string): string {
-  const firstToken = command.trim().split(/\s+/)[0] || "";
-  const normalized = firstToken.replace(/\\/g, "/");
-  return normalized.split("/").pop()?.toLowerCase() || "";
-}
 
 export function inferAssignableAgentLabelFromCommand(command: string): AssignableAgentLabel {
   const trimmedCommand = command.trim().toLowerCase();
@@ -46,7 +37,7 @@ export function buildAgentRunCommand(
   }
 
   if (agentLabel === "Claude Code") {
-    return `claude --permission-mode auto ${quoteShellArg(prompt)}`;
+    return buildAgenticHarnessPromptCommandForCommand("claude", repoRoot, prompt, "unattended");
   }
   if (agentLabel === "Codex") {
     return buildAgenticHarnessPromptCommandForCommand("codex", repoRoot, prompt, "unattended");
@@ -54,11 +45,11 @@ export function buildAgentRunCommand(
   if (agentLabel === "Gemini") {
     return buildAgenticHarnessPromptCommandForCommand("gemini", repoRoot, prompt, "unattended");
   }
+  if (agentLabel === "Qwen Code") {
+    return buildAgenticHarnessPromptCommandForCommand("opencode run -m ollama/qwen3-coder:30b", repoRoot, prompt, "unattended");
+  }
   if (agentLabel === "OpenCode") {
     return `opencode run ${quoteShellArg(prompt)}`;
   }
-  if (agentLabel === "Qwen Code") {
-    return `opencode run -m ollama/qwen3-coder:30b ${quoteShellArg(prompt)}`;
-  }
-  return `opencode run ${quoteShellArg(prompt)}`;
+  return `NO AGENTIC HARNESS SELECTED`; //No Agentic Harness selected
 }

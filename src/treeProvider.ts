@@ -4,7 +4,7 @@ import * as path from "path";
 import * as os from "os";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { getRootPath, getRepoRoot, getWorkspaceProjectPath, getAntigravityHomePath, safeReadDir } from "./utils";
+import { getRootPath, getRepoRoot, getWorkspaceProjectPath, getAntigravityHomePath, safeReadDir, parseEnvFile } from "./utils";
 import { isAutocommitRunning, hasGitHubRemoteSync, getCurrentBranchNameSync } from "./git";
 import { CLAUDE_ACTION_COLOR } from "./terminal";
 import {
@@ -397,14 +397,14 @@ const ANTIGRAVITY_ROOT_HIDDEN = new Set([
   ".git"
 ]);
 
-function shouldHideAntigravityEntry(dirPath: string, entry: fs.Dirent): boolean {
+export function shouldHideAntigravityEntry(dirPath: string, entry: fs.Dirent): boolean {
   const antigravityRoot = getAntigravityHomePath();
   if (!antigravityRoot) return false;
   if (path.resolve(dirPath) !== path.resolve(antigravityRoot)) return false;
   return ANTIGRAVITY_ROOT_HIDDEN.has(entry.name);
 }
 
-function missingRootItem(): NodeItem {
+export function missingRootItem(): NodeItem {
   const item = new NodeItem(
     { kind: "category", label: "Missing ~/.antigravity" },
     vscode.TreeItemCollapsibleState.None
@@ -414,13 +414,13 @@ function missingRootItem(): NodeItem {
   return item;
 }
 
-function emptyItem(label: string): NodeItem {
+export function emptyItem(label: string): NodeItem {
   const item = new NodeItem({ kind: "category", label }, vscode.TreeItemCollapsibleState.None);
   item.iconPath = new vscode.ThemeIcon("circle-slash");
   return item;
 }
 
-function readSkillsDir(dir: string): Array<{ name: string; filePath: string; source: string }> {
+export function readSkillsDir(dir: string): Array<{ name: string; filePath: string; source: string }> {
   if (!fs.existsSync(dir)) return [];
   try {
     return fs.readdirSync(dir, { withFileTypes: true })
@@ -468,7 +468,7 @@ async function readEnabledPluginSkills(): Promise<Array<{ name: string; filePath
   }
 }
 
-function parseAgentsOutput(output: string): Array<{ name: string; model: string; section: string }> {
+export function parseAgentsOutput(output: string): Array<{ name: string; model: string; section: string }> {
   const agents: Array<{ name: string; model: string; section: string }> = [];
   let currentSection = "";
 
@@ -495,7 +495,7 @@ function parseAgentsOutput(output: string): Array<{ name: string; model: string;
   return agents;
 }
 
-function parsePluginListOutput(output: string): Array<{ name: string; enabled: boolean }> {
+export function parsePluginListOutput(output: string): Array<{ name: string; enabled: boolean }> {
   // Strip ANSI escape codes
   const clean = output.replace(ANSI_CSI_PATTERN, "").replace(ANSI_OSC_PATTERN, "");
 
@@ -589,17 +589,9 @@ function getQuickActionItems(): NodeItem[] {
   const autocommitRunning = repoRoot ? isAutocommitRunning(repoRoot) : false;
   const hasAgentFolder = repoRoot ? fs.existsSync(path.join(getWorkspaceProjectPath(repoRoot), ".agent")) : false;
   const hasGitHub = repoRoot ? hasGitHubRemoteSync(repoRoot) : false;
-  const savedJiraProjectKey =
-    repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
-      ? (
-          fs
-            .readFileSync(path.join(repoRoot, ".env"), "utf8")
-            .match(/^\s*JIRA_PROJECT_KEY\s*=\s*([^\r\n#]+)/m)?.[1] ?? ""
-        )
-          .trim()
-          .replace(/^['"]|['"]$/g, "")
-          .toUpperCase()
-      : "";
+  const savedJiraProjectKey = repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
+    ? (parseEnvFile(path.join(repoRoot, ".env")).jira_project_key ?? "").toUpperCase()
+    : "";
 
   const setupWorkspace = new NodeItem(
     { kind: "action", label: "Setup Workspace" },
@@ -631,7 +623,6 @@ function getQuickActionItems(): NodeItem[] {
   updateProjectConfig.tooltip =
     "Expand to update project configuration with the selected Agentic Harness.";
   items.push(updateProjectConfig);
-
 
   const assignJiraItemToAgent = new NodeItem(
     { kind: "action", label: "Assign Jira Item to Agent" },

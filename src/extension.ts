@@ -37,7 +37,8 @@ import {
   normalizeStringArray,
   readClaudeAnthropicBaseUrl,
   isLocalLiteLLMBaseUrl,
-  LOCAL_LITELLM_READY_URL
+  LOCAL_LITELLM_READY_URL,
+  getNonce
 } from "./settings";
 import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing } from "./scripts";
 import {
@@ -310,15 +311,6 @@ export function activate(context: vscode.ExtensionContext) {
       prefix: "hotfix"
     }
   ];
-
-  const getNonce = (): string => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let nonce = "";
-    for (let i = 0; i < 32; i += 1) {
-      nonce += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return nonce;
-  };
 
   const normalizeBranchSegment = (value: string): string =>
     value
@@ -1816,8 +1808,7 @@ export function activate(context: vscode.ExtensionContext) {
                 resourceProvider
               );
               logAlways(
-                `[jiraProjectCreate] skill locations ready: ${
-                  copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+                `[jiraProjectCreate] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
                 }`
               );
               provider.refresh();
@@ -2445,12 +2436,16 @@ export function activate(context: vscode.ExtensionContext) {
     summary: string,
     agentLabel: AssignableAgentLabel
   ): string => {
+    const jiraEmail = (vscode.workspace
+      .getConfiguration("antigravity")
+      .get<string>("jiraEmail") || "").trim();
+
     const jiraAccessInstructions =
-      agentLabel === "Codex"
-        ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as diegosfb@gmail.com, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using diegosfb@gmail.com. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as diegosfb@gmail.com, then continue with the MCP-backed Jira actions. Inspect Jira item ${issueKey}, add each assumption as a Jira comment line beginning with "AGENT ASSUMTION:", add a final Jira comment beginning with "AGENT SOLUTION:", and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead by using Jira MCP actions.`
+      agentLabel === "Codex" && jiraEmail
+        ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as ${jiraEmail}, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using ${jiraEmail}. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as ${jiraEmail}, then continue with the MCP-backed Jira actions. Inspect Jira item ${issueKey}, add each assumption as a Jira comment line beginning with "AGENT ASSUMPTION:", add a final Jira comment beginning with "AGENT SOLUTION:", and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead by using Jira MCP actions.`
         : "";
 
-    return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+    return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMPTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
   };
 
   const writeAgentLaunchScript = (scriptPrefix: string, command: string): string => {
@@ -3897,8 +3892,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       logAlways(
-        `[Setup Workspace] support folders ready in ${workspaceDir}: ${
-          createdSupportPaths.length > 0 ? createdSupportPaths.join(", ") : "already present"
+        `[Setup Workspace] support folders ready in ${workspaceDir}: ${createdSupportPaths.length > 0 ? createdSupportPaths.join(", ") : "already present"
         }`
       );
 
@@ -4120,7 +4114,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
       const repoRoot = getRepoRoot(rootPath);
       logAlways(`[initRepositoryConfigUpdate] repoRoot: ${repoRoot}`);
-      
+
       logAlways(`[initRepositoryConfigUpdate] invoking init-repo script from ${path.join(extensionRoot, "src")}`);
       // Passing empty string for repo name to trigger detection in the script
       await runRepoScript("init-repo", [""], { scriptDir: path.join(extensionRoot, "src") });
@@ -4400,8 +4394,7 @@ export function activate(context: vscode.ExtensionContext) {
             resourceProvider
           );
           logAlways(
-            `[createJiraItemGrillMe] skill locations ready: ${
-              copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+            `[createJiraItemGrillMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
             }`
           );
           provider.refresh();
@@ -4629,8 +4622,7 @@ export function activate(context: vscode.ExtensionContext) {
             resourceProvider
           );
           logAlways(
-            `[assignJiraItemToAgentGrillMe] skill locations ready: ${
-              copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+            `[assignJiraItemToAgentGrillMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
             }`
           );
           provider.refresh();
@@ -4857,8 +4849,7 @@ export function activate(context: vscode.ExtensionContext) {
           resourceProvider
         );
         logAlways(
-          `[cloudArchitectReview] skill locations ready: ${
-            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          `[cloudArchitectReview] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
           }`
         );
         provider.refresh();
@@ -4925,8 +4916,7 @@ export function activate(context: vscode.ExtensionContext) {
           ? await copyGrillMeSkill(extensionRoot, repoRoot, resourceProvider)
           : await copyFeatureEstimatorSkill(extensionRoot, repoRoot, resourceProvider);
         logAlways(
-          `[${actionKey}] skill locations ready: ${
-            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          `[${actionKey}] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
           }`
         );
         provider.refresh();
@@ -4940,8 +4930,7 @@ export function activate(context: vscode.ExtensionContext) {
       const commandLine = buildAgenticHarnessFileCommand(repoRoot, promptFilePath, "prompt");
 
       logAlways(
-        `[${actionKey}] launching Agentic Harness for ${
-          selection.source === "jira" ? selection.issue.key : "free-text request"
+        `[${actionKey}] launching Agentic Harness for ${selection.source === "jira" ? selection.issue.key : "free-text request"
         }`
       );
       runInPersistentTerminal(
@@ -4975,8 +4964,7 @@ export function activate(context: vscode.ExtensionContext) {
           resourceProvider
         );
         logAlways(
-          `[explainMe] skill locations ready: ${
-            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          `[explainMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
           }`
         );
         provider.refresh();
@@ -5357,10 +5345,10 @@ export function activate(context: vscode.ExtensionContext) {
             color: PULL_REMOTE_AND_MERGE_ACTION_COLOR,
             ...(projectTestingCommand
               ? {
-                  env: {
-                    ANTIGRAVITY_PROJECT_TESTING_COMMAND: projectTestingCommand
-                  }
+                env: {
+                  ANTIGRAVITY_PROJECT_TESTING_COMMAND: projectTestingCommand
                 }
+              }
               : {})
           }
         );
