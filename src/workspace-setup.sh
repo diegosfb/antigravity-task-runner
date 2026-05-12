@@ -32,16 +32,22 @@ rsync -a --ignore-existing \
 
 echo "workspace-setup: copied missing files from ${REPO_URL}"
 
-# Create .claude folder and symlinks into .agent if not already present.
-CLAUDE_DIR="${DEST_DIR}/.claude"
-if [ ! -d "${CLAUDE_DIR}" ]; then
-  mkdir -p "${CLAUDE_DIR}"
-fi
-if [ ! -e "${CLAUDE_DIR}/skills" ]; then
-  ln -s "../.agent/skills" "${CLAUDE_DIR}/skills"
-  echo "workspace-setup: created symlink .claude/skills -> .agent/skills"
-fi
-if [ ! -e "${CLAUDE_DIR}/agents" ]; then
-  ln -s "../.agent/agents" "${CLAUDE_DIR}/agents"
-  echo "workspace-setup: created symlink .claude/agents -> .agent/agents"
-fi
+# Create agent harness folders and symlinks into .agent if not already present.
+create_agent_symlinks() {
+  local agent_dir="$1"
+  local label="$2"
+  if [ ! -d "${agent_dir}" ]; then
+    mkdir -p "${agent_dir}"
+  fi
+  if [ ! -e "${agent_dir}/skills" ]; then
+    ln -s "../.agent/skills" "${agent_dir}/skills"
+    echo "workspace-setup: created symlink .${label}/skills -> .agent/skills"
+  fi
+  if [ ! -e "${agent_dir}/agents" ]; then
+    ln -s "../.agent/agents" "${agent_dir}/agents"
+    echo "workspace-setup: created symlink .${label}/agents -> .agent/agents"
+  fi
+}
+
+create_agent_symlinks "${DEST_DIR}/.claude" "claude"
+create_agent_symlinks "${DEST_DIR}/.codex" "codex"
