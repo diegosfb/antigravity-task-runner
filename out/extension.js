@@ -202,7 +202,7 @@ function activate(context) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
-    const renderSetupWorkspaceHtml = (webview, workspaceDir, projectTemplates) => {
+    const renderSetupWorkspaceHtml = (webview, workspaceDir, projectTemplates, defaultCreateCodexHarnessLinks) => {
         const nonce = getNonce();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         const templateCards = projectTemplates
@@ -263,6 +263,32 @@ function activate(context) {
       .template-list {
         display: grid;
         gap: 10px;
+      }
+      .option-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--vscode-input-border, transparent);
+        background: var(--vscode-sideBar-background);
+      }
+      .option-card input {
+        margin-top: 3px;
+      }
+      .option-copy {
+        display: grid;
+        gap: 4px;
+      }
+      .option-name {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .option-description {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        line-height: 1.5;
       }
       .template-card {
         display: grid;
@@ -341,6 +367,20 @@ function activate(context) {
         ${templateCards}
       </div>
 
+      <label class="option-card">
+        <input
+          type="checkbox"
+          id="create-codex-harness-links"${defaultCreateCodexHarnessLinks ? " checked" : ""}
+        />
+        <span class="option-copy">
+          <span class="option-name">Create Codex compatibility links</span>
+          <span class="option-description">
+            Adds <code>.codex/skills</code> and <code>.codex/agents</code> symlinks to
+            <code>.agent</code> so bundled skills are available when this workspace is run with Codex.
+          </span>
+        </span>
+      </label>
+
       <div id="setup-workspace-error" class="error" aria-live="polite"></div>
 
       <div class="actions">
@@ -354,6 +394,7 @@ function activate(context) {
       const form = document.getElementById("setup-workspace-form");
       const errorMessage = document.getElementById("setup-workspace-error");
       const cancelButton = document.getElementById("cancel-button");
+      const codexHarnessCheckbox = document.getElementById("create-codex-harness-links");
       const cards = Array.from(document.querySelectorAll(".template-card"));
       const radios = Array.from(document.querySelectorAll('input[name="project-template"]'));
 
@@ -382,7 +423,12 @@ function activate(context) {
         errorMessage.textContent = "";
         vscode.postMessage({
           type: "submitSetupWorkspace",
-          payload: { templateName: selected.value }
+          payload: {
+            templateName: selected.value,
+            createCodexHarnessLinks: Boolean(
+              codexHarnessCheckbox && codexHarnessCheckbox.checked
+            )
+          }
         });
       });
 
@@ -399,9 +445,9 @@ function activate(context) {
   </body>
 </html>`;
     };
-    const showSetupWorkspaceDialog = async (workspaceDir, projectTemplates) => new Promise((resolve) => {
+    const showSetupWorkspaceDialog = async (workspaceDir, projectTemplates, defaultCreateCodexHarnessLinks) => new Promise((resolve) => {
         const panel = vscode.window.createWebviewPanel("setupWorkspace", "Setup Workspace", vscode.ViewColumn.Active, { enableScripts: true });
-        panel.webview.html = renderSetupWorkspaceHtml(panel.webview, workspaceDir, projectTemplates);
+        panel.webview.html = renderSetupWorkspaceHtml(panel.webview, workspaceDir, projectTemplates, defaultCreateCodexHarnessLinks);
         let settled = false;
         const resolveOnce = (value) => {
             if (settled)
@@ -421,6 +467,7 @@ function activate(context) {
                 return;
             const payload = message.payload || {};
             const templateName = typeof payload.templateName === "string" ? payload.templateName.trim() : "";
+            const createCodexHarnessLinks = Boolean(payload.createCodexHarnessLinks);
             const selectedTemplate = projectTemplates.find((projectTemplate) => projectTemplate.name === templateName);
             if (!selectedTemplate) {
                 void panel.webview.postMessage({
@@ -429,7 +476,10 @@ function activate(context) {
                 });
                 return;
             }
-            resolveOnce(selectedTemplate);
+            resolveOnce({
+                template: selectedTemplate,
+                createCodexHarnessLinks
+            });
             panel.dispose();
         }, undefined, context.subscriptions);
     });
@@ -3166,11 +3216,13 @@ function activate(context) {
             void vscode.window.showErrorMessage("Resources/project-templates.json does not contain any valid project templates.");
             return;
         }
-        const selectedTemplate = await showSetupWorkspaceDialog(workspaceDir, projectTemplates);
-        if (!selectedTemplate) {
+        const defaultCreateCodexHarnessLinks = (0, settings_1.getAgenticHarnessExecutionCommand)().trim().toLowerCase().startsWith("codex");
+        const selection = await showSetupWorkspaceDialog(workspaceDir, projectTemplates, defaultCreateCodexHarnessLinks);
+        if (!selection) {
             (0, logger_1.logAlways)("[Setup Workspace] Selection cancelled");
             return;
         }
+        const { template: selectedTemplate, createCodexHarnessLinks } = selection;
         fs.mkdirSync(workspaceDir, { recursive: true });
         let copiedGuideFiles;
         try {
@@ -3183,17 +3235,19 @@ function activate(context) {
             return;
         }
         (0, logger_1.logAlways)(`[Setup Workspace] guide files ready in ${workspaceDir}: ${copiedGuideFiles.length > 0 ? copiedGuideFiles.join(", ") : "already present"}`);
-        let createdDirectories;
+        let createdSupportPaths;
         try {
-            createdDirectories = await (0, projectTemplates_1.ensureSetupWorkspaceDirectories)(workspaceDir);
+            createdSupportPaths = await (0, projectTemplates_1.ensureSetupWorkspaceDirectories)(workspaceDir, {
+                createCodexHarnessLinks
+            });
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logAlways)(`[Setup Workspace] ERROR creating support directories: ${message}`);
-            void vscode.window.showErrorMessage(`Failed to create .agent and .claude in ${workspaceDir}: ${message}`);
+            (0, logger_1.logAlways)(`[Setup Workspace] ERROR preparing support folders: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to prepare workspace support folders in ${workspaceDir}: ${message}`);
             return;
         }
-        (0, logger_1.logAlways)(`[Setup Workspace] support directories ready in ${workspaceDir}: ${createdDirectories.length > 0 ? createdDirectories.join(", ") : "already present"}`);
+        (0, logger_1.logAlways)(`[Setup Workspace] support folders ready in ${workspaceDir}: ${createdSupportPaths.length > 0 ? createdSupportPaths.join(", ") : "already present"}`);
         let copiedSkills;
         try {
             copiedSkills = await (0, projectTemplates_1.copySetupWorkspaceSkills)(path.join(extensionRoot, "Resources"), workspaceDir, resourceProvider);
@@ -3205,7 +3259,9 @@ function activate(context) {
             return;
         }
         (0, logger_1.logAlways)(`[Setup Workspace] bundled skills ready in ${workspaceDir}: ${copiedSkills.length > 0 ? copiedSkills.join(", ") : "already present"}`);
-        const prompt = (0, projectTemplates_1.buildSetupWorkspacePrompt)(selectedTemplate, workspaceDir);
+        const prompt = (0, projectTemplates_1.buildSetupWorkspacePrompt)(selectedTemplate, workspaceDir, {
+            createCodexHarnessLinks
+        });
         const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(workspaceDir, prompt, "dangerous");
         const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;
         try {
@@ -3217,8 +3273,10 @@ function activate(context) {
             void vscode.window.showErrorMessage(`Failed to launch the Agentic Harness terminal: ${message}`);
             return;
         }
-        (0, logger_1.logAlways)(`[Setup Workspace] Opened harness for template ${selectedTemplate.name} in ${workspaceDir}`);
-        void vscode.window.showInformationMessage(`Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}.`);
+        (0, logger_1.logAlways)(`[Setup Workspace] Opened harness for template ${selectedTemplate.name} in ${workspaceDir}` +
+            `${createCodexHarnessLinks ? " with Codex compatibility links." : ""}`);
+        void vscode.window.showInformationMessage(`Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}` +
+            `${createCodexHarnessLinks ? " with Codex compatibility links." : "."}`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.updateWorkspaceAgentsMd", async () => {
         (0, logger_1.showOutputChannel)();
