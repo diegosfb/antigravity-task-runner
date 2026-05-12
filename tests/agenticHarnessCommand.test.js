@@ -71,6 +71,17 @@ test("buildAgenticHarnessPromptCommandForCommand keeps opencode commands simple"
   assert.equal(command, 'opencode run -m ollama/qwen3-coder:30b "create the jira project"');
 });
 
+test("buildAgenticHarnessPromptCommandForCommand keeps opencode dangerous mode simple", () => {
+  const command = buildAgenticHarnessPromptCommandForCommand(
+    "opencode run",
+    "/tmp/repo",
+    "create the jira project",
+    "dangerous"
+  );
+
+  assert.equal(command, 'opencode run "create the jira project"');
+});
+
 test("buildAgenticHarnessPromptCommandForCommand supports codex commands with extra args", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
     "codex --model gpt-5.5-codex",
@@ -106,6 +117,28 @@ test("buildAgenticHarnessFileCommandForCommand keeps codex dangerous mode in exe
 
   assert.match(command, /^codex exec --full-auto -C "\/tmp\/repo"/);
   assert.match(command, /- < "\/tmp\/prompt\.txt"$/);
+});
+
+test("buildAgenticHarnessFileCommandForCommand keeps opencode prompt mode simple", () => {
+  const command = buildAgenticHarnessFileCommandForCommand(
+    "opencode run -m ollama/qwen3-coder:30b",
+    "/tmp/repo",
+    "/tmp/prompt.txt",
+    "prompt"
+  );
+
+  assert.equal(command, 'opencode run -m ollama/qwen3-coder:30b "$(cat "/tmp/prompt.txt")"');
+});
+
+test("buildAgenticHarnessFileCommandForCommand keeps opencode dangerous mode simple", () => {
+  const command = buildAgenticHarnessFileCommandForCommand(
+    "opencode run",
+    "/tmp/repo",
+    "/tmp/prompt.txt",
+    "dangerous"
+  );
+
+  assert.equal(command, 'opencode run "$(cat "/tmp/prompt.txt")"');
 });
 
 test("buildAgenticHarnessPromptCommandForCommand escapes codex dangerous prompts for the shell", () => {
