@@ -41,7 +41,7 @@ export function buildAgentRunCommand(
       customCommand,
       repoRoot,
       prompt,
-      "dangerous"
+      "unattended"
     );
   }
 
@@ -49,10 +49,10 @@ export function buildAgentRunCommand(
     return `claude --permission-mode auto ${quoteShellArg(prompt)}`;
   }
   if (agentLabel === "Codex") {
-    return buildAgenticHarnessPromptCommandForCommand("codex", repoRoot, prompt, "dangerous");
+    return buildAgenticHarnessPromptCommandForCommand("codex", repoRoot, prompt, "unattended");
   }
   if (agentLabel === "Gemini") {
-    return buildAgenticHarnessPromptCommandForCommand("gemini", repoRoot, prompt, "dangerous");
+    return buildAgenticHarnessPromptCommandForCommand("gemini", repoRoot, prompt, "unattended");
   }
   if (agentLabel === "OpenCode") {
     return `opencode run ${quoteShellArg(prompt)}`;

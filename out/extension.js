@@ -1519,7 +1519,7 @@ function activate(context) {
                     description
                 });
                 const envPath = getRepoEnvPath(repoRoot);
-                const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "dangerous");
+                const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(repoRoot, prompt, "unattended");
                 const taskName = `Agentic Harness Create Jira Project ${Date.now()}`;
                 try {
                     await (0, terminal_1.runCommandInTaskTerminal)(taskName, commandLine, {
@@ -2027,7 +2027,7 @@ function activate(context) {
     const launchAgentForJiraItem = async (repoRoot, agentLabel, issueKey, issueSummary, agentCommand) => {
         const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
         const promptFilePath = writeAgentPromptFile(`assign-jira-item-to-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, prompt);
-        const command = (0, agenticHarnessCommand_1.buildAgenticHarnessFileCommandForCommand)(agentCommand, repoRoot, promptFilePath, "dangerous");
+        const command = (0, agenticHarnessCommand_1.buildAgenticHarnessFileCommandForCommand)(agentCommand, repoRoot, promptFilePath, "unattended");
         const lines = command.includes("\n")
             ? [
                 `zsh ${(0, utils_1.quoteShellArg)(writeAgentLaunchScript(`antigravity-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-jira`, `cd ${(0, utils_1.quoteShellArg)(repoRoot)}\n${command}`))}`
@@ -3184,7 +3184,7 @@ function activate(context) {
         }
         (0, logger_1.logAlways)(`[Setup Workspace] support folders ready in ${workspaceDir}: ${createdSupportPaths.length > 0 ? createdSupportPaths.join(", ") : "already present"}`);
         const prompt = (0, projectTemplates_1.buildSetupWorkspacePrompt)(selectedTemplate, workspaceDir);
-        const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(workspaceDir, prompt, "dangerous");
+        const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(workspaceDir, prompt, "unattended");
         const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;
         try {
             await (0, terminal_1.runCommandInTaskTerminal)(taskName, commandLine, { cwd: workspaceDir });
@@ -3217,7 +3217,7 @@ function activate(context) {
         }
         const taskName = `Agentic Harness Update AGENTS.md ${Date.now()}`;
         const promptFilePath = await (0, projectTemplates_1.buildUpdateAgentsMdPromptFilePath)(extensionRoot, resourceProvider);
-        const commandLine = (0, terminal_1.buildAgenticHarnessFileCommand)(workspaceDir, promptFilePath, "dangerous");
+        const commandLine = (0, terminal_1.buildAgenticHarnessFileCommand)(workspaceDir, promptFilePath, "unattended");
         try {
             await (0, terminal_1.runCommandInTaskTerminal)(taskName, commandLine, { cwd: workspaceDir });
         }

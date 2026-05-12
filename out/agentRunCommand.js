@@ -29,16 +29,16 @@ function inferAssignableAgentLabelFromCommand(command) {
 function buildAgentRunCommand(repoRoot, agentLabel, prompt, options = {}) {
     const customCommand = options.customCommand?.trim();
     if (customCommand) {
-        return (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)(customCommand, repoRoot, prompt, "dangerous");
+        return (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)(customCommand, repoRoot, prompt, "unattended");
     }
     if (agentLabel === "Claude Code") {
         return `claude --permission-mode auto ${quoteShellArg(prompt)}`;
     }
     if (agentLabel === "Codex") {
-        return (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)("codex", repoRoot, prompt, "dangerous");
+        return (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)("codex", repoRoot, prompt, "unattended");
     }
     if (agentLabel === "Gemini") {
-        return (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)("gemini", repoRoot, prompt, "dangerous");
+        return (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)("gemini", repoRoot, prompt, "unattended");
     }
     if (agentLabel === "OpenCode") {
         return `opencode run ${quoteShellArg(prompt)}`;

@@ -62,19 +62,19 @@ async function runCommandInTaskTerminal(name, commandLine, options = {}) {
     };
     return vscode.tasks.executeTask(task);
 }
-function buildAgenticHarnessPromptCommand(repoRoot, prompt, mode = "dangerous") {
+function buildAgenticHarnessPromptCommand(repoRoot, prompt, mode = "unattended") {
     const command = (0, settings_1.getAgenticHarnessExecutionCommand)();
     const runString = (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)(command, repoRoot, prompt, mode);
     (0, logger_1.logAlways)(`[agenticHarness] runString: ${runString}`);
     return runString;
 }
-function buildAgenticHarnessFileCommand(repoRoot, promptFilePath, mode = "dangerous") {
+function buildAgenticHarnessFileCommand(repoRoot, promptFilePath, mode = "unattended") {
     const command = (0, settings_1.getAgenticHarnessExecutionCommand)();
     const runString = (0, agenticHarnessCommand_1.buildAgenticHarnessFileCommandForCommand)(command, repoRoot, promptFilePath, mode);
     (0, logger_1.logAlways)(`[agenticHarness] runString (file): ${runString}`);
     return runString;
 }
-function buildLightAgenticHarnessPromptCommand(repoRoot, prompt, mode = "dangerous") {
+function buildLightAgenticHarnessPromptCommand(repoRoot, prompt, mode = "unattended") {
     const command = (0, settings_1.getLightAgenticHarnessExecutionCommand)();
     const runString = (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)(command, repoRoot, prompt, mode);
     (0, logger_1.logAlways)(`[lightAgenticHarness] runString: ${runString}`);
@@ -83,7 +83,7 @@ function buildLightAgenticHarnessPromptCommand(repoRoot, prompt, mode = "dangero
 async function runClaudeInitAndUpdateInPersistentTerminal(repoRoot, prompt) {
     const commands = [
         `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-        buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous")
+        buildAgenticHarnessPromptCommand(repoRoot, prompt, "unattended")
     ];
     runInPersistentTerminal(getAgentTerminalName(), commands, {
         iconPath: new vscode.ThemeIcon("robot", exports.CLAUDE_ACTION_COLOR),

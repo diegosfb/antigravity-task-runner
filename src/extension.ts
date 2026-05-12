@@ -1836,7 +1836,7 @@ export function activate(context: vscode.ExtensionContext) {
               description
             });
             const envPath = getRepoEnvPath(repoRoot);
-            const commandLine = buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous");
+            const commandLine = buildAgenticHarnessPromptCommand(repoRoot, prompt, "unattended");
             const taskName = `Agentic Harness Create Jira Project ${Date.now()}`;
             try {
               await runCommandInTaskTerminal(
@@ -2490,7 +2490,7 @@ export function activate(context: vscode.ExtensionContext) {
       agentCommand,
       repoRoot,
       promptFilePath,
-      "dangerous"
+      "unattended"
     );
     const lines = command.includes("\n")
       ? [
@@ -3903,7 +3903,7 @@ export function activate(context: vscode.ExtensionContext) {
       );
 
       const prompt = buildSetupWorkspacePrompt(selectedTemplate, workspaceDir);
-      const commandLine = buildAgenticHarnessPromptCommand(workspaceDir, prompt, "dangerous");
+      const commandLine = buildAgenticHarnessPromptCommand(workspaceDir, prompt, "unattended");
       const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;
 
       try {
@@ -3954,7 +3954,7 @@ export function activate(context: vscode.ExtensionContext) {
         extensionRoot,
         resourceProvider
       );
-      const commandLine = buildAgenticHarnessFileCommand(workspaceDir, promptFilePath, "dangerous");
+      const commandLine = buildAgenticHarnessFileCommand(workspaceDir, promptFilePath, "unattended");
 
       try {
         await runCommandInTaskTerminal(taskName, commandLine, { cwd: workspaceDir });

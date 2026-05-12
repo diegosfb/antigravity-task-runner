@@ -78,7 +78,7 @@ export async function runCommandInTaskTerminal(
 export function buildAgenticHarnessPromptCommand(
   repoRoot: string,
   prompt: string,
-  mode: AgenticHarnessPromptMode = "dangerous"
+  mode: AgenticHarnessPromptMode = "unattended"
 ): string {
   const command = getAgenticHarnessExecutionCommand();
   const runString = buildAgenticHarnessPromptCommandForCommand(
@@ -94,7 +94,7 @@ export function buildAgenticHarnessPromptCommand(
 export function buildAgenticHarnessFileCommand(
   repoRoot: string,
   promptFilePath: string,
-  mode: AgenticHarnessPromptMode = "dangerous"
+  mode: AgenticHarnessPromptMode = "unattended"
 ): string {
   const command = getAgenticHarnessExecutionCommand();
   const runString = buildAgenticHarnessFileCommandForCommand(
@@ -110,7 +110,7 @@ export function buildAgenticHarnessFileCommand(
 export function buildLightAgenticHarnessPromptCommand(
   repoRoot: string,
   prompt: string,
-  mode: AgenticHarnessPromptMode = "dangerous"
+  mode: AgenticHarnessPromptMode = "unattended"
 ): string {
   const command = getLightAgenticHarnessExecutionCommand();
   const runString = buildAgenticHarnessPromptCommandForCommand(
@@ -129,7 +129,7 @@ export async function runClaudeInitAndUpdateInPersistentTerminal(
 ): Promise<void> {
   const commands = [
     `cd ${quoteShellArg(repoRoot)}`,
-    buildAgenticHarnessPromptCommand(repoRoot, prompt, "dangerous")
+    buildAgenticHarnessPromptCommand(repoRoot, prompt, "unattended")
   ];
   runInPersistentTerminal(getAgentTerminalName(), commands, {
     iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),

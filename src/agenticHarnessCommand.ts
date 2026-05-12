@@ -1,4 +1,4 @@
-export type AgenticHarnessPromptMode = "dangerous" | "prompt";
+export type AgenticHarnessPromptMode = "unattended" | "prompt";
 
 type HarnessBaseCommandBuilder = (
   command: string,
@@ -25,7 +25,7 @@ function buildCodexPromptBaseCommand(command: string): string {
   return command.replace(/\bcodex\s+exec\b/, "codex").trim();
 }
 
-function buildOpenCodeDangerousBaseCommand(command: string): string {
+function buildOpenCodeUnattendedBaseCommand(command: string): string {
   return /\bopencode\s+run\b/.test(command)
     ? command
     : command.replace(/\bopencode\b/, "opencode run");
@@ -35,7 +35,7 @@ function buildOpenCodePromptBaseCommand(command: string): string {
   return command.replace(/\bopencode\s+run\b/, "opencode").trim();
 }
 
-function buildGeminiDangerousBaseCommand(command: string): string {
+function buildGeminiUnattendedBaseCommand(command: string): string {
   return /(?:^|\s)--yolo(?:\s|$)/.test(command)
     ? command
     : command.replace(/\bgemini\b/, "gemini --yolo");
@@ -50,7 +50,7 @@ function getExecutableName(command: string): string {
 
 const HARNESS_BASE_COMMAND_BUILDERS: Record<string, HarnessBaseCommandBuilder> = {
   claude(command, _repoRoot, mode) {
-    if (mode === "dangerous") {
+    if (mode === "unattended") {
       return `${command} --dangerously-skip-permissions --print`;
     }
     return command;
@@ -59,7 +59,7 @@ const HARNESS_BASE_COMMAND_BUILDERS: Record<string, HarnessBaseCommandBuilder> =
   codex(command, repoRoot, mode) {
     const codexTrustArgs = buildCodexTrustArgs(repoRoot);
 
-    if (mode === "dangerous") {
+    if (mode === "unattended") {
       return `${buildCodexExecBaseCommand(command)} --full-auto ${codexTrustArgs}`;
     }
 
@@ -67,14 +67,14 @@ const HARNESS_BASE_COMMAND_BUILDERS: Record<string, HarnessBaseCommandBuilder> =
   },
 
   opencode(command, _repoRoot, mode) {
-    return mode === "dangerous"
-      ? buildOpenCodeDangerousBaseCommand(command)
+    return mode === "unattended"
+      ? buildOpenCodeUnattendedBaseCommand(command)
       : buildOpenCodePromptBaseCommand(command);
   },
 
   gemini(command, _repoRoot, mode) {
-    return mode === "dangerous"
-      ? buildGeminiDangerousBaseCommand(command)
+    return mode === "unattended"
+      ? buildGeminiUnattendedBaseCommand(command)
       : command;
   }
 };
@@ -109,7 +109,7 @@ export function buildAgenticHarnessPromptCommandForCommand(
   command: string,
   repoRoot: string,
   prompt: string,
-  mode: AgenticHarnessPromptMode = "dangerous"
+  mode: AgenticHarnessPromptMode = "unattended"
 ): string {
   return buildAgenticHarnessCommandForArgument(
     command,
@@ -129,7 +129,7 @@ export function buildAgenticHarnessFileCommandForCommand(
   command: string,
   repoRoot: string,
   promptFilePath: string,
-  mode: AgenticHarnessPromptMode = "dangerous"
+  mode: AgenticHarnessPromptMode = "unattended"
 ): string {
   return buildAgenticHarnessCommandForArgument(
     command,

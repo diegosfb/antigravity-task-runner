@@ -17,7 +17,7 @@ function buildCodexExecBaseCommand(command) {
 function buildCodexPromptBaseCommand(command) {
     return command.replace(/\bcodex\s+exec\b/, "codex").trim();
 }
-function buildOpenCodeDangerousBaseCommand(command) {
+function buildOpenCodeUnattendedBaseCommand(command) {
     return /\bopencode\s+run\b/.test(command)
         ? command
         : command.replace(/\bopencode\b/, "opencode run");
@@ -25,7 +25,7 @@ function buildOpenCodeDangerousBaseCommand(command) {
 function buildOpenCodePromptBaseCommand(command) {
     return command.replace(/\bopencode\s+run\b/, "opencode").trim();
 }
-function buildGeminiDangerousBaseCommand(command) {
+function buildGeminiUnattendedBaseCommand(command) {
     return /(?:^|\s)--yolo(?:\s|$)/.test(command)
         ? command
         : command.replace(/\bgemini\b/, "gemini --yolo");
@@ -38,26 +38,26 @@ function getExecutableName(command) {
 }
 const HARNESS_BASE_COMMAND_BUILDERS = {
     claude(command, _repoRoot, mode) {
-        if (mode === "dangerous") {
+        if (mode === "unattended") {
             return `${command} --dangerously-skip-permissions --print`;
         }
         return command;
     },
     codex(command, repoRoot, mode) {
         const codexTrustArgs = buildCodexTrustArgs(repoRoot);
-        if (mode === "dangerous") {
+        if (mode === "unattended") {
             return `${buildCodexExecBaseCommand(command)} --full-auto ${codexTrustArgs}`;
         }
         return `${buildCodexPromptBaseCommand(command)} ${codexTrustArgs}`;
     },
     opencode(command, _repoRoot, mode) {
-        return mode === "dangerous"
-            ? buildOpenCodeDangerousBaseCommand(command)
+        return mode === "unattended"
+            ? buildOpenCodeUnattendedBaseCommand(command)
             : buildOpenCodePromptBaseCommand(command);
     },
     gemini(command, _repoRoot, mode) {
-        return mode === "dangerous"
-            ? buildGeminiDangerousBaseCommand(command)
+        return mode === "unattended"
+            ? buildGeminiUnattendedBaseCommand(command)
             : command;
     }
 };
@@ -75,7 +75,7 @@ function buildPromptArgumentFromFile(promptFilePath) {
     const quotedFile = quoteShellArg(promptFilePath);
     return `"$(cat ${quotedFile})"`;
 }
-function buildAgenticHarnessPromptCommandForCommand(command, repoRoot, prompt, mode = "dangerous") {
+function buildAgenticHarnessPromptCommandForCommand(command, repoRoot, prompt, mode = "unattended") {
     return buildAgenticHarnessCommandForArgument(command, repoRoot, quoteShellArg(prompt), mode);
 }
 /**
@@ -84,7 +84,7 @@ function buildAgenticHarnessPromptCommandForCommand(command, repoRoot, prompt, m
  * prompt argument so long, multi-line prompts do not need to be shell-escaped
  * inline by the caller.
  */
-function buildAgenticHarnessFileCommandForCommand(command, repoRoot, promptFilePath, mode = "dangerous") {
+function buildAgenticHarnessFileCommandForCommand(command, repoRoot, promptFilePath, mode = "unattended") {
     return buildAgenticHarnessCommandForArgument(command, repoRoot, buildPromptArgumentFromFile(promptFilePath), mode);
 }
 //# sourceMappingURL=agenticHarnessCommand.js.map

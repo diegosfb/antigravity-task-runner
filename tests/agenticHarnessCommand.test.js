@@ -6,12 +6,12 @@ const {
   buildAgenticHarnessPromptCommandForCommand
 } = require("../out/agenticHarnessCommand.js");
 
-test("buildAgenticHarnessPromptCommandForCommand uses --dangerously-skip-permissions and --print for dangerous mode", () => {
+test("buildAgenticHarnessPromptCommandForCommand uses --dangerously-skip-permissions and --print for unattended mode", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
     "claude",
     "/tmp/repo",
     "create the jira project",
-    "dangerous"
+    "unattended"
   );
 
   assert.equal(command, 'claude --dangerously-skip-permissions --print "create the jira project"');
@@ -44,12 +44,12 @@ test("buildAgenticHarnessPromptCommandForCommand keeps codex prompt mode interac
   assert.match(command, /"create the jira project"$/);
 });
 
-test("buildAgenticHarnessPromptCommandForCommand keeps codex dangerous mode in exec full-auto", () => {
+test("buildAgenticHarnessPromptCommandForCommand keeps codex unattended mode in exec full-auto", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
     "codex",
     "/tmp/repo",
     "create the jira project",
-    "dangerous"
+    "unattended"
   );
 
   assert.match(command, /^codex exec --full-auto -C "\/tmp\/repo"/);
@@ -71,12 +71,12 @@ test("buildAgenticHarnessPromptCommandForCommand removes opencode run in prompt 
   assert.equal(command, 'opencode -m ollama/qwen3-coder:30b "create the jira project"');
 });
 
-test("buildAgenticHarnessPromptCommandForCommand adds opencode run in dangerous mode", () => {
+test("buildAgenticHarnessPromptCommandForCommand adds opencode run in unattended mode", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
     "opencode -m ollama/qwen3-coder:30b",
     "/tmp/repo",
     "create the jira project",
-    "dangerous"
+    "unattended"
   );
 
   assert.equal(command, 'opencode run -m ollama/qwen3-coder:30b "create the jira project"');
@@ -93,12 +93,12 @@ test("buildAgenticHarnessPromptCommandForCommand keeps gemini prompt mode simple
   assert.equal(command, 'gemini "create the jira project"');
 });
 
-test("buildAgenticHarnessPromptCommandForCommand adds gemini yolo in dangerous mode", () => {
+test("buildAgenticHarnessPromptCommandForCommand adds gemini yolo in unattended mode", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
     "gemini --model gemini-2.5-pro",
     "/tmp/repo",
     "create the jira project",
-    "dangerous"
+    "unattended"
   );
 
   assert.equal(command, 'gemini --yolo --model gemini-2.5-pro "create the jira project"');
@@ -129,12 +129,12 @@ test("buildAgenticHarnessFileCommandForCommand keeps codex prompt mode interacti
   assert.match(command, /"\$\(cat "\/tmp\/prompt\.txt"\)"$/);
 });
 
-test("buildAgenticHarnessFileCommandForCommand keeps codex dangerous mode in exec full-auto", () => {
+test("buildAgenticHarnessFileCommandForCommand keeps codex unattended mode in exec full-auto", () => {
   const command = buildAgenticHarnessFileCommandForCommand(
     "codex",
     "/tmp/repo",
     "/tmp/prompt.txt",
-    "dangerous"
+    "unattended"
   );
 
   assert.match(command, /^codex exec --full-auto -C "\/tmp\/repo"/);
@@ -152,12 +152,12 @@ test("buildAgenticHarnessFileCommandForCommand removes opencode run in prompt mo
   assert.equal(command, 'opencode -m ollama/qwen3-coder:30b "$(cat "/tmp/prompt.txt")"');
 });
 
-test("buildAgenticHarnessFileCommandForCommand adds opencode run in dangerous mode", () => {
+test("buildAgenticHarnessFileCommandForCommand adds opencode run in unattended mode", () => {
   const command = buildAgenticHarnessFileCommandForCommand(
     "opencode -m ollama/qwen3-coder:30b",
     "/tmp/repo",
     "/tmp/prompt.txt",
-    "dangerous"
+    "unattended"
   );
 
   assert.equal(command, 'opencode run -m ollama/qwen3-coder:30b "$(cat "/tmp/prompt.txt")"');
@@ -174,23 +174,23 @@ test("buildAgenticHarnessFileCommandForCommand keeps gemini prompt mode simple",
   assert.equal(command, 'gemini "$(cat "/tmp/prompt.txt")"');
 });
 
-test("buildAgenticHarnessFileCommandForCommand adds gemini yolo in dangerous mode", () => {
+test("buildAgenticHarnessFileCommandForCommand adds gemini yolo in unattended mode", () => {
   const command = buildAgenticHarnessFileCommandForCommand(
     "gemini --model gemini-2.5-pro",
     "/tmp/repo",
     "/tmp/prompt.txt",
-    "dangerous"
+    "unattended"
   );
 
   assert.equal(command, 'gemini --yolo --model gemini-2.5-pro "$(cat "/tmp/prompt.txt")"');
 });
 
-test("buildAgenticHarnessPromptCommandForCommand escapes codex dangerous prompts for the shell", () => {
+test("buildAgenticHarnessPromptCommandForCommand escapes codex unattended prompts for the shell", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
     "codex",
     "/tmp/repo",
     'check "$HOME" and `whoami`',
-    "dangerous"
+    "unattended"
   );
 
   assert.ok(command.endsWith('"check \\"\\$HOME\\" and \\`whoami\\`"'));
