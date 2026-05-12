@@ -23,3 +23,15 @@ test("Qwen Code Jira command keeps the explicit qwen model", () => {
 
   assert.match(command, /^opencode run -m ollama\/qwen3-coder:30b "/);
 });
+
+test("Codex Jira command uses exec full-auto without a heredoc", () => {
+  const command = buildAgentRunCommand(
+    "/tmp/repo",
+    "Codex",
+    "work on Jira Item TEST-3 - Example summary"
+  );
+
+  assert.match(command, /^codex exec --full-auto -C "\/tmp\/repo"/);
+  assert.doesNotMatch(command, /ANTIGRAVITY_JIRA_PROMPT_EOF|ANTIGRAVITY_HARNESS_PROMPT_EOF|<<'/);
+  assert.match(command, /"work on Jira Item TEST-3 - Example summary"$/);
+});

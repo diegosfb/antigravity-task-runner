@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildAgenticHarnessPromptCommandForCommand = buildAgenticHarnessPromptCommandForCommand;
 exports.buildAgenticHarnessFileCommandForCommand = buildAgenticHarnessFileCommandForCommand;
 function quoteShellArg(value) {
-    return `"${value.replace(/"/g, '\\"')}"`;
+    return `"${value.replace(/["\\$`]/g, "\\$&")}"`;
 }
 function buildCodexTrustArgs(repoRoot) {
     const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
@@ -37,8 +37,7 @@ function buildAgenticHarnessPromptCommandForCommand(command, repoRoot, prompt, m
         if (mode === "prompt") {
             return `${buildCodexPromptBaseCommand(trimmedCommand)} ${codexTrustArgs} ${quoteShellArg(prompt)}`;
         }
-        const heredocMarker = "ANTIGRAVITY_HARNESS_PROMPT_EOF";
-        return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} - <<'${heredocMarker}'\n${prompt}\n${heredocMarker}`;
+        return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} ${quoteShellArg(prompt)}`;
     }
     return `${trimmedCommand} ${quoteShellArg(prompt)}`;
 }

@@ -4,7 +4,7 @@ exports.inferAssignableAgentLabelFromCommand = inferAssignableAgentLabelFromComm
 exports.buildAgentRunCommand = buildAgentRunCommand;
 const agenticHarnessCommand_1 = require("./agenticHarnessCommand");
 function quoteShellArg(value) {
-    return `"${value.replace(/"/g, '\\"')}"`;
+    return `"${value.replace(/["\\$`]/g, "\\$&")}"`;
 }
 function getExecutableName(command) {
     const firstToken = command.trim().split(/\s+/)[0] || "";
@@ -35,9 +35,7 @@ function buildAgentRunCommand(repoRoot, agentLabel, prompt, options = {}) {
         return `claude --permission-mode auto ${quoteShellArg(prompt)}`;
     }
     if (agentLabel === "Codex") {
-        const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
-        const heredocMarker = "ANTIGRAVITY_JIRA_PROMPT_EOF";
-        return `codex exec --full-auto -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} - <<'${heredocMarker}'\n${prompt}\n${heredocMarker}`;
+        return (0, agenticHarnessCommand_1.buildAgenticHarnessPromptCommandForCommand)("codex", repoRoot, prompt, "dangerous");
     }
     if (agentLabel === "OpenCode") {
         return `opencode run ${quoteShellArg(prompt)}`;

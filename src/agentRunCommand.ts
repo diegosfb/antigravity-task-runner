@@ -9,7 +9,7 @@ export type AssignableAgentLabel =
   | "Qwen Code";
 
 function quoteShellArg(value: string): string {
-  return `"${value.replace(/"/g, '\\"')}"`;
+  return `"${value.replace(/["\\$`]/g, "\\$&")}"`;
 }
 
 function getExecutableName(command: string): string {
@@ -49,9 +49,7 @@ export function buildAgentRunCommand(
     return `claude --permission-mode auto ${quoteShellArg(prompt)}`;
   }
   if (agentLabel === "Codex") {
-    const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
-    const heredocMarker = "ANTIGRAVITY_JIRA_PROMPT_EOF";
-    return `codex exec --full-auto -C ${quoteShellArg(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${quoteShellArg(trustOverride)} - <<'${heredocMarker}'\n${prompt}\n${heredocMarker}`;
+    return buildAgenticHarnessPromptCommandForCommand("codex", repoRoot, prompt, "dangerous");
   }
   if (agentLabel === "OpenCode") {
     return `opencode run ${quoteShellArg(prompt)}`;

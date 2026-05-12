@@ -55,8 +55,9 @@ test("buildAgenticHarnessPromptCommandForCommand keeps codex dangerous mode in e
   assert.match(command, /^codex exec --full-auto -C "\/tmp\/repo"/);
   assert.match(command, /trust_level=\\"trusted\\"/);
   assert.match(command, /projects\.\\"\/tmp\/repo\\"\.\w+=\\"trusted\\"/);
-  assert.match(command, /<<'ANTIGRAVITY_HARNESS_PROMPT_EOF'/);
-  assert.match(command, /\ncreate the jira project\nANTIGRAVITY_HARNESS_PROMPT_EOF$/);
+  assert.doesNotMatch(command, /ANTIGRAVITY_HARNESS_PROMPT_EOF/);
+  assert.doesNotMatch(command, /<<'/);
+  assert.match(command, /"create the jira project"$/);
 });
 
 test("buildAgenticHarnessPromptCommandForCommand keeps opencode commands simple", () => {
@@ -105,6 +106,17 @@ test("buildAgenticHarnessFileCommandForCommand keeps codex dangerous mode in exe
 
   assert.match(command, /^codex exec --full-auto -C "\/tmp\/repo"/);
   assert.match(command, /- < "\/tmp\/prompt\.txt"$/);
+});
+
+test("buildAgenticHarnessPromptCommandForCommand escapes codex dangerous prompts for the shell", () => {
+  const command = buildAgenticHarnessPromptCommandForCommand(
+    "codex",
+    "/tmp/repo",
+    'check "$HOME" and `whoami`',
+    "dangerous"
+  );
+
+  assert.ok(command.endsWith('"check \\"\\$HOME\\" and \\`whoami\\`"'));
 });
 
 test("buildAgenticHarnessPromptCommandForCommand supports full executable paths", () => {

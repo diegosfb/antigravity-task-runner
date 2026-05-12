@@ -1,7 +1,7 @@
 export type AgenticHarnessPromptMode = "dangerous" | "prompt";
 
 function quoteShellArg(value: string): string {
-  return `"${value.replace(/"/g, '\\"')}"`;
+  return `"${value.replace(/["\\$`]/g, "\\$&")}"`;
 }
 
 function buildCodexTrustArgs(repoRoot: string): string {
@@ -49,9 +49,7 @@ export function buildAgenticHarnessPromptCommandForCommand(
       return `${buildCodexPromptBaseCommand(trimmedCommand)} ${codexTrustArgs} ${quoteShellArg(prompt)}`;
     }
 
-    const heredocMarker = "ANTIGRAVITY_HARNESS_PROMPT_EOF";
-
-    return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} - <<'${heredocMarker}'\n${prompt}\n${heredocMarker}`;
+    return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} ${quoteShellArg(prompt)}`;
   }
 
   return `${trimmedCommand} ${quoteShellArg(prompt)}`;
