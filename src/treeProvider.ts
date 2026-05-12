@@ -377,9 +377,13 @@ const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
 const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
-const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
-const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
 const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
+const CLOUD_ARCHITECT_ICON_PATH = vscode.Uri.file(
+  path.resolve(__dirname, "..", "Resources", "cloud-architect.svg")
+);
+const EXPLAIN_ME_ICON_PATH = vscode.Uri.file(
+  path.resolve(__dirname, "..", "Resources", "explain-me.svg")
+);
 const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(
   path.resolve(__dirname, "..", "Resources", "feature-estimator-red.svg")
 );
@@ -844,7 +848,7 @@ function getQuickActionItems(): NodeItem[] {
     vscode.TreeItemCollapsibleState.None
   );
   if (hasCloudInfrastructure) {
-    cloudArchitectReview.iconPath = new vscode.ThemeIcon("cloud", CLOUD_ARCHITECT_ACTION_COLOR);
+    cloudArchitectReview.iconPath = CLOUD_ARCHITECT_ICON_PATH;
     cloudArchitectReview.command = {
       command: "antigravity.cloudArchitectReview",
       title: "Cloud Architect Review"
@@ -879,7 +883,7 @@ function getQuickActionItems(): NodeItem[] {
     { kind: "action", label: "Explain Me" },
     vscode.TreeItemCollapsibleState.None
   );
-  explainMe.iconPath = new vscode.ThemeIcon("comment-discussion", EXPLAIN_ME_ACTION_COLOR);
+  explainMe.iconPath = EXPLAIN_ME_ICON_PATH;
   explainMe.command = {
     command: "antigravity.explainMe",
     title: "Explain Me"
