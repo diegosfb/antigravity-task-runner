@@ -35,3 +35,13 @@ test("Codex Jira command uses exec full-auto without a heredoc", () => {
   assert.doesNotMatch(command, /ANTIGRAVITY_JIRA_PROMPT_EOF|ANTIGRAVITY_HARNESS_PROMPT_EOF|<<'/);
   assert.match(command, /"work on Jira Item TEST-3 - Example summary"$/);
 });
+
+test("Gemini Jira command uses the gemini harness directly", () => {
+  const command = buildAgentRunCommand(
+    "/tmp/repo",
+    "Gemini",
+    "work on Jira Item TEST-4 - Example summary"
+  );
+
+  assert.equal(command, 'gemini "work on Jira Item TEST-4 - Example summary"');
+});

@@ -51,6 +51,9 @@ export function buildAgentRunCommand(
   if (agentLabel === "Codex") {
     return buildAgenticHarnessPromptCommandForCommand("codex", repoRoot, prompt, "dangerous");
   }
+  if (agentLabel === "Gemini") {
+    return buildAgenticHarnessPromptCommandForCommand("gemini", repoRoot, prompt, "dangerous");
+  }
   if (agentLabel === "OpenCode") {
     return `opencode run ${quoteShellArg(prompt)}`;
   }

@@ -39,7 +39,7 @@ function buildAgenticHarnessPromptCommandForCommand(command, repoRoot, prompt, m
         }
         return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} ${quoteShellArg(prompt)}`;
     }
-    if (executableName === "opencode") {
+    if (executableName === "opencode" || executableName === "gemini") {
         return `${trimmedCommand} ${quoteShellArg(prompt)}`;
     }
     return `${trimmedCommand} ${quoteShellArg(prompt)}`;
@@ -52,7 +52,7 @@ function buildAgenticHarnessPromptCommandForCommand(command, repoRoot, prompt, m
  * For claude: uses --print "$(cat <file>)"
  * For codex dangerous mode: uses file redirect (- < <file>)
  * For codex prompt mode: passes "$(cat <file>)" as the prompt argument
- * For opencode: passes "$(cat <file>)" as the prompt argument
+ * For opencode/gemini: passes "$(cat <file>)" as the prompt argument
  * For others: falls back to "$(cat <file>)" command substitution
  */
 function buildAgenticHarnessFileCommandForCommand(command, repoRoot, promptFilePath, mode = "dangerous") {
@@ -72,7 +72,7 @@ function buildAgenticHarnessFileCommandForCommand(command, repoRoot, promptFileP
         }
         return `${buildCodexExecBaseCommand(trimmedCommand)} --full-auto ${codexTrustArgs} - < ${quotedFile}`;
     }
-    if (executableName === "opencode") {
+    if (executableName === "opencode" || executableName === "gemini") {
         return `${trimmedCommand} "$(cat ${quotedFile})"`;
     }
     // Generic fallback: inject file contents via command substitution

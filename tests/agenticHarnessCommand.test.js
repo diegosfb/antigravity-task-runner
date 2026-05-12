@@ -82,6 +82,28 @@ test("buildAgenticHarnessPromptCommandForCommand keeps opencode dangerous mode s
   assert.equal(command, 'opencode run "create the jira project"');
 });
 
+test("buildAgenticHarnessPromptCommandForCommand keeps gemini prompt mode simple", () => {
+  const command = buildAgenticHarnessPromptCommandForCommand(
+    "gemini",
+    "/tmp/repo",
+    "create the jira project",
+    "prompt"
+  );
+
+  assert.equal(command, 'gemini "create the jira project"');
+});
+
+test("buildAgenticHarnessPromptCommandForCommand keeps gemini dangerous mode simple", () => {
+  const command = buildAgenticHarnessPromptCommandForCommand(
+    "gemini",
+    "/tmp/repo",
+    "create the jira project",
+    "dangerous"
+  );
+
+  assert.equal(command, 'gemini "create the jira project"');
+});
+
 test("buildAgenticHarnessPromptCommandForCommand supports codex commands with extra args", () => {
   const command = buildAgenticHarnessPromptCommandForCommand(
     "codex --model gpt-5.5-codex",
@@ -139,6 +161,28 @@ test("buildAgenticHarnessFileCommandForCommand keeps opencode dangerous mode sim
   );
 
   assert.equal(command, 'opencode run "$(cat "/tmp/prompt.txt")"');
+});
+
+test("buildAgenticHarnessFileCommandForCommand keeps gemini prompt mode simple", () => {
+  const command = buildAgenticHarnessFileCommandForCommand(
+    "gemini",
+    "/tmp/repo",
+    "/tmp/prompt.txt",
+    "prompt"
+  );
+
+  assert.equal(command, 'gemini "$(cat "/tmp/prompt.txt")"');
+});
+
+test("buildAgenticHarnessFileCommandForCommand keeps gemini dangerous mode simple", () => {
+  const command = buildAgenticHarnessFileCommandForCommand(
+    "gemini",
+    "/tmp/repo",
+    "/tmp/prompt.txt",
+    "dangerous"
+  );
+
+  assert.equal(command, 'gemini "$(cat "/tmp/prompt.txt")"');
 });
 
 test("buildAgenticHarnessPromptCommandForCommand escapes codex dangerous prompts for the shell", () => {
