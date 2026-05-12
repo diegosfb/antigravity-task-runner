@@ -73,12 +73,12 @@ test("buildSetupWorkspacePrompt includes the template details and target path", 
   assert.match(prompt, /Download the latest release source code\./);
   assert.match(prompt, /\/tmp\/workspace/);
   assert.match(prompt, /Do not modify files outside/);
-  assert.match(prompt, /Do not assume AGENTS\.md, CLAUDE\.md, \.agent, \.claude, or \.codex already exist/);
-  assert.doesNotMatch(prompt, /CLAUDE\.md, AGENTS\.md, \.agent, and \.claude/);
+  assert.match(prompt, /The workspace root already contains \.agent\/skills, \.agent\/agents, \.claude, \.codex, and \.opencode/);
+  assert.match(prompt, /Do not assume AGENTS\.md or CLAUDE\.md already exist/);
   assert.doesNotMatch(prompt, /jira-project-creation/);
 });
 
-test("buildSetupWorkspacePrompt mentions Codex compatibility links when requested", () => {
+test("buildSetupWorkspacePrompt describes the precreated harness links", () => {
   const prompt = buildSetupWorkspacePrompt(
     {
       name: "WebService Project",
@@ -86,11 +86,10 @@ test("buildSetupWorkspacePrompt mentions Codex compatibility links when requeste
       downloadUrl: "https://github.com/diegosfb/TestService",
       instructions: "Download the latest release source code."
     },
-    "/tmp/workspace",
-    { createCodexHarnessLinks: true }
+    "/tmp/workspace"
   );
 
-  assert.match(prompt, /include Codex compatibility by linking \.codex\/skills and \.codex\/agents into \.agent/);
+  assert.match(prompt, /\.claude\/skills, \.claude\/agents, \.codex\/skills, \.codex\/agents, \.opencode\/skills, and \.opencode\/agents already point into \.agent/);
 });
 
 test("buildUpdateAgentsMdPrompt includes the progressive disclosure refactor steps", async () => {
@@ -151,7 +150,7 @@ test("copySetupWorkspaceGuideFiles does not overwrite existing project guide fil
   );
 });
 
-test("ensureSetupWorkspaceDirectories creates Claude harness folders and links in the project root", async () => {
+test("ensureSetupWorkspaceDirectories creates agent harness folders and links in the project root", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
   const projectRoot = path.join(tempRoot, "workspace");
 
@@ -159,36 +158,30 @@ test("ensureSetupWorkspaceDirectories creates Claude harness folders and links i
 
   assert.deepEqual(createdDirectories, [
     ".agent",
-    ".claude",
-    ".claude/skills",
-    ".claude/agents"
-  ]);
-  assert.ok(fs.statSync(path.join(projectRoot, ".agent")).isDirectory());
-  assert.ok(fs.statSync(path.join(projectRoot, ".claude")).isDirectory());
-  assertRelativeSymlink(path.join(projectRoot, ".claude", "skills"), "../.agent/skills");
-  assertRelativeSymlink(path.join(projectRoot, ".claude", "agents"), "../.agent/agents");
-});
-
-test("ensureSetupWorkspaceDirectories optionally creates Codex harness links", async () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
-  const projectRoot = path.join(tempRoot, "workspace");
-
-  const createdDirectories = await ensureSetupWorkspaceDirectories(projectRoot, {
-    createCodexHarnessLinks: true
-  });
-
-  assert.deepEqual(createdDirectories, [
-    ".agent",
+    path.join(".agent", "skills"),
+    path.join(".agent", "agents"),
     ".claude",
     ".codex",
+    ".opencode",
     ".claude/skills",
     ".claude/agents",
     ".codex/skills",
-    ".codex/agents"
+    ".codex/agents",
+    ".opencode/skills",
+    ".opencode/agents"
   ]);
+  assert.ok(fs.statSync(path.join(projectRoot, ".agent")).isDirectory());
+  assert.ok(fs.statSync(path.join(projectRoot, ".agent", "skills")).isDirectory());
+  assert.ok(fs.statSync(path.join(projectRoot, ".agent", "agents")).isDirectory());
+  assert.ok(fs.statSync(path.join(projectRoot, ".claude")).isDirectory());
   assert.ok(fs.statSync(path.join(projectRoot, ".codex")).isDirectory());
+  assert.ok(fs.statSync(path.join(projectRoot, ".opencode")).isDirectory());
+  assertRelativeSymlink(path.join(projectRoot, ".claude", "skills"), "../.agent/skills");
+  assertRelativeSymlink(path.join(projectRoot, ".claude", "agents"), "../.agent/agents");
   assertRelativeSymlink(path.join(projectRoot, ".codex", "skills"), "../.agent/skills");
   assertRelativeSymlink(path.join(projectRoot, ".codex", "agents"), "../.agent/agents");
+  assertRelativeSymlink(path.join(projectRoot, ".opencode", "skills"), "../.agent/skills");
+  assertRelativeSymlink(path.join(projectRoot, ".opencode", "agents"), "../.agent/agents");
 });
 
 test("ensureSetupWorkspaceDirectories does not recreate existing directories or harness links", async () => {
@@ -196,17 +189,33 @@ test("ensureSetupWorkspaceDirectories does not recreate existing directories or 
   const projectRoot = path.join(tempRoot, "workspace");
 
   fs.mkdirSync(path.join(projectRoot, ".agent"), { recursive: true });
+  fs.mkdirSync(path.join(projectRoot, ".agent", "skills"), { recursive: true });
+  fs.mkdirSync(path.join(projectRoot, ".agent", "agents"), { recursive: true });
   fs.mkdirSync(path.join(projectRoot, ".claude"), { recursive: true });
+  fs.mkdirSync(path.join(projectRoot, ".codex"), { recursive: true });
+  fs.mkdirSync(path.join(projectRoot, ".opencode"), { recursive: true });
   fs.symlinkSync("../.agent/skills", path.join(projectRoot, ".claude", "skills"));
   fs.symlinkSync("../.agent/agents", path.join(projectRoot, ".claude", "agents"));
+  fs.symlinkSync("../.agent/skills", path.join(projectRoot, ".codex", "skills"));
+  fs.symlinkSync("../.agent/agents", path.join(projectRoot, ".codex", "agents"));
+  fs.symlinkSync("../.agent/skills", path.join(projectRoot, ".opencode", "skills"));
+  fs.symlinkSync("../.agent/agents", path.join(projectRoot, ".opencode", "agents"));
 
   const createdDirectories = await ensureSetupWorkspaceDirectories(projectRoot);
 
   assert.deepEqual(createdDirectories, []);
   assert.ok(fs.statSync(path.join(projectRoot, ".agent")).isDirectory());
+  assert.ok(fs.statSync(path.join(projectRoot, ".agent", "skills")).isDirectory());
+  assert.ok(fs.statSync(path.join(projectRoot, ".agent", "agents")).isDirectory());
   assert.ok(fs.statSync(path.join(projectRoot, ".claude")).isDirectory());
+  assert.ok(fs.statSync(path.join(projectRoot, ".codex")).isDirectory());
+  assert.ok(fs.statSync(path.join(projectRoot, ".opencode")).isDirectory());
   assertRelativeSymlink(path.join(projectRoot, ".claude", "skills"), "../.agent/skills");
   assertRelativeSymlink(path.join(projectRoot, ".claude", "agents"), "../.agent/agents");
+  assertRelativeSymlink(path.join(projectRoot, ".codex", "skills"), "../.agent/skills");
+  assertRelativeSymlink(path.join(projectRoot, ".codex", "agents"), "../.agent/agents");
+  assertRelativeSymlink(path.join(projectRoot, ".opencode", "skills"), "../.agent/skills");
+  assertRelativeSymlink(path.join(projectRoot, ".opencode", "agents"), "../.agent/agents");
 });
 
 test("copySetupWorkspaceSkills copies jira-project-creation into .agent/skills", async () => {

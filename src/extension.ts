@@ -86,6 +86,7 @@ import { buildMergeReviewPrompt } from "./mergeReviewPrompt";
 import {
   buildUpdateAgentsMdPromptFilePath,
   buildSetupWorkspacePrompt,
+  ensureSetupWorkspaceDirectories,
   loadProjectTemplates,
   type ProjectTemplate
 } from "./projectTemplates";
@@ -377,16 +378,10 @@ export function activate(context: vscode.ExtensionContext) {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
-  type SetupWorkspaceSelection = {
-    template: ProjectTemplate;
-    createCodexHarnessLinks: boolean;
-  };
-
   const renderSetupWorkspaceHtml = (
     webview: vscode.Webview,
     workspaceDir: string,
-    projectTemplates: ProjectTemplate[],
-    defaultCreateCodexHarnessLinks: boolean
+    projectTemplates: ProjectTemplate[]
   ): string => {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -449,32 +444,6 @@ export function activate(context: vscode.ExtensionContext) {
       .template-list {
         display: grid;
         gap: 10px;
-      }
-      .option-card {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 12px;
-        align-items: start;
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px solid var(--vscode-input-border, transparent);
-        background: var(--vscode-sideBar-background);
-      }
-      .option-card input {
-        margin-top: 3px;
-      }
-      .option-copy {
-        display: grid;
-        gap: 4px;
-      }
-      .option-name {
-        font-size: 13px;
-        font-weight: 600;
-      }
-      .option-description {
-        font-size: 12px;
-        color: var(--vscode-descriptionForeground);
-        line-height: 1.5;
       }
       .template-card {
         display: grid;
@@ -553,20 +522,6 @@ export function activate(context: vscode.ExtensionContext) {
         ${templateCards}
       </div>
 
-      <label class="option-card">
-        <input
-          type="checkbox"
-          id="create-codex-harness-links"${defaultCreateCodexHarnessLinks ? " checked" : ""}
-        />
-        <span class="option-copy">
-          <span class="option-name">Create Codex compatibility links</span>
-          <span class="option-description">
-            Adds <code>.codex/skills</code> and <code>.codex/agents</code> symlinks to
-            <code>.agent</code> so bundled skills are available when this workspace is run with Codex.
-          </span>
-        </span>
-      </label>
-
       <div id="setup-workspace-error" class="error" aria-live="polite"></div>
 
       <div class="actions">
@@ -580,7 +535,6 @@ export function activate(context: vscode.ExtensionContext) {
       const form = document.getElementById("setup-workspace-form");
       const errorMessage = document.getElementById("setup-workspace-error");
       const cancelButton = document.getElementById("cancel-button");
-      const codexHarnessCheckbox = document.getElementById("create-codex-harness-links");
       const cards = Array.from(document.querySelectorAll(".template-card"));
       const radios = Array.from(document.querySelectorAll('input[name="project-template"]'));
 
@@ -609,12 +563,7 @@ export function activate(context: vscode.ExtensionContext) {
         errorMessage.textContent = "";
         vscode.postMessage({
           type: "submitSetupWorkspace",
-          payload: {
-            templateName: selected.value,
-            createCodexHarnessLinks: Boolean(
-              codexHarnessCheckbox && codexHarnessCheckbox.checked
-            )
-          }
+          payload: { templateName: selected.value }
         });
       });
 
@@ -634,9 +583,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   const showSetupWorkspaceDialog = async (
     workspaceDir: string,
-    projectTemplates: ProjectTemplate[],
-    defaultCreateCodexHarnessLinks: boolean
-  ): Promise<SetupWorkspaceSelection | undefined> =>
+    projectTemplates: ProjectTemplate[]
+  ): Promise<ProjectTemplate | undefined> =>
     new Promise((resolve) => {
       const panel = vscode.window.createWebviewPanel(
         "setupWorkspace",
@@ -644,15 +592,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.ViewColumn.Active,
         { enableScripts: true }
       );
-      panel.webview.html = renderSetupWorkspaceHtml(
-        panel.webview,
-        workspaceDir,
-        projectTemplates,
-        defaultCreateCodexHarnessLinks
-      );
+      panel.webview.html = renderSetupWorkspaceHtml(panel.webview, workspaceDir, projectTemplates);
 
       let settled = false;
-      const resolveOnce = (value: SetupWorkspaceSelection | undefined) => {
+      const resolveOnce = (value: ProjectTemplate | undefined) => {
         if (settled) return;
         settled = true;
         resolve(value);
@@ -671,7 +614,6 @@ export function activate(context: vscode.ExtensionContext) {
           const payload = message.payload || {};
           const templateName =
             typeof payload.templateName === "string" ? payload.templateName.trim() : "";
-          const createCodexHarnessLinks = Boolean(payload.createCodexHarnessLinks);
           const selectedTemplate = projectTemplates.find(
             (projectTemplate) => projectTemplate.name === templateName
           );
@@ -684,10 +626,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          resolveOnce({
-            template: selectedTemplate,
-            createCodexHarnessLinks
-          });
+          resolveOnce(selectedTemplate);
           panel.dispose();
         },
         undefined,
@@ -3938,24 +3877,32 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const defaultCreateCodexHarnessLinks =
-        getAgenticHarnessExecutionCommand().trim().toLowerCase().startsWith("codex");
-      const selection = await showSetupWorkspaceDialog(
-        workspaceDir,
-        projectTemplates,
-        defaultCreateCodexHarnessLinks
-      );
-      if (!selection) {
+      const selectedTemplate = await showSetupWorkspaceDialog(workspaceDir, projectTemplates);
+      if (!selectedTemplate) {
         logAlways("[Setup Workspace] Selection cancelled");
         return;
       }
-      const { template: selectedTemplate, createCodexHarnessLinks } = selection;
 
       fs.mkdirSync(workspaceDir, { recursive: true });
 
-      const prompt = buildSetupWorkspacePrompt(selectedTemplate, workspaceDir, {
-        createCodexHarnessLinks
-      });
+      let createdSupportPaths: string[];
+      try {
+        createdSupportPaths = await ensureSetupWorkspaceDirectories(workspaceDir);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logAlways(`[Setup Workspace] ERROR preparing support folders: ${message}`);
+        void vscode.window.showErrorMessage(
+          `Failed to prepare workspace support folders in ${workspaceDir}: ${message}`
+        );
+        return;
+      }
+      logAlways(
+        `[Setup Workspace] support folders ready in ${workspaceDir}: ${
+          createdSupportPaths.length > 0 ? createdSupportPaths.join(", ") : "already present"
+        }`
+      );
+
+      const prompt = buildSetupWorkspacePrompt(selectedTemplate, workspaceDir);
       const commandLine = buildAgenticHarnessPromptCommand(workspaceDir, prompt, "dangerous");
       const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;
 
@@ -3971,12 +3918,10 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       logAlways(
-        `[Setup Workspace] Opened harness for template ${selectedTemplate.name} in ${workspaceDir}` +
-        `${createCodexHarnessLinks ? " with Codex compatibility links." : ""}`
+        `[Setup Workspace] Opened harness for template ${selectedTemplate.name} in ${workspaceDir}`
       );
       void vscode.window.showInformationMessage(
-        `Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}` +
-        `${createCodexHarnessLinks ? " with Codex compatibility links." : "."}`
+        `Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}.`
       );
     })
   );

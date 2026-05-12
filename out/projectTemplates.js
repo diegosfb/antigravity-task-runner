@@ -50,7 +50,15 @@ async function loadProjectTemplates(resourcesRoot, resourceProvider = (0, resour
     return parseProjectTemplates(raw);
 }
 const SETUP_WORKSPACE_GUIDE_FILE_NAMES = ["CLAUDE.md", "AGENTS.md"];
-const SETUP_WORKSPACE_BASE_DIRECTORY_NAMES = [".agent", ".claude"];
+const SETUP_WORKSPACE_BASE_DIRECTORY_NAMES = [
+    ".agent",
+    path.join(".agent", "skills"),
+    path.join(".agent", "agents"),
+    ".claude",
+    ".codex",
+    ".opencode"
+];
+const SETUP_WORKSPACE_HARNESS_DIRECTORY_NAMES = [".claude", ".codex", ".opencode"];
 const SETUP_WORKSPACE_HARNESS_LINK_NAMES = ["skills", "agents"];
 const SETUP_WORKSPACE_SKILL_DIRECTORY_NAMES = ["jira-project-creation"];
 async function pathExistsIncludingSymlinks(targetPath) {
@@ -101,21 +109,16 @@ async function copySetupWorkspaceGuideFiles(resourcesRoot, projectRoot, resource
     }
     return copiedFiles;
 }
-async function ensureSetupWorkspaceDirectories(projectRoot, options = {}) {
+async function ensureSetupWorkspaceDirectories(projectRoot) {
     const createdPaths = [];
     await fs.promises.mkdir(projectRoot, { recursive: true });
-    const directoryNames = [...SETUP_WORKSPACE_BASE_DIRECTORY_NAMES];
-    if (options.createCodexHarnessLinks) {
-        directoryNames.push(".codex");
-    }
-    for (const directoryName of directoryNames) {
+    for (const directoryName of SETUP_WORKSPACE_BASE_DIRECTORY_NAMES) {
         if (await ensureSetupWorkspaceDirectory(projectRoot, directoryName)) {
             createdPaths.push(directoryName);
         }
     }
-    createdPaths.push(...await ensureSetupWorkspaceHarnessLinks(projectRoot, ".claude"));
-    if (options.createCodexHarnessLinks) {
-        createdPaths.push(...await ensureSetupWorkspaceHarnessLinks(projectRoot, ".codex"));
+    for (const harnessDirectoryName of SETUP_WORKSPACE_HARNESS_DIRECTORY_NAMES) {
+        createdPaths.push(...await ensureSetupWorkspaceHarnessLinks(projectRoot, harnessDirectoryName));
     }
     return createdPaths;
 }
@@ -138,21 +141,19 @@ async function copySetupWorkspaceSkills(resourcesRoot, projectRoot, resourceProv
     }
     return copiedSkills;
 }
-function buildSetupWorkspacePrompt(template, workspaceDir, options = {}) {
-    const codexCompatibilityInstruction = options.createCodexHarnessLinks
-        ? "If local agent harness folders are needed for this workspace, include Codex compatibility by linking .codex/skills and .codex/agents into .agent."
-        : "";
+function buildSetupWorkspacePrompt(template, workspaceDir) {
     return [
         `Set up the workspace by downloading the "${template.name}" project into "${workspaceDir}".`,
         `Use this source URL: ${template.downloadUrl}.`,
         `Follow these instructions exactly: ${template.instructions}.`,
         `If the target directory does not exist yet, create it first.`,
-        "Do not assume AGENTS.md, CLAUDE.md, .agent, .claude, or .codex already exist. Only create them if the selected setup actually requires them.",
-        codexCompatibilityInstruction,
+        "The workspace root already contains .agent/skills, .agent/agents, .claude, .codex, and .opencode.",
+        ".claude/skills, .claude/agents, .codex/skills, .codex/agents, .opencode/skills, and .opencode/agents already point into .agent.",
+        "Do not assume AGENTS.md or CLAUDE.md already exist unless the selected setup requires them.",
         `Do not modify files outside "${workspaceDir}".`,
         `If "${workspaceDir}" already contains some of the project files, only add the missing ones. Do not overwrite or modify any existing files in "${workspaceDir}".`,
         "Prefer non-interactive commands and finish once the missing files are extracted or downloaded."
-    ].filter(Boolean).join(" ");
+    ].join(" ");
 }
 async function buildUpdateAgentsMdPrompt(resourcesRoot = path.resolve(__dirname, "..", "Resources"), resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(resourcesRoot)) {
     return (await resourceProvider.readTextFile(path.join("prompts", "update-agents-md.md"))).trim();
