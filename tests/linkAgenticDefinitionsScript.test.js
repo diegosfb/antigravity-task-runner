@@ -72,6 +72,30 @@ test("links every agent in an agents collection folder", () => {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
+test("links agent folders that use the agents/name/name.md layout", () => {
+  const { tempRoot, workspaceRoot } = makeTempWorkspace();
+  const agentsRoot = path.join(tempRoot, "shared", "agents");
+  const platformAgent = path.join(agentsRoot, "platform-agent");
+  const qaAgent = path.join(agentsRoot, "qa-agent");
+
+  fs.mkdirSync(platformAgent, { recursive: true });
+  fs.mkdirSync(qaAgent, { recursive: true });
+  fs.writeFileSync(path.join(platformAgent, "platform-agent.md"), "# Platform Agent\n", "utf8");
+  fs.writeFileSync(path.join(qaAgent, "qa-agent.md"), "# QA Agent\n", "utf8");
+
+  const output = runScript([agentsRoot], workspaceRoot);
+
+  assert.match(output, /created=6/);
+  assertSymlink(path.join(workspaceRoot, ".agent2", "agents", "platform-agent"), platformAgent);
+  assertSymlink(path.join(workspaceRoot, ".agent2", "agents", "qa-agent"), qaAgent);
+  assertSymlink(path.join(workspaceRoot, ".claude2", "agents", "platform-agent"), platformAgent);
+  assertSymlink(path.join(workspaceRoot, ".claude2", "agents", "qa-agent"), qaAgent);
+  assertSymlink(path.join(workspaceRoot, ".codex", "agents", "platform-agent"), platformAgent);
+  assertSymlink(path.join(workspaceRoot, ".codex", "agents", "qa-agent"), qaAgent);
+
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+});
+
 test("links skills and agents when a package folder contains both", () => {
   const { tempRoot, workspaceRoot } = makeTempWorkspace();
   const packageRoot = path.join(tempRoot, "shared", "my-package");
@@ -81,7 +105,7 @@ test("links skills and agents when a package folder contains both", () => {
   fs.mkdirSync(skillDir, { recursive: true });
   fs.mkdirSync(agentDir, { recursive: true });
   fs.writeFileSync(path.join(skillDir, "SKILL.md"), "# Delivery Skill\n", "utf8");
-  fs.writeFileSync(path.join(agentDir, "AGENT.md"), "# Delivery Agent\n", "utf8");
+  fs.writeFileSync(path.join(agentDir, "delivery-agent.md"), "# Delivery Agent\n", "utf8");
 
   const output = runScript([packageRoot], workspaceRoot);
 

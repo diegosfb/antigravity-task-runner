@@ -7,9 +7,9 @@ Usage: link-agentic-definitions.sh <source-folder> [workspace-root]
 
 Detects whether <source-folder> is:
 - a single skill folder containing SKILL.md
-- a single agent folder containing AGENT.md
+- a single agent folder containing AGENT.md or <folder-name>.md
 - a skills collection folder containing child skill folders
-- an agents collection folder containing child agent folders
+- an agents collection folder containing child agent folders with AGENT.md or <folder-name>.md
 - a package/lib folder containing skills/ and/or agents/
 
 Then creates symlinks in:
@@ -61,6 +61,37 @@ ensure_target_dirs() {
   done
 }
 
+has_skill_definition() {
+  local dir="$1"
+  [ -f "${dir}/SKILL.md" ]
+}
+
+has_agent_definition() {
+  local dir="$1"
+  local dir_name
+
+  dir_name="$(basename "${dir}")"
+
+  [ -f "${dir}/AGENT.md" ] || [ -f "${dir}/${dir_name}.md" ]
+}
+
+directory_matches_kind() {
+  local dir="$1"
+  local kind="$2"
+
+  case "${kind}" in
+    skill)
+      has_skill_definition "${dir}"
+      ;;
+    agent)
+      has_agent_definition "${dir}"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 link_item_into_targets() {
   local source_item="$1"
   shift
@@ -102,7 +133,7 @@ link_item_into_targets() {
 
 link_child_directories() {
   local collection_dir="$1"
-  local marker_file="$2"
+  local kind="$2"
   shift 2
 
   local matched=0
@@ -113,7 +144,7 @@ link_child_directories() {
   fi
 
   while IFS= read -r -d '' child; do
-    if [ -f "${child}/${marker_file}" ]; then
+    if directory_matches_kind "${child}" "${kind}"; then
       link_item_into_targets "${child}" "$@"
       matched=1
     fi
@@ -128,7 +159,7 @@ link_child_directories() {
 
 has_child_directories_with_marker() {
   local collection_dir="$1"
-  local marker_file="$2"
+  local kind="$2"
   local child
 
   if [ ! -d "${collection_dir}" ]; then
@@ -136,7 +167,7 @@ has_child_directories_with_marker() {
   fi
 
   while IFS= read -r -d '' child; do
-    if [ -f "${child}/${marker_file}" ]; then
+    if directory_matches_kind "${child}" "${kind}"; then
       return 0
     fi
   done < <(find "${collection_dir}" -mindepth 1 -maxdepth 1 -type d -print0)
@@ -156,7 +187,7 @@ process_single_agent_dir() {
 
 process_skills_collection() {
   ensure_target_dirs "${SKILL_TARGETS[@]}"
-  if ! link_child_directories "$1" "SKILL.md" "${SKILL_TARGETS[@]}"; then
+  if ! link_child_directories "$1" "skill" "${SKILL_TARGETS[@]}"; then
     echo "ERROR: No skill folders with SKILL.md found in ${1}" >&2
     return 1
   fi
@@ -164,8 +195,8 @@ process_skills_collection() {
 
 process_agents_collection() {
   ensure_target_dirs "${AGENT_TARGETS[@]}"
-  if ! link_child_directories "$1" "AGENT.md" "${AGENT_TARGETS[@]}"; then
-    echo "ERROR: No agent folders with AGENT.md found in ${1}" >&2
+  if ! link_child_directories "$1" "agent" "${AGENT_TARGETS[@]}"; then
+    echo "ERROR: No agent folders with AGENT.md or <folder-name>.md found in ${1}" >&2
     return 1
   fi
 }
@@ -182,16 +213,16 @@ if [ -d "${SOURCE_DIR}/skills" ] || [ -d "${SOURCE_DIR}/agents" ]; then
     process_agents_collection "${SOURCE_DIR}/agents"
     handled=1
   fi
-elif [ -f "${SOURCE_DIR}/SKILL.md" ]; then
+elif has_skill_definition "${SOURCE_DIR}"; then
   process_single_skill_dir "${SOURCE_DIR}"
   handled=1
-elif [ -f "${SOURCE_DIR}/AGENT.md" ]; then
+elif has_agent_definition "${SOURCE_DIR}"; then
   process_single_agent_dir "${SOURCE_DIR}"
   handled=1
-elif has_child_directories_with_marker "${SOURCE_DIR}" "SKILL.md"; then
+elif has_child_directories_with_marker "${SOURCE_DIR}" "skill"; then
   process_skills_collection "${SOURCE_DIR}"
   handled=1
-elif has_child_directories_with_marker "${SOURCE_DIR}" "AGENT.md"; then
+elif has_child_directories_with_marker "${SOURCE_DIR}" "agent"; then
   process_agents_collection "${SOURCE_DIR}"
   handled=1
 fi
