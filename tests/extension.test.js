@@ -15,7 +15,23 @@ function createVscodeMock() {
     TreeItem,
     TreeItemCollapsibleState,
     workspace: { getConfiguration: () => ({ get: () => undefined }) },
-    window: { terminals: [], createTerminal: () => ({}), createOutputChannel: () => ({ appendLine() {} }) },
+    window: {
+      terminals: [],
+      createTerminal: () => ({}),
+      createOutputChannel: () => ({ appendLine() {} }),
+      showErrorMessage: () => Promise.resolve(),
+      showWarningMessage: () => Promise.resolve(),
+      showInformationMessage: () => Promise.resolve(),
+      createWebviewPanel: () => ({
+        webview: {
+          html: "",
+          postMessage: () => Promise.resolve(),
+          onDidReceiveMessage: () => ({ dispose() {} })
+        },
+        onDidDispose: () => ({ dispose() {} }),
+        dispose() {}
+      })
+    },
     EventEmitter: class { constructor() { this.event = undefined; } fire() {} },
     tasks: { executeTask: () => Promise.resolve({}) },
     TaskScope: { Workspace: 0 },
@@ -26,7 +42,6 @@ function createVscodeMock() {
     Uri: { file: (p) => p, joinPath: (...parts) => parts.join("/") },
     extensions: { getExtension: () => undefined },
     commands: { executeCommand: () => Promise.resolve() },
-    window: { createOutputChannel: () => ({ appendLine() {} }), showErrorMessage: () => Promise.resolve(), showWarningMessage: () => Promise.resolve(), showInformationMessage: () => Promise.resolve(), createWebviewPanel: () => ({ webview: { html: "", postMessage: () => Promise.resolve(), onDidReceiveMessage: () => ({ dispose() {} }) }, onDidDispose: () => ({ dispose() {} }), dispose() {} }) },
     ViewColumn: { Active: 0 }
   };
 }
