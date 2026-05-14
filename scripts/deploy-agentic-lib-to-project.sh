@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: link-agentic-definitions.sh <source-folder> [workspace-root]
+Usage: deploy-agentic-lib-to-project.sh <source-folder> [workspace-root]
 
 Detects whether <source-folder> is:
 - a single skill folder containing SKILL.md

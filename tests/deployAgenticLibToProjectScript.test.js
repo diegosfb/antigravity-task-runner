@@ -6,10 +6,10 @@ const path = require("node:path");
 const { execFileSync, spawnSync } = require("node:child_process");
 
 const repoRoot = path.resolve(__dirname, "..");
-const scriptPath = path.join(repoRoot, "scripts", "link-agentic-definitions.sh");
+const scriptPath = path.join(repoRoot, "scripts", "deploy-agentic-lib-to-project.sh");
 
 function makeTempWorkspace() {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-link-agentic-definitions-"));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-deploy-agentic-lib-to-project-"));
   const workspaceRoot = path.join(tempRoot, "workspace");
   fs.mkdirSync(workspaceRoot, { recursive: true });
   return { tempRoot, workspaceRoot };
