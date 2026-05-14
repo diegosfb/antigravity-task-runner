@@ -116,6 +116,10 @@ import {
   EXPLAIN_ME_PROMPT,
   copyExplainMeSkill
 } from "./explainMe";
+import {
+  DEPLOY_AGENTIC_LIB_TO_PROJECT_SCRIPT_NAME,
+  resolveDeployAgenticLibSourceFolder
+} from "./deployAgenticLib";
 
 type GitInputBox = {
   value: string;
@@ -3480,25 +3484,15 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       const projectRoot = getRepoRoot(rootPath);
-      const linkName = path.basename(filePath);
-      const linkPath = path.join(projectRoot, linkName);
-      let linkExists = false;
       try {
-        fs.lstatSync(linkPath); // succeeds for regular files and symlinks (including broken)
-        linkExists = true;
-      } catch {
-        // path doesn't exist at all
-      }
-      if (linkExists) {
-        void vscode.window.showErrorMessage(`"${linkName}" already exists in the project root.`);
-        return;
-      }
-      try {
-        fs.symlinkSync(filePath, linkPath);
-        void vscode.window.showInformationMessage(`Symlink created: ${linkName} → ${filePath}`);
+        const sourceFolder = resolveDeployAgenticLibSourceFolder(filePath);
+        await runRepoScript(DEPLOY_AGENTIC_LIB_TO_PROJECT_SCRIPT_NAME, [sourceFolder], {
+          cwd: projectRoot,
+          scriptDir: path.join(extensionRoot, "scripts")
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(`Failed to create symlink: ${message}`);
+        void vscode.window.showErrorMessage(`Failed to add folder to project: ${message}`);
       }
     })
   );

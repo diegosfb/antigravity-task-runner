@@ -27,6 +27,7 @@ const agenticHarnessCommand_1 = require("./agenticHarnessCommand");
 const resourceProvider_1 = require("./resourceProvider");
 const updateProjectConfig_1 = require("./updateProjectConfig");
 const explainMe_1 = require("./explainMe");
+const deployAgenticLib_1 = require("./deployAgenticLib");
 function getRepoPackageVersion(repoRoot) {
     try {
         const packageJsonPath = path.join(repoRoot, "package.json");
@@ -2824,27 +2825,16 @@ function activate(context) {
             return;
         }
         const projectRoot = (0, utils_1.getRepoRoot)(rootPath);
-        const linkName = path.basename(filePath);
-        const linkPath = path.join(projectRoot, linkName);
-        let linkExists = false;
         try {
-            fs.lstatSync(linkPath); // succeeds for regular files and symlinks (including broken)
-            linkExists = true;
-        }
-        catch {
-            // path doesn't exist at all
-        }
-        if (linkExists) {
-            void vscode.window.showErrorMessage(`"${linkName}" already exists in the project root.`);
-            return;
-        }
-        try {
-            fs.symlinkSync(filePath, linkPath);
-            void vscode.window.showInformationMessage(`Symlink created: ${linkName} → ${filePath}`);
+            const sourceFolder = (0, deployAgenticLib_1.resolveDeployAgenticLibSourceFolder)(filePath);
+            await (0, scripts_1.runRepoScript)(deployAgenticLib_1.DEPLOY_AGENTIC_LIB_TO_PROJECT_SCRIPT_NAME, [sourceFolder], {
+                cwd: projectRoot,
+                scriptDir: path.join(extensionRoot, "scripts")
+            });
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to create symlink: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to add folder to project: ${message}`);
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.addToAgent", async (item) => {

@@ -522,6 +522,7 @@
     "src/update-agent-setup.sh",
     "src/update-agentic-workspace.sh",
     "src/workspace-setup.sh",
+    "scripts/deploy-agentic-lib-to-project.sh",
     "Knowhow/Antigravity workflows/create_feature_branch/WORKFLOW.md",
     "Knowhow/Antigravity workflows/approve_pull_request/WORKFLOW.md"
   ],
