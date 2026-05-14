@@ -243,7 +243,8 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.10.42",
+          "name": "Task Runner",
+          "contextualTitle": "Task Runner v4.10.42",
           "icon": "Resources/taskrunner.svg"
         }
       ]
