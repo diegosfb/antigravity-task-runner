@@ -325,7 +325,7 @@ function getCustomAgenticPlatformAddonsPath() {
     return addonsPath || undefined;
 }
 function shouldHideAddonsEntry(dirPath, entry) {
-    if (!entry.isDirectory() || !entry.name.startsWith("."))
+    if (!entry.name.startsWith("."))
         return false;
     const addonsPath = getCustomAgenticPlatformAddonsPath();
     if (!addonsPath)

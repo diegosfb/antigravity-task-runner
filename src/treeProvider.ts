@@ -415,7 +415,7 @@ export function getCustomAgenticPlatformAddonsPath(): string | undefined {
 }
 
 export function shouldHideAddonsEntry(dirPath: string, entry: fs.Dirent): boolean {
-  if (!entry.isDirectory() || !entry.name.startsWith(".")) return false;
+  if (!entry.name.startsWith(".")) return false;
 
   const addonsPath = getCustomAgenticPlatformAddonsPath();
   if (!addonsPath) return false;

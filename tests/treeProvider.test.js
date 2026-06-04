@@ -178,7 +178,7 @@ test("shouldHideAntigravityEntry checks ANTIGRAVITY_ROOT_HIDDEN", () => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-test("shouldHideAddonsEntry hides dot-prefixed directories inside configured addons tree", () => {
+test("shouldHideAddonsEntry hides dot-prefixed files and directories inside configured addons tree", () => {
   const addonsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-addons-"));
   const nestedDir = path.join(addonsRoot, "visible");
   fs.mkdirSync(nestedDir, { recursive: true });
@@ -193,6 +193,10 @@ test("shouldHideAddonsEntry hides dot-prefixed directories inside configured add
   );
   assert.equal(
     shouldHideAddonsEntry(nestedDir, { name: ".nested-hidden", isDirectory: () => true }),
+    true
+  );
+  assert.equal(
+    shouldHideAddonsEntry(addonsRoot, { name: ".env", isDirectory: () => false }),
     true
   );
   assert.equal(
