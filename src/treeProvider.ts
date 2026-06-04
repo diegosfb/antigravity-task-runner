@@ -151,6 +151,10 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
       return getUpdateProjectConfigItems();
     }
 
+    if (element.kind === "category" && element.label === "ADLC") {
+      return getAdlcItems();
+    }
+
     if (element.kind === "folder" && element.label === "Claude Plugins") {
       return this.getClaudePluginItems();
     }
@@ -781,6 +785,14 @@ function getQuickActionItems(): NodeItem[] {
   };
   items.push(setFeatureFlag);
 
+  const adlc = new NodeItem(
+    { kind: "category", label: "ADLC" },
+    vscode.TreeItemCollapsibleState.Collapsed
+  );
+  adlc.iconPath = new vscode.ThemeIcon("folder", FEATURE_FLAG_ACTION_COLOR);
+  adlc.tooltip = "ADLC roles coming soon.";
+  items.push(adlc);
+
   if (!savedJiraProjectKey) {
     const selectOrCreateJiraProject = new NodeItem(
       { kind: "action", label: "Select/Set Jira Project" },
@@ -994,6 +1006,24 @@ function getUpdateProjectConfigItems(): NodeItem[] {
     "Open the selected Agentic Harness with the progressive-disclosure AGENTS.md update prompt.";
 
   return [updateGithubActions, updateTests, updateAgentsMd];
+}
+
+function getAdlcItems(): NodeItem[] {
+  return [
+    "Product Design",
+    "Business Analyst",
+    "Solution Architect",
+    "Estimator",
+    "Developer"
+  ].map((label) => {
+    const item = new NodeItem(
+      { kind: "action", label },
+      vscode.TreeItemCollapsibleState.None
+    );
+    item.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
+    item.tooltip = "Coming soon.";
+    return item;
+  });
 }
 
 function getPrReviewerItems(): NodeItem[] {

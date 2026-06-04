@@ -210,3 +210,33 @@ test("shouldHideAddonsEntry hides dot-prefixed files and directories inside conf
 
   fs.rmSync(addonsRoot, { recursive: true, force: true });
 });
+
+test("quick actions include ADLC after feature flag with static child roles", async () => {
+  const { AntigravityViewProvider } = setupTreeProviderModule();
+  const provider = new AntigravityViewProvider();
+
+  const rootItems = await provider.getChildren();
+  const actionLabels = rootItems.map((item) => item.label);
+  const featureFlagIndex = actionLabels.indexOf("Set Feature Flag for changes");
+  const adlcIndex = actionLabels.indexOf("ADLC");
+
+  assert.notEqual(featureFlagIndex, -1);
+  assert.equal(adlcIndex, featureFlagIndex + 1);
+
+  const adlcItem = rootItems[adlcIndex];
+  assert.equal(adlcItem.collapsibleState, 1);
+  assert.equal(adlcItem.command, undefined);
+
+  const adlcChildren = await provider.getChildren(adlcItem);
+  assert.deepEqual(
+    adlcChildren.map((item) => item.label),
+    [
+      "Product Design",
+      "Business Analyst",
+      "Solution Architect",
+      "Estimator",
+      "Developer"
+    ]
+  );
+  assert.ok(adlcChildren.every((item) => item.command === undefined));
+});
