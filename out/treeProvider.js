@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AntigravityViewProvider = exports.NodeItem = void 0;
 exports.shouldHideAntigravityEntry = shouldHideAntigravityEntry;
+exports.getCustomAgenticPlatformAddonsPath = getCustomAgenticPlatformAddonsPath;
+exports.shouldHideAddonsEntry = shouldHideAddonsEntry;
 exports.missingRootItem = missingRootItem;
 exports.emptyItem = emptyItem;
 exports.readSkillsDir = readSkillsDir;
@@ -239,7 +241,7 @@ class AntigravityViewProvider {
         return items.length > 0 ? items : [emptyItem("No workflows found")];
     }
     async getFolderItems(dirPath) {
-        const entries = (await (0, utils_1.safeReadDir)(dirPath)).filter((entry) => !shouldHideAntigravityEntry(dirPath, entry));
+        const entries = (await (0, utils_1.safeReadDir)(dirPath)).filter((entry) => !shouldHideAntigravityEntry(dirPath, entry) && !shouldHideAddonsEntry(dirPath, entry));
         const itemsWithKind = entries.map((entry) => {
             const entryPath = path.join(dirPath, entry.name);
             const isDirectory = entry.isDirectory();
@@ -316,6 +318,22 @@ function shouldHideAntigravityEntry(dirPath, entry) {
     if (path.resolve(dirPath) !== path.resolve(antigravityRoot))
         return false;
     return ANTIGRAVITY_ROOT_HIDDEN.has(entry.name);
+}
+function getCustomAgenticPlatformAddonsPath() {
+    const rawAddons = vscode.workspace.getConfiguration("antigravity").get("customAgenticPlatformAddons") || "";
+    const addonsPath = rawAddons.trim().replace(/^~/, os.homedir());
+    return addonsPath || undefined;
+}
+function shouldHideAddonsEntry(dirPath, entry) {
+    if (!entry.isDirectory() || !entry.name.startsWith("."))
+        return false;
+    const addonsPath = getCustomAgenticPlatformAddonsPath();
+    if (!addonsPath)
+        return false;
+    const relativePath = path.relative(path.resolve(addonsPath), path.resolve(dirPath));
+    if (relativePath.startsWith("..") || path.isAbsolute(relativePath))
+        return false;
+    return true;
 }
 function missingRootItem() {
     const item = new NodeItem({ kind: "category", label: "Missing ~/.antigravity" }, vscode.TreeItemCollapsibleState.None);
@@ -466,8 +484,7 @@ const ANSI_CSI_PATTERN = /\x1b\[[0-9;]*[A-Za-z]/g;
 const ANSI_OSC_PATTERN = /\x1b\][^\x07]*\x07/g;
 function getLinkedFolderItems() {
     const folders = [...TOP_LEVEL_LINKED_FOLDERS];
-    const rawAddons = vscode.workspace.getConfiguration("antigravity").get("customAgenticPlatformAddons") || "";
-    const addonsPath = rawAddons.trim().replace(/^~/, os.homedir());
+    const addonsPath = getCustomAgenticPlatformAddonsPath();
     if (addonsPath) {
         folders.push({ label: path.basename(addonsPath) || "addons", path: addonsPath, isAddons: true });
     }

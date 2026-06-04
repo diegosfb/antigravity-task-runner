@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-function createVscodeMock() {
+function createVscodeMock(configuration = {}) {
   class ThemeColor { constructor(id) { this.id = id; } }
   class ThemeIcon { constructor(id, color) { this.id = id; this.color = color; } }
   const TreeItemCollapsibleState = { None: 0, Collapsed: 1, Expanded: 2 };
@@ -19,7 +19,7 @@ function createVscodeMock() {
     ThemeIcon,
     TreeItem,
     TreeItemCollapsibleState,
-    workspace: { getConfiguration: () => ({ get: () => undefined }) },
+    workspace: { getConfiguration: () => ({ get: (key) => configuration[key] }) },
     window: { terminals: [], createTerminal: () => ({}), createOutputChannel: () => ({ appendLine() {} }) },
     EventEmitter: class { constructor() { this.event = undefined; } fire() {} },
     tasks: { executeTask: () => Promise.resolve({}) },
@@ -32,13 +32,14 @@ function createVscodeMock() {
   };
 }
 
-function setupTreeProviderModule() {
+function setupTreeProviderModule(configuration = {}) {
   const Module = require("module");
   const originalRequire = Module.prototype.require;
   Module.prototype.require = function (id) {
-    if (id === "vscode") return createVscodeMock();
+    if (id === "vscode") return createVscodeMock(configuration);
     return originalRequire.apply(this, arguments);
   };
+  delete require.cache[require.resolve("../out/treeProvider.js")];
   const tp = require("../out/treeProvider.js");
   Module.prototype.require = originalRequire;
   return tp;
@@ -175,4 +176,33 @@ test("shouldHideAntigravityEntry checks ANTIGRAVITY_ROOT_HIDDEN", () => {
   const entry = { name: ".DS_Store" };
   assert.equal(shouldHideAntigravityEntry(tmpDir, entry), false);
   fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test("shouldHideAddonsEntry hides dot-prefixed directories inside configured addons tree", () => {
+  const addonsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-addons-"));
+  const nestedDir = path.join(addonsRoot, "visible");
+  fs.mkdirSync(nestedDir, { recursive: true });
+
+  const { shouldHideAddonsEntry } = setupTreeProviderModule({
+    customAgenticPlatformAddons: addonsRoot
+  });
+
+  assert.equal(
+    shouldHideAddonsEntry(addonsRoot, { name: ".hidden", isDirectory: () => true }),
+    true
+  );
+  assert.equal(
+    shouldHideAddonsEntry(nestedDir, { name: ".nested-hidden", isDirectory: () => true }),
+    true
+  );
+  assert.equal(
+    shouldHideAddonsEntry(addonsRoot, { name: "README.md", isDirectory: () => false }),
+    false
+  );
+  assert.equal(
+    shouldHideAddonsEntry(path.dirname(addonsRoot), { name: ".outside", isDirectory: () => true }),
+    false
+  );
+
+  fs.rmSync(addonsRoot, { recursive: true, force: true });
 });

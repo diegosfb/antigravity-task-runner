@@ -320,7 +320,7 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
 
   private async getFolderItems(dirPath: string): Promise<NodeItem[]> {
     const entries = (await safeReadDir(dirPath)).filter(
-      (entry) => !shouldHideAntigravityEntry(dirPath, entry)
+      (entry) => !shouldHideAntigravityEntry(dirPath, entry) && !shouldHideAddonsEntry(dirPath, entry)
     );
     const itemsWithKind = entries.map((entry) => {
       const entryPath = path.join(dirPath, entry.name);
@@ -406,6 +406,24 @@ export function shouldHideAntigravityEntry(dirPath: string, entry: fs.Dirent): b
   if (!antigravityRoot) return false;
   if (path.resolve(dirPath) !== path.resolve(antigravityRoot)) return false;
   return ANTIGRAVITY_ROOT_HIDDEN.has(entry.name);
+}
+
+export function getCustomAgenticPlatformAddonsPath(): string | undefined {
+  const rawAddons = vscode.workspace.getConfiguration("antigravity").get<string>("customAgenticPlatformAddons") || "";
+  const addonsPath = rawAddons.trim().replace(/^~/, os.homedir());
+  return addonsPath || undefined;
+}
+
+export function shouldHideAddonsEntry(dirPath: string, entry: fs.Dirent): boolean {
+  if (!entry.isDirectory() || !entry.name.startsWith(".")) return false;
+
+  const addonsPath = getCustomAgenticPlatformAddonsPath();
+  if (!addonsPath) return false;
+
+  const relativePath = path.relative(path.resolve(addonsPath), path.resolve(dirPath));
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) return false;
+
+  return true;
 }
 
 export function missingRootItem(): NodeItem {
@@ -558,8 +576,7 @@ const ANSI_OSC_PATTERN = /\x1b\][^\x07]*\x07/g;
 
 function getLinkedFolderItems(): NodeItem[] {
   const folders: Array<{ label: string; path: string; isAddons?: boolean }> = [...TOP_LEVEL_LINKED_FOLDERS];
-  const rawAddons = vscode.workspace.getConfiguration("antigravity").get<string>("customAgenticPlatformAddons") || "";
-  const addonsPath = rawAddons.trim().replace(/^~/, os.homedir());
+  const addonsPath = getCustomAgenticPlatformAddonsPath();
   if (addonsPath) {
     folders.push({ label: path.basename(addonsPath) || "addons", path: addonsPath, isAddons: true });
   }
