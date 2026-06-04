@@ -3,6 +3,12 @@
 const fs = require("fs");
 const path = require("path");
 
+const VERSIONED_TITLE_PATTERN = /v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?/;
+
+function formatVersionedTitle(baseTitle, version) {
+  return `${baseTitle} v${version}`;
+}
+
 function syncViewMetadata(pkg) {
   const version = pkg.version;
   const views = pkg.contributes && pkg.contributes.views;
@@ -14,16 +20,17 @@ function syncViewMetadata(pkg) {
       if (!view || typeof view !== "object") continue;
 
       if (view.id === "antigravityView") {
-        view.name = "Task Runner";
-        view.contextualTitle = `Task Runner v${version}`;
+        const versionedTitle = formatVersionedTitle("Task Runner", version);
+        view.name = versionedTitle;
+        view.contextualTitle = versionedTitle;
         continue;
       }
 
       if (typeof view.name === "string") {
-        view.name = view.name.replace(/v\d+\.\d+\.\d+/, `v${version}`);
+        view.name = view.name.replace(VERSIONED_TITLE_PATTERN, `v${version}`);
       }
       if (typeof view.contextualTitle === "string") {
-        view.contextualTitle = view.contextualTitle.replace(/v\d+\.\d+\.\d+/, `v${version}`);
+        view.contextualTitle = view.contextualTitle.replace(VERSIONED_TITLE_PATTERN, `v${version}`);
       }
     }
   }
@@ -44,6 +51,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  formatVersionedTitle,
   syncPackageFile,
   syncViewMetadata
 };
