@@ -1,0 +1,14 @@
+Run LiteLLM OpenAI
+
+
+
+
+
+
+
+
+
+add
+Run with Ollama
+Assign backlog md to Agent similat to Assign Jira Item to Agent
+

@@ -2,8 +2,8 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.10.42",
-  "publisher": "diegosfb@gmail.com",
+  "version": "4.10.47",
+  "publisher": "diegosfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
   "repository": {
@@ -244,7 +244,7 @@
         {
           "id": "antigravityView",
           "name": "Task Runner",
-          "contextualTitle": "Task Runner v4.10.42",
+          "contextualTitle": "Task Runner v4.10.47",
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -532,6 +532,7 @@
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.js\"",
     "test": "npm run compile && node --test tests/*.test.js",
     "create-release": "bash scripts/create-release.sh",
+    "deploy-agentic-lib-to-project": "bash scripts/deploy-agentic-lib-to-project.sh",
     "sync-view-name": "node src/sync-view-name.js",
     "version": "node src/sync-view-name.js",
     "bump-version": "./scripts/bump-version.sh"
