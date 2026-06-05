@@ -137,10 +137,14 @@ function stripBacklogItemDisplayNamePrefix(value) {
 function stripBacklogItemFileNamePrefix(value) {
     return path.basename(value ?? "", path.extname(value ?? "")).replace(/^[a-z0-9]+-/, "").trim();
 }
+function findUniqueMatch(items, predicate) {
+    const matches = items.filter(predicate);
+    return matches.length === 1 ? matches[0] : undefined;
+}
 function findBacklogItemBySummary(summary, backlogItems) {
     const normalizedSummary = normalizeBacklogItemCompletedMatchText(summary);
     if (normalizedSummary) {
-        const summaryMatch = backlogItems.find((item) => {
+        const summaryMatch = findUniqueMatch(backlogItems, (item) => {
             const titleVariants = [
                 item.displayName,
                 stripBacklogItemDisplayNamePrefix(item.displayName)
@@ -155,7 +159,7 @@ function findBacklogItemBySummary(summary, backlogItems) {
     if (!normalizedSummarySlug) {
         return undefined;
     }
-    return backlogItems.find((item) => {
+    return findUniqueMatch(backlogItems, (item) => {
         const slugCandidates = [
             item.displayName,
             stripBacklogItemDisplayNamePrefix(item.displayName),
@@ -168,7 +172,7 @@ function findBacklogItemBySummary(summary, backlogItems) {
 function findJiraIssueBySummary(summary, issues) {
     const normalizedSummary = normalizeBacklogItemCompletedMatchText(summary);
     if (normalizedSummary) {
-        const summaryMatch = issues.find((issue) => normalizeBacklogItemCompletedMatchText(issue.summary) === normalizedSummary);
+        const summaryMatch = findUniqueMatch(issues, (issue) => normalizeBacklogItemCompletedMatchText(issue.summary) === normalizedSummary);
         if (summaryMatch) {
             return summaryMatch;
         }
@@ -177,12 +181,12 @@ function findJiraIssueBySummary(summary, issues) {
     if (!normalizedSummarySlug) {
         return undefined;
     }
-    return issues.find((issue) => normalizeBacklogItemCompletedSlug(issue.summary) === normalizedSummarySlug);
+    return findUniqueMatch(issues, (issue) => normalizeBacklogItemCompletedSlug(issue.summary) === normalizedSummarySlug);
 }
 function findMatchingBacklogItemForJiraIssue(issue, backlogItems) {
     const normalizedDescription = normalizeBacklogItemCompletedMatchText(issue?.description);
     if (normalizedDescription) {
-        const descriptionMatch = backlogItems.find((item) => normalizeBacklogItemCompletedMatchText(item.description) === normalizedDescription);
+        const descriptionMatch = findUniqueMatch(backlogItems, (item) => normalizeBacklogItemCompletedMatchText(item.description) === normalizedDescription);
         if (descriptionMatch) {
             return descriptionMatch;
         }
@@ -192,7 +196,7 @@ function findMatchingBacklogItemForJiraIssue(issue, backlogItems) {
 function findMatchingJiraIssueForBacklogItem(backlogItem, issues) {
     const normalizedDescription = normalizeBacklogItemCompletedMatchText(backlogItem?.description);
     if (normalizedDescription) {
-        const descriptionMatch = issues.find((issue) => normalizeBacklogItemCompletedMatchText(issue.description) === normalizedDescription);
+        const descriptionMatch = findUniqueMatch(issues, (issue) => normalizeBacklogItemCompletedMatchText(issue.description) === normalizedDescription);
         if (descriptionMatch) {
             return descriptionMatch;
         }
@@ -534,10 +538,15 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
           .trim();
       }
 
+      function findUniqueMatch(items, predicate) {
+        const matches = items.filter(predicate);
+        return matches.length === 1 ? matches[0] : undefined;
+      }
+
       function findMatchingBacklogItemBySummary(summary) {
         const normalizedSummary = normalizeMatchText(summary);
         if (normalizedSummary) {
-          const summaryMatch = backlogItems.find((item) =>
+          const summaryMatch = findUniqueMatch(backlogItems, (item) =>
             [item.displayName, stripDisplayNamePrefix(item.displayName)].some(
               (candidate) => normalizeMatchText(candidate) === normalizedSummary
             )
@@ -552,7 +561,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
           return undefined;
         }
 
-        return backlogItems.find((item) =>
+        return findUniqueMatch(backlogItems, (item) =>
           [
             item.displayName,
             stripDisplayNamePrefix(item.displayName),
@@ -565,7 +574,8 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       function findMatchingIssueBySummary(summary) {
         const normalizedSummary = normalizeMatchText(summary);
         if (normalizedSummary) {
-          const summaryMatch = issues.find(
+          const summaryMatch = findUniqueMatch(
+            issues,
             (issue) => normalizeMatchText(issue.summary) === normalizedSummary
           );
           if (summaryMatch) {
@@ -578,13 +588,14 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
           return undefined;
         }
 
-        return issues.find((issue) => normalizeSlug(issue.summary) === normalizedSummarySlug);
+        return findUniqueMatch(issues, (issue) => normalizeSlug(issue.summary) === normalizedSummarySlug);
       }
 
       function findMatchingBacklogItem(issue) {
         const normalizedDescription = normalizeMatchText(issue?.description);
         if (normalizedDescription) {
-          const descriptionMatch = backlogItems.find(
+          const descriptionMatch = findUniqueMatch(
+            backlogItems,
             (item) => normalizeMatchText(item.description) === normalizedDescription
           );
           if (descriptionMatch) {
@@ -597,7 +608,8 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       function findMatchingIssue(backlogItem) {
         const normalizedDescription = normalizeMatchText(backlogItem?.description);
         if (normalizedDescription) {
-          const descriptionMatch = issues.find(
+          const descriptionMatch = findUniqueMatch(
+            issues,
             (issue) => normalizeMatchText(issue.description) === normalizedDescription
           );
           if (descriptionMatch) {

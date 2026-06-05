@@ -173,13 +173,18 @@ function stripBacklogItemFileNamePrefix(value: string | undefined): string {
   return path.basename(value ?? "", path.extname(value ?? "")).replace(/^[a-z0-9]+-/, "").trim();
 }
 
+function findUniqueMatch<T>(items: T[], predicate: (item: T) => boolean): T | undefined {
+  const matches = items.filter(predicate);
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
 function findBacklogItemBySummary(
   summary: string | undefined,
   backlogItems: BacklogItemCompletedLocalItem[]
 ): BacklogItemCompletedLocalItem | undefined {
   const normalizedSummary = normalizeBacklogItemCompletedMatchText(summary);
   if (normalizedSummary) {
-    const summaryMatch = backlogItems.find((item) => {
+    const summaryMatch = findUniqueMatch(backlogItems, (item) => {
       const titleVariants = [
         item.displayName,
         stripBacklogItemDisplayNamePrefix(item.displayName)
@@ -198,7 +203,7 @@ function findBacklogItemBySummary(
     return undefined;
   }
 
-  return backlogItems.find((item) => {
+  return findUniqueMatch(backlogItems, (item) => {
     const slugCandidates = [
       item.displayName,
       stripBacklogItemDisplayNamePrefix(item.displayName),
@@ -217,7 +222,8 @@ function findJiraIssueBySummary(
 ): JiraIssueSummary | undefined {
   const normalizedSummary = normalizeBacklogItemCompletedMatchText(summary);
   if (normalizedSummary) {
-    const summaryMatch = issues.find(
+    const summaryMatch = findUniqueMatch(
+      issues,
       (issue) => normalizeBacklogItemCompletedMatchText(issue.summary) === normalizedSummary
     );
     if (summaryMatch) {
@@ -230,7 +236,8 @@ function findJiraIssueBySummary(
     return undefined;
   }
 
-  return issues.find(
+  return findUniqueMatch(
+    issues,
     (issue) => normalizeBacklogItemCompletedSlug(issue.summary) === normalizedSummarySlug
   );
 }
@@ -241,7 +248,8 @@ export function findMatchingBacklogItemForJiraIssue(
 ): BacklogItemCompletedLocalItem | undefined {
   const normalizedDescription = normalizeBacklogItemCompletedMatchText(issue?.description);
   if (normalizedDescription) {
-    const descriptionMatch = backlogItems.find(
+    const descriptionMatch = findUniqueMatch(
+      backlogItems,
       (item) => normalizeBacklogItemCompletedMatchText(item.description) === normalizedDescription
     );
     if (descriptionMatch) {
@@ -257,7 +265,8 @@ export function findMatchingJiraIssueForBacklogItem(
 ): JiraIssueSummary | undefined {
   const normalizedDescription = normalizeBacklogItemCompletedMatchText(backlogItem?.description);
   if (normalizedDescription) {
-    const descriptionMatch = issues.find(
+    const descriptionMatch = findUniqueMatch(
+      issues,
       (issue) => normalizeBacklogItemCompletedMatchText(issue.description) === normalizedDescription
     );
     if (descriptionMatch) {
@@ -622,10 +631,15 @@ export function renderBacklogItemCompletedHtml(
           .trim();
       }
 
+      function findUniqueMatch(items, predicate) {
+        const matches = items.filter(predicate);
+        return matches.length === 1 ? matches[0] : undefined;
+      }
+
       function findMatchingBacklogItemBySummary(summary) {
         const normalizedSummary = normalizeMatchText(summary);
         if (normalizedSummary) {
-          const summaryMatch = backlogItems.find((item) =>
+          const summaryMatch = findUniqueMatch(backlogItems, (item) =>
             [item.displayName, stripDisplayNamePrefix(item.displayName)].some(
               (candidate) => normalizeMatchText(candidate) === normalizedSummary
             )
@@ -640,7 +654,7 @@ export function renderBacklogItemCompletedHtml(
           return undefined;
         }
 
-        return backlogItems.find((item) =>
+        return findUniqueMatch(backlogItems, (item) =>
           [
             item.displayName,
             stripDisplayNamePrefix(item.displayName),
@@ -653,7 +667,8 @@ export function renderBacklogItemCompletedHtml(
       function findMatchingIssueBySummary(summary) {
         const normalizedSummary = normalizeMatchText(summary);
         if (normalizedSummary) {
-          const summaryMatch = issues.find(
+          const summaryMatch = findUniqueMatch(
+            issues,
             (issue) => normalizeMatchText(issue.summary) === normalizedSummary
           );
           if (summaryMatch) {
@@ -666,13 +681,14 @@ export function renderBacklogItemCompletedHtml(
           return undefined;
         }
 
-        return issues.find((issue) => normalizeSlug(issue.summary) === normalizedSummarySlug);
+        return findUniqueMatch(issues, (issue) => normalizeSlug(issue.summary) === normalizedSummarySlug);
       }
 
       function findMatchingBacklogItem(issue) {
         const normalizedDescription = normalizeMatchText(issue?.description);
         if (normalizedDescription) {
-          const descriptionMatch = backlogItems.find(
+          const descriptionMatch = findUniqueMatch(
+            backlogItems,
             (item) => normalizeMatchText(item.description) === normalizedDescription
           );
           if (descriptionMatch) {
@@ -685,7 +701,8 @@ export function renderBacklogItemCompletedHtml(
       function findMatchingIssue(backlogItem) {
         const normalizedDescription = normalizeMatchText(backlogItem?.description);
         if (normalizedDescription) {
-          const descriptionMatch = issues.find(
+          const descriptionMatch = findUniqueMatch(
+            issues,
             (issue) => normalizeMatchText(issue.description) === normalizedDescription
           );
           if (descriptionMatch) {

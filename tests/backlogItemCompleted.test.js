@@ -182,6 +182,80 @@ test("findMatching helpers fall back to Jira summary and backlog title when desc
   );
 });
 
+test("findMatching helpers return undefined when no cross-match exists", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const backlogItems = [
+    {
+      description: "Local-only description",
+      displayName: "Feature: Local Only",
+      fileName: "feature-local-only.md",
+      filePath: "/tmp/feature-local-only.md",
+      statusName: "To Do"
+    }
+  ];
+  const issues = [
+    {
+      description: "Jira-only description",
+      id: "23",
+      issueTypeName: "Task",
+      key: "ANTIGRAVIT-23",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "To Do",
+      summary: "Different Jira Item"
+    }
+  ];
+
+  assert.equal(
+    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems),
+    undefined
+  );
+  assert.equal(
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues),
+    undefined
+  );
+});
+
+test("findMatching helpers leave ambiguous summary matches unresolved", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const backlogItems = [
+    {
+      description: "",
+      displayName: "Epic: Duplicate Item",
+      fileName: "epic-duplicate-item.md",
+      filePath: "/tmp/epic-duplicate-item.md",
+      statusName: "To Do"
+    }
+  ];
+  const issues = [
+    {
+      description: "",
+      id: "31",
+      issueTypeName: "Epic",
+      key: "ANTIGRAVIT-31",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "To Do",
+      summary: "Duplicate Item"
+    },
+    {
+      description: "",
+      id: "32",
+      issueTypeName: "Story",
+      key: "ANTIGRAVIT-32",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "In Progress",
+      summary: "Duplicate Item"
+    }
+  ];
+
+  assert.equal(
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues),
+    undefined
+  );
+});
+
 test("upsertBacklogItemCompletedStatus updates an existing status section", () => {
   const backlogItemCompleted = setupBacklogItemCompletedModule();
   const updated = backlogItemCompleted.upsertBacklogItemCompletedStatus(
