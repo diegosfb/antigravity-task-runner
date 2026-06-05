@@ -487,14 +487,14 @@ export function renderBacklogItemCompletedHtml(
       </section>
 
       <section class="section">
-        <p class="section-title">Local Backlog</p>
+        <p class="section-title">Local Backlog Item</p>
         <label>
           <span>Backlog Folder</span>
           <input id="backlogDir" name="backlogDir" type="text" value="${escapeHtml(initialValues.backlogDir)}" autocomplete="off" />
         </label>
         <div class="hint" id="backlogFolderStatus">${escapeHtml(backlogLoadError || `Eligible local backlog items: ${String(backlogItems.length)}`)}</div>
         <label>
-          <span>Item to Mark Completed</span>
+          <span>Local Item to Mark Completed</span>
           <select id="backlogItemPath" name="backlogItemPath">
             <option value="">— No local backlog item selected —</option>
             ${backlogOptions}

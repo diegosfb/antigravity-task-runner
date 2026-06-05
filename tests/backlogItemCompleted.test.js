@@ -369,7 +369,8 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /Backlog Folder/);
   assert.match(html, /JIRA Backlog Item/);
   assert.match(html, /JIRA Item to Mark Completed/);
-  assert.match(html, /Item to Mark Completed/);
+  assert.match(html, /Local Backlog Item/);
+  assert.match(html, /Local Item to Mark Completed/);
   assert.match(html, /Use Jira/);
   assert.match(html, /loadBacklogItemCompletedBacklogItems/);
   assert.match(html, /saveBacklogItemCompletedDraft/);
