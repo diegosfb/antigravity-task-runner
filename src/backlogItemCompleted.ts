@@ -557,7 +557,7 @@ export function renderBacklogItemCompletedHtml(
 
       function normalizeMatchText(value) {
         return String(value || "")
-          .replace(/\r\n/g, "\n")
+          .replace(/\\r\\n/g, "\\n")
           .replace(/^\\s*[-*+]\\s+/gm, "")
           .replace(/^\\s*\\d+\\.\\s+/gm, "")
           .replace(/\\s+/g, " ")

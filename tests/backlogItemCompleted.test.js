@@ -378,3 +378,43 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
     /Selected Jira items move to In Review, or Done when review is unavailable\. Selected local backlog files get a Status of In Review\./
   );
 });
+
+test("renderBacklogItemCompletedHtml emits a syntactically valid webview script", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const html = backlogItemCompleted.renderBacklogItemCompletedHtml(
+    { cspSource: "vscode-resource:" },
+    {
+      backlogDir: "/tmp/workspace/docs/backlog",
+      backlogItemPath: "",
+      issueKey: "TASK-2",
+      projectKey: "TASK",
+      useJira: true
+    },
+    [
+      {
+        description: "Second item description",
+        id: "2",
+        key: "TASK-2",
+        summary: "Second item",
+        projectKey: "TASK",
+        projectName: "Task Project",
+        issueTypeName: "Bug",
+        statusName: "To Do"
+      }
+    ],
+    [
+      {
+        description: "Second item description",
+        displayName: "Feature: Second Item",
+        fileName: "feature-second-item.md",
+        filePath: "/tmp/workspace/docs/backlog/feature-second-item.md",
+        statusName: "In Progress",
+        summary: "Second item description"
+      }
+    ]
+  );
+
+  const scriptMatch = html.match(/<script nonce="[^"]+">([\s\S]*)<\/script>/);
+  assert.ok(scriptMatch?.[1], "Expected the rendered HTML to include an inline script.");
+  assert.doesNotThrow(() => new Function("acquireVsCodeApi", scriptMatch[1]));
+});
