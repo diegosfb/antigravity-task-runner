@@ -128,6 +128,7 @@ export function renderAssignBacklogItemToAgentHtml(
         display: grid;
         gap: 10px;
         padding: 14px;
+        border: 1px solid var(--vscode-panel-border, var(--vscode-input-border, transparent));
         border-radius: 10px;
         background: color-mix(in srgb, var(--vscode-editorWidget-background, var(--vscode-sideBar-background)) 82%, transparent);
       }
