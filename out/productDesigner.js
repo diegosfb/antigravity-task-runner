@@ -104,10 +104,29 @@ function renderProductDesignerHtml(webview, initialValues) {
         display: grid;
         gap: 16px;
       }
+      .section {
+        display: grid;
+        gap: 16px;
+        padding: 16px;
+        border: 1px solid var(--vscode-panel-border, var(--vscode-input-border, transparent));
+        border-radius: 10px;
+        background: var(--vscode-sideBar-background, var(--vscode-editorWidget-background, transparent));
+      }
+      .section-title {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--vscode-descriptionForeground);
+      }
       .grid {
         display: grid;
         gap: 16px;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+      .grid.two-column {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
       label {
         display: grid;
@@ -169,47 +188,55 @@ function renderProductDesignerHtml(webview, initialValues) {
   </head>
   <body>
     <form id="productDesignerForm">
-      <div class="grid">
+      <section class="section">
+        <p class="section-title">Agent Settings</p>
         <label>
           <span class="required">Agent Harness</span>
           <input id="agentHarness" name="agentHarness" value="${escapeHtml(initialValues.agentHarness)}" required />
-          <span class="hint">Defaults to Codex.</span>
         </label>
+        <div class="grid two-column">
+          <label>
+            <span>Agent Model</span>
+            <input id="agentModel" name="agentModel" value="${escapeHtml(initialValues.agentModel)}" />
+          </label>
+          <label>
+            <span>Agent Intelligence</span>
+            <input id="agentIntelligence" name="agentIntelligence" value="${escapeHtml(initialValues.agentIntelligence)}" />
+          </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <p class="section-title">Project Inputs</p>
         <label>
-          <span>Agent Model</span>
-          <input id="agentModel" name="agentModel" value="${escapeHtml(initialValues.agentModel)}" />
+          <span class="required">Project Description folder</span>
+          <input id="projectDescriptionDir" name="projectDescriptionDir" value="${escapeHtml(initialValues.projectDescriptionDir)}" required />
         </label>
+
         <label>
-          <span>Agent Intelligence</span>
-          <input id="agentIntelligence" name="agentIntelligence" value="${escapeHtml(initialValues.agentIntelligence)}" />
+          <span>Project Meeting notes folder</span>
+          <input id="meetingsRecordingsFolder" name="meetingsRecordingsFolder" value="${escapeHtml(initialValues.meetingsRecordingsFolder)}" />
         </label>
-      </div>
 
-      <label>
-        <span class="required">Project Description folder</span>
-        <input id="projectDescriptionDir" name="projectDescriptionDir" value="${escapeHtml(initialValues.projectDescriptionDir)}" required />
-      </label>
+        <label>
+          <span class="required">Project Workspace folder</span>
+          <input id="workspace" name="workspace" value="${escapeHtml(initialValues.workspace)}" required />
+          <span class="hint">Defaults to the current project root when a workspace is open.</span>
+        </label>
 
-      <label>
-        <span>Project Meeting notes folder</span>
-        <input id="meetingsRecordingsFolder" name="meetingsRecordingsFolder" value="${escapeHtml(initialValues.meetingsRecordingsFolder)}" />
-      </label>
+        <label>
+          <span>Project Confluence</span>
+          <input id="projectConfluence" name="projectConfluence" value="${escapeHtml(initialValues.projectConfluence)}" />
+        </label>
+      </section>
 
-      <label>
-        <span class="required">Project Workspace folder</span>
-        <input id="workspace" name="workspace" value="${escapeHtml(initialValues.workspace)}" required />
-        <span class="hint">Defaults to the current project root when a workspace is open.</span>
-      </label>
-
-      <label>
-        <span>Project Confluence</span>
-        <input id="projectConfluence" name="projectConfluence" value="${escapeHtml(initialValues.projectConfluence)}" />
-      </label>
-
-      <label>
-        <span class="required">Agent Script Path</span>
-        <input id="agentScriptPath" name="agentScriptPath" value="${escapeHtml(initialValues.agentScriptPath)}" required />
-      </label>
+      <section class="section">
+        <p class="section-title">Execution</p>
+        <label>
+          <span class="required">Agent Script Path</span>
+          <input id="agentScriptPath" name="agentScriptPath" value="${escapeHtml(initialValues.agentScriptPath)}" required />
+        </label>
+      </section>
 
       <div id="errorMessage" class="error" aria-live="polite"></div>
 
