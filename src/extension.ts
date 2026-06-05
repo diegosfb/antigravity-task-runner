@@ -3789,6 +3789,23 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.openOpencodeTerminal", async () => {
+      try {
+        const rootPath = getRootPath();
+        if (!rootPath) {
+          void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+          return;
+        }
+        const repoRoot = getRepoRoot(rootPath);
+        await openCommandInExternalTerminal(repoRoot, "opencode");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Opencode failed: ${message}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.openOpenClaudeTerminal", async () => {
       const rootPath = getRootPath();
       if (!rootPath) {

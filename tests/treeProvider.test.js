@@ -263,10 +263,12 @@ test("top-level Claude actions include Ollama terminal entries", async () => {
   const claudeTerminalIndex = rootLabels.indexOf("Claude Terminal");
   const ollamaClaudeIndex = rootLabels.indexOf("Ollama Claude");
   const ollamaCodexIndex = rootLabels.indexOf("Ollama Codex");
+  const opencodeIndex = rootLabels.indexOf("Opencode");
 
   assert.notEqual(claudeTerminalIndex, -1);
   assert.equal(ollamaClaudeIndex, claudeTerminalIndex + 1);
   assert.equal(ollamaCodexIndex, ollamaClaudeIndex + 1);
+  assert.equal(opencodeIndex, ollamaCodexIndex + 1);
 });
 
 test("quick actions group repository commands under Repository Actions", async () => {

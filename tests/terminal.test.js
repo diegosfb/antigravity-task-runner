@@ -150,3 +150,19 @@ test("buildExternalTerminalLaunchSpecs preserves ollama codex command arguments"
     /cd \\"\/tmp\/project root\\" && ollama launch codex --model glm-5:cloud --yes/
   );
 });
+
+test("buildExternalTerminalLaunchSpecs preserves opencode command", () => {
+  const terminal = setupTerminalModule();
+  const specs = terminal.buildExternalTerminalLaunchSpecs(
+    "/tmp/project root",
+    "opencode",
+    "darwin"
+  );
+
+  assert.equal(specs.length, 1);
+  assert.equal(specs[0].command, "osascript");
+  assert.match(
+    specs[0].args.join(" "),
+    /cd \\"\/tmp\/project root\\" && opencode/
+  );
+});
