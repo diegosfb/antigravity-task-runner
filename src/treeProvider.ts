@@ -11,6 +11,7 @@ import {
   detectCloudInfrastructureSignals
 } from "./cloudArchitectReview";
 import { BUSINESS_ANALYST_COMMAND } from "./businessAnalyst";
+import { DEVELOPER_COMMAND } from "./developer";
 import { ESTIMATOR_COMMAND } from "./estimator";
 import { PLAN_EXECUTION_COMMAND } from "./planExecution";
 import { PRODUCT_DESIGNER_COMMAND } from "./productDesigner";
@@ -1070,11 +1071,15 @@ function getAdlcItems(): NodeItem[] {
   };
 
   const developer = new NodeItem(
-    { kind: "action", label: "Developer" },
+    { kind: "action", label: "Develop Execution Plan" },
     vscode.TreeItemCollapsibleState.None
   );
   developer.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
-  developer.tooltip = "Coming soon.";
+  developer.tooltip = "Open the Develop Execution Plan runner form.";
+  developer.command = {
+    command: DEVELOPER_COMMAND,
+    title: "Open Develop Execution Plan"
+  };
 
   return [productDesigner, businessAnalyst, solutionArchitect, estimator, planExecution, developer];
 }

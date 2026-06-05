@@ -30,6 +30,7 @@ const explainMe_1 = require("./explainMe");
 const deployAgenticLib_1 = require("./deployAgenticLib");
 const businessAnalyst_1 = require("./businessAnalyst");
 const productDesigner_1 = require("./productDesigner");
+const developer_1 = require("./developer");
 const estimator_1 = require("./estimator");
 const planExecution_1 = require("./planExecution");
 const solutionArchitect_1 = require("./solutionArchitect");
@@ -57,6 +58,7 @@ function activate(context) {
     const BUSINESS_ANALYST_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
     const ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
     const PLAN_EXECUTION_ACTION_COLOR = new vscode.ThemeColor("charts.orange");
+    const DEVELOPER_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiGreen");
     context.subscriptions.push(outputChannel);
     (0, logger_1.initLogger)(outputChannel);
     const provider = new treeProvider_1.AntigravityViewProvider();
@@ -156,6 +158,16 @@ function activate(context) {
         });
         terminal.show();
         terminal.sendText((0, planExecution_1.buildPlanExecutionCommand)(values), true);
+    };
+    const launchDeveloperInNewTerminal = (values) => {
+        const terminal = vscode.window.createTerminal({
+            name: "Develop Execution Plan",
+            cwd: values.workspace,
+            iconPath: new vscode.ThemeIcon("circle-large-outline", DEVELOPER_ACTION_COLOR),
+            color: DEVELOPER_ACTION_COLOR
+        });
+        terminal.show();
+        terminal.sendText((0, developer_1.buildDeveloperCommand)(values), true);
     };
     const getProjectScopedStateKey = (prefix) => {
         const workspaceRoot = (0, utils_1.getWorkspaceRoot)();
@@ -4846,6 +4858,60 @@ function activate(context) {
                 void panel.webview.postMessage({
                     type: "planExecutionError",
                     payload: { message: `Failed to open Plan Execution terminal: ${messageText}` }
+                });
+            }
+        }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand(developer_1.DEVELOPER_COMMAND, async () => {
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const workspaceRoot = rootPath
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("developerForm"));
+        const initialValues = (0, developer_1.sanitizeDeveloperFormValues)(savedValues, workspaceRoot);
+        const panel = vscode.window.createWebviewPanel("antigravityDeveloper", "Develop Execution Plan", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, developer_1.renderDeveloperHtml)(panel.webview, initialValues);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelDeveloper") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "saveDeveloperDraft") {
+                const draftValues = (0, developer_1.sanitizeDeveloperFormValues)(message.payload, workspaceRoot);
+                await context.workspaceState.update(getProjectScopedStateKey("developerForm"), draftValues);
+                return;
+            }
+            if (message.type !== "runDeveloper") {
+                return;
+            }
+            const values = (0, developer_1.sanitizeDeveloperFormValues)(message.payload, workspaceRoot);
+            const missingFields = (0, developer_1.getMissingDeveloperFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "developerError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            try {
+                await context.workspaceState.update(getProjectScopedStateKey("developerForm"), values);
+                launchDeveloperInNewTerminal(values);
+                void vscode.window.showInformationMessage("Opened Develop Execution Plan terminal.");
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "developerError",
+                    payload: { message: `Failed to open Develop Execution Plan terminal: ${messageText}` }
                 });
             }
         }, undefined, context.subscriptions);

@@ -20,6 +20,7 @@ const git_1 = require("./git");
 const terminal_1 = require("./terminal");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const businessAnalyst_1 = require("./businessAnalyst");
+const developer_1 = require("./developer");
 const estimator_1 = require("./estimator");
 const planExecution_1 = require("./planExecution");
 const productDesigner_1 = require("./productDesigner");
@@ -812,9 +813,13 @@ function getAdlcItems() {
         command: planExecution_1.PLAN_EXECUTION_COMMAND,
         title: "Open Plan Execution"
     };
-    const developer = new NodeItem({ kind: "action", label: "Developer" }, vscode.TreeItemCollapsibleState.None);
+    const developer = new NodeItem({ kind: "action", label: "Develop Execution Plan" }, vscode.TreeItemCollapsibleState.None);
     developer.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
-    developer.tooltip = "Coming soon.";
+    developer.tooltip = "Open the Develop Execution Plan runner form.";
+    developer.command = {
+        command: developer_1.DEVELOPER_COMMAND,
+        title: "Open Develop Execution Plan"
+    };
     return [productDesigner, businessAnalyst, solutionArchitect, estimator, planExecution, developer];
 }
 function getPrReviewerItems() {

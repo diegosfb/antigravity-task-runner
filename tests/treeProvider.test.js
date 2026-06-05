@@ -236,7 +236,7 @@ test("quick actions include ADLC after feature flag with runner actions", async 
       "Solution Architect",
       "Estimator",
       "Plan Execution",
-      "Developer"
+      "Develop Execution Plan"
     ]
   );
   assert.equal(adlcChildren[0].command?.command, "antigravity.openProductDesigner");
@@ -244,5 +244,5 @@ test("quick actions include ADLC after feature flag with runner actions", async 
   assert.equal(adlcChildren[2].command?.command, "antigravity.openSolutionArchitect");
   assert.equal(adlcChildren[3].command?.command, "antigravity.openEstimator");
   assert.equal(adlcChildren[4].command?.command, "antigravity.openPlanExecution");
-  assert.equal(adlcChildren[5].command, undefined);
+  assert.equal(adlcChildren[5].command?.command, "antigravity.openDeveloper");
 });
