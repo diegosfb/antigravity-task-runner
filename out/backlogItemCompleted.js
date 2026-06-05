@@ -22,7 +22,8 @@ function getDefaultBacklogItemCompletedValues(projectKey = "", workspacePath = "
         backlogDir: workspacePath ? path.join(workspacePath, "docs", "backlog") : "",
         backlogItemPath: "",
         issueKey: "",
-        projectKey: projectKey.trim()
+        projectKey: projectKey.trim(),
+        useJira: Boolean(projectKey.trim())
     };
 }
 function sanitizeBacklogItemCompletedFormValues(values, projectKey = "", workspacePath = "") {
@@ -33,15 +34,17 @@ function sanitizeBacklogItemCompletedFormValues(values, projectKey = "", workspa
             ? values.backlogItemPath.trim()
             : defaults.backlogItemPath,
         issueKey: typeof values?.issueKey === "string" ? values.issueKey.trim() : defaults.issueKey,
-        projectKey: typeof values?.projectKey === "string" ? values.projectKey.trim() : defaults.projectKey
+        projectKey: typeof values?.projectKey === "string" ? values.projectKey.trim() : defaults.projectKey,
+        useJira: typeof values?.useJira === "boolean" ? values.useJira : defaults.useJira
     };
 }
 function getMissingBacklogItemCompletedFields(values) {
     const missing = [];
-    if (!values.projectKey)
+    if (values.useJira && !values.projectKey)
         missing.push("Jira Project");
-    if (!values.issueKey && !values.backlogItemPath)
-        missing.push("Assigned Jira item or local backlog item");
+    if (!values.backlogItemPath && (!values.useJira || !values.issueKey)) {
+        missing.push(values.useJira ? "Assigned Jira item or local backlog item" : "Local backlog item");
+    }
     return missing;
 }
 function normalizeLineEndings(value) {
@@ -280,6 +283,9 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
         border-radius: 10px;
         background: var(--vscode-sideBar-background, var(--vscode-editorWidget-background, transparent));
       }
+      .section.is-disabled {
+        opacity: 0.55;
+      }
       .section-title {
         margin: 0;
         font-size: 12px;
@@ -329,6 +335,10 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
         border: 1px solid var(--vscode-input-border, transparent);
         border-radius: 6px;
       }
+      input[type="checkbox"] {
+        width: auto;
+        justify-self: start;
+      }
       .hint {
         font-size: 12px;
         color: var(--vscode-descriptionForeground);
@@ -371,8 +381,12 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
   </head>
   <body>
     <form id="backlogItemCompletedForm">
-      <section class="section">
+      <section id="jiraSection" class="section">
         <p class="section-title">Jira</p>
+        <label>
+          <span>Use Jira</span>
+          <input id="useJira" name="useJira" type="checkbox" ${initialValues.useJira ? "checked" : ""} />
+        </label>
         <div class="detail-grid">
           <div class="detail-card">
             <span class="detail-label">Jira Project</span>
@@ -471,7 +485,9 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       const backlogItemDescription = document.getElementById("backlogItemDescription");
       const backlogItemPathInput = document.getElementById("backlogItemPath");
       const backlogItemStatus = document.getElementById("backlogItemStatus");
+      const jiraSection = document.getElementById("jiraSection");
       const issueKeyInput = document.getElementById("issueKey");
+      const useJiraInput = document.getElementById("useJira");
       const issueSummary = document.getElementById("issueSummary");
       const issueType = document.getElementById("issueType");
       const issueStatus = document.getElementById("issueStatus");
@@ -480,6 +496,9 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       let backlogReloadTimer;
 
       function getSelectedIssue() {
+        if (!useJiraInput.checked) {
+          return undefined;
+        }
         return issues.find((issue) => issue.key === issueKeyInput.value);
       }
 
@@ -504,7 +523,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       }
 
       function stripDisplayNamePrefix(value) {
-        return String(value || "").replace(/^[^:]+:\s*/, "").trim();
+        return String(value || "").replace(/^[^:]+:\\s*/, "").trim();
       }
 
       function stripFileNamePrefix(value) {
@@ -651,9 +670,16 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
         return {
           backlogDir: String(backlogDirInput.value || "").trim(),
           backlogItemPath: String(backlogItemPathInput.value || "").trim(),
-          issueKey: String(issueKeyInput.value || "").trim(),
-          projectKey: String(initialValues.projectKey || "").trim()
+          issueKey: useJiraInput.checked ? String(issueKeyInput.value || "").trim() : "",
+          projectKey: String(initialValues.projectKey || "").trim(),
+          useJira: useJiraInput.checked
         };
+      }
+
+      function syncJiraState() {
+        jiraSection.classList.toggle("is-disabled", !useJiraInput.checked);
+        issueKeyInput.disabled = !useJiraInput.checked;
+        updateSelectedIssueDetails();
       }
 
       function queueDraftSave() {
@@ -681,13 +707,21 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       }
 
       function syncRunButton() {
-        runButton.disabled = !issueKeyInput.value && !backlogItemPathInput.value;
+        runButton.disabled =
+          !backlogItemPathInput.value && (!useJiraInput.checked || !issueKeyInput.value);
       }
 
       issueKeyInput.addEventListener("change", () => {
         errorMessage.textContent = "";
         updateSelectedIssueDetails();
         syncSelections("issue");
+        syncRunButton();
+        queueDraftSave();
+      });
+
+      useJiraInput.addEventListener("change", () => {
+        errorMessage.textContent = "";
+        syncJiraState();
         syncRunButton();
         queueDraftSave();
       });
@@ -713,8 +747,10 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         const payload = getPayload();
-        if (!payload.issueKey && !payload.backlogItemPath) {
-          errorMessage.textContent = "Choose a Jira item, a local backlog item, or both before continuing.";
+        if (!payload.backlogItemPath && (!payload.useJira || !payload.issueKey)) {
+          errorMessage.textContent = payload.useJira
+            ? "Choose a Jira item, a local backlog item, or both before continuing."
+            : "Choose a local backlog item before continuing with Jira disabled.";
           syncRunButton();
           return;
         }
@@ -757,6 +793,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       });
 
       renderBacklogItemOptions(initialValues.backlogItemPath);
+      syncJiraState();
       updateSelectedIssueDetails();
       if (issueKeyInput.value) {
         syncSelections("issue");

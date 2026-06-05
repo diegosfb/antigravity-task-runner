@@ -29,7 +29,8 @@ test("getDefaultBacklogItemCompletedValues uses the provided project key", () =>
     backlogDir: "/tmp/workspace/docs/backlog",
     backlogItemPath: "",
     issueKey: "",
-    projectKey: "TASK"
+    projectKey: "TASK",
+    useJira: true
   });
 });
 
@@ -40,7 +41,8 @@ test("sanitizeBacklogItemCompletedFormValues trims payload values", () => {
       backlogDir: " /tmp/custom-backlog ",
       backlogItemPath: " /tmp/custom-backlog/task-demo.md ",
       issueKey: " TASK-123 ",
-      projectKey: " TASK "
+      projectKey: " TASK ",
+      useJira: false
     },
     "OTHER",
     "/tmp/workspace"
@@ -50,20 +52,35 @@ test("sanitizeBacklogItemCompletedFormValues trims payload values", () => {
     backlogDir: "/tmp/custom-backlog",
     backlogItemPath: "/tmp/custom-backlog/task-demo.md",
     issueKey: "TASK-123",
-    projectKey: "TASK"
+    projectKey: "TASK",
+    useJira: false
   });
 });
 
-test("getMissingBacklogItemCompletedFields requires a project and one target", () => {
+test("getMissingBacklogItemCompletedFields requires a project and one target when Jira is enabled", () => {
   const backlogItemCompleted = setupBacklogItemCompletedModule();
   const missing = backlogItemCompleted.getMissingBacklogItemCompletedFields({
     backlogDir: "",
     backlogItemPath: "",
     issueKey: "",
-    projectKey: ""
+    projectKey: "",
+    useJira: true
   });
 
   assert.deepEqual(missing, ["Jira Project", "Assigned Jira item or local backlog item"]);
+});
+
+test("getMissingBacklogItemCompletedFields only requires a local backlog item when Jira is disabled", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const missing = backlogItemCompleted.getMissingBacklogItemCompletedFields({
+    backlogDir: "",
+    backlogItemPath: "",
+    issueKey: "TASK-123",
+    projectKey: "TASK",
+    useJira: false
+  });
+
+  assert.deepEqual(missing, ["Local backlog item"]);
 });
 
 test("loadBacklogItemsForCompletion keeps To Do, In Progress, and missing-status files", () => {
@@ -191,7 +208,8 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
       backlogDir: "/tmp/workspace/docs/backlog",
       backlogItemPath: "/tmp/workspace/docs/backlog/feature-second-item.md",
       issueKey: "TASK-2",
-      projectKey: "TASK"
+      projectKey: "TASK",
+      useJira: true
     },
     [
       {
@@ -229,10 +247,12 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /Backlog Item Completed/);
   assert.match(html, /Backlog Folder/);
   assert.match(html, /Item to Mark Completed/);
+  assert.match(html, /Use Jira/);
   assert.match(html, /loadBacklogItemCompletedBacklogItems/);
   assert.match(html, /saveBacklogItemCompletedDraft/);
   assert.match(html, /Mark Completed/);
   assert.match(html, /<span class="detail-label">Jira Project<\/span>/);
+  assert.match(html, /id="useJira"/);
   assert.match(html, /<option value="TASK-2" selected>TASK-2 - Second item<\/option>/);
   assert.match(html, /feature-second-item\.md/);
   assert.match(
