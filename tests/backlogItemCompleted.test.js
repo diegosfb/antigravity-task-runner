@@ -371,6 +371,7 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /id="useJira"/);
   assert.match(html, /id="comparedResult"/);
   assert.match(html, /<option value="TASK-2" selected>TASK-2 - Second item<\/option>/);
+  assert.match(html, /<span class="detail-label">Description<\/span>/);
   assert.match(html, /feature-second-item\.md/);
   assert.match(
     html,

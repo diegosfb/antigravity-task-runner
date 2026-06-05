@@ -451,7 +451,7 @@ export function renderBacklogItemCompletedHtml(
         </label>
         <div class="detail-grid">
           <div class="detail-card">
-            <span class="detail-label">Summary</span>
+            <span class="detail-label">Description</span>
             <span id="issueSummary" class="detail-value"></span>
           </div>
           <div class="detail-card">
@@ -659,7 +659,7 @@ export function renderBacklogItemCompletedHtml(
 
       function updateSelectedIssueDetails() {
         const selectedIssue = getSelectedIssue();
-        issueSummary.textContent = selectedIssue?.summary || "";
+        issueSummary.textContent = selectedIssue?.description || "";
         issueType.textContent = selectedIssue?.issueTypeName || "";
         issueStatus.textContent = selectedIssue?.statusName || "";
         issueProject.textContent = selectedIssue?.projectName || selectedIssue?.projectKey || initialValues.projectKey || "";
