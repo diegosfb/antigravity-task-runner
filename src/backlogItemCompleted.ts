@@ -345,12 +345,6 @@ export function renderBacklogItemCompletedHtml(
         text-transform: uppercase;
         color: var(--vscode-descriptionForeground);
       }
-      .section-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-      }
       label,
       .detail-grid,
       .detail-grid-split,
@@ -413,17 +407,26 @@ export function renderBacklogItemCompletedHtml(
         width: auto;
         justify-self: start;
       }
-      .checkbox-inline {
+      .current-branch-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .current-branch-title.is-disabled {
+        opacity: 0.45;
+      }
+      .current-branch-value {
+        color: var(--vscode-textLink-foreground, var(--vscode-foreground));
+      }
+      .inline-checkbox {
         display: inline-flex;
         align-items: center;
         gap: 8px;
         font-size: 12px;
-      }
-      .checkbox-inline span {
-        color: var(--vscode-descriptionForeground);
-      }
-      .inline-value {
-        font-size: 13px;
+        font-weight: 400;
       }
       .hint {
         font-size: 12px;
@@ -467,7 +470,7 @@ export function renderBacklogItemCompletedHtml(
         .detail-grid-split {
           grid-template-columns: 1fr;
         }
-        .section-header {
+        .current-branch-title {
           align-items: start;
           flex-direction: column;
         }
@@ -476,17 +479,13 @@ export function renderBacklogItemCompletedHtml(
   </head>
   <body>
     <form id="backlogItemCompletedForm">
-      <section id="jiraSection" class="section">
-        <div class="section-header">
-          <p class="section-title">Jira</p>
-          <label class="checkbox-inline">
+      <div id="jiraSection" class="current-branch-title">
+        <span>Jira Project: <span class="current-branch-value">${escapeHtml(initialValues.projectKey)}</span></span>
+        <label class="inline-checkbox">
           <input id="useJira" name="useJira" type="checkbox" ${initialValues.useJira ? "checked" : ""} />
-            <span>Use Jira</span>
-          </label>
-        </div>
-        <div class="inline-value">Jira Project: <strong>${escapeHtml(initialValues.projectKey)}</strong></div>
-        <span class="hint">Select any Jira item in To Do or In Progress, including unassigned items. Completing it will move it to In Review, or Done if review is unavailable.</span>
-      </section>
+          <span>Use Jira</span>
+        </label>
+      </div>
 
       <section class="section">
         <p class="section-title">JIRA Backlog Item</p>
