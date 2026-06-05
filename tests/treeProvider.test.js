@@ -32,11 +32,12 @@ function createVscodeMock(configuration = {}) {
   };
 }
 
-function setupTreeProviderModule(configuration = {}) {
+function setupTreeProviderModule(configuration = {}, dependencyOverrides = {}) {
   const Module = require("module");
   const originalRequire = Module.prototype.require;
   Module.prototype.require = function (id) {
     if (id === "vscode") return createVscodeMock(configuration);
+    if (dependencyOverrides[id]) return dependencyOverrides[id];
     return originalRequire.apply(this, arguments);
   };
   delete require.cache[require.resolve("../out/treeProvider.js")];
@@ -251,4 +252,57 @@ test("quick actions include ADLC after feature flag with runner actions", async 
     assert.equal(item.iconPath.color.id, "charts.red");
   }
   assert.equal(adlcChildren[4].iconPath.id, "map");
+});
+
+test("quick actions group repository commands under Repository Actions", async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-tree-provider-repo-"));
+  fs.mkdirSync(path.join(repoRoot, ".git"));
+  const utils = require("../out/utils.js");
+  const git = require("../out/git.js");
+  const { AntigravityViewProvider } = setupTreeProviderModule(
+    {},
+    {
+      "./utils": {
+        ...utils,
+        getRootPath: () => repoRoot,
+        getRepoRoot: () => repoRoot
+      },
+      "./git": {
+        ...git,
+        getCurrentBranchNameSync: () => "feature/test-repository-actions"
+      }
+    }
+  );
+  const provider = new AntigravityViewProvider();
+
+  const rootItems = await provider.getChildren();
+  const repositoryActions = rootItems.find((item) => item.label === "Repository Actions");
+
+  assert.ok(repositoryActions);
+  assert.equal(repositoryActions.collapsibleState, 1);
+  assert.equal(repositoryActions.command, undefined);
+  assert.equal(repositoryActions.iconPath.id, "github");
+  assert.equal(repositoryActions.iconPath.color.id, "charts.orange");
+
+  const repositoryActionLabels = (await provider.getChildren(repositoryActions)).map((item) => item.label);
+
+  assert.deepEqual(repositoryActionLabels.slice(0, 4), [
+    "Commit",
+    "Create Repo Release",
+    "Create Feature Branch",
+    "Create Pull Request"
+  ]);
+  assert.deepEqual(repositoryActionLabels.slice(-3), [
+    "Go To Branch",
+    "Pull Remote and merge",
+    "Agentic review of Merge"
+  ]);
+  assert.ok(
+    repositoryActionLabels.length === 7 || repositoryActionLabels.length === 8
+  );
+  if (repositoryActionLabels.length === 8) {
+    assert.equal(repositoryActionLabels[4], "Merge branch to main");
+  }
+
+  fs.rmSync(repoRoot, { recursive: true, force: true });
 });
