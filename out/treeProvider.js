@@ -847,6 +847,12 @@ function getClaudeActionItems() {
         command: "antigravity.openOllamaClaudeTerminal",
         title: "Open Ollama Claude"
     };
+    const ollamaCodex = new NodeItem({ kind: "action", label: "Ollama Codex" }, vscode.TreeItemCollapsibleState.None);
+    ollamaCodex.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    ollamaCodex.command = {
+        command: "antigravity.openOllamaCodexTerminal",
+        title: "Open Ollama Codex"
+    };
     const setClaudeModel = new NodeItem({ kind: "action", label: "Set Claude Model" }, vscode.TreeItemCollapsibleState.None);
     setClaudeModel.iconPath = new vscode.ThemeIcon("repo", CLAUDE_MODEL_ACTION_COLOR);
     setClaudeModel.command = {
@@ -871,6 +877,6 @@ function getClaudeActionItems() {
         command: "antigravity.runProjectTests",
         title: "Run Project Tests"
     };
-    return [item, ollamaClaude, setClaudeModel, runLiteLLMOpenAI, buildProject, runProjectTests];
+    return [item, ollamaClaude, ollamaCodex, setClaudeModel, runLiteLLMOpenAI, buildProject, runProjectTests];
 }
 //# sourceMappingURL=treeProvider.js.map

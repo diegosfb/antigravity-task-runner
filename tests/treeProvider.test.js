@@ -254,7 +254,7 @@ test("quick actions include ADLC after feature flag with runner actions", async 
   assert.equal(adlcChildren[4].iconPath.id, "map");
 });
 
-test("top-level Claude actions include Ollama Claude", async () => {
+test("top-level Claude actions include Ollama terminal entries", async () => {
   const { AntigravityViewProvider } = setupTreeProviderModule();
   const provider = new AntigravityViewProvider();
 
@@ -262,9 +262,11 @@ test("top-level Claude actions include Ollama Claude", async () => {
   const rootLabels = rootItems.map((item) => item.label);
   const claudeTerminalIndex = rootLabels.indexOf("Claude Terminal");
   const ollamaClaudeIndex = rootLabels.indexOf("Ollama Claude");
+  const ollamaCodexIndex = rootLabels.indexOf("Ollama Codex");
 
   assert.notEqual(claudeTerminalIndex, -1);
   assert.equal(ollamaClaudeIndex, claudeTerminalIndex + 1);
+  assert.equal(ollamaCodexIndex, ollamaClaudeIndex + 1);
 });
 
 test("quick actions group repository commands under Repository Actions", async () => {
