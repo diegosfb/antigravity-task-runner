@@ -423,9 +423,9 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       </section>
 
       <section class="section">
-        <p class="section-title">Compared Result</p>
+        <p class="section-title">Comp. Result</p>
         <div class="detail-card">
-          <span class="detail-label">Compared Result</span>
+          <span class="detail-label">Comp. Result</span>
           <pre id="comparedResult" class="detail-value"></pre>
         </div>
       </section>

@@ -366,7 +366,7 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /loadBacklogItemCompletedBacklogItems/);
   assert.match(html, /saveBacklogItemCompletedDraft/);
   assert.match(html, /Mark Completed/);
-  assert.match(html, /Compared Result/);
+  assert.match(html, /Comp\. Result/);
   assert.match(html, /<span class="detail-label">Jira Project<\/span>/);
   assert.match(html, /id="useJira"/);
   assert.match(html, /id="comparedResult"/);
