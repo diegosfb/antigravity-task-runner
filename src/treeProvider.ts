@@ -636,7 +636,7 @@ function getQuickActionItems(): NodeItem[] {
   items.push(updateProjectConfig);
 
   const assignJiraItemToAgent = new NodeItem(
-    { kind: "action", label: "Assign Jira Item to Agent" },
+    { kind: "action", label: "Assign Backlog Item to Agent" },
     vscode.TreeItemCollapsibleState.None
   );
   assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
@@ -650,7 +650,7 @@ function getQuickActionItems(): NodeItem[] {
   }
   assignJiraItemToAgent.command = {
     command: "antigravity.assignJiraItemToAgent",
-    title: "Assign Jira Item to Agent"
+    title: "Assign Backlog Item to Agent"
   };
   items.push(assignJiraItemToAgent);
 

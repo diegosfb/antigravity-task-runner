@@ -525,7 +525,7 @@ function getQuickActionItems() {
     updateProjectConfig.tooltip =
         "Expand to update project configuration with the selected Agentic Harness.";
     items.push(updateProjectConfig);
-    const assignJiraItemToAgent = new NodeItem({ kind: "action", label: "Assign Jira Item to Agent" }, vscode.TreeItemCollapsibleState.None);
+    const assignJiraItemToAgent = new NodeItem({ kind: "action", label: "Assign Backlog Item to Agent" }, vscode.TreeItemCollapsibleState.None);
     assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
     if (!savedJiraProjectKey) {
         assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", new vscode.ThemeColor("disabledForeground"));
@@ -534,7 +534,7 @@ function getQuickActionItems() {
     }
     assignJiraItemToAgent.command = {
         command: "antigravity.assignJiraItemToAgent",
-        title: "Assign Jira Item to Agent"
+        title: "Assign Backlog Item to Agent"
     };
     items.push(assignJiraItemToAgent);
     if (!hasRepo) {

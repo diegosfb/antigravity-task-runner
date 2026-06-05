@@ -2399,7 +2399,7 @@ export function activate(context: vscode.ExtensionContext) {
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Assign Jira Item to Agent</title>
+    <title>Assign Backlog Item to Agent</title>
     <style>
       :root { color-scheme: light dark; font-family: var(--vscode-font-family); }
       body { margin: 0; padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
@@ -2574,7 +2574,7 @@ export function activate(context: vscode.ExtensionContext) {
       const agentCommandOptions = getAssignableAgentCommandOptions();
       const panel = vscode.window.createWebviewPanel(
         "assignJiraItemToAgent",
-        "Assign Jira Item to Agent",
+        "Assign Backlog Item to Agent",
         vscode.ViewColumn.Active,
         { enableScripts: true }
       );
@@ -4841,7 +4841,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (!projectKey) {
         void vscode.window.showErrorMessage(
-          "Assign Jira Item to Agent is disabled because JIRA_PROJECT_KEY is not set for this repository."
+          "Assign Backlog Item to Agent is disabled because JIRA_PROJECT_KEY is not set for this repository."
         );
         provider.refresh();
         return;
