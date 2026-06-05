@@ -40,6 +40,16 @@ test("getRepoRoot walks up from .agent/antigravity", () => {
   assert.equal(result, "/project");
 });
 
+test("resolveProjectWorkspaceRoot appends workspace for repo roots", () => {
+  const utils = setupUtilsModule();
+  assert.equal(utils.resolveProjectWorkspaceRoot("/project"), "/project/workspace");
+});
+
+test("resolveProjectWorkspaceRoot preserves paths already pointing at workspace", () => {
+  const utils = setupUtilsModule();
+  assert.equal(utils.resolveProjectWorkspaceRoot("/project/workspace"), "/project/workspace");
+});
+
 test("parseEnvFile returns empty object for missing file", () => {
   const utils = setupUtilsModule();
   const result = utils.parseEnvFile("/nonexistent/.env");

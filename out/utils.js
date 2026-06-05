@@ -4,6 +4,7 @@ exports.getExecutableName = exports.quoteShellArg = void 0;
 exports.getRootPath = getRootPath;
 exports.getRepoRoot = getRepoRoot;
 exports.getWorkspaceRoot = getWorkspaceRoot;
+exports.resolveProjectWorkspaceRoot = resolveProjectWorkspaceRoot;
 exports.getWorkspaceProjectPath = getWorkspaceProjectPath;
 exports.getAntigravityHomePath = getAntigravityHomePath;
 exports.safeReadDir = safeReadDir;
@@ -49,6 +50,14 @@ function getWorkspaceRoot() {
     if (!folders || folders.length === 0)
         return undefined;
     return folders[0].uri.fsPath;
+}
+function resolveProjectWorkspaceRoot(rootPath) {
+    if (!rootPath)
+        return undefined;
+    const normalizedRoot = path.resolve(rootPath);
+    return path.basename(normalizedRoot) === "workspace"
+        ? normalizedRoot
+        : path.join(normalizedRoot, "workspace");
 }
 function getWorkspaceProjectPath(repoRoot) {
     const configured = vscode.workspace.getConfiguration("antigravity").get("workspaceProjectPath") || "./";

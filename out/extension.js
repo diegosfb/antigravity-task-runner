@@ -4554,10 +4554,8 @@ function activate(context) {
         const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
         const rootPath = (0, utils_1.getRootPath)();
         const workspaceRoot = rootPath
-            ? path.join((0, utils_1.getRepoRoot)(rootPath), "workspace")
-            : openWorkspaceRoot
-                ? path.join(openWorkspaceRoot, "workspace")
-                : undefined;
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
         const savedValues = context.workspaceState.get(getProjectScopedStateKey("productDesignerForm"));
         const initialValues = (0, productDesigner_1.sanitizeProductDesignerFormValues)(savedValues, workspaceRoot);
         const panel = vscode.window.createWebviewPanel("antigravityProductDesigner", "Product Designer", vscode.ViewColumn.Active, {
@@ -4605,10 +4603,8 @@ function activate(context) {
         const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
         const rootPath = (0, utils_1.getRootPath)();
         const workspaceRoot = rootPath
-            ? path.join((0, utils_1.getRepoRoot)(rootPath), "workspace")
-            : openWorkspaceRoot
-                ? path.join(openWorkspaceRoot, "workspace")
-                : undefined;
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
         const savedValues = context.workspaceState.get(getProjectScopedStateKey("businessAnalystForm"));
         const initialValues = (0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(savedValues, workspaceRoot);
         const panel = vscode.window.createWebviewPanel("antigravityBusinessAnalyst", "Business Analyst", vscode.ViewColumn.Active, {

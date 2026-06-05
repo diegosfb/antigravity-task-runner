@@ -50,6 +50,7 @@ import {
   getRepoRoot,
   getWorkspaceProjectPath,
   getWorkspaceRoot,
+  resolveProjectWorkspaceRoot,
   listInfrastructureYamlFiles,
   findNestedGitFolders,
   parseEnvFile,
@@ -5840,10 +5841,8 @@ export function activate(context: vscode.ExtensionContext) {
       const openWorkspaceRoot = getWorkspaceRoot();
       const rootPath = getRootPath();
       const workspaceRoot = rootPath
-        ? path.join(getRepoRoot(rootPath), "workspace")
-        : openWorkspaceRoot
-          ? path.join(openWorkspaceRoot, "workspace")
-          : undefined;
+        ? resolveProjectWorkspaceRoot(getRepoRoot(rootPath))
+        : resolveProjectWorkspaceRoot(openWorkspaceRoot);
       const savedValues = context.workspaceState.get<Partial<ProductDesignerFormValues>>(
         getProjectScopedStateKey("productDesignerForm")
       );
@@ -5910,10 +5909,8 @@ export function activate(context: vscode.ExtensionContext) {
       const openWorkspaceRoot = getWorkspaceRoot();
       const rootPath = getRootPath();
       const workspaceRoot = rootPath
-        ? path.join(getRepoRoot(rootPath), "workspace")
-        : openWorkspaceRoot
-          ? path.join(openWorkspaceRoot, "workspace")
-          : undefined;
+        ? resolveProjectWorkspaceRoot(getRepoRoot(rootPath))
+        : resolveProjectWorkspaceRoot(openWorkspaceRoot);
       const savedValues = context.workspaceState.get<Partial<BusinessAnalystFormValues>>(
         getProjectScopedStateKey("businessAnalystForm")
       );
