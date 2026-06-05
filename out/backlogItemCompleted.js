@@ -523,7 +523,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       }
 
       function stripDisplayNamePrefix(value) {
-        return String(value || "").replace(/^[^:]+:\\s*/, "").trim();
+        return String(value || "").replace(/^[^:]+: */, "").trim();
       }
 
       function stripFileNamePrefix(value) {

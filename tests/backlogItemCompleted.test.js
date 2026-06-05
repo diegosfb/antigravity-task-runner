@@ -253,6 +253,7 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /Mark Completed/);
   assert.match(html, /<span class="detail-label">Jira Project<\/span>/);
   assert.match(html, /id="useJira"/);
+  assert.ok(html.includes('replace(/^[^:]+: */, "")'));
   assert.match(html, /<option value="TASK-2" selected>TASK-2 - Second item<\/option>/);
   assert.match(html, /feature-second-item\.md/);
   assert.match(
