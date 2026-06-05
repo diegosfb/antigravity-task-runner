@@ -5837,7 +5837,13 @@ export function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(
     vscode.commands.registerCommand(PRODUCT_DESIGNER_COMMAND, async () => {
-      const workspaceRoot = getWorkspaceRoot();
+      const openWorkspaceRoot = getWorkspaceRoot();
+      const rootPath = getRootPath();
+      const workspaceRoot = rootPath
+        ? path.join(getRepoRoot(rootPath), "workspace")
+        : openWorkspaceRoot
+          ? path.join(openWorkspaceRoot, "workspace")
+          : undefined;
       const savedValues = context.workspaceState.get<Partial<ProductDesignerFormValues>>(
         getProjectScopedStateKey("productDesignerForm")
       );
@@ -5901,10 +5907,13 @@ export function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(
     vscode.commands.registerCommand(BUSINESS_ANALYST_COMMAND, async () => {
+      const openWorkspaceRoot = getWorkspaceRoot();
       const rootPath = getRootPath();
       const workspaceRoot = rootPath
-        ? getWorkspaceProjectPath(getRepoRoot(rootPath))
-        : getWorkspaceRoot();
+        ? path.join(getRepoRoot(rootPath), "workspace")
+        : openWorkspaceRoot
+          ? path.join(openWorkspaceRoot, "workspace")
+          : undefined;
       const savedValues = context.workspaceState.get<Partial<BusinessAnalystFormValues>>(
         getProjectScopedStateKey("businessAnalystForm")
       );

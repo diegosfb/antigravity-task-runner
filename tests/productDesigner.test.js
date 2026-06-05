@@ -26,7 +26,7 @@ function setupProductDesignerModule() {
   return productDesigner;
 }
 
-test("getDefaultProductDesignerValues defaults harness to Codex and workspace root", () => {
+test("getDefaultProductDesignerValues defaults harness to Codex and the provided workspace path", () => {
   const productDesigner = setupProductDesignerModule();
   const defaults = productDesigner.getDefaultProductDesignerValues("/tmp/project");
 

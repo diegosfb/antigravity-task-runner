@@ -241,7 +241,7 @@ export function renderProductDesignerHtml(
         <label>
           <span class="required">Project Workspace folder</span>
           <input id="workspace" name="workspace" value="${escapeHtml(initialValues.workspace)}" required />
-          <span class="hint">Defaults to the current project root when a workspace is open.</span>
+          <span class="hint">Defaults to the project root's workspace folder when a project is open.</span>
         </label>
 
         <label>

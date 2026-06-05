@@ -4551,7 +4551,13 @@ function activate(context) {
         }, undefined, context.subscriptions);
     }));
     context.subscriptions.push(vscode.commands.registerCommand(productDesigner_1.PRODUCT_DESIGNER_COMMAND, async () => {
-        const workspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const workspaceRoot = rootPath
+            ? path.join((0, utils_1.getRepoRoot)(rootPath), "workspace")
+            : openWorkspaceRoot
+                ? path.join(openWorkspaceRoot, "workspace")
+                : undefined;
         const savedValues = context.workspaceState.get(getProjectScopedStateKey("productDesignerForm"));
         const initialValues = (0, productDesigner_1.sanitizeProductDesignerFormValues)(savedValues, workspaceRoot);
         const panel = vscode.window.createWebviewPanel("antigravityProductDesigner", "Product Designer", vscode.ViewColumn.Active, {
@@ -4596,10 +4602,13 @@ function activate(context) {
         }, undefined, context.subscriptions);
     }));
     context.subscriptions.push(vscode.commands.registerCommand(businessAnalyst_1.BUSINESS_ANALYST_COMMAND, async () => {
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
         const rootPath = (0, utils_1.getRootPath)();
         const workspaceRoot = rootPath
-            ? (0, utils_1.getWorkspaceProjectPath)((0, utils_1.getRepoRoot)(rootPath))
-            : (0, utils_1.getWorkspaceRoot)();
+            ? path.join((0, utils_1.getRepoRoot)(rootPath), "workspace")
+            : openWorkspaceRoot
+                ? path.join(openWorkspaceRoot, "workspace")
+                : undefined;
         const savedValues = context.workspaceState.get(getProjectScopedStateKey("businessAnalystForm"));
         const initialValues = (0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(savedValues, workspaceRoot);
         const panel = vscode.window.createWebviewPanel("antigravityBusinessAnalyst", "Business Analyst", vscode.ViewColumn.Active, {
