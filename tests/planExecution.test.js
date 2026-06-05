@@ -161,7 +161,8 @@ test("renderPlanExecutionHtml includes Jira controls", () => {
   assert.match(html, /savePlanExecutionDraft/);
   assert.match(html, /syncProjectFolderDefaults/);
   assert.match(html, /Enable Jira using configured credentials/);
-  assert.match(html, /Jira Project Name/);
+  assert.match(html, /<span>Jira Project<\/span>/);
+  assert.match(html, /type="hidden"/);
   assert.match(html, /Agent Script Path/);
 });
 
@@ -176,8 +177,10 @@ test("renderPlanExecutionHtml shows configured Jira project key as a label", () 
     "TASK"
   );
 
-  assert.match(html, /Jira Project: <strong>TASK<\/strong>/);
+  assert.match(html, /<span>Jira Project<\/span>/);
+  assert.match(html, /<div class="jira-project-value">TASK<\/div>/);
   assert.match(html, /jiraProjectNameRow.hidden = !enableJiraInput.checked;/);
   assert.match(html, /const configuredJiraProjectKey = "TASK";/);
+  assert.match(html, /type="hidden"/);
   assert.doesNotMatch(html, /<span>Jira Project Name<\/span>/);
 });

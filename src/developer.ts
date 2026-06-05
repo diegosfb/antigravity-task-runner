@@ -173,7 +173,7 @@ export function renderDeveloperHtml(
   const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
   const values = JSON.stringify(initialValues);
   const normalizedConfiguredJiraProjectKey = configuredJiraProjectKey.trim();
-  const hasConfiguredJiraProjectKey = normalizedConfiguredJiraProjectKey.length > 0;
+  const displayedJiraProjectName = normalizedConfiguredJiraProjectKey || initialValues.jiraProjectName.trim();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -367,23 +367,17 @@ export function renderDeveloperHtml(
           />
           <span>Enable Jira using configured credentials</span>
         </label>
-        ${hasConfiguredJiraProjectKey
-      ? `<div id="jiraProjectNameRow">
-          <span>Jira Project: <strong>${escapeHtml(normalizedConfiguredJiraProjectKey)}</strong></span>
-          <div class="jira-project-value">${escapeHtml(normalizedConfiguredJiraProjectKey)}</div>
-          <span class="hint">Uses JIRA_PROJECT_KEY from this repository's .env file together with the Jira credentials from Antigravity settings.</span>
-        </div>`
-      : `<label id="jiraProjectNameRow">
-          <span>Jira Project Name</span>
+        <div id="jiraProjectNameRow">
+          <span>Jira Project</span>
           <input
             id="jiraProjectName"
             name="jiraProjectName"
-            value="${escapeHtml(initialValues.jiraProjectName)}"
-            ${initialValues.enableJira ? "" : "disabled"}
+            type="hidden"
+            value="${escapeHtml(displayedJiraProjectName)}"
           />
-          <span class="hint">Uses Jira Username, Jira URL, and Jira API Token from the Antigravity settings.</span>
-        </label>`
-    }
+          <div class="jira-project-value">${escapeHtml(displayedJiraProjectName || "Not set")}</div>
+          <span class="hint">Uses JIRA_PROJECT_KEY from this repository's .env file together with the Jira credentials from Antigravity settings.</span>
+        </div>
       </section>
 
       <section class="section">
