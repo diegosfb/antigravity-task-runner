@@ -106,10 +106,10 @@ test("loadBacklogItemsForCompletion keeps To Do, In Progress, and missing-status
   const items = backlogItemCompleted.loadBacklogItemsForCompletion(tempDir);
 
   assert.deepEqual(
-    items.map((item) => ({ fileName: item.fileName, statusName: item.statusName })),
+    items.map((item) => ({ fileName: item.fileName, statusName: item.statusName, typeName: item.typeName })),
     [
-      { fileName: "feature-alpha.md", statusName: "To Do" },
-      { fileName: "feature-gamma.md", statusName: "" }
+      { fileName: "feature-alpha.md", statusName: "To Do", typeName: "Feature" },
+      { fileName: "feature-gamma.md", statusName: "", typeName: "Feature" }
     ]
   );
 });
@@ -123,7 +123,8 @@ test("findMatching helpers compare Jira descriptions with backlog description se
       fileName: "feature-matching-item.md",
       filePath: "/tmp/feature-matching-item.md",
       statusName: "To Do",
-      summary: ""
+      summary: "",
+      typeName: "Feature"
     }
   ];
   const issues = [
@@ -158,7 +159,8 @@ test("findMatching helpers treat a unique contained description as a cross-match
       fileName: "epic-test-item.md",
       filePath: "/tmp/epic-test-item.md",
       statusName: "To Do",
-      summary: ""
+      summary: "",
+      typeName: "Epic"
     }
   ];
   const issues = [
@@ -194,7 +196,8 @@ test("findMatching helpers do not fall back to Jira summary and backlog title wh
       fileName: "epic-test-item.md",
       filePath: "/tmp/epic-test-item.md",
       statusName: "To Do",
-      summary: ""
+      summary: "",
+      typeName: "Epic"
     }
   ];
   const issues = [
@@ -229,7 +232,8 @@ test("findMatching helpers return undefined when no cross-match exists", () => {
       fileName: "feature-local-only.md",
       filePath: "/tmp/feature-local-only.md",
       statusName: "To Do",
-      summary: ""
+      summary: "",
+      typeName: "Feature"
     }
   ];
   const issues = [
@@ -264,7 +268,8 @@ test("findMatching helpers leave ambiguous description matches unresolved", () =
       fileName: "feature-duplicate-item.md",
       filePath: "/tmp/feature-duplicate-item.md",
       statusName: "To Do",
-      summary: ""
+      summary: "",
+      typeName: "Feature"
     }
   ];
   const issues = [
@@ -354,7 +359,8 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
         fileName: "feature-second-item.md",
         filePath: "/tmp/workspace/docs/backlog/feature-second-item.md",
         statusName: "In Progress",
-        summary: "Second item description"
+        summary: "Second item description",
+        typeName: "Feature"
       }
     ]
   );
@@ -372,6 +378,7 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /id="comparedResult"/);
   assert.match(html, /<option value="TASK-2" selected>TASK-2 - Second item<\/option>/);
   assert.match(html, /<span class="detail-label">Description<\/span>/);
+  assert.match(html, /<span class="detail-label">Local Type<\/span>/);
   assert.match(html, /feature-second-item\.md/);
   assert.match(
     html,
@@ -409,7 +416,8 @@ test("renderBacklogItemCompletedHtml emits a syntactically valid webview script"
         fileName: "feature-second-item.md",
         filePath: "/tmp/workspace/docs/backlog/feature-second-item.md",
         statusName: "In Progress",
-        summary: "Second item description"
+        summary: "Second item description",
+        typeName: "Feature"
       }
     ]
   );

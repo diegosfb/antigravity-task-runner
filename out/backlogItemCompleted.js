@@ -74,11 +74,23 @@ function extractMarkdownTitle(markdown, fileName) {
     }
     return titleLine.replace(/^#\s+/, "").trim() || fileName.replace(/\.md$/i, "");
 }
+function extractBacklogItemType(displayName, fileName) {
+    const titlePrefix = displayName.match(/^([^:]+):\s*/)?.[1]?.trim();
+    if (titlePrefix) {
+        return titlePrefix;
+    }
+    const filePrefix = path.basename(fileName, path.extname(fileName)).match(/^([^-]+)/)?.[1]?.trim();
+    if (!filePrefix) {
+        return "";
+    }
+    return filePrefix.charAt(0).toUpperCase() + filePrefix.slice(1).toLowerCase();
+}
 function normalizeStatusName(value) {
     return value.trim().toLowerCase();
 }
 function parseBacklogItemCompletedLocalItem(filePath, markdown) {
     const fileName = path.basename(filePath);
+    const displayName = extractMarkdownTitle(markdown, fileName);
     const summary = extractMarkdownSection(markdown, /^##\s*summary\s*$/i);
     const description = extractMarkdownSection(markdown, /^##\s*description\s*$/i);
     const statusName = extractMarkdownSection(markdown, STATUS_SECTION_PATTERN)
@@ -86,11 +98,12 @@ function parseBacklogItemCompletedLocalItem(filePath, markdown) {
         .trim();
     return {
         description,
-        displayName: extractMarkdownTitle(markdown, fileName),
+        displayName,
         fileName,
         filePath,
         statusName,
-        summary
+        summary,
+        typeName: extractBacklogItemType(displayName, fileName)
     };
 }
 function isBacklogItemEligibleForCompletion(item) {
@@ -408,6 +421,10 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
             <span id="backlogItemDescription" class="detail-value"></span>
           </div>
           <div class="detail-card">
+            <span class="detail-label">Local Type</span>
+            <span id="backlogItemType" class="detail-value"></span>
+          </div>
+          <div class="detail-card">
             <span class="detail-label">Current Local Status</span>
             <span id="backlogItemStatus" class="detail-value"></span>
           </div>
@@ -452,6 +469,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       const backlogItemDescription = document.getElementById("backlogItemDescription");
       const backlogItemPathInput = document.getElementById("backlogItemPath");
       const backlogItemStatus = document.getElementById("backlogItemStatus");
+      const backlogItemType = document.getElementById("backlogItemType");
       const jiraSection = document.getElementById("jiraSection");
       const issueKeyInput = document.getElementById("issueKey");
       const useJiraInput = document.getElementById("useJira");
@@ -587,6 +605,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       function updateSelectedBacklogItemDetails() {
         const selectedBacklogItem = getSelectedBacklogItem();
         backlogItemDescription.textContent = selectedBacklogItem?.description || "";
+        backlogItemType.textContent = selectedBacklogItem?.typeName || "";
         backlogItemStatus.textContent = selectedBacklogItem?.statusName || "No status";
       }
 
