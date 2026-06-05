@@ -151,6 +151,22 @@ test("buildExternalTerminalLaunchSpecs preserves ollama codex command arguments"
   );
 });
 
+test("buildExternalTerminalLaunchSpecs preserves codex command", () => {
+  const terminal = setupTerminalModule();
+  const specs = terminal.buildExternalTerminalLaunchSpecs(
+    "/tmp/project root",
+    "codex",
+    "darwin"
+  );
+
+  assert.equal(specs.length, 1);
+  assert.equal(specs[0].command, "osascript");
+  assert.match(
+    specs[0].args.join(" "),
+    /cd \\"\/tmp\/project root\\" && codex/
+  );
+});
+
 test("buildExternalTerminalLaunchSpecs preserves opencode command", () => {
   const terminal = setupTerminalModule();
   const specs = terminal.buildExternalTerminalLaunchSpecs(

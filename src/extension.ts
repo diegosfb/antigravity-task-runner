@@ -3749,6 +3749,23 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.openCodexTerminal", async () => {
+      try {
+        const rootPath = getRootPath();
+        if (!rootPath) {
+          void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+          return;
+        }
+        const repoRoot = getRepoRoot(rootPath);
+        await openCommandInExternalTerminal(repoRoot, "codex");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Codex Terminal failed: ${message}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.openOllamaClaudeTerminal", async () => {
       try {
         const rootPath = getRootPath();

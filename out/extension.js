@@ -2987,6 +2987,21 @@ function activate(context) {
             void vscode.window.showErrorMessage(`Claude Terminal failed: ${message}`);
         }
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openCodexTerminal", async () => {
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            await (0, terminal_1.openCommandInExternalTerminal)(repoRoot, "codex");
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Codex Terminal failed: ${message}`);
+        }
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOllamaClaudeTerminal", async () => {
         try {
             const rootPath = (0, utils_1.getRootPath)();

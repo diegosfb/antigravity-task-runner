@@ -254,19 +254,21 @@ test("quick actions include ADLC after feature flag with runner actions", async 
   assert.equal(adlcChildren[4].iconPath.id, "map");
 });
 
-test("top-level Claude actions include Ollama terminal entries", async () => {
+test("top-level Claude actions include terminal launcher entries", async () => {
   const { AntigravityViewProvider } = setupTreeProviderModule();
   const provider = new AntigravityViewProvider();
 
   const rootItems = await provider.getChildren();
   const rootLabels = rootItems.map((item) => item.label);
   const claudeTerminalIndex = rootLabels.indexOf("Claude Terminal");
+  const codexTerminalIndex = rootLabels.indexOf("Codex Terminal");
   const ollamaClaudeIndex = rootLabels.indexOf("Ollama Claude");
   const ollamaCodexIndex = rootLabels.indexOf("Ollama Codex");
   const opencodeIndex = rootLabels.indexOf("Opencode");
 
   assert.notEqual(claudeTerminalIndex, -1);
-  assert.equal(ollamaClaudeIndex, claudeTerminalIndex + 1);
+  assert.equal(codexTerminalIndex, claudeTerminalIndex + 1);
+  assert.equal(ollamaClaudeIndex, codexTerminalIndex + 1);
   assert.equal(ollamaCodexIndex, ollamaClaudeIndex + 1);
   assert.equal(opencodeIndex, ollamaCodexIndex + 1);
 });
