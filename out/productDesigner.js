@@ -260,12 +260,46 @@ function renderProductDesignerHtml(webview, initialValues) {
       const errorMessage = document.getElementById("errorMessage");
       const runButton = document.getElementById("runButton");
       const cancelButton = document.getElementById("cancelButton");
+      const projectDescriptionDirInput = document.getElementById("projectDescriptionDir");
+      const meetingsRecordingsFolderInput = document.getElementById("meetingsRecordingsFolder");
+      const workspaceInput = document.getElementById("workspace");
       const requiredFields = [
         document.getElementById("agentHarness"),
-        document.getElementById("projectDescriptionDir"),
-        document.getElementById("workspace"),
+        projectDescriptionDirInput,
+        workspaceInput,
         document.getElementById("agentScriptPath")
       ];
+
+      function joinPath(base, ...parts) {
+        if (!base) return "";
+        const trailingSlash = /[\\\\/]$/.test(base);
+        const separator = base.includes("\\\\") ? "\\\\" : "/";
+        const normalizedBase = trailingSlash ? base.slice(0, -1) : base;
+        return [normalizedBase, ...parts].join(separator);
+      }
+
+      function getDefaultFolders(workspace) {
+        return {
+          projectDescriptionDir: workspace ? joinPath(workspace, "docs", "project_description") : "",
+          meetingsRecordingsFolder: workspace ? joinPath(workspace, "docs", "project_meeting_notes") : ""
+        };
+      }
+
+      function syncProjectFolderDefaults() {
+        const defaults = getDefaultFolders(workspaceInput.value.trim());
+        if (projectDescriptionDirInput.dataset.userModified !== "true") {
+          projectDescriptionDirInput.value = defaults.projectDescriptionDir;
+        }
+        if (meetingsRecordingsFolderInput.dataset.userModified !== "true") {
+          meetingsRecordingsFolderInput.value = defaults.meetingsRecordingsFolder;
+        }
+      }
+
+      function refreshProjectFolderFlags() {
+        const defaults = getDefaultFolders(workspaceInput.value.trim());
+        projectDescriptionDirInput.dataset.userModified = String(projectDescriptionDirInput.value.trim() !== defaults.projectDescriptionDir);
+        meetingsRecordingsFolderInput.dataset.userModified = String(meetingsRecordingsFolderInput.value.trim() !== defaults.meetingsRecordingsFolder);
+      }
 
       function getPayload() {
         const data = new FormData(form);
@@ -280,6 +314,21 @@ function renderProductDesignerHtml(webview, initialValues) {
           agentScriptPath: String(data.get("agentScriptPath") || "").trim()
         };
       }
+
+      workspaceInput.addEventListener("input", () => {
+        syncProjectFolderDefaults();
+        refreshProjectFolderFlags();
+      });
+
+      projectDescriptionDirInput.addEventListener("input", () => {
+        const defaults = getDefaultFolders(workspaceInput.value.trim());
+        projectDescriptionDirInput.dataset.userModified = String(projectDescriptionDirInput.value.trim() !== defaults.projectDescriptionDir);
+      });
+
+      meetingsRecordingsFolderInput.addEventListener("input", () => {
+        const defaults = getDefaultFolders(workspaceInput.value.trim());
+        meetingsRecordingsFolderInput.dataset.userModified = String(meetingsRecordingsFolderInput.value.trim() !== defaults.meetingsRecordingsFolder);
+      });
 
       function syncRunButton() {
         runButton.disabled = requiredFields.some((field) => !field.value.trim());
@@ -317,6 +366,7 @@ function renderProductDesignerHtml(webview, initialValues) {
         }
       });
 
+      refreshProjectFolderFlags();
       vscode.setState(initialValues);
       syncRunButton();
     </script>

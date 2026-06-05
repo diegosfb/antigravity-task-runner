@@ -94,3 +94,16 @@ test("buildProductDesignerCommand includes required flags first and omits blank 
   assert.equal(command.includes("--model"), false);
   assert.equal(command.includes("--meetings-recordings-folder"), false);
 });
+
+test("renderProductDesignerHtml includes workspace-derived project folder sync", () => {
+  const productDesigner = setupProductDesignerModule();
+  const html = productDesigner.renderProductDesignerHtml(
+    { cspSource: "vscode-resource:" },
+    productDesigner.getDefaultProductDesignerValues("/tmp/project")
+  );
+
+  assert.match(html, /syncProjectFolderDefaults/);
+  assert.match(html, /refreshProjectFolderFlags/);
+  assert.match(html, /Project Description folder/);
+  assert.match(html, /Project Meeting notes folder/);
+});
