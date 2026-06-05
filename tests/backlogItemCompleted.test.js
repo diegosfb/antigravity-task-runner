@@ -376,7 +376,9 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /loadBacklogItemCompletedBacklogItems/);
   assert.match(html, /saveBacklogItemCompletedDraft/);
   assert.match(html, /Mark Completed/);
-  assert.match(html, /<span class="detail-label">Jira Project<\/span>/);
+  assert.match(html, /section-header/);
+  assert.match(html, /checkbox-inline/);
+  assert.match(html, /Jira Project: <strong>TASK<\/strong>/);
   assert.match(html, /id="useJira"/);
   assert.match(html, /<option value="TASK-2" selected>TASK-2 - Second item<\/option>/);
   assert.match(html, /detail-grid-split/);

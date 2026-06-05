@@ -345,6 +345,12 @@ export function renderBacklogItemCompletedHtml(
         text-transform: uppercase;
         color: var(--vscode-descriptionForeground);
       }
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
       label,
       .detail-grid,
       .detail-grid-split,
@@ -407,6 +413,18 @@ export function renderBacklogItemCompletedHtml(
         width: auto;
         justify-self: start;
       }
+      .checkbox-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      }
+      .checkbox-inline span {
+        color: var(--vscode-descriptionForeground);
+      }
+      .inline-value {
+        font-size: 13px;
+      }
       .hint {
         font-size: 12px;
         color: var(--vscode-descriptionForeground);
@@ -449,23 +467,24 @@ export function renderBacklogItemCompletedHtml(
         .detail-grid-split {
           grid-template-columns: 1fr;
         }
+        .section-header {
+          align-items: start;
+          flex-direction: column;
+        }
       }
     </style>
   </head>
   <body>
     <form id="backlogItemCompletedForm">
       <section id="jiraSection" class="section">
-        <p class="section-title">Jira</p>
-        <label>
-          <span>Use Jira</span>
+        <div class="section-header">
+          <p class="section-title">Jira</p>
+          <label class="checkbox-inline">
           <input id="useJira" name="useJira" type="checkbox" ${initialValues.useJira ? "checked" : ""} />
-        </label>
-        <div class="detail-grid">
-          <div class="detail-card">
-            <span class="detail-label">Jira Project</span>
-            <span class="detail-value">${escapeHtml(initialValues.projectKey)}</span>
-          </div>
+            <span>Use Jira</span>
+          </label>
         </div>
+        <div class="inline-value">Jira Project: <strong>${escapeHtml(initialValues.projectKey)}</strong></div>
         <span class="hint">Select any Jira item in To Do or In Progress, including unassigned items. Completing it will move it to In Review, or Done if review is unavailable.</span>
       </section>
 
