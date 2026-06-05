@@ -487,7 +487,7 @@ export function renderBacklogItemCompletedHtml(
         </label>
       </div>
 
-      <section class="section">
+      <section id="jiraBacklogSection" class="section" ${initialValues.useJira ? "" : "hidden"}>
         <p class="section-title">JIRA Backlog Item</p>
         <label>
           <span class="required">JIRA Item to Mark Completed</span>
@@ -574,6 +574,7 @@ export function renderBacklogItemCompletedHtml(
       const backlogItemPathInput = document.getElementById("backlogItemPath");
       const backlogItemStatus = document.getElementById("backlogItemStatus");
       const backlogItemType = document.getElementById("backlogItemType");
+      const jiraBacklogSection = document.getElementById("jiraBacklogSection");
       const jiraSection = document.getElementById("jiraSection");
       const issueKeyInput = document.getElementById("issueKey");
       const useJiraInput = document.getElementById("useJira");
@@ -719,6 +720,7 @@ export function renderBacklogItemCompletedHtml(
 
       function syncJiraState() {
         jiraSection.classList.toggle("is-disabled", !useJiraInput.checked);
+        jiraBacklogSection.hidden = !useJiraInput.checked;
         issueKeyInput.disabled = !useJiraInput.checked;
         updateSelectedIssueDetails();
       }

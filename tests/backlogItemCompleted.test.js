@@ -434,3 +434,42 @@ test("renderBacklogItemCompletedHtml emits a syntactically valid webview script"
   assert.ok(scriptMatch?.[1], "Expected the rendered HTML to include an inline script.");
   assert.doesNotThrow(() => new Function("acquireVsCodeApi", scriptMatch[1]));
 });
+
+test("renderBacklogItemCompletedHtml hides Jira backlog section when Jira is disabled", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const html = backlogItemCompleted.renderBacklogItemCompletedHtml(
+    { cspSource: "vscode-resource:" },
+    {
+      backlogDir: "/tmp/workspace/docs/backlog",
+      backlogItemPath: "/tmp/workspace/docs/backlog/feature-second-item.md",
+      issueKey: "",
+      projectKey: "TASK",
+      useJira: false
+    },
+    [
+      {
+        description: "Second item description",
+        id: "2",
+        key: "TASK-2",
+        summary: "Second item",
+        projectKey: "TASK",
+        projectName: "Task Project",
+        issueTypeName: "Bug",
+        statusName: "To Do"
+      }
+    ],
+    [
+      {
+        description: "Second item description",
+        displayName: "Feature: Second Item",
+        fileName: "feature-second-item.md",
+        filePath: "/tmp/workspace/docs/backlog/feature-second-item.md",
+        statusName: "In Progress",
+        summary: "Second item description",
+        typeName: "Feature"
+      }
+    ]
+  );
+
+  assert.match(html, /id="jiraBacklogSection" class="section" hidden/);
+});
