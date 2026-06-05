@@ -449,10 +449,6 @@ export function renderBacklogItemCompletedHtml(
             <span class="detail-label">Jira Project</span>
             <span class="detail-value">${escapeHtml(initialValues.projectKey)}</span>
           </div>
-          <div class="detail-card">
-            <span class="detail-label">Available Jira Items</span>
-            <span class="detail-value">${String(issues.length)}</span>
-          </div>
         </div>
         <span class="hint">Select any Jira item in To Do or In Progress, including unassigned items. Completing it will move it to In Review, or Done if review is unavailable.</span>
       </section>
@@ -466,6 +462,7 @@ export function renderBacklogItemCompletedHtml(
             ${options}
           </select>
         </label>
+        <div class="hint">Eligible Jira backlog items: ${String(issues.length)}.</div>
         <div class="detail-grid">
           <div class="detail-card">
             <span class="detail-label">Description</span>

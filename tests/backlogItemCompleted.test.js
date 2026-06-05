@@ -369,6 +369,7 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /Backlog Folder/);
   assert.match(html, /JIRA Backlog Item/);
   assert.match(html, /JIRA Item to Mark Completed/);
+  assert.match(html, /Eligible Jira backlog items: 2\./);
   assert.match(html, /Local Backlog Item/);
   assert.match(html, /Local Item to Mark Completed/);
   assert.match(html, /Use Jira/);
@@ -380,6 +381,7 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /<option value="TASK-2" selected>TASK-2 - Second item<\/option>/);
   assert.match(html, /<span class="detail-label">Description<\/span>/);
   assert.match(html, /<span class="detail-label">Local Type<\/span>/);
+  assert.doesNotMatch(html, /Available Jira Items/);
   assert.match(html, /feature-second-item\.md/);
   assert.doesNotMatch(html, /Transition Rule/);
   assert.doesNotMatch(html, /Comp\. Result/);
