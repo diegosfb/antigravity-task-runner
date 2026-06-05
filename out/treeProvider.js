@@ -517,23 +517,9 @@ function getQuickActionItems() {
     const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
     const currentBranch = hasRepo && repoRoot ? (0, git_1.getCurrentBranchNameSync)(repoRoot) : undefined;
     const autocommitRunning = repoRoot ? (0, git_1.isAutocommitRunning)(repoRoot) : false;
-    const hasAgentFolder = repoRoot ? fs.existsSync(path.join((0, utils_1.getWorkspaceProjectPath)(repoRoot), ".agent")) : false;
-    const hasGitHub = repoRoot ? (0, git_1.hasGitHubRemoteSync)(repoRoot) : false;
     const savedJiraProjectKey = repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
         ? ((0, utils_1.parseEnvFile)(path.join(repoRoot, ".env")).jira_project_key ?? "").toUpperCase()
         : "";
-    const setupWorkspace = new NodeItem({ kind: "action", label: "Setup Workspace" }, vscode.TreeItemCollapsibleState.None);
-    setupWorkspace.iconPath = new vscode.ThemeIcon("debug-continue", QUICK_ACTION_COLOR);
-    if (hasAgentFolder) {
-        setupWorkspace.iconPath = new vscode.ThemeIcon("debug-continue", new vscode.ThemeColor("disabledForeground"));
-        setupWorkspace.tooltip = "A .agent folder already exists in this project.";
-    }
-    setupWorkspace.contextValue = hasRepo ? "antigravitySetupWorkspaceActionWithRepo" : "antigravitySetupWorkspaceAction";
-    setupWorkspace.command = {
-        command: "antigravity.setupWorkspace",
-        title: "Setup Workspace"
-    };
-    items.push(setupWorkspace);
     const updateProjectConfig = new NodeItem({ kind: "category", label: "Update Project Config" }, vscode.TreeItemCollapsibleState.Collapsed);
     updateProjectConfig.iconPath = new vscode.ThemeIcon("settings-gear", UPDATE_PROJECT_CONFIG_ACTION_COLOR);
     updateProjectConfig.tooltip =
@@ -719,19 +705,6 @@ function getQuickActionItems() {
     explainMe.tooltip =
         "Download the latest explain-me skill into the project and ask the selected Agentic Harness to explain the whole solution and the latest uncommitted changes.";
     items.push(explainMe);
-    const autocommitCheckpoint = new NodeItem({ kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" }, vscode.TreeItemCollapsibleState.None);
-    if (!autocommitRunning && !hasGitHub) {
-        autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", new vscode.ThemeColor("disabledForeground"));
-        autocommitCheckpoint.tooltip = "No GitHub repository found. Please Init a repository first.";
-    }
-    else {
-        autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", QUICK_ACTION_COLOR);
-        autocommitCheckpoint.command = {
-            command: "antigravity.autocommitCheckpoint",
-            title: "Autocommit Checkpoint"
-        };
-    }
-    items.push(autocommitCheckpoint);
     if (autocommitRunning) {
         const revertChanges = new NodeItem({ kind: "action", label: "Revert Changes" }, vscode.TreeItemCollapsibleState.None);
         revertChanges.iconPath = new vscode.ThemeIcon("discard", QUICK_ACTION_COLOR);
