@@ -1694,7 +1694,7 @@ function activate(context) {
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Add Jira Item</title>
+    <title>Create Backlog item</title>
     <style>
       :root { color-scheme: light dark; font-family: var(--vscode-font-family); }
       body { margin: 0; padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
@@ -1798,7 +1798,7 @@ function activate(context) {
 </html>`;
     };
     const showCreateJiraItemDialog = async (projectKey, issueTypes) => new Promise((resolve) => {
-        const panel = vscode.window.createWebviewPanel("createJiraItem", "Add Jira Item", vscode.ViewColumn.Active, { enableScripts: true });
+        const panel = vscode.window.createWebviewPanel("createJiraItem", "Create Backlog item", vscode.ViewColumn.Active, { enableScripts: true });
         panel.webview.html = renderCreateJiraItemHtml(panel.webview, projectKey, issueTypes);
         let settled = false;
         const resolveOnce = (value) => {

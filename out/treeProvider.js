@@ -641,11 +641,11 @@ function getQuickActionItems() {
         items.push(selectOrCreateJiraProject);
     }
     else {
-        const addJiraItem = new NodeItem({ kind: "action", label: "Add Jira Item" }, vscode.TreeItemCollapsibleState.None);
+        const addJiraItem = new NodeItem({ kind: "action", label: "Create Backlog item" }, vscode.TreeItemCollapsibleState.None);
         addJiraItem.iconPath = new vscode.ThemeIcon("add", JIRA_ACTION_COLOR);
         addJiraItem.command = {
             command: "antigravity.addJiraItem",
-            title: "Add Jira Item"
+            title: "Create Backlog item"
         };
         items.push(addJiraItem);
         const takeJiraItemAssign = new NodeItem({ kind: "action", label: "Take Jira Item (Assign)" }, vscode.TreeItemCollapsibleState.None);

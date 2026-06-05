@@ -2131,7 +2131,7 @@ export function activate(context: vscode.ExtensionContext) {
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Add Jira Item</title>
+    <title>Create Backlog item</title>
     <style>
       :root { color-scheme: light dark; font-family: var(--vscode-font-family); }
       body { margin: 0; padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
@@ -2242,7 +2242,7 @@ export function activate(context: vscode.ExtensionContext) {
     new Promise((resolve) => {
       const panel = vscode.window.createWebviewPanel(
         "createJiraItem",
-        "Add Jira Item",
+        "Create Backlog item",
         vscode.ViewColumn.Active,
         { enableScripts: true }
       );

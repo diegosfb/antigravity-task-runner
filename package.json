@@ -206,7 +206,7 @@
       },
       {
         "command": "antigravity.addJiraItem",
-        "title": "Antigravity: Add Jira Item"
+        "title": "Antigravity: Create Backlog item"
       },
       {
         "command": "antigravity.setupWorkspace",
