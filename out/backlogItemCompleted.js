@@ -79,6 +79,7 @@ function normalizeStatusName(value) {
 }
 function parseBacklogItemCompletedLocalItem(filePath, markdown) {
     const fileName = path.basename(filePath);
+    const summary = extractMarkdownSection(markdown, /^##\s*summary\s*$/i);
     const description = extractMarkdownSection(markdown, /^##\s*description\s*$/i);
     const statusName = extractMarkdownSection(markdown, STATUS_SECTION_PATTERN)
         .split(/\r?\n/, 1)[0]
@@ -88,7 +89,8 @@ function parseBacklogItemCompletedLocalItem(filePath, markdown) {
         displayName: extractMarkdownTitle(markdown, fileName),
         fileName,
         filePath,
-        statusName
+        statusName,
+        summary
     };
 }
 function isBacklogItemEligibleForCompletion(item) {
@@ -141,20 +143,24 @@ function findUniqueMatch(items, predicate) {
     const matches = items.filter(predicate);
     return matches.length === 1 ? matches[0] : undefined;
 }
-function findUniqueDescriptionMatch(items, description, getDescription) {
-    const normalizedDescription = normalizeBacklogItemCompletedMatchText(description);
-    if (!normalizedDescription) {
+function findUniqueDescriptionMatch(items, descriptions, getDescriptions) {
+    const normalizedDescriptions = descriptions
+        .map((description) => normalizeBacklogItemCompletedMatchText(description))
+        .filter(Boolean);
+    if (normalizedDescriptions.length === 0) {
         return undefined;
     }
-    const exactMatch = findUniqueMatch(items, (item) => normalizeBacklogItemCompletedMatchText(getDescription(item)) === normalizedDescription);
+    const exactMatch = findUniqueMatch(items, (item) => getDescriptions(item)
+        .map((description) => normalizeBacklogItemCompletedMatchText(description))
+        .some((description) => normalizedDescriptions.includes(description)));
     if (exactMatch) {
         return exactMatch;
     }
     return findUniqueMatch(items, (item) => {
-        const normalizedItemDescription = normalizeBacklogItemCompletedMatchText(getDescription(item));
-        return Boolean(normalizedItemDescription) &&
-            (normalizedItemDescription.includes(normalizedDescription) ||
-                normalizedDescription.includes(normalizedItemDescription));
+        const normalizedItemDescriptions = getDescriptions(item)
+            .map((description) => normalizeBacklogItemCompletedMatchText(description))
+            .filter(Boolean);
+        return normalizedItemDescriptions.some((itemDescription) => normalizedDescriptions.some((description) => itemDescription.includes(description) || description.includes(itemDescription)));
     });
 }
 function findBacklogItemBySummary(summary, backlogItems) {
@@ -200,14 +206,14 @@ function findJiraIssueBySummary(summary, issues) {
     return findUniqueMatch(issues, (issue) => normalizeBacklogItemCompletedSlug(issue.summary) === normalizedSummarySlug);
 }
 function findMatchingBacklogItemForJiraIssue(issue, backlogItems) {
-    const descriptionMatch = findUniqueDescriptionMatch(backlogItems, issue?.description, (item) => item.description);
+    const descriptionMatch = findUniqueDescriptionMatch(backlogItems, [issue?.description], (item) => [item.description, item.summary]);
     if (descriptionMatch) {
         return descriptionMatch;
     }
     return findBacklogItemBySummary(issue?.summary, backlogItems);
 }
 function findMatchingJiraIssueForBacklogItem(backlogItem, issues) {
-    const descriptionMatch = findUniqueDescriptionMatch(issues, backlogItem?.description, (issue) => issue.description);
+    const descriptionMatch = findUniqueDescriptionMatch(issues, [backlogItem?.description, backlogItem?.summary], (issue) => [issue.description]);
     if (descriptionMatch) {
         return descriptionMatch;
     }
@@ -553,25 +559,35 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
         return matches.length === 1 ? matches[0] : undefined;
       }
 
-      function findUniqueDescriptionMatch(items, description, getDescription) {
-        const normalizedDescription = normalizeMatchText(description);
-        if (!normalizedDescription) {
+      function findUniqueDescriptionMatch(items, descriptions, getDescriptions) {
+        const normalizedDescriptions = descriptions
+          .map((description) => normalizeMatchText(description))
+          .filter(Boolean);
+        if (normalizedDescriptions.length === 0) {
           return undefined;
         }
 
         const exactMatch = findUniqueMatch(
           items,
-          (item) => normalizeMatchText(getDescription(item)) === normalizedDescription
+          (item) =>
+            getDescriptions(item)
+              .map((description) => normalizeMatchText(description))
+              .some((description) => normalizedDescriptions.includes(description))
         );
         if (exactMatch) {
           return exactMatch;
         }
 
         return findUniqueMatch(items, (item) => {
-          const normalizedItemDescription = normalizeMatchText(getDescription(item));
-          return Boolean(normalizedItemDescription) &&
-            (normalizedItemDescription.includes(normalizedDescription) ||
-              normalizedDescription.includes(normalizedItemDescription));
+          const normalizedItemDescriptions = getDescriptions(item)
+            .map((description) => normalizeMatchText(description))
+            .filter(Boolean);
+          return normalizedItemDescriptions.some((itemDescription) =>
+            normalizedDescriptions.some(
+              (description) =>
+                itemDescription.includes(description) || description.includes(itemDescription)
+            )
+          );
         });
       }
 
@@ -626,8 +642,8 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       function findMatchingBacklogItem(issue) {
         const descriptionMatch = findUniqueDescriptionMatch(
           backlogItems,
-          issue?.description,
-          (item) => item.description
+          [issue?.description],
+          (item) => [item.description, item.summary]
         );
         if (descriptionMatch) {
           return descriptionMatch;
@@ -638,8 +654,8 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       function findMatchingIssue(backlogItem) {
         const descriptionMatch = findUniqueDescriptionMatch(
           issues,
-          backlogItem?.description,
-          (issue) => issue.description
+          [backlogItem?.description, backlogItem?.summary],
+          (issue) => [issue.description]
         );
         if (descriptionMatch) {
           return descriptionMatch;

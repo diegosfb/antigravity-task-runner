@@ -122,7 +122,8 @@ test("findMatching helpers compare Jira descriptions with backlog description se
       displayName: "Feature: Matching Item",
       fileName: "feature-matching-item.md",
       filePath: "/tmp/feature-matching-item.md",
-      statusName: "To Do"
+      statusName: "To Do",
+      summary: ""
     }
   ];
   const issues = [
@@ -156,7 +157,8 @@ test("findMatching helpers treat a unique contained description as a cross-match
       displayName: "Epic: Test Item",
       fileName: "epic-test-item.md",
       filePath: "/tmp/epic-test-item.md",
-      statusName: "To Do"
+      statusName: "To Do",
+      summary: ""
     }
   ];
   const issues = [
@@ -191,7 +193,8 @@ test("findMatching helpers fall back to Jira summary and backlog title when desc
       displayName: "Epic: Test Item",
       fileName: "epic-test-item.md",
       filePath: "/tmp/epic-test-item.md",
-      statusName: "To Do"
+      statusName: "To Do",
+      summary: ""
     }
   ];
   const issues = [
@@ -225,7 +228,8 @@ test("findMatching helpers return undefined when no cross-match exists", () => {
       displayName: "Feature: Local Only",
       fileName: "feature-local-only.md",
       filePath: "/tmp/feature-local-only.md",
-      statusName: "To Do"
+      statusName: "To Do",
+      summary: ""
     }
   ];
   const issues = [
@@ -259,7 +263,8 @@ test("findMatching helpers leave ambiguous summary matches unresolved", () => {
       displayName: "Epic: Duplicate Item",
       fileName: "epic-duplicate-item.md",
       filePath: "/tmp/epic-duplicate-item.md",
-      statusName: "To Do"
+      statusName: "To Do",
+      summary: ""
     }
   ];
   const issues = [
@@ -288,6 +293,42 @@ test("findMatching helpers leave ambiguous summary matches unresolved", () => {
   assert.equal(
     backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues),
     undefined
+  );
+});
+
+test("findMatching helpers use backlog summary text when description is blank", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const backlogItems = [
+    {
+      description: "",
+      displayName: "Epic: Test Item",
+      fileName: "epic-test-item.md",
+      filePath: "/tmp/epic-test-item.md",
+      statusName: "To Do",
+      summary: "Provision the test workspace and validate the generated environments."
+    }
+  ];
+  const issues = [
+    {
+      description:
+        "Provision the test workspace and validate the generated environments. Confirm the default GitHub environments are created as part of setup.",
+      id: "17",
+      issueTypeName: "Epic",
+      key: "ANTIGRAVIT-17",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "In Progress",
+      summary: "Different Jira summary"
+    }
+  ];
+
+  assert.equal(
+    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems)?.filePath,
+    "/tmp/epic-test-item.md"
+  );
+  assert.equal(
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues)?.key,
+    "ANTIGRAVIT-17"
   );
 });
 
@@ -348,7 +389,8 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
         displayName: "Feature: Second Item",
         fileName: "feature-second-item.md",
         filePath: "/tmp/workspace/docs/backlog/feature-second-item.md",
-        statusName: "In Progress"
+        statusName: "In Progress",
+        summary: "Second item description"
       }
     ]
   );
