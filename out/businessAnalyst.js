@@ -16,6 +16,19 @@ function getDefaultProjectFolders(workspace) {
         backlogDir: workspace ? path.join(workspace, "docs", "backlog") : ""
     };
 }
+function normalizePathForComparison(value) {
+    return path.normalize(value).replace(/[/\\]+$/, "");
+}
+function normalizeLegacyProjectFolder(value, workspace, folderName) {
+    if (!value || !workspace || path.basename(workspace) !== "workspace") {
+        return value;
+    }
+    const currentDefault = path.join(workspace, "docs", folderName);
+    const legacyDuplicatedWorkspaceDefault = path.join(workspace, "workspace", "docs", folderName);
+    return normalizePathForComparison(value) === normalizePathForComparison(legacyDuplicatedWorkspaceDefault)
+        ? currentDefault
+        : value;
+}
 function getDefaultBusinessAnalystValues(workspaceRoot) {
     const workspace = workspaceRoot ?? "";
     const projectFolders = getDefaultProjectFolders(workspace);
@@ -32,13 +45,16 @@ function getDefaultBusinessAnalystValues(workspaceRoot) {
 }
 function sanitizeBusinessAnalystFormValues(values, workspaceRoot) {
     const defaults = getDefaultBusinessAnalystValues(workspaceRoot);
+    const workspace = typeof values?.workspace === "string" ? values.workspace.trim() : defaults.workspace;
+    const specsDir = typeof values?.specsDir === "string" ? values.specsDir.trim() : defaults.specsDir;
+    const backlogDir = typeof values?.backlogDir === "string" ? values.backlogDir.trim() : defaults.backlogDir;
     return {
         agentHarness: typeof values?.agentHarness === "string" ? values.agentHarness.trim() : defaults.agentHarness,
         agentModel: typeof values?.agentModel === "string" ? values.agentModel.trim() : defaults.agentModel,
         agentIntelligence: typeof values?.agentIntelligence === "string" ? values.agentIntelligence.trim() : defaults.agentIntelligence,
-        workspace: typeof values?.workspace === "string" ? values.workspace.trim() : defaults.workspace,
-        specsDir: typeof values?.specsDir === "string" ? values.specsDir.trim() : defaults.specsDir,
-        backlogDir: typeof values?.backlogDir === "string" ? values.backlogDir.trim() : defaults.backlogDir,
+        workspace,
+        specsDir: normalizeLegacyProjectFolder(specsDir, workspace, "specs"),
+        backlogDir: normalizeLegacyProjectFolder(backlogDir, workspace, "backlog"),
         jiraProjectKey: typeof values?.jiraProjectKey === "string" ? values.jiraProjectKey.trim() : defaults.jiraProjectKey,
         agentScriptPath: typeof values?.agentScriptPath === "string" ? values.agentScriptPath.trim() : defaults.agentScriptPath
     };

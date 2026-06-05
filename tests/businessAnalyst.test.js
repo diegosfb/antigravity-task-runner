@@ -64,6 +64,23 @@ test("sanitizeBusinessAnalystFormValues trims input and preserves explicit overr
   });
 });
 
+test("sanitizeBusinessAnalystFormValues repairs legacy duplicated workspace defaults", () => {
+  const { sanitizeBusinessAnalystFormValues } = setupBusinessAnalystModule();
+  const workspaceRoot = "/tmp/project/workspace";
+  const values = sanitizeBusinessAnalystFormValues(
+    {
+      workspace: workspaceRoot,
+      specsDir: "/tmp/project/workspace/workspace/docs/specs",
+      backlogDir: "/tmp/project/workspace/workspace/docs/backlog"
+    },
+    workspaceRoot
+  );
+
+  assert.equal(values.workspace, workspaceRoot);
+  assert.equal(values.specsDir, "/tmp/project/workspace/docs/specs");
+  assert.equal(values.backlogDir, "/tmp/project/workspace/docs/backlog");
+});
+
 test("getMissingBusinessAnalystFields lists only mandatory fields", () => {
   const { getMissingBusinessAnalystFields } = setupBusinessAnalystModule();
   const missing = getMissingBusinessAnalystFields({
