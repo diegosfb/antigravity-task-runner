@@ -864,6 +864,12 @@ function activate(context) {
         const env = (0, utils_1.parseEnvFile)(getRepoEnvPath(repoRoot));
         return (env.jira_project_key || "").trim().toUpperCase();
     };
+    const applySavedJiraProjectKey = (values, jiraProjectKey) => jiraProjectKey
+        ? {
+            ...values,
+            jiraProjectName: jiraProjectKey
+        }
+        : values;
     const buildFeatureEstimatorDetailsFromIssue = (issue) => {
         const metadata = [issue.issueTypeName, issue.statusName].filter(Boolean).join(", ");
         return metadata
@@ -4729,16 +4735,18 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand(businessAnalyst_1.BUSINESS_ANALYST_COMMAND, async () => {
         const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
         const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : openWorkspaceRoot;
         const workspaceRoot = rootPath
             ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
             : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
         const savedValues = context.workspaceState.get(getProjectScopedStateKey("businessAnalystForm"));
-        const initialValues = (0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(savedValues, workspaceRoot);
+        const initialValues = applySavedJiraProjectKey((0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(savedValues, workspaceRoot), savedJiraProjectKey);
         const panel = vscode.window.createWebviewPanel("antigravityBusinessAnalyst", "Business Analyst", vscode.ViewColumn.Active, {
             enableScripts: true,
             retainContextWhenHidden: true
         });
-        panel.webview.html = (0, businessAnalyst_1.renderBusinessAnalystHtml)(panel.webview, initialValues);
+        panel.webview.html = (0, businessAnalyst_1.renderBusinessAnalystHtml)(panel.webview, initialValues, savedJiraProjectKey);
         panel.webview.onDidReceiveMessage(async (message) => {
             if (!message)
                 return;
@@ -4747,14 +4755,14 @@ function activate(context) {
                 return;
             }
             if (message.type === "saveBusinessAnalystDraft") {
-                const draftValues = (0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(message.payload, workspaceRoot);
+                const draftValues = applySavedJiraProjectKey((0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
                 await context.workspaceState.update(getProjectScopedStateKey("businessAnalystForm"), draftValues);
                 return;
             }
             if (message.type !== "runBusinessAnalyst") {
                 return;
             }
-            const values = (0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(message.payload, workspaceRoot);
+            const values = applySavedJiraProjectKey((0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
             const missingFields = (0, businessAnalyst_1.getMissingBusinessAnalystFields)(values);
             if (missingFields.length > 0) {
                 void panel.webview.postMessage({
@@ -4837,16 +4845,18 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand(estimator_1.ESTIMATOR_COMMAND, async () => {
         const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
         const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : openWorkspaceRoot;
         const workspaceRoot = rootPath
             ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
             : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
         const savedValues = context.workspaceState.get(getProjectScopedStateKey("estimatorForm"));
-        const initialValues = (0, estimator_1.sanitizeEstimatorFormValues)(savedValues, workspaceRoot);
+        const initialValues = applySavedJiraProjectKey((0, estimator_1.sanitizeEstimatorFormValues)(savedValues, workspaceRoot), savedJiraProjectKey);
         const panel = vscode.window.createWebviewPanel("antigravityEstimator", "Estimate Project", vscode.ViewColumn.Active, {
             enableScripts: true,
             retainContextWhenHidden: true
         });
-        panel.webview.html = (0, estimator_1.renderEstimatorHtml)(panel.webview, initialValues);
+        panel.webview.html = (0, estimator_1.renderEstimatorHtml)(panel.webview, initialValues, savedJiraProjectKey);
         panel.webview.onDidReceiveMessage(async (message) => {
             if (!message)
                 return;
@@ -4855,14 +4865,14 @@ function activate(context) {
                 return;
             }
             if (message.type === "saveEstimatorDraft") {
-                const draftValues = (0, estimator_1.sanitizeEstimatorFormValues)(message.payload, workspaceRoot);
+                const draftValues = applySavedJiraProjectKey((0, estimator_1.sanitizeEstimatorFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
                 await context.workspaceState.update(getProjectScopedStateKey("estimatorForm"), draftValues);
                 return;
             }
             if (message.type !== "runEstimator") {
                 return;
             }
-            const values = (0, estimator_1.sanitizeEstimatorFormValues)(message.payload, workspaceRoot);
+            const values = applySavedJiraProjectKey((0, estimator_1.sanitizeEstimatorFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
             const missingFields = (0, estimator_1.getMissingEstimatorFields)(values);
             if (missingFields.length > 0) {
                 void panel.webview.postMessage({
@@ -4891,16 +4901,18 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand(planExecution_1.PLAN_EXECUTION_COMMAND, async () => {
         const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
         const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : openWorkspaceRoot;
         const workspaceRoot = rootPath
             ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
             : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
         const savedValues = context.workspaceState.get(getProjectScopedStateKey("planExecutionForm"));
-        const initialValues = (0, planExecution_1.sanitizePlanExecutionFormValues)(savedValues, workspaceRoot);
+        const initialValues = applySavedJiraProjectKey((0, planExecution_1.sanitizePlanExecutionFormValues)(savedValues, workspaceRoot), savedJiraProjectKey);
         const panel = vscode.window.createWebviewPanel("antigravityPlanExecution", "Create Execution Plan", vscode.ViewColumn.Active, {
             enableScripts: true,
             retainContextWhenHidden: true
         });
-        panel.webview.html = (0, planExecution_1.renderPlanExecutionHtml)(panel.webview, initialValues);
+        panel.webview.html = (0, planExecution_1.renderPlanExecutionHtml)(panel.webview, initialValues, savedJiraProjectKey);
         panel.webview.onDidReceiveMessage(async (message) => {
             if (!message)
                 return;
@@ -4909,14 +4921,14 @@ function activate(context) {
                 return;
             }
             if (message.type === "savePlanExecutionDraft") {
-                const draftValues = (0, planExecution_1.sanitizePlanExecutionFormValues)(message.payload, workspaceRoot);
+                const draftValues = applySavedJiraProjectKey((0, planExecution_1.sanitizePlanExecutionFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
                 await context.workspaceState.update(getProjectScopedStateKey("planExecutionForm"), draftValues);
                 return;
             }
             if (message.type !== "runPlanExecution") {
                 return;
             }
-            const values = (0, planExecution_1.sanitizePlanExecutionFormValues)(message.payload, workspaceRoot);
+            const values = applySavedJiraProjectKey((0, planExecution_1.sanitizePlanExecutionFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
             const missingFields = (0, planExecution_1.getMissingPlanExecutionFields)(values);
             if (missingFields.length > 0) {
                 void panel.webview.postMessage({
@@ -4945,16 +4957,18 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand(developer_1.DEVELOPER_COMMAND, async () => {
         const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
         const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : openWorkspaceRoot;
         const workspaceRoot = rootPath
             ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
             : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
         const savedValues = context.workspaceState.get(getProjectScopedStateKey("developerForm"));
-        const initialValues = (0, developer_1.sanitizeDeveloperFormValues)(savedValues, workspaceRoot);
+        const initialValues = applySavedJiraProjectKey((0, developer_1.sanitizeDeveloperFormValues)(savedValues, workspaceRoot), savedJiraProjectKey);
         const panel = vscode.window.createWebviewPanel("antigravityDeveloper", "Develop Execution Plan", vscode.ViewColumn.Active, {
             enableScripts: true,
             retainContextWhenHidden: true
         });
-        panel.webview.html = (0, developer_1.renderDeveloperHtml)(panel.webview, initialValues);
+        panel.webview.html = (0, developer_1.renderDeveloperHtml)(panel.webview, initialValues, savedJiraProjectKey);
         panel.webview.onDidReceiveMessage(async (message) => {
             if (!message)
                 return;
@@ -4963,14 +4977,14 @@ function activate(context) {
                 return;
             }
             if (message.type === "saveDeveloperDraft") {
-                const draftValues = (0, developer_1.sanitizeDeveloperFormValues)(message.payload, workspaceRoot);
+                const draftValues = applySavedJiraProjectKey((0, developer_1.sanitizeDeveloperFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
                 await context.workspaceState.update(getProjectScopedStateKey("developerForm"), draftValues);
                 return;
             }
             if (message.type !== "runDeveloper") {
                 return;
             }
-            const values = (0, developer_1.sanitizeDeveloperFormValues)(message.payload, workspaceRoot);
+            const values = applySavedJiraProjectKey((0, developer_1.sanitizeDeveloperFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
             const missingFields = (0, developer_1.getMissingDeveloperFields)(values);
             if (missingFields.length > 0) {
                 void panel.webview.postMessage({

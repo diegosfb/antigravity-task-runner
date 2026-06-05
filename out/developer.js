@@ -131,10 +131,12 @@ function escapeHtml(value) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
 }
-function renderDeveloperHtml(webview, initialValues) {
+function renderDeveloperHtml(webview, initialValues, configuredJiraProjectKey = "") {
     const nonce = (0, settings_1.getNonce)();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
     const values = JSON.stringify(initialValues);
+    const normalizedConfiguredJiraProjectKey = configuredJiraProjectKey.trim();
+    const hasConfiguredJiraProjectKey = normalizedConfiguredJiraProjectKey.length > 0;
     return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -215,6 +217,14 @@ function renderDeveloperHtml(webview, initialValues) {
         grid-template-columns: auto 1fr;
         align-items: center;
         column-gap: 10px;
+      }
+      .jira-project-value {
+        box-sizing: border-box;
+        padding: 8px 10px;
+        color: var(--vscode-input-foreground);
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, transparent);
+        border-radius: 6px;
       }
       .error {
         min-height: 18px;
@@ -319,7 +329,13 @@ function renderDeveloperHtml(webview, initialValues) {
           />
           <span>Enable Jira using configured credentials</span>
         </label>
-        <label>
+        ${hasConfiguredJiraProjectKey
+        ? `<div id="jiraProjectNameRow">
+          <span>Jira Project: <strong>${escapeHtml(normalizedConfiguredJiraProjectKey)}</strong></span>
+          <div class="jira-project-value">${escapeHtml(normalizedConfiguredJiraProjectKey)}</div>
+          <span class="hint">Uses JIRA_PROJECT_KEY from this repository's .env file together with the Jira credentials from Antigravity settings.</span>
+        </div>`
+        : `<label id="jiraProjectNameRow">
           <span>Jira Project Name</span>
           <input
             id="jiraProjectName"
@@ -328,7 +344,7 @@ function renderDeveloperHtml(webview, initialValues) {
             ${initialValues.enableJira ? "" : "disabled"}
           />
           <span class="hint">Uses Jira Username, Jira URL, and Jira API Token from the Antigravity settings.</span>
-        </label>
+        </label>`}
       </section>
 
       <section class="section">
@@ -363,7 +379,9 @@ function renderDeveloperHtml(webview, initialValues) {
       const architectureDirInput = document.getElementById("architectureDir");
       const enableJiraInput = document.getElementById("enableJira");
       const jiraProjectNameInput = document.getElementById("jiraProjectName");
+      const jiraProjectNameRow = document.getElementById("jiraProjectNameRow");
       const agentScriptPathInput = document.getElementById("agentScriptPath");
+      const configuredJiraProjectKey = ${JSON.stringify(normalizedConfiguredJiraProjectKey)};
       const requiredFields = [
         agentHarnessInput,
         workspaceInput,
@@ -449,13 +467,19 @@ function renderDeveloperHtml(webview, initialValues) {
           backlogDir: String(data.get("backlogDir") || "").trim(),
           architectureDir: String(data.get("architectureDir") || "").trim(),
           enableJira: enableJiraInput.checked,
-          jiraProjectName: String(data.get("jiraProjectName") || "").trim(),
+          jiraProjectName: configuredJiraProjectKey || String(data.get("jiraProjectName") || "").trim(),
           agentScriptPath: String(data.get("agentScriptPath") || "").trim()
         };
       }
 
       function syncJiraFields() {
-        jiraProjectNameInput.disabled = !enableJiraInput.checked;
+        jiraProjectNameRow.hidden = !enableJiraInput.checked;
+        if (jiraProjectNameInput) {
+          jiraProjectNameInput.disabled = !enableJiraInput.checked || Boolean(configuredJiraProjectKey);
+          if (configuredJiraProjectKey) {
+            jiraProjectNameInput.value = configuredJiraProjectKey;
+          }
+        }
       }
 
       function queueDraftSave() {
@@ -473,7 +497,7 @@ function renderDeveloperHtml(webview, initialValues) {
       function syncRunButton() {
         runButton.disabled =
           requiredFields.some((field) => !field.value.trim()) ||
-          (enableJiraInput.checked && !jiraProjectNameInput.value.trim());
+          (enableJiraInput.checked && !getPayload().jiraProjectName);
       }
 
       workspaceInput.addEventListener("input", () => {

@@ -164,3 +164,20 @@ test("renderPlanExecutionHtml includes Jira controls", () => {
   assert.match(html, /Jira Project Name/);
   assert.match(html, /Agent Script Path/);
 });
+
+test("renderPlanExecutionHtml shows configured Jira project key as a label", () => {
+  const planExecution = setupPlanExecutionModule();
+  const html = planExecution.renderPlanExecutionHtml(
+    { cspSource: "vscode-resource:" },
+    {
+      ...planExecution.getDefaultPlanExecutionValues("/tmp/project"),
+      enableJira: true
+    },
+    "TASK"
+  );
+
+  assert.match(html, /Jira Project: <strong>TASK<\/strong>/);
+  assert.match(html, /jiraProjectNameRow.hidden = !enableJiraInput.checked;/);
+  assert.match(html, /const configuredJiraProjectKey = "TASK";/);
+  assert.doesNotMatch(html, /<span>Jira Project Name<\/span>/);
+});

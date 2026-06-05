@@ -195,3 +195,23 @@ test("renderBusinessAnalystHtml includes draft save and workspace-derived folder
   assert.match(html, /Jira Project Name/);
   assert.match(html, /Agent Script Path/);
 });
+
+test("renderBusinessAnalystHtml shows configured Jira project key as a label", () => {
+  const {
+    renderBusinessAnalystHtml,
+    getDefaultBusinessAnalystValues
+  } = setupBusinessAnalystModule();
+  const html = renderBusinessAnalystHtml(
+    { cspSource: "vscode-resource:" },
+    {
+      ...getDefaultBusinessAnalystValues("/tmp/project/workspace"),
+      enableJira: true
+    },
+    "TASK"
+  );
+
+  assert.match(html, /Jira Project: <strong>TASK<\/strong>/);
+  assert.match(html, /jiraProjectNameRow.hidden = !enableJiraInput.checked;/);
+  assert.match(html, /const configuredJiraProjectKey = "TASK";/);
+  assert.doesNotMatch(html, /<span>Jira Project Name<\/span>/);
+});

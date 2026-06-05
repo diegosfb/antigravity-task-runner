@@ -225,3 +225,20 @@ test("renderDeveloperHtml includes draft save and workspace-derived input sync",
   assert.match(html, /Jira Project Name/);
   assert.match(html, /Agent Script Path/);
 });
+
+test("renderDeveloperHtml shows configured Jira project key as a label", () => {
+  const developer = setupDeveloperModule();
+  const html = developer.renderDeveloperHtml(
+    { cspSource: "vscode-resource:" },
+    {
+      ...developer.getDefaultDeveloperValues("/tmp/project"),
+      enableJira: true
+    },
+    "TASK"
+  );
+
+  assert.match(html, /Jira Project: <strong>TASK<\/strong>/);
+  assert.match(html, /jiraProjectNameRow.hidden = !enableJiraInput.checked;/);
+  assert.match(html, /const configuredJiraProjectKey = "TASK";/);
+  assert.doesNotMatch(html, /<span>Jira Project Name<\/span>/);
+});

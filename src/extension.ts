@@ -1174,6 +1174,17 @@ export function activate(context: vscode.ExtensionContext) {
     return (env.jira_project_key || "").trim().toUpperCase();
   };
 
+  const applySavedJiraProjectKey = <T extends { jiraProjectName: string }>(
+    values: T,
+    jiraProjectKey: string
+  ): T =>
+    jiraProjectKey
+      ? {
+        ...values,
+        jiraProjectName: jiraProjectKey
+      }
+      : values;
+
   type FeatureEstimatorDialogAction = "estimate" | "grillMe";
 
   type FeatureEstimatorDialogResult =
@@ -6107,13 +6118,18 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(BUSINESS_ANALYST_COMMAND, async () => {
       const openWorkspaceRoot = getWorkspaceRoot();
       const rootPath = getRootPath();
+      const repoRoot = rootPath ? getRepoRoot(rootPath) : openWorkspaceRoot;
       const workspaceRoot = rootPath
         ? resolveProjectWorkspaceRoot(getRepoRoot(rootPath))
         : resolveProjectWorkspaceRoot(openWorkspaceRoot);
+      const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
       const savedValues = context.workspaceState.get<Partial<BusinessAnalystFormValues>>(
         getProjectScopedStateKey("businessAnalystForm")
       );
-      const initialValues = sanitizeBusinessAnalystFormValues(savedValues, workspaceRoot);
+      const initialValues = applySavedJiraProjectKey(
+        sanitizeBusinessAnalystFormValues(savedValues, workspaceRoot),
+        savedJiraProjectKey
+      );
       const panel = vscode.window.createWebviewPanel(
         "antigravityBusinessAnalyst",
         "Business Analyst",
@@ -6123,7 +6139,7 @@ export function activate(context: vscode.ExtensionContext) {
           retainContextWhenHidden: true
         }
       );
-      panel.webview.html = renderBusinessAnalystHtml(panel.webview, initialValues);
+      panel.webview.html = renderBusinessAnalystHtml(panel.webview, initialValues, savedJiraProjectKey);
       panel.webview.onDidReceiveMessage(
         async (message) => {
           if (!message) return;
@@ -6132,9 +6148,12 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
           if (message.type === "saveBusinessAnalystDraft") {
-            const draftValues = sanitizeBusinessAnalystFormValues(
-              message.payload as Partial<BusinessAnalystFormValues> | undefined,
-              workspaceRoot
+            const draftValues = applySavedJiraProjectKey(
+              sanitizeBusinessAnalystFormValues(
+                message.payload as Partial<BusinessAnalystFormValues> | undefined,
+                workspaceRoot
+              ),
+              savedJiraProjectKey
             );
             await context.workspaceState.update(
               getProjectScopedStateKey("businessAnalystForm"),
@@ -6146,9 +6165,12 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          const values = sanitizeBusinessAnalystFormValues(
-            message.payload as Partial<BusinessAnalystFormValues> | undefined,
-            workspaceRoot
+          const values = applySavedJiraProjectKey(
+            sanitizeBusinessAnalystFormValues(
+              message.payload as Partial<BusinessAnalystFormValues> | undefined,
+              workspaceRoot
+            ),
+            savedJiraProjectKey
           );
           const missingFields = getMissingBusinessAnalystFields(values);
           if (missingFields.length > 0) {
@@ -6265,13 +6287,18 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(ESTIMATOR_COMMAND, async () => {
       const openWorkspaceRoot = getWorkspaceRoot();
       const rootPath = getRootPath();
+      const repoRoot = rootPath ? getRepoRoot(rootPath) : openWorkspaceRoot;
       const workspaceRoot = rootPath
         ? resolveProjectWorkspaceRoot(getRepoRoot(rootPath))
         : resolveProjectWorkspaceRoot(openWorkspaceRoot);
+      const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
       const savedValues = context.workspaceState.get<Partial<EstimatorFormValues>>(
         getProjectScopedStateKey("estimatorForm")
       );
-      const initialValues = sanitizeEstimatorFormValues(savedValues, workspaceRoot);
+      const initialValues = applySavedJiraProjectKey(
+        sanitizeEstimatorFormValues(savedValues, workspaceRoot),
+        savedJiraProjectKey
+      );
       const panel = vscode.window.createWebviewPanel(
         "antigravityEstimator",
         "Estimate Project",
@@ -6281,7 +6308,7 @@ export function activate(context: vscode.ExtensionContext) {
           retainContextWhenHidden: true
         }
       );
-      panel.webview.html = renderEstimatorHtml(panel.webview, initialValues);
+      panel.webview.html = renderEstimatorHtml(panel.webview, initialValues, savedJiraProjectKey);
       panel.webview.onDidReceiveMessage(
         async (message) => {
           if (!message) return;
@@ -6290,9 +6317,12 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
           if (message.type === "saveEstimatorDraft") {
-            const draftValues = sanitizeEstimatorFormValues(
-              message.payload as Partial<EstimatorFormValues> | undefined,
-              workspaceRoot
+            const draftValues = applySavedJiraProjectKey(
+              sanitizeEstimatorFormValues(
+                message.payload as Partial<EstimatorFormValues> | undefined,
+                workspaceRoot
+              ),
+              savedJiraProjectKey
             );
             await context.workspaceState.update(
               getProjectScopedStateKey("estimatorForm"),
@@ -6304,9 +6334,12 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          const values = sanitizeEstimatorFormValues(
-            message.payload as Partial<EstimatorFormValues> | undefined,
-            workspaceRoot
+          const values = applySavedJiraProjectKey(
+            sanitizeEstimatorFormValues(
+              message.payload as Partial<EstimatorFormValues> | undefined,
+              workspaceRoot
+            ),
+            savedJiraProjectKey
           );
           const missingFields = getMissingEstimatorFields(values);
           if (missingFields.length > 0) {
@@ -6344,13 +6377,18 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(PLAN_EXECUTION_COMMAND, async () => {
       const openWorkspaceRoot = getWorkspaceRoot();
       const rootPath = getRootPath();
+      const repoRoot = rootPath ? getRepoRoot(rootPath) : openWorkspaceRoot;
       const workspaceRoot = rootPath
         ? resolveProjectWorkspaceRoot(getRepoRoot(rootPath))
         : resolveProjectWorkspaceRoot(openWorkspaceRoot);
+      const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
       const savedValues = context.workspaceState.get<Partial<PlanExecutionFormValues>>(
         getProjectScopedStateKey("planExecutionForm")
       );
-      const initialValues = sanitizePlanExecutionFormValues(savedValues, workspaceRoot);
+      const initialValues = applySavedJiraProjectKey(
+        sanitizePlanExecutionFormValues(savedValues, workspaceRoot),
+        savedJiraProjectKey
+      );
       const panel = vscode.window.createWebviewPanel(
         "antigravityPlanExecution",
         "Create Execution Plan",
@@ -6360,7 +6398,7 @@ export function activate(context: vscode.ExtensionContext) {
           retainContextWhenHidden: true
         }
       );
-      panel.webview.html = renderPlanExecutionHtml(panel.webview, initialValues);
+      panel.webview.html = renderPlanExecutionHtml(panel.webview, initialValues, savedJiraProjectKey);
       panel.webview.onDidReceiveMessage(
         async (message) => {
           if (!message) return;
@@ -6369,9 +6407,12 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
           if (message.type === "savePlanExecutionDraft") {
-            const draftValues = sanitizePlanExecutionFormValues(
-              message.payload as Partial<PlanExecutionFormValues> | undefined,
-              workspaceRoot
+            const draftValues = applySavedJiraProjectKey(
+              sanitizePlanExecutionFormValues(
+                message.payload as Partial<PlanExecutionFormValues> | undefined,
+                workspaceRoot
+              ),
+              savedJiraProjectKey
             );
             await context.workspaceState.update(
               getProjectScopedStateKey("planExecutionForm"),
@@ -6383,9 +6424,12 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          const values = sanitizePlanExecutionFormValues(
-            message.payload as Partial<PlanExecutionFormValues> | undefined,
-            workspaceRoot
+          const values = applySavedJiraProjectKey(
+            sanitizePlanExecutionFormValues(
+              message.payload as Partial<PlanExecutionFormValues> | undefined,
+              workspaceRoot
+            ),
+            savedJiraProjectKey
           );
           const missingFields = getMissingPlanExecutionFields(values);
           if (missingFields.length > 0) {
@@ -6423,13 +6467,18 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(DEVELOPER_COMMAND, async () => {
       const openWorkspaceRoot = getWorkspaceRoot();
       const rootPath = getRootPath();
+      const repoRoot = rootPath ? getRepoRoot(rootPath) : openWorkspaceRoot;
       const workspaceRoot = rootPath
         ? resolveProjectWorkspaceRoot(getRepoRoot(rootPath))
         : resolveProjectWorkspaceRoot(openWorkspaceRoot);
+      const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
       const savedValues = context.workspaceState.get<Partial<DeveloperFormValues>>(
         getProjectScopedStateKey("developerForm")
       );
-      const initialValues = sanitizeDeveloperFormValues(savedValues, workspaceRoot);
+      const initialValues = applySavedJiraProjectKey(
+        sanitizeDeveloperFormValues(savedValues, workspaceRoot),
+        savedJiraProjectKey
+      );
       const panel = vscode.window.createWebviewPanel(
         "antigravityDeveloper",
         "Develop Execution Plan",
@@ -6439,7 +6488,7 @@ export function activate(context: vscode.ExtensionContext) {
           retainContextWhenHidden: true
         }
       );
-      panel.webview.html = renderDeveloperHtml(panel.webview, initialValues);
+      panel.webview.html = renderDeveloperHtml(panel.webview, initialValues, savedJiraProjectKey);
       panel.webview.onDidReceiveMessage(
         async (message) => {
           if (!message) return;
@@ -6448,9 +6497,12 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
           if (message.type === "saveDeveloperDraft") {
-            const draftValues = sanitizeDeveloperFormValues(
-              message.payload as Partial<DeveloperFormValues> | undefined,
-              workspaceRoot
+            const draftValues = applySavedJiraProjectKey(
+              sanitizeDeveloperFormValues(
+                message.payload as Partial<DeveloperFormValues> | undefined,
+                workspaceRoot
+              ),
+              savedJiraProjectKey
             );
             await context.workspaceState.update(
               getProjectScopedStateKey("developerForm"),
@@ -6462,9 +6514,12 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          const values = sanitizeDeveloperFormValues(
-            message.payload as Partial<DeveloperFormValues> | undefined,
-            workspaceRoot
+          const values = applySavedJiraProjectKey(
+            sanitizeDeveloperFormValues(
+              message.payload as Partial<DeveloperFormValues> | undefined,
+              workspaceRoot
+            ),
+            savedJiraProjectKey
           );
           const missingFields = getMissingDeveloperFields(values);
           if (missingFields.length > 0) {
