@@ -2988,16 +2988,19 @@ function activate(context) {
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOllamaClaudeTerminal", async () => {
-        const rootPath = (0, utils_1.getRootPath)();
-        if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-            return;
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            await (0, terminal_1.openCommandInExternalTerminal)(repoRoot, "ollama launch claude --model glm-5:cloud --yes");
         }
-        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        (0, terminal_1.runInPersistentTerminal)((0, terminal_1.getAgentTerminalName)(), [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "ollama launch claude"], {
-            iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
-            color: terminal_1.CLAUDE_ACTION_COLOR
-        });
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Ollama Claude failed: ${message}`);
+        }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOpenClaudeTerminal", async () => {
         const rootPath = (0, utils_1.getRootPath)();

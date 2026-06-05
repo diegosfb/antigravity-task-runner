@@ -118,3 +118,19 @@ test("buildExternalTerminalLaunchSpecs provides Linux terminal fallbacks", () =>
   );
   assert.ok(JSON.stringify(specs).includes('cd \\"/tmp/project root\\" && claude'));
 });
+
+test("buildExternalTerminalLaunchSpecs preserves ollama claude command arguments", () => {
+  const terminal = setupTerminalModule();
+  const specs = terminal.buildExternalTerminalLaunchSpecs(
+    "/tmp/project root",
+    "ollama launch claude --model glm-5:cloud --yes",
+    "darwin"
+  );
+
+  assert.equal(specs.length, 1);
+  assert.equal(specs[0].command, "osascript");
+  assert.match(
+    specs[0].args.join(" "),
+    /cd \\"\/tmp\/project root\\" && ollama launch claude --model glm-5:cloud --yes/
+  );
+});

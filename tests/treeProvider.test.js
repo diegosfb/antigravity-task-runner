@@ -254,6 +254,19 @@ test("quick actions include ADLC after feature flag with runner actions", async 
   assert.equal(adlcChildren[4].iconPath.id, "map");
 });
 
+test("top-level Claude actions include Ollama Claude", async () => {
+  const { AntigravityViewProvider } = setupTreeProviderModule();
+  const provider = new AntigravityViewProvider();
+
+  const rootItems = await provider.getChildren();
+  const rootLabels = rootItems.map((item) => item.label);
+  const claudeTerminalIndex = rootLabels.indexOf("Claude Terminal");
+  const ollamaClaudeIndex = rootLabels.indexOf("Ollama Claude");
+
+  assert.notEqual(claudeTerminalIndex, -1);
+  assert.equal(ollamaClaudeIndex, claudeTerminalIndex + 1);
+});
+
 test("quick actions group repository commands under Repository Actions", async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-tree-provider-repo-"));
   fs.mkdirSync(path.join(repoRoot, ".git"));

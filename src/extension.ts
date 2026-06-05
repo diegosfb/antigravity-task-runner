@@ -3750,16 +3750,21 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.openOllamaClaudeTerminal", async () => {
-      const rootPath = getRootPath();
-      if (!rootPath) {
-        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-        return;
+      try {
+        const rootPath = getRootPath();
+        if (!rootPath) {
+          void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+          return;
+        }
+        const repoRoot = getRepoRoot(rootPath);
+        await openCommandInExternalTerminal(
+          repoRoot,
+          "ollama launch claude --model glm-5:cloud --yes"
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Ollama Claude failed: ${message}`);
       }
-      const repoRoot = getRepoRoot(rootPath);
-      runInPersistentTerminal(getAgentTerminalName(), [`cd ${quoteShellArg(repoRoot)}`, "ollama launch claude"], {
-        iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
-        color: CLAUDE_ACTION_COLOR
-      });
     })
   );
 
