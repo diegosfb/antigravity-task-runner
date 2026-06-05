@@ -28,6 +28,7 @@ const resourceProvider_1 = require("./resourceProvider");
 const updateProjectConfig_1 = require("./updateProjectConfig");
 const explainMe_1 = require("./explainMe");
 const deployAgenticLib_1 = require("./deployAgenticLib");
+const productDesigner_1 = require("./productDesigner");
 function getRepoPackageVersion(repoRoot) {
     try {
         const packageJsonPath = path.join(repoRoot, "package.json");
@@ -48,6 +49,7 @@ function activate(context) {
     const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBrightBlue");
     const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
     const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
+    const PRODUCT_DESIGNER_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiMagenta");
     context.subscriptions.push(outputChannel);
     (0, logger_1.initLogger)(outputChannel);
     const provider = new treeProvider_1.AntigravityViewProvider();
@@ -97,6 +99,16 @@ function activate(context) {
             color: UPDATE_PROJECT_CONFIG_ACTION_COLOR
         });
         void vscode.window.showInformationMessage(successMessage);
+    };
+    const launchProductDesignerInNewTerminal = (values) => {
+        const terminal = vscode.window.createTerminal({
+            name: "Product Designer",
+            cwd: values.workspace,
+            iconPath: new vscode.ThemeIcon("edit", PRODUCT_DESIGNER_ACTION_COLOR),
+            color: PRODUCT_DESIGNER_ACTION_COLOR
+        });
+        terminal.show();
+        terminal.sendText((0, productDesigner_1.buildProductDesignerCommand)(values), true);
     };
     const refreshAutocommitUiWhenStateChanges = (repoRoot, expectedRunningState, attemptsRemaining = 20) => {
         provider.refresh();
@@ -4517,6 +4529,49 @@ function activate(context) {
             }
             catch (err) {
                 await (0, terminal_1.runInSecondaryTerminal)([`echo "[antigravity] ERROR: ${String(err)}"`]);
+            }
+        }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand(productDesigner_1.PRODUCT_DESIGNER_COMMAND, async () => {
+        const workspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const initialValues = (0, productDesigner_1.getDefaultProductDesignerValues)(workspaceRoot);
+        const panel = vscode.window.createWebviewPanel("antigravityProductDesigner", "Product Designer", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, productDesigner_1.renderProductDesignerHtml)(panel.webview, initialValues);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelProductDesigner") {
+                panel.dispose();
+                return;
+            }
+            if (message.type !== "runProductDesigner") {
+                return;
+            }
+            const values = (0, productDesigner_1.sanitizeProductDesignerFormValues)(message.payload, workspaceRoot);
+            const missingFields = (0, productDesigner_1.getMissingProductDesignerFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "productDesignerError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            try {
+                launchProductDesignerInNewTerminal(values);
+                void vscode.window.showInformationMessage("Opened Product Designer terminal.");
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "productDesignerError",
+                    payload: { message: `Failed to open Product Designer terminal: ${messageText}` }
+                });
             }
         }, undefined, context.subscriptions);
     }));

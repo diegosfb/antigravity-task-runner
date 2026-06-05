@@ -10,6 +10,7 @@ import { CLAUDE_ACTION_COLOR } from "./terminal";
 import {
   detectCloudInfrastructureSignals
 } from "./cloudArchitectReview";
+import { PRODUCT_DESIGNER_COMMAND } from "./productDesigner";
 
 const execAsync = promisify(exec);
 
@@ -1009,8 +1010,18 @@ function getUpdateProjectConfigItems(): NodeItem[] {
 }
 
 function getAdlcItems(): NodeItem[] {
-  return [
-    "Product Design",
+  const productDesigner = new NodeItem(
+    { kind: "action", label: "Product Designer" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  productDesigner.iconPath = new vscode.ThemeIcon("edit", FEATURE_FLAG_ACTION_COLOR);
+  productDesigner.tooltip = "Open the Product Designer runner form.";
+  productDesigner.command = {
+    command: PRODUCT_DESIGNER_COMMAND,
+    title: "Open Product Designer"
+  };
+
+  const pendingItems = [
     "Business Analyst",
     "Solution Architect",
     "Estimator",
@@ -1024,6 +1035,8 @@ function getAdlcItems(): NodeItem[] {
     item.tooltip = "Coming soon.";
     return item;
   });
+
+  return [productDesigner, ...pendingItems];
 }
 
 function getPrReviewerItems(): NodeItem[] {

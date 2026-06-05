@@ -169,6 +169,10 @@
         "title": "Antigravity: Set Feature Flag for changes"
       },
       {
+        "command": "antigravity.openProductDesigner",
+        "title": "Antigravity: Open Product Designer"
+      },
+      {
         "command": "antigravity.reviewPullRequest",
         "title": "Antigravity: Review a Pull Request"
       },

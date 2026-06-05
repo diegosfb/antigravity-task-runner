@@ -49,6 +49,7 @@ import {
   getRootPath,
   getRepoRoot,
   getWorkspaceProjectPath,
+  getWorkspaceRoot,
   listInfrastructureYamlFiles,
   findNestedGitFolders,
   parseEnvFile,
@@ -120,6 +121,15 @@ import {
   DEPLOY_AGENTIC_LIB_TO_PROJECT_SCRIPT_NAME,
   resolveDeployAgenticLibSourceFolder
 } from "./deployAgenticLib";
+import {
+  PRODUCT_DESIGNER_COMMAND,
+  buildProductDesignerCommand,
+  getDefaultProductDesignerValues,
+  getMissingProductDesignerFields,
+  renderProductDesignerHtml,
+  sanitizeProductDesignerFormValues,
+  type ProductDesignerFormValues
+} from "./productDesigner";
 
 type GitInputBox = {
   value: string;
@@ -166,6 +176,7 @@ export function activate(context: vscode.ExtensionContext) {
   const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBrightBlue");
   const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
   const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
+  const PRODUCT_DESIGNER_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiMagenta");
   context.subscriptions.push(outputChannel);
   initLogger(outputChannel);
 
@@ -237,6 +248,19 @@ export function activate(context: vscode.ExtensionContext) {
       }
     );
     void vscode.window.showInformationMessage(successMessage);
+  };
+
+  const launchProductDesignerInNewTerminal = (
+    values: ProductDesignerFormValues
+  ): void => {
+    const terminal = vscode.window.createTerminal({
+      name: "Product Designer",
+      cwd: values.workspace,
+      iconPath: new vscode.ThemeIcon("edit", PRODUCT_DESIGNER_ACTION_COLOR),
+      color: PRODUCT_DESIGNER_ACTION_COLOR
+    });
+    terminal.show();
+    terminal.sendText(buildProductDesignerCommand(values), true);
   };
 
   const refreshAutocommitUiWhenStateChanges = (
@@ -5776,6 +5800,63 @@ export function activate(context: vscode.ExtensionContext) {
             await runRepoScript("update-agent-setup", url ? [tool, url] : [tool], { scriptDir: path.join(extensionRoot, "src") });
           } catch (err) {
             await runInSecondaryTerminal([`echo "[antigravity] ERROR: ${String(err)}"`]);
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(PRODUCT_DESIGNER_COMMAND, async () => {
+      const workspaceRoot = getWorkspaceRoot();
+      const initialValues = getDefaultProductDesignerValues(workspaceRoot);
+      const panel = vscode.window.createWebviewPanel(
+        "antigravityProductDesigner",
+        "Product Designer",
+        vscode.ViewColumn.Active,
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true
+        }
+      );
+      panel.webview.html = renderProductDesignerHtml(panel.webview, initialValues);
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          if (!message) return;
+          if (message.type === "cancelProductDesigner") {
+            panel.dispose();
+            return;
+          }
+          if (message.type !== "runProductDesigner") {
+            return;
+          }
+
+          const values = sanitizeProductDesignerFormValues(
+            message.payload as Partial<ProductDesignerFormValues> | undefined,
+            workspaceRoot
+          );
+          const missingFields = getMissingProductDesignerFields(values);
+          if (missingFields.length > 0) {
+            void panel.webview.postMessage({
+              type: "productDesignerError",
+              payload: {
+                message: `Fill in the required fields: ${missingFields.join(", ")}.`
+              }
+            });
+            return;
+          }
+
+          try {
+            launchProductDesignerInNewTerminal(values);
+            void vscode.window.showInformationMessage("Opened Product Designer terminal.");
+            panel.dispose();
+          } catch (error) {
+            const messageText = error instanceof Error ? error.message : String(error);
+            void panel.webview.postMessage({
+              type: "productDesignerError",
+              payload: { message: `Failed to open Product Designer terminal: ${messageText}` }
+            });
           }
         },
         undefined,
