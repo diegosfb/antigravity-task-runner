@@ -36,6 +36,7 @@ test("getDefaultDeveloperValues derives project inputs from workspace", () => {
     agentIntelligence: "",
     workspace: "/tmp/project",
     projectDescriptionDir: "/tmp/project/docs/project_description",
+    sourceOutputFolder: "/tmp/project/docs/project_description/src",
     executionPlanFile: "/tmp/project/docs/project-execution-plan.md",
     backlogDir: "/tmp/project/docs/backlog",
     architectureDir: "/tmp/project/docs/architecture",
@@ -52,6 +53,7 @@ test("sanitizeDeveloperFormValues trims values and preserves explicit overrides"
       agentIntelligence: " high ",
       workspace: " /tmp/project ",
       projectDescriptionDir: " /docs/project_description ",
+      sourceOutputFolder: " /docs/project_description/custom-src ",
       executionPlanFile: " /docs/project-execution-plan.md ",
       backlogDir: " /docs/backlog ",
       architectureDir: " /docs/architecture ",
@@ -66,11 +68,25 @@ test("sanitizeDeveloperFormValues trims values and preserves explicit overrides"
     agentIntelligence: "high",
     workspace: "/tmp/project",
     projectDescriptionDir: "/docs/project_description",
+    sourceOutputFolder: "/docs/project_description/custom-src",
     executionPlanFile: "/docs/project-execution-plan.md",
     backlogDir: "/docs/backlog",
     architectureDir: "/docs/architecture",
     agentScriptPath: "./developer.sh"
   });
+});
+
+test("sanitizeDeveloperFormValues derives source output folder from project description when omitted", () => {
+  const developer = setupDeveloperModule();
+  const values = developer.sanitizeDeveloperFormValues(
+    {
+      workspace: " /tmp/project ",
+      projectDescriptionDir: " /docs/project_description "
+    },
+    "/tmp/project"
+  );
+
+  assert.equal(values.sourceOutputFolder, "/docs/project_description/src");
 });
 
 test("getMissingDeveloperFields returns only required empty values", () => {
@@ -81,6 +97,7 @@ test("getMissingDeveloperFields returns only required empty values", () => {
     agentIntelligence: "",
     workspace: "",
     projectDescriptionDir: "",
+    sourceOutputFolder: "",
     executionPlanFile: "",
     backlogDir: "",
     architectureDir: "",
@@ -106,6 +123,7 @@ test("buildDeveloperCommand includes required flags and non-empty optional flags
     agentIntelligence: "",
     workspace: "/tmp/project",
     projectDescriptionDir: "/tmp/project/docs/project_description",
+    sourceOutputFolder: "/tmp/project/docs/project_description/src",
     executionPlanFile: "/tmp/project/docs/project-execution-plan.md",
     backlogDir: "",
     architectureDir: "/tmp/project/docs/architecture",
@@ -120,6 +138,8 @@ test("buildDeveloperCommand includes required flags and non-empty optional flags
       "\"/tmp/project/docs/project-execution-plan.md\"",
       "--project-description-dir",
       "\"/tmp/project/docs/project_description\"",
+      "--src-output-folder",
+      "\"/tmp/project/docs/project_description/src\"",
       "--architecture-dir",
       "\"/tmp/project/docs/architecture\"",
       "--workspace",
@@ -143,6 +163,7 @@ test("renderDeveloperHtml includes draft save and workspace-derived input sync",
 
   assert.match(html, /saveDeveloperDraft/);
   assert.match(html, /syncProjectFolderDefaults/);
+  assert.match(html, /Sourcecode Output folder/);
   assert.match(html, /Project Execution Plan file/);
   assert.match(html, /Project Backlog folder/);
   assert.match(html, /Project Architecture folder/);

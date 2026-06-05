@@ -11,18 +11,25 @@ export type DeveloperFormValues = {
   agentIntelligence: string;
   workspace: string;
   projectDescriptionDir: string;
+  sourceOutputFolder: string;
   executionPlanFile: string;
   backlogDir: string;
   architectureDir: string;
   agentScriptPath: string;
 };
 
+function getDefaultSourceOutputFolder(projectDescriptionDir: string): string {
+  return projectDescriptionDir ? path.join(projectDescriptionDir, "src") : "";
+}
+
 function getDefaultProjectInputs(workspace: string): Pick<
   DeveloperFormValues,
-  "projectDescriptionDir" | "executionPlanFile" | "backlogDir" | "architectureDir"
+  "projectDescriptionDir" | "sourceOutputFolder" | "executionPlanFile" | "backlogDir" | "architectureDir"
 > {
+  const projectDescriptionDir = workspace ? path.join(workspace, "docs", "project_description") : "";
   return {
-    projectDescriptionDir: workspace ? path.join(workspace, "docs", "project_description") : "",
+    projectDescriptionDir,
+    sourceOutputFolder: getDefaultSourceOutputFolder(projectDescriptionDir),
     executionPlanFile: workspace ? path.join(workspace, "docs", "project-execution-plan.md") : "",
     backlogDir: workspace ? path.join(workspace, "docs", "backlog") : "",
     architectureDir: workspace ? path.join(workspace, "docs", "architecture") : ""
@@ -39,6 +46,7 @@ export function getDefaultDeveloperValues(workspaceRoot?: string): DeveloperForm
     agentIntelligence: "",
     workspace,
     projectDescriptionDir: projectInputs.projectDescriptionDir,
+    sourceOutputFolder: projectInputs.sourceOutputFolder,
     executionPlanFile: projectInputs.executionPlanFile,
     backlogDir: projectInputs.backlogDir,
     architectureDir: projectInputs.architectureDir,
@@ -53,6 +61,10 @@ export function sanitizeDeveloperFormValues(
   const defaults = getDefaultDeveloperValues(workspaceRoot);
   const workspace = typeof values?.workspace === "string" ? values.workspace.trim() : defaults.workspace;
   const defaultProjectInputs = getDefaultProjectInputs(workspace);
+  const projectDescriptionDir =
+    typeof values?.projectDescriptionDir === "string"
+      ? values.projectDescriptionDir.trim()
+      : defaultProjectInputs.projectDescriptionDir;
 
   return {
     agentHarness: typeof values?.agentHarness === "string" ? values.agentHarness.trim() : defaults.agentHarness,
@@ -62,10 +74,11 @@ export function sanitizeDeveloperFormValues(
         ? values.agentIntelligence.trim()
         : defaults.agentIntelligence,
     workspace,
-    projectDescriptionDir:
-      typeof values?.projectDescriptionDir === "string"
-        ? values.projectDescriptionDir.trim()
-        : defaultProjectInputs.projectDescriptionDir,
+    projectDescriptionDir,
+    sourceOutputFolder:
+      typeof values?.sourceOutputFolder === "string"
+        ? values.sourceOutputFolder.trim()
+        : getDefaultSourceOutputFolder(projectDescriptionDir),
     executionPlanFile:
       typeof values?.executionPlanFile === "string"
         ? values.executionPlanFile.trim()
@@ -102,6 +115,9 @@ export function buildDeveloperCommand(values: DeveloperFormValues): string {
     quoteShellArg(values.executionPlanFile),
     ...(values.projectDescriptionDir
       ? ["--project-description-dir", quoteShellArg(values.projectDescriptionDir)]
+      : []),
+    ...(values.sourceOutputFolder
+      ? ["--src-output-folder", quoteShellArg(values.sourceOutputFolder)]
       : []),
     ...(values.architectureDir ? ["--architecture-dir", quoteShellArg(values.architectureDir)] : []),
     ...(values.backlogDir ? ["--backlog-dir", quoteShellArg(values.backlogDir)] : []),
@@ -281,6 +297,12 @@ export function renderDeveloperHtml(
         </label>
 
         <label>
+          <span>Sourcecode Output folder</span>
+          <input id="sourceOutputFolder" name="sourceOutputFolder" value="${escapeHtml(initialValues.sourceOutputFolder)}" />
+          <span class="hint">Defaults to the project description folder plus <code>src</code>.</span>
+        </label>
+
+        <label>
           <span class="required">Project Execution Plan file</span>
           <input id="executionPlanFile" name="executionPlanFile" value="${escapeHtml(initialValues.executionPlanFile)}" required />
         </label>
@@ -322,6 +344,7 @@ export function renderDeveloperHtml(
       const agentHarnessInput = document.getElementById("agentHarness");
       const workspaceInput = document.getElementById("workspace");
       const projectDescriptionDirInput = document.getElementById("projectDescriptionDir");
+      const sourceOutputFolderInput = document.getElementById("sourceOutputFolder");
       const executionPlanFileInput = document.getElementById("executionPlanFile");
       const backlogDirInput = document.getElementById("backlogDir");
       const architectureDirInput = document.getElementById("architectureDir");
@@ -345,9 +368,15 @@ export function renderDeveloperHtml(
         return [normalizedBase, ...parts].join(separator);
       }
 
+      function getDefaultSourceOutputFolder(projectDescriptionDir) {
+        return projectDescriptionDir ? joinPath(projectDescriptionDir, "src") : "";
+      }
+
       function getDefaultFolders(workspace) {
+        const projectDescriptionDir = workspace ? joinPath(workspace, "docs", "project_description") : "";
         return {
-          projectDescriptionDir: workspace ? joinPath(workspace, "docs", "project_description") : "",
+          projectDescriptionDir,
+          sourceOutputFolder: getDefaultSourceOutputFolder(projectDescriptionDir),
           executionPlanFile: workspace ? joinPath(workspace, "docs", "project-execution-plan.md") : "",
           backlogDir: workspace ? joinPath(workspace, "docs", "backlog") : "",
           architectureDir: workspace ? joinPath(workspace, "docs", "architecture") : ""
@@ -358,6 +387,9 @@ export function renderDeveloperHtml(
         const defaults = getDefaultFolders(workspaceInput.value.trim());
         if (projectDescriptionDirInput.dataset.userModified !== "true") {
           projectDescriptionDirInput.value = defaults.projectDescriptionDir;
+        }
+        if (sourceOutputFolderInput.dataset.userModified !== "true") {
+          sourceOutputFolderInput.value = getDefaultSourceOutputFolder(projectDescriptionDirInput.value.trim());
         }
         if (executionPlanFileInput.dataset.userModified !== "true") {
           executionPlanFileInput.value = defaults.executionPlanFile;
@@ -374,6 +406,9 @@ export function renderDeveloperHtml(
         const defaults = getDefaultFolders(workspaceInput.value.trim());
         projectDescriptionDirInput.dataset.userModified = String(
           projectDescriptionDirInput.value.trim() !== defaults.projectDescriptionDir
+        );
+        sourceOutputFolderInput.dataset.userModified = String(
+          sourceOutputFolderInput.value.trim() !== getDefaultSourceOutputFolder(projectDescriptionDirInput.value.trim())
         );
         executionPlanFileInput.dataset.userModified = String(
           executionPlanFileInput.value.trim() !== defaults.executionPlanFile
@@ -394,6 +429,7 @@ export function renderDeveloperHtml(
           agentIntelligence: String(data.get("agentIntelligence") || "").trim(),
           workspace: String(data.get("workspace") || "").trim(),
           projectDescriptionDir: String(data.get("projectDescriptionDir") || "").trim(),
+          sourceOutputFolder: String(data.get("sourceOutputFolder") || "").trim(),
           executionPlanFile: String(data.get("executionPlanFile") || "").trim(),
           backlogDir: String(data.get("backlogDir") || "").trim(),
           architectureDir: String(data.get("architectureDir") || "").trim(),
@@ -426,6 +462,18 @@ export function renderDeveloperHtml(
         const defaults = getDefaultFolders(workspaceInput.value.trim());
         projectDescriptionDirInput.dataset.userModified = String(
           projectDescriptionDirInput.value.trim() !== defaults.projectDescriptionDir
+        );
+        if (sourceOutputFolderInput.dataset.userModified !== "true") {
+          sourceOutputFolderInput.value = getDefaultSourceOutputFolder(projectDescriptionDirInput.value.trim());
+        }
+        sourceOutputFolderInput.dataset.userModified = String(
+          sourceOutputFolderInput.value.trim() !== getDefaultSourceOutputFolder(projectDescriptionDirInput.value.trim())
+        );
+      });
+
+      sourceOutputFolderInput.addEventListener("input", () => {
+        sourceOutputFolderInput.dataset.userModified = String(
+          sourceOutputFolderInput.value.trim() !== getDefaultSourceOutputFolder(projectDescriptionDirInput.value.trim())
         );
       });
 
