@@ -10,6 +10,7 @@ import { CLAUDE_ACTION_COLOR } from "./terminal";
 import {
   detectCloudInfrastructureSignals
 } from "./cloudArchitectReview";
+import { BUSINESS_ANALYST_COMMAND } from "./businessAnalyst";
 import { PRODUCT_DESIGNER_COMMAND } from "./productDesigner";
 
 const execAsync = promisify(exec);
@@ -1021,8 +1022,18 @@ function getAdlcItems(): NodeItem[] {
     title: "Open Product Designer"
   };
 
+  const businessAnalyst = new NodeItem(
+    { kind: "action", label: "Business Analyst" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  businessAnalyst.iconPath = new vscode.ThemeIcon("note", FEATURE_FLAG_ACTION_COLOR);
+  businessAnalyst.tooltip = "Open the Business Analyst runner form.";
+  businessAnalyst.command = {
+    command: BUSINESS_ANALYST_COMMAND,
+    title: "Open Business Analyst"
+  };
+
   const pendingItems = [
-    "Business Analyst",
     "Solution Architect",
     "Estimator",
     "Developer"
@@ -1036,7 +1047,7 @@ function getAdlcItems(): NodeItem[] {
     return item;
   });
 
-  return [productDesigner, ...pendingItems];
+  return [productDesigner, businessAnalyst, ...pendingItems];
 }
 
 function getPrReviewerItems(): NodeItem[] {

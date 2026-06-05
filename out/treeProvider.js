@@ -19,6 +19,7 @@ const utils_1 = require("./utils");
 const git_1 = require("./git");
 const terminal_1 = require("./terminal");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
+const businessAnalyst_1 = require("./businessAnalyst");
 const productDesigner_1 = require("./productDesigner");
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
 class NodeItem extends vscode.TreeItem {
@@ -780,8 +781,14 @@ function getAdlcItems() {
         command: productDesigner_1.PRODUCT_DESIGNER_COMMAND,
         title: "Open Product Designer"
     };
+    const businessAnalyst = new NodeItem({ kind: "action", label: "Business Analyst" }, vscode.TreeItemCollapsibleState.None);
+    businessAnalyst.iconPath = new vscode.ThemeIcon("note", FEATURE_FLAG_ACTION_COLOR);
+    businessAnalyst.tooltip = "Open the Business Analyst runner form.";
+    businessAnalyst.command = {
+        command: businessAnalyst_1.BUSINESS_ANALYST_COMMAND,
+        title: "Open Business Analyst"
+    };
     const pendingItems = [
-        "Business Analyst",
         "Solution Architect",
         "Estimator",
         "Developer"
@@ -791,7 +798,7 @@ function getAdlcItems() {
         item.tooltip = "Coming soon.";
         return item;
     });
-    return [productDesigner, ...pendingItems];
+    return [productDesigner, businessAnalyst, ...pendingItems];
 }
 function getPrReviewerItems() {
     const reviewPullRequest = new NodeItem({ kind: "action", label: "Review a Pull Request" }, vscode.TreeItemCollapsibleState.None);

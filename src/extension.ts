@@ -122,9 +122,16 @@ import {
   resolveDeployAgenticLibSourceFolder
 } from "./deployAgenticLib";
 import {
+  BUSINESS_ANALYST_COMMAND,
+  buildBusinessAnalystCommand,
+  getMissingBusinessAnalystFields,
+  renderBusinessAnalystHtml,
+  sanitizeBusinessAnalystFormValues,
+  type BusinessAnalystFormValues
+} from "./businessAnalyst";
+import {
   PRODUCT_DESIGNER_COMMAND,
   buildProductDesignerCommand,
-  getDefaultProductDesignerValues,
   getMissingProductDesignerFields,
   renderProductDesignerHtml,
   sanitizeProductDesignerFormValues,
@@ -177,6 +184,7 @@ export function activate(context: vscode.ExtensionContext) {
   const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
   const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
   const PRODUCT_DESIGNER_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiMagenta");
+  const BUSINESS_ANALYST_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
   context.subscriptions.push(outputChannel);
   initLogger(outputChannel);
 
@@ -261,6 +269,26 @@ export function activate(context: vscode.ExtensionContext) {
     });
     terminal.show();
     terminal.sendText(buildProductDesignerCommand(values), true);
+  };
+
+  const launchBusinessAnalystInNewTerminal = (
+    values: BusinessAnalystFormValues
+  ): void => {
+    const terminal = vscode.window.createTerminal({
+      name: "Business Analyst",
+      cwd: values.workspace,
+      iconPath: new vscode.ThemeIcon("note", BUSINESS_ANALYST_ACTION_COLOR),
+      color: BUSINESS_ANALYST_ACTION_COLOR
+    });
+    terminal.show();
+    terminal.sendText(buildBusinessAnalystCommand(values), true);
+  };
+
+  const getProjectScopedStateKey = (prefix: string): string => {
+    const workspaceRoot = getWorkspaceRoot();
+    const rootPath = getRootPath();
+    const projectRoot = rootPath ? getRepoRoot(rootPath) : workspaceRoot;
+    return `${prefix}:${projectRoot ?? "global"}`;
   };
 
   const refreshAutocommitUiWhenStateChanges = (
@@ -5810,7 +5838,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand(PRODUCT_DESIGNER_COMMAND, async () => {
       const workspaceRoot = getWorkspaceRoot();
-      const initialValues = getDefaultProductDesignerValues(workspaceRoot);
+      const savedValues = context.workspaceState.get<Partial<ProductDesignerFormValues>>(
+        getProjectScopedStateKey("productDesignerForm")
+      );
+      const initialValues = sanitizeProductDesignerFormValues(savedValues, workspaceRoot);
       const panel = vscode.window.createWebviewPanel(
         "antigravityProductDesigner",
         "Product Designer",
@@ -5848,6 +5879,10 @@ export function activate(context: vscode.ExtensionContext) {
           }
 
           try {
+            await context.workspaceState.update(
+              getProjectScopedStateKey("productDesignerForm"),
+              values
+            );
             launchProductDesignerInNewTerminal(values);
             void vscode.window.showInformationMessage("Opened Product Designer terminal.");
             panel.dispose();
@@ -5856,6 +5891,84 @@ export function activate(context: vscode.ExtensionContext) {
             void panel.webview.postMessage({
               type: "productDesignerError",
               payload: { message: `Failed to open Product Designer terminal: ${messageText}` }
+            });
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(BUSINESS_ANALYST_COMMAND, async () => {
+      const rootPath = getRootPath();
+      const workspaceRoot = rootPath
+        ? getWorkspaceProjectPath(getRepoRoot(rootPath))
+        : getWorkspaceRoot();
+      const savedValues = context.workspaceState.get<Partial<BusinessAnalystFormValues>>(
+        getProjectScopedStateKey("businessAnalystForm")
+      );
+      const initialValues = sanitizeBusinessAnalystFormValues(savedValues, workspaceRoot);
+      const panel = vscode.window.createWebviewPanel(
+        "antigravityBusinessAnalyst",
+        "Business Analyst",
+        vscode.ViewColumn.Active,
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true
+        }
+      );
+      panel.webview.html = renderBusinessAnalystHtml(panel.webview, initialValues);
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          if (!message) return;
+          if (message.type === "cancelBusinessAnalyst") {
+            panel.dispose();
+            return;
+          }
+          if (message.type === "saveBusinessAnalystDraft") {
+            const draftValues = sanitizeBusinessAnalystFormValues(
+              message.payload as Partial<BusinessAnalystFormValues> | undefined,
+              workspaceRoot
+            );
+            await context.workspaceState.update(
+              getProjectScopedStateKey("businessAnalystForm"),
+              draftValues
+            );
+            return;
+          }
+          if (message.type !== "runBusinessAnalyst") {
+            return;
+          }
+
+          const values = sanitizeBusinessAnalystFormValues(
+            message.payload as Partial<BusinessAnalystFormValues> | undefined,
+            workspaceRoot
+          );
+          const missingFields = getMissingBusinessAnalystFields(values);
+          if (missingFields.length > 0) {
+            void panel.webview.postMessage({
+              type: "businessAnalystError",
+              payload: {
+                message: `Fill in the required fields: ${missingFields.join(", ")}.`
+              }
+            });
+            return;
+          }
+
+          try {
+            await context.workspaceState.update(
+              getProjectScopedStateKey("businessAnalystForm"),
+              values
+            );
+            launchBusinessAnalystInNewTerminal(values);
+            void vscode.window.showInformationMessage("Opened Business Analyst terminal.");
+            panel.dispose();
+          } catch (error) {
+            const messageText = error instanceof Error ? error.message : String(error);
+            void panel.webview.postMessage({
+              type: "businessAnalystError",
+              payload: { message: `Failed to open Business Analyst terminal: ${messageText}` }
             });
           }
         },
