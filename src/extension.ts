@@ -170,6 +170,11 @@ import {
   sanitizeSolutionArchitectFormValues,
   type SolutionArchitectFormValues
 } from "./solutionArchitect";
+import {
+  buildBacklogItemFileName,
+  buildBacklogItemTemplate,
+  resolveBacklogItemFilePath
+} from "./backlogItem";
 
 type GitInputBox = {
   value: string;
@@ -2107,6 +2112,7 @@ export function activate(context: vscode.ExtensionContext) {
     issueType: string;
     summary: string;
     description: string;
+    backlogDir: string;
   };
 
   type AssignJiraItemToAgentDialogAction = "assign" | "grillMe";
@@ -2120,7 +2126,8 @@ export function activate(context: vscode.ExtensionContext) {
   const renderCreateJiraItemHtml = (
     webview: vscode.Webview,
     projectKey: string,
-    issueTypes: JiraIssueType[]
+    issueTypes: JiraIssueType[],
+    defaultBacklogDir: string
   ): string => {
     const nonce = getNonce();
     const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -2176,6 +2183,11 @@ export function activate(context: vscode.ExtensionContext) {
         <textarea id="issue-description"></textarea>
         <span class="hint">The description will be sent to Jira as rich text.</span>
       </label>
+      <label>
+        Local Backlog Folder
+        <input id="backlog-dir" type="text" autocomplete="off" value="${escapeHtml(defaultBacklogDir)}" />
+        <span class="hint">Creates a matching local markdown file in this folder.</span>
+      </label>
       <div class="error" id="error-message"></div>
       <div class="actions">
         <button type="button" id="cancel-button">Cancel</button>
@@ -2189,6 +2201,7 @@ export function activate(context: vscode.ExtensionContext) {
       const issueTypeSelect = document.getElementById("issue-type");
       const issueNameInput = document.getElementById("issue-name");
       const issueDescriptionInput = document.getElementById("issue-description");
+      const backlogDirInput = document.getElementById("backlog-dir");
       const errorMessage = document.getElementById("error-message");
       const form = document.getElementById("jira-item-form");
       const cancelButton = document.getElementById("cancel-button");
@@ -2211,11 +2224,17 @@ export function activate(context: vscode.ExtensionContext) {
           action,
           issueType: issueTypeSelect.value,
           summary: issueNameInput.value.trim(),
-          description: issueDescriptionInput.value.trim()
+          description: issueDescriptionInput.value.trim(),
+          backlogDir: backlogDirInput.value.trim()
         };
         if (!payload.summary) {
           errorMessage.textContent = "Enter a Jira item name.";
           issueNameInput.focus();
+          return;
+        }
+        if (!payload.backlogDir) {
+          errorMessage.textContent = "Enter a local backlog folder.";
+          backlogDirInput.focus();
           return;
         }
         vscode.postMessage({ type: "submitCreateJiraItem", payload });
@@ -2237,7 +2256,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   const showCreateJiraItemDialog = async (
     projectKey: string,
-    issueTypes: JiraIssueType[]
+    issueTypes: JiraIssueType[],
+    defaultBacklogDir: string
   ): Promise<CreateJiraItemDialogResult | undefined> =>
     new Promise((resolve) => {
       const panel = vscode.window.createWebviewPanel(
@@ -2246,7 +2266,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.ViewColumn.Active,
         { enableScripts: true }
       );
-      panel.webview.html = renderCreateJiraItemHtml(panel.webview, projectKey, issueTypes);
+      panel.webview.html = renderCreateJiraItemHtml(
+        panel.webview,
+        projectKey,
+        issueTypes,
+        defaultBacklogDir
+      );
 
       let settled = false;
       const resolveOnce = (
@@ -2274,6 +2299,8 @@ export function activate(context: vscode.ExtensionContext) {
           const summary = typeof payload.summary === "string" ? payload.summary.trim() : "";
           const description =
             typeof payload.description === "string" ? payload.description.trim() : "";
+          const backlogDir =
+            typeof payload.backlogDir === "string" ? payload.backlogDir.trim() : "";
 
           if (!issueType) {
             void panel.webview.postMessage({
@@ -2289,8 +2316,15 @@ export function activate(context: vscode.ExtensionContext) {
             });
             return;
           }
+          if (!backlogDir) {
+            void panel.webview.postMessage({
+              type: "createJiraItemError",
+              payload: { message: "Enter a local backlog folder." }
+            });
+            return;
+          }
 
-          resolveOnce({ action, issueType, summary, description });
+          resolveOnce({ action, issueType, summary, description, backlogDir });
           panel.dispose();
         },
         undefined,
@@ -4513,7 +4547,8 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const jiraItem = await showCreateJiraItemDialog(projectKey, issueTypes);
+      const defaultBacklogDir = path.join(repoRoot, "docs", "backlog");
+      const jiraItem = await showCreateJiraItemDialog(projectKey, issueTypes, defaultBacklogDir);
       if (!jiraItem) return;
 
       if (jiraItem.action === "grillMe") {
@@ -4563,8 +4598,43 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      const resolvedBacklogDir = path.resolve(repoRoot, jiraItem.backlogDir);
+      const backlogFileName = buildBacklogItemFileName(jiraItem.issueType, jiraItem.summary);
+      if (!backlogFileName) {
+        void vscode.window.showErrorMessage(
+          "Failed to create a local backlog file because the item type or name cannot be converted into a filename."
+        );
+        return;
+      }
+      const backlogFilePath = resolveBacklogItemFilePath(
+        resolvedBacklogDir,
+        jiraItem.issueType,
+        jiraItem.summary
+      );
+      if (!backlogFilePath) {
+        void vscode.window.showErrorMessage(
+          "Failed to resolve the local backlog file path."
+        );
+        return;
+      }
+      if (fs.existsSync(resolvedBacklogDir) && !fs.statSync(resolvedBacklogDir).isDirectory()) {
+        void vscode.window.showErrorMessage(
+          `Local backlog folder is not a directory: ${resolvedBacklogDir}`
+        );
+        return;
+      }
+      if (fs.existsSync(backlogFilePath)) {
+        void vscode.window.showErrorMessage(
+          `A backlog file named ${backlogFileName} already exists in ${resolvedBacklogDir}.`
+        );
+        return;
+      }
+
+      let createdIssue:
+        | Awaited<ReturnType<typeof createJiraIssue>>
+        | undefined;
       try {
-        const createdIssue = await vscode.window.withProgress(
+        createdIssue = await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
             title: "Creating Jira item",
@@ -4578,14 +4648,33 @@ export function activate(context: vscode.ExtensionContext) {
               description: jiraItem.description
             })
         );
-
-        void vscode.window.showInformationMessage(
-          `Created Jira ${jiraItem.issueType} ${createdIssue.key} in project ${projectKey}.`
-        );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(`Failed to create Jira item: ${message}`);
+        return;
       }
+
+      try {
+        await fs.promises.mkdir(resolvedBacklogDir, { recursive: true });
+        await fs.promises.writeFile(
+          backlogFilePath,
+          buildBacklogItemTemplate({
+            issueType: jiraItem.issueType,
+            summary: jiraItem.summary
+          }),
+          "utf8"
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(
+          `Created Jira ${jiraItem.issueType} ${createdIssue.key}, but failed to create ${backlogFileName}: ${message}`
+        );
+        return;
+      }
+
+      void vscode.window.showInformationMessage(
+        `Created Jira ${jiraItem.issueType} ${createdIssue.key} in project ${projectKey} and added ${backlogFileName}.`
+      );
     })
   );
 
