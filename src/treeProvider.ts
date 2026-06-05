@@ -11,6 +11,7 @@ import {
   detectCloudInfrastructureSignals
 } from "./cloudArchitectReview";
 import { BUSINESS_ANALYST_COMMAND } from "./businessAnalyst";
+import { ESTIMATOR_COMMAND } from "./estimator";
 import { PRODUCT_DESIGNER_COMMAND } from "./productDesigner";
 import { SOLUTION_ARCHITECT_COMMAND } from "./solutionArchitect";
 
@@ -1045,7 +1046,18 @@ function getAdlcItems(): NodeItem[] {
     title: "Open Solution Architect"
   };
 
-  const pendingItems = ["Estimator", "Developer"].map((label) => {
+  const estimator = new NodeItem(
+    { kind: "action", label: "Estimator" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  estimator.iconPath = new vscode.ThemeIcon("graph", FEATURE_FLAG_ACTION_COLOR);
+  estimator.tooltip = "Open the Estimator runner form.";
+  estimator.command = {
+    command: ESTIMATOR_COMMAND,
+    title: "Open Estimator"
+  };
+
+  const pendingItems = ["Developer"].map((label) => {
     const item = new NodeItem(
       { kind: "action", label },
       vscode.TreeItemCollapsibleState.None
@@ -1055,7 +1067,7 @@ function getAdlcItems(): NodeItem[] {
     return item;
   });
 
-  return [productDesigner, businessAnalyst, solutionArchitect, ...pendingItems];
+  return [productDesigner, businessAnalyst, solutionArchitect, estimator, ...pendingItems];
 }
 
 function getPrReviewerItems(): NodeItem[] {

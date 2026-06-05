@@ -37,7 +37,7 @@ test("getDefaultSolutionArchitectValues derives project inputs from workspace", 
     workspace: "/tmp/project",
     projectDescriptionDir: "/tmp/project/docs/project_description",
     specsDir: "/tmp/project/docs/specs",
-    architectureGuidelinesFile: "/tmp/project/docs/architecture_guidelines.md",
+    architectureGuidelinesFolder: "/tmp/project/docs/architecture/architecture_guidelines",
     backlogDir: "/tmp/project/docs/backlog",
     agentScriptPath: ""
   });
@@ -53,7 +53,7 @@ test("sanitizeSolutionArchitectFormValues trims values and preserves overrides",
       workspace: " /tmp/project ",
       projectDescriptionDir: " /docs/project_description ",
       specsDir: " /docs/specs ",
-      architectureGuidelinesFile: " /docs/architecture_guidelines.md ",
+      architectureGuidelinesFolder: " /docs/architecture ",
       backlogDir: " /docs/backlog ",
       agentScriptPath: " ./solution-architect.sh "
     },
@@ -67,7 +67,7 @@ test("sanitizeSolutionArchitectFormValues trims values and preserves overrides",
     workspace: "/tmp/project",
     projectDescriptionDir: "/docs/project_description",
     specsDir: "/docs/specs",
-    architectureGuidelinesFile: "/docs/architecture_guidelines.md",
+    architectureGuidelinesFolder: "/docs/architecture",
     backlogDir: "/docs/backlog",
     agentScriptPath: "./solution-architect.sh"
   });
@@ -82,7 +82,7 @@ test("getMissingSolutionArchitectFields returns only required empty values", () 
     workspace: "",
     projectDescriptionDir: "",
     specsDir: "",
-    architectureGuidelinesFile: "",
+    architectureGuidelinesFolder: "",
     backlogDir: "",
     agentScriptPath: ""
   });
@@ -105,7 +105,7 @@ test("buildSolutionArchitectCommand includes required flags and non-empty option
     workspace: "/tmp/project",
     projectDescriptionDir: "/tmp/project/docs/project_description",
     specsDir: "/tmp/project/docs/specs",
-    architectureGuidelinesFile: "/tmp/project/docs/architecture_guidelines.md",
+    architectureGuidelinesFolder: "/tmp/project/docs/architecture/architecture_guidelines",
     backlogDir: "",
     agentScriptPath: "./solution-architect.sh"
   });
@@ -122,8 +122,8 @@ test("buildSolutionArchitectCommand includes required flags and non-empty option
       "\"/tmp/project/docs/project_description\"",
       "--harness",
       "\"Codex\"",
-      "--architecture-guidelines",
-      "\"/tmp/project/docs/architecture_guidelines.md\"",
+      "--architecture-guidelines-folder",
+      "\"/tmp/project/docs/architecture/architecture_guidelines\"",
       "--model",
       "\"gpt-5\""
     ].join(" ")
@@ -143,6 +143,6 @@ test("renderSolutionArchitectHtml includes draft save and workspace-derived fold
   assert.match(html, /syncProjectFolderDefaults/);
   assert.match(html, /Project Description folder/);
   assert.match(html, /Project Specs folder/);
-  assert.match(html, /Project Architecture guidelines file/);
+  assert.match(html, /Project Architecture guidelines folder/);
   assert.match(html, /Agent Script Path/);
 });

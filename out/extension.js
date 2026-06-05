@@ -30,6 +30,7 @@ const explainMe_1 = require("./explainMe");
 const deployAgenticLib_1 = require("./deployAgenticLib");
 const businessAnalyst_1 = require("./businessAnalyst");
 const productDesigner_1 = require("./productDesigner");
+const estimator_1 = require("./estimator");
 const solutionArchitect_1 = require("./solutionArchitect");
 function getRepoPackageVersion(repoRoot) {
     try {
@@ -53,6 +54,7 @@ function activate(context) {
     const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
     const PRODUCT_DESIGNER_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiMagenta");
     const BUSINESS_ANALYST_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
+    const ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
     context.subscriptions.push(outputChannel);
     (0, logger_1.initLogger)(outputChannel);
     const provider = new treeProvider_1.AntigravityViewProvider();
@@ -132,6 +134,16 @@ function activate(context) {
         });
         terminal.show();
         terminal.sendText((0, solutionArchitect_1.buildSolutionArchitectCommand)(values), true);
+    };
+    const launchEstimatorInNewTerminal = (values) => {
+        const terminal = vscode.window.createTerminal({
+            name: "Estimator",
+            cwd: values.workspace,
+            iconPath: new vscode.ThemeIcon("graph", ESTIMATOR_ACTION_COLOR),
+            color: ESTIMATOR_ACTION_COLOR
+        });
+        terminal.show();
+        terminal.sendText((0, estimator_1.buildEstimatorCommand)(values), true);
     };
     const getProjectScopedStateKey = (prefix) => {
         const workspaceRoot = (0, utils_1.getWorkspaceRoot)();
@@ -4714,6 +4726,60 @@ function activate(context) {
                 void panel.webview.postMessage({
                     type: "solutionArchitectError",
                     payload: { message: `Failed to open Solution Architect terminal: ${messageText}` }
+                });
+            }
+        }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand(estimator_1.ESTIMATOR_COMMAND, async () => {
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const workspaceRoot = rootPath
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("estimatorForm"));
+        const initialValues = (0, estimator_1.sanitizeEstimatorFormValues)(savedValues, workspaceRoot);
+        const panel = vscode.window.createWebviewPanel("antigravityEstimator", "Estimator", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, estimator_1.renderEstimatorHtml)(panel.webview, initialValues);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelEstimator") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "saveEstimatorDraft") {
+                const draftValues = (0, estimator_1.sanitizeEstimatorFormValues)(message.payload, workspaceRoot);
+                await context.workspaceState.update(getProjectScopedStateKey("estimatorForm"), draftValues);
+                return;
+            }
+            if (message.type !== "runEstimator") {
+                return;
+            }
+            const values = (0, estimator_1.sanitizeEstimatorFormValues)(message.payload, workspaceRoot);
+            const missingFields = (0, estimator_1.getMissingEstimatorFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "estimatorError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            try {
+                await context.workspaceState.update(getProjectScopedStateKey("estimatorForm"), values);
+                launchEstimatorInNewTerminal(values);
+                void vscode.window.showInformationMessage("Opened Estimator terminal.");
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "estimatorError",
+                    payload: { message: `Failed to open Estimator terminal: ${messageText}` }
                 });
             }
         }, undefined, context.subscriptions);

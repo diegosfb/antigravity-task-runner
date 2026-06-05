@@ -139,6 +139,14 @@ import {
   type ProductDesignerFormValues
 } from "./productDesigner";
 import {
+  ESTIMATOR_COMMAND,
+  buildEstimatorCommand,
+  getMissingEstimatorFields,
+  renderEstimatorHtml,
+  sanitizeEstimatorFormValues,
+  type EstimatorFormValues
+} from "./estimator";
+import {
   SOLUTION_ARCHITECT_COMMAND,
   buildSolutionArchitectCommand,
   getMissingSolutionArchitectFields,
@@ -194,6 +202,7 @@ export function activate(context: vscode.ExtensionContext) {
   const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
   const PRODUCT_DESIGNER_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiMagenta");
   const BUSINESS_ANALYST_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
+  const ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
   context.subscriptions.push(outputChannel);
   initLogger(outputChannel);
 
@@ -304,6 +313,19 @@ export function activate(context: vscode.ExtensionContext) {
     });
     terminal.show();
     terminal.sendText(buildSolutionArchitectCommand(values), true);
+  };
+
+  const launchEstimatorInNewTerminal = (
+    values: EstimatorFormValues
+  ): void => {
+    const terminal = vscode.window.createTerminal({
+      name: "Estimator",
+      cwd: values.workspace,
+      iconPath: new vscode.ThemeIcon("graph", ESTIMATOR_ACTION_COLOR),
+      color: ESTIMATOR_ACTION_COLOR
+    });
+    terminal.show();
+    terminal.sendText(buildEstimatorCommand(values), true);
   };
 
   const getProjectScopedStateKey = (prefix: string): string => {
@@ -6075,6 +6097,85 @@ export function activate(context: vscode.ExtensionContext) {
             void panel.webview.postMessage({
               type: "solutionArchitectError",
               payload: { message: `Failed to open Solution Architect terminal: ${messageText}` }
+            });
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(ESTIMATOR_COMMAND, async () => {
+      const openWorkspaceRoot = getWorkspaceRoot();
+      const rootPath = getRootPath();
+      const workspaceRoot = rootPath
+        ? resolveProjectWorkspaceRoot(getRepoRoot(rootPath))
+        : resolveProjectWorkspaceRoot(openWorkspaceRoot);
+      const savedValues = context.workspaceState.get<Partial<EstimatorFormValues>>(
+        getProjectScopedStateKey("estimatorForm")
+      );
+      const initialValues = sanitizeEstimatorFormValues(savedValues, workspaceRoot);
+      const panel = vscode.window.createWebviewPanel(
+        "antigravityEstimator",
+        "Estimator",
+        vscode.ViewColumn.Active,
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true
+        }
+      );
+      panel.webview.html = renderEstimatorHtml(panel.webview, initialValues);
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          if (!message) return;
+          if (message.type === "cancelEstimator") {
+            panel.dispose();
+            return;
+          }
+          if (message.type === "saveEstimatorDraft") {
+            const draftValues = sanitizeEstimatorFormValues(
+              message.payload as Partial<EstimatorFormValues> | undefined,
+              workspaceRoot
+            );
+            await context.workspaceState.update(
+              getProjectScopedStateKey("estimatorForm"),
+              draftValues
+            );
+            return;
+          }
+          if (message.type !== "runEstimator") {
+            return;
+          }
+
+          const values = sanitizeEstimatorFormValues(
+            message.payload as Partial<EstimatorFormValues> | undefined,
+            workspaceRoot
+          );
+          const missingFields = getMissingEstimatorFields(values);
+          if (missingFields.length > 0) {
+            void panel.webview.postMessage({
+              type: "estimatorError",
+              payload: {
+                message: `Fill in the required fields: ${missingFields.join(", ")}.`
+              }
+            });
+            return;
+          }
+
+          try {
+            await context.workspaceState.update(
+              getProjectScopedStateKey("estimatorForm"),
+              values
+            );
+            launchEstimatorInNewTerminal(values);
+            void vscode.window.showInformationMessage("Opened Estimator terminal.");
+            panel.dispose();
+          } catch (error) {
+            const messageText = error instanceof Error ? error.message : String(error);
+            void panel.webview.postMessage({
+              type: "estimatorError",
+              payload: { message: `Failed to open Estimator terminal: ${messageText}` }
             });
           }
         },

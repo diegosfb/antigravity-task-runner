@@ -20,6 +20,7 @@ const git_1 = require("./git");
 const terminal_1 = require("./terminal");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const businessAnalyst_1 = require("./businessAnalyst");
+const estimator_1 = require("./estimator");
 const productDesigner_1 = require("./productDesigner");
 const solutionArchitect_1 = require("./solutionArchitect");
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
@@ -796,13 +797,20 @@ function getAdlcItems() {
         command: solutionArchitect_1.SOLUTION_ARCHITECT_COMMAND,
         title: "Open Solution Architect"
     };
-    const pendingItems = ["Estimator", "Developer"].map((label) => {
+    const estimator = new NodeItem({ kind: "action", label: "Estimator" }, vscode.TreeItemCollapsibleState.None);
+    estimator.iconPath = new vscode.ThemeIcon("graph", FEATURE_FLAG_ACTION_COLOR);
+    estimator.tooltip = "Open the Estimator runner form.";
+    estimator.command = {
+        command: estimator_1.ESTIMATOR_COMMAND,
+        title: "Open Estimator"
+    };
+    const pendingItems = ["Developer"].map((label) => {
         const item = new NodeItem({ kind: "action", label }, vscode.TreeItemCollapsibleState.None);
         item.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
         item.tooltip = "Coming soon.";
         return item;
     });
-    return [productDesigner, businessAnalyst, solutionArchitect, ...pendingItems];
+    return [productDesigner, businessAnalyst, solutionArchitect, estimator, ...pendingItems];
 }
 function getPrReviewerItems() {
     const reviewPullRequest = new NodeItem({ kind: "action", label: "Review a Pull Request" }, vscode.TreeItemCollapsibleState.None);
