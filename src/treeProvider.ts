@@ -1057,7 +1057,7 @@ function getAdlcItems(): NodeItem[] {
     title: "Open Estimator"
   };
 
-  const pendingItems = ["Developer"].map((label) => {
+  const pendingItems = ["Plan Execution", "Developer"].map((label) => {
     const item = new NodeItem(
       { kind: "action", label },
       vscode.TreeItemCollapsibleState.None
@@ -1066,7 +1066,6 @@ function getAdlcItems(): NodeItem[] {
     item.tooltip = "Coming soon.";
     return item;
   });
-
   return [productDesigner, businessAnalyst, solutionArchitect, estimator, ...pendingItems];
 }
 

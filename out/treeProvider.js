@@ -804,7 +804,7 @@ function getAdlcItems() {
         command: estimator_1.ESTIMATOR_COMMAND,
         title: "Open Estimator"
     };
-    const pendingItems = ["Developer"].map((label) => {
+    const pendingItems = ["Plan Execution", "Developer"].map((label) => {
         const item = new NodeItem({ kind: "action", label }, vscode.TreeItemCollapsibleState.None);
         item.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
         item.tooltip = "Coming soon.";

@@ -235,6 +235,7 @@ test("quick actions include ADLC after feature flag with static child roles", as
       "Business Analyst",
       "Solution Architect",
       "Estimator",
+      "Plan Execution",
       "Developer"
     ]
   );
