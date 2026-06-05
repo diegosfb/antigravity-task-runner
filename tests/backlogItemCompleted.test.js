@@ -131,6 +131,40 @@ test("findMatching helpers compare Jira descriptions with backlog description se
   );
 });
 
+test("findMatching helpers fall back to Jira summary and backlog title when descriptions are empty", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const backlogItems = [
+    {
+      description: "",
+      displayName: "Epic: Test Item",
+      fileName: "epic-test-item.md",
+      filePath: "/tmp/epic-test-item.md",
+      statusName: "To Do"
+    }
+  ];
+  const issues = [
+    {
+      description: "",
+      id: "17",
+      issueTypeName: "Epic",
+      key: "ANTIGRAVIT-17",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "In Progress",
+      summary: "Test Item"
+    }
+  ];
+
+  assert.equal(
+    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems)?.filePath,
+    "/tmp/epic-test-item.md"
+  );
+  assert.equal(
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues)?.key,
+    "ANTIGRAVIT-17"
+  );
+});
+
 test("upsertBacklogItemCompletedStatus updates an existing status section", () => {
   const backlogItemCompleted = setupBacklogItemCompletedModule();
   const updated = backlogItemCompleted.upsertBacklogItemCompletedStatus(

@@ -154,30 +154,116 @@ export function normalizeBacklogItemCompletedMatchText(value: string | undefined
     .toLowerCase();
 }
 
-export function findMatchingBacklogItemForJiraIssue(
-  issue: Pick<JiraIssueSummary, "description"> | undefined,
+function normalizeBacklogItemCompletedSlug(value: string | undefined): string {
+  return normalizeBacklogItemCompletedMatchText(value)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function stripBacklogItemDisplayNamePrefix(value: string | undefined): string {
+  return (value ?? "").replace(/^[^:]+:\s*/, "").trim();
+}
+
+function stripBacklogItemFileNamePrefix(value: string | undefined): string {
+  return path.basename(value ?? "", path.extname(value ?? "")).replace(/^[a-z0-9]+-/, "").trim();
+}
+
+function findBacklogItemBySummary(
+  summary: string | undefined,
   backlogItems: BacklogItemCompletedLocalItem[]
 ): BacklogItemCompletedLocalItem | undefined {
-  const normalizedDescription = normalizeBacklogItemCompletedMatchText(issue?.description);
-  if (!normalizedDescription) {
+  const normalizedSummary = normalizeBacklogItemCompletedMatchText(summary);
+  if (normalizedSummary) {
+    const summaryMatch = backlogItems.find((item) => {
+      const titleVariants = [
+        item.displayName,
+        stripBacklogItemDisplayNamePrefix(item.displayName)
+      ];
+      return titleVariants.some(
+        (candidate) => normalizeBacklogItemCompletedMatchText(candidate) === normalizedSummary
+      );
+    });
+    if (summaryMatch) {
+      return summaryMatch;
+    }
+  }
+
+  const normalizedSummarySlug = normalizeBacklogItemCompletedSlug(summary);
+  if (!normalizedSummarySlug) {
     return undefined;
   }
-  return backlogItems.find(
-    (item) => normalizeBacklogItemCompletedMatchText(item.description) === normalizedDescription
+
+  return backlogItems.find((item) => {
+    const slugCandidates = [
+      item.displayName,
+      stripBacklogItemDisplayNamePrefix(item.displayName),
+      item.fileName,
+      stripBacklogItemFileNamePrefix(item.fileName)
+    ];
+    return slugCandidates.some(
+      (candidate) => normalizeBacklogItemCompletedSlug(candidate) === normalizedSummarySlug
+    );
+  });
+}
+
+function findJiraIssueBySummary(
+  summary: string | undefined,
+  issues: JiraIssueSummary[]
+): JiraIssueSummary | undefined {
+  const normalizedSummary = normalizeBacklogItemCompletedMatchText(summary);
+  if (normalizedSummary) {
+    const summaryMatch = issues.find(
+      (issue) => normalizeBacklogItemCompletedMatchText(issue.summary) === normalizedSummary
+    );
+    if (summaryMatch) {
+      return summaryMatch;
+    }
+  }
+
+  const normalizedSummarySlug = normalizeBacklogItemCompletedSlug(summary);
+  if (!normalizedSummarySlug) {
+    return undefined;
+  }
+
+  return issues.find(
+    (issue) => normalizeBacklogItemCompletedSlug(issue.summary) === normalizedSummarySlug
   );
 }
 
+export function findMatchingBacklogItemForJiraIssue(
+  issue: Pick<JiraIssueSummary, "description" | "summary"> | undefined,
+  backlogItems: BacklogItemCompletedLocalItem[]
+): BacklogItemCompletedLocalItem | undefined {
+  const normalizedDescription = normalizeBacklogItemCompletedMatchText(issue?.description);
+  if (normalizedDescription) {
+    const descriptionMatch = backlogItems.find(
+      (item) => normalizeBacklogItemCompletedMatchText(item.description) === normalizedDescription
+    );
+    if (descriptionMatch) {
+      return descriptionMatch;
+    }
+  }
+  return findBacklogItemBySummary(issue?.summary, backlogItems);
+}
+
 export function findMatchingJiraIssueForBacklogItem(
-  backlogItem: Pick<BacklogItemCompletedLocalItem, "description"> | undefined,
+  backlogItem: Pick<BacklogItemCompletedLocalItem, "description" | "displayName" | "fileName"> | undefined,
   issues: JiraIssueSummary[]
 ): JiraIssueSummary | undefined {
   const normalizedDescription = normalizeBacklogItemCompletedMatchText(backlogItem?.description);
-  if (!normalizedDescription) {
-    return undefined;
+  if (normalizedDescription) {
+    const descriptionMatch = issues.find(
+      (issue) => normalizeBacklogItemCompletedMatchText(issue.description) === normalizedDescription
+    );
+    if (descriptionMatch) {
+      return descriptionMatch;
+    }
   }
-  return issues.find(
-    (issue) => normalizeBacklogItemCompletedMatchText(issue.description) === normalizedDescription
-  );
+  const matchedIssueByTitle = findJiraIssueBySummary(backlogItem?.displayName, issues);
+  if (matchedIssueByTitle) {
+    return matchedIssueByTitle;
+  }
+  return findJiraIssueBySummary(stripBacklogItemFileNamePrefix(backlogItem?.fileName), issues);
 }
 
 export function upsertBacklogItemCompletedStatus(markdown: string, statusName = "In Review"): string {
@@ -497,20 +583,98 @@ export function renderBacklogItemCompletedHtml(
           .toLowerCase();
       }
 
-      function findMatchingBacklogItem(issue) {
-        const normalizedDescription = normalizeMatchText(issue?.description);
-        if (!normalizedDescription) {
+      function normalizeSlug(value) {
+        return normalizeMatchText(value)
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      }
+
+      function stripDisplayNamePrefix(value) {
+        return String(value || "").replace(/^[^:]+:\s*/, "").trim();
+      }
+
+      function stripFileNamePrefix(value) {
+        return String(value || "")
+          .replace(/^.*[\\\\/]/, "")
+          .replace(/\\.md$/i, "")
+          .replace(/^[a-z0-9]+-/, "")
+          .trim();
+      }
+
+      function findMatchingBacklogItemBySummary(summary) {
+        const normalizedSummary = normalizeMatchText(summary);
+        if (normalizedSummary) {
+          const summaryMatch = backlogItems.find((item) =>
+            [item.displayName, stripDisplayNamePrefix(item.displayName)].some(
+              (candidate) => normalizeMatchText(candidate) === normalizedSummary
+            )
+          );
+          if (summaryMatch) {
+            return summaryMatch;
+          }
+        }
+
+        const normalizedSummarySlug = normalizeSlug(summary);
+        if (!normalizedSummarySlug) {
           return undefined;
         }
-        return backlogItems.find((item) => normalizeMatchText(item.description) === normalizedDescription);
+
+        return backlogItems.find((item) =>
+          [
+            item.displayName,
+            stripDisplayNamePrefix(item.displayName),
+            item.fileName,
+            stripFileNamePrefix(item.fileName)
+          ].some((candidate) => normalizeSlug(candidate) === normalizedSummarySlug)
+        );
+      }
+
+      function findMatchingIssueBySummary(summary) {
+        const normalizedSummary = normalizeMatchText(summary);
+        if (normalizedSummary) {
+          const summaryMatch = issues.find(
+            (issue) => normalizeMatchText(issue.summary) === normalizedSummary
+          );
+          if (summaryMatch) {
+            return summaryMatch;
+          }
+        }
+
+        const normalizedSummarySlug = normalizeSlug(summary);
+        if (!normalizedSummarySlug) {
+          return undefined;
+        }
+
+        return issues.find((issue) => normalizeSlug(issue.summary) === normalizedSummarySlug);
+      }
+
+      function findMatchingBacklogItem(issue) {
+        const normalizedDescription = normalizeMatchText(issue?.description);
+        if (normalizedDescription) {
+          const descriptionMatch = backlogItems.find(
+            (item) => normalizeMatchText(item.description) === normalizedDescription
+          );
+          if (descriptionMatch) {
+            return descriptionMatch;
+          }
+        }
+        return findMatchingBacklogItemBySummary(issue?.summary);
       }
 
       function findMatchingIssue(backlogItem) {
         const normalizedDescription = normalizeMatchText(backlogItem?.description);
-        if (!normalizedDescription) {
-          return undefined;
+        if (normalizedDescription) {
+          const descriptionMatch = issues.find(
+            (issue) => normalizeMatchText(issue.description) === normalizedDescription
+          );
+          if (descriptionMatch) {
+            return descriptionMatch;
+          }
         }
-        return issues.find((issue) => normalizeMatchText(issue.description) === normalizedDescription);
+        return (
+          findMatchingIssueBySummary(backlogItem?.displayName) ||
+          findMatchingIssueBySummary(stripFileNamePrefix(backlogItem?.fileName))
+        );
       }
 
       function updateSelectedIssueDetails() {
