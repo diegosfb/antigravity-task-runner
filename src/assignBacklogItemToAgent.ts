@@ -140,7 +140,8 @@ export function renderAssignBacklogItemToAgentHtml(
       .current-branch-title { font-size: 18px; font-weight: 600; }
       .current-branch-value { color: #7cc7ff; }
       .header-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-      .header-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+      .header-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; white-space: nowrap; }
+      .header-toggle input { width: auto; padding: 0; margin: 0; }
       .panel-section {
         display: grid;
         gap: 10px;
