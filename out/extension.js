@@ -1898,7 +1898,7 @@ function activate(context) {
             .map((item) => item.trim())
             .filter(Boolean)));
     };
-    const showAssignJiraItemToAgentDialog = async (projectKey, issues, backlogItems, selectedIssueKey, selectedBacklogItemPath, backlogStatusMessage = "") => new Promise((resolve) => {
+    const showAssignJiraItemToAgentDialog = async (projectKey, issues, backlogItems, selectedIssueKey, selectedBacklogItemPath, backlogStatusMessage = "", useJira = true) => new Promise((resolve) => {
         const initialAgentCommand = (0, settings_1.getAgenticHarnessExecutionCommand)();
         const agentCommandOptions = getAssignableAgentCommandOptions();
         const panel = vscode.window.createWebviewPanel("assignJiraItemToAgent", "Assign Backlog Item to Agent", vscode.ViewColumn.Active, { enableScripts: true });
@@ -1909,7 +1909,8 @@ function activate(context) {
             initialAgentCommand,
             projectKey,
             selectedBacklogItemPath,
-            selectedIssueKey
+            selectedIssueKey,
+            useJira
         });
         let settled = false;
         const resolveOnce = (value) => {
@@ -1933,10 +1934,18 @@ function activate(context) {
             const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
             const backlogItemPath = typeof payload.backlogItemPath === "string" ? payload.backlogItemPath.trim() : "";
             const agentCommand = typeof payload.agentCommand === "string" ? payload.agentCommand.trim() : "";
-            if (!issueKey || !issues.some((issue) => issue.key === issueKey)) {
+            const useJira = payload.useJira !== false;
+            if (useJira && (!issueKey || !issues.some((issue) => issue.key === issueKey))) {
                 void panel.webview.postMessage({
                     type: "assignJiraItemToAgentError",
                     payload: { message: "Select a Jira item." }
+                });
+                return;
+            }
+            if (!useJira && !backlogItemPath) {
+                void panel.webview.postMessage({
+                    type: "assignJiraItemToAgentError",
+                    payload: { message: "Select a local backlog item." }
                 });
                 return;
             }
@@ -1951,7 +1960,8 @@ function activate(context) {
                 action,
                 backlogItemPath,
                 issueKey,
-                agentCommand
+                agentCommand,
+                useJira
             });
             panel.dispose();
         }, undefined, context.subscriptions);
@@ -1993,7 +2003,7 @@ function activate(context) {
                 `zsh ${(0, utils_1.quoteShellArg)(writeAgentLaunchScript(`antigravity-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-jira`, `cd ${(0, utils_1.quoteShellArg)(repoRoot)}\n${command}`))}`
             ]
             : [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, command];
-        (0, terminal_1.runInPersistentTerminal)(`${agentLabel}: ${issue.key}`, lines, {
+        (0, terminal_1.runInPersistentTerminal)(issue ? `${agentLabel}: ${issue.key}` : `${agentLabel}: ${backlogItem?.fileName ?? "backlog-item"}`, lines, {
             iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR
         });
@@ -3705,11 +3715,13 @@ function activate(context) {
         const selectedIssueKey = issues[0]?.key ?? "";
         const initialIssue = issues.find((candidate) => candidate.key === selectedIssueKey);
         const selectedBacklogItemPath = (0, backlogItemCompleted_1.findMatchingBacklogItemForJiraIssue)(initialIssue, backlogItems)?.filePath ?? "";
-        const selection = await showAssignJiraItemToAgentDialog(projectKey, issues, backlogItems, selectedIssueKey, selectedBacklogItemPath, backlogStatusMessage);
+        const selection = await showAssignJiraItemToAgentDialog(projectKey, issues, backlogItems, selectedIssueKey, selectedBacklogItemPath, backlogStatusMessage, true);
         if (!selection)
             return;
-        const issue = issues.find((candidate) => candidate.key === selection.issueKey);
-        if (!issue) {
+        const issue = selection.useJira
+            ? issues.find((candidate) => candidate.key === selection.issueKey)
+            : undefined;
+        if (selection.useJira && !issue) {
             void vscode.window.showErrorMessage("The selected Jira item is no longer available.");
             return;
         }
@@ -3747,7 +3759,7 @@ function activate(context) {
             const promptFilePath = writeAgentPromptFile("assign-jira-item-grill-me", prompt);
             const commandLine = (0, agenticHarnessCommand_1.buildAgenticHarnessFileCommandForCommand)(selection.agentCommand, repoRoot, promptFilePath, "prompt");
             (0, logger_1.logAlways)(`[assignJiraItemToAgentGrillMe] runString (file): ${commandLine}`);
-            (0, logger_1.logAlways)(`[assignJiraItemToAgentGrillMe] launching Agentic Harness for ${issue.key} with selected command`);
+            (0, logger_1.logAlways)(`[assignJiraItemToAgentGrillMe] launching Agentic Harness for ${issue?.key ?? selectedBacklogItem?.fileName ?? "local backlog item"} with selected command`);
             (0, terminal_1.runInPersistentTerminal)("Assign Backlog Item Grill Me", [
                 `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
                 commandLine
@@ -3755,33 +3767,39 @@ function activate(context) {
                 iconPath: FEATURE_ESTIMATOR_ICON_PATH,
                 color: FEATURE_ESTIMATOR_ACTION_COLOR
             });
-            void vscode.window.showInformationMessage(selectedBacklogItem
+            void vscode.window.showInformationMessage(issue && selectedBacklogItem
                 ? `Opened Grill Me for Jira item ${issue.key} and local backlog item ${path.basename(selectedBacklogItem.filePath)} with the selected agent harness command.`
-                : `Opened Grill Me for Jira item ${issue.key} with the selected agent harness command.`);
+                : issue
+                    ? `Opened Grill Me for Jira item ${issue.key} with the selected agent harness command.`
+                    : `Opened Grill Me for local backlog item ${path.basename(selectedBacklogItem?.filePath ?? "backlog item")} with the selected agent harness command.`);
             return;
         }
         const agentLabel = (0, agentRunCommand_1.inferAssignableAgentLabelFromCommand)(selection.agentCommand);
-        const updatedSummary = buildIssueSummaryForAgent(issue.summary, agentLabel);
-        try {
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Assigning ${issue.key}`,
-                cancellable: false
-            }, async () => {
-                await (0, jira_1.updateJiraIssueSummaryAndLabels)(credentials, issue.key, updatedSummary, [buildAgentJiraLabel(agentLabel)]);
-                await (0, jira_1.assignJiraIssueToCurrentUser)(credentials, issue.key);
-                await (0, jira_1.transitionJiraIssueToStatus)(credentials, issue.key, "In Progress");
-            });
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to assign Jira item to agent: ${message}`);
-            return;
+        if (issue) {
+            const updatedSummary = buildIssueSummaryForAgent(issue.summary, agentLabel);
+            try {
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Assigning ${issue.key}`,
+                    cancellable: false
+                }, async () => {
+                    await (0, jira_1.updateJiraIssueSummaryAndLabels)(credentials, issue.key, updatedSummary, [buildAgentJiraLabel(agentLabel)]);
+                    await (0, jira_1.assignJiraIssueToCurrentUser)(credentials, issue.key);
+                    await (0, jira_1.transitionJiraIssueToStatus)(credentials, issue.key, "In Progress");
+                });
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Failed to assign Jira item to agent: ${message}`);
+                return;
+            }
         }
         await launchAgentForJiraItem(repoRoot, agentLabel, issue, selection.agentCommand, selectedBacklogItem);
-        void vscode.window.showInformationMessage(selectedBacklogItem
+        void vscode.window.showInformationMessage(issue && selectedBacklogItem
             ? `${issue.key} was assigned to ${credentials.email}, moved to In Progress, and launched with local backlog item ${path.basename(selectedBacklogItem.filePath)} in the agent context.`
-            : `${issue.key} was assigned to ${credentials.email}, moved to In Progress, and launched with the selected agent harness command.`);
+            : issue
+                ? `${issue.key} was assigned to ${credentials.email}, moved to In Progress, and launched with the selected agent harness command.`
+                : `Local backlog item ${path.basename(selectedBacklogItem?.filePath ?? "backlog item")} was launched with the selected agent harness command.`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand(backlogItemCompleted_1.BACKLOG_ITEM_COMPLETED_COMMAND, async () => {
         const rootPath = (0, utils_1.getRootPath)();

@@ -63,6 +63,25 @@ test("buildAssignBacklogItemToAgentPrompt includes Jira and local backlog update
   assert.match(prompt, /Use Jira MCP tools/);
 });
 
+test("buildAssignBacklogItemToAgentPrompt supports local backlog only mode", () => {
+  const assignBacklogItemToAgent = setupAssignBacklogItemToAgentModule();
+  const prompt = assignBacklogItemToAgent.buildAssignBacklogItemToAgentPrompt(
+    undefined,
+    "Codex",
+    "agent@example.com",
+    getFixtureBacklogItem()
+  );
+
+  assert.match(
+    prompt,
+    /work on local backlog item Feature: Replicate backlog matching on assign flow/
+  );
+  assert.doesNotMatch(prompt, /Use Jira MCP tools/);
+  assert.doesNotMatch(prompt, /transition Jira item/);
+  assert.match(prompt, /## Notes section using lines that start with AGENT ASSUMPTION:/);
+  assert.match(prompt, /## Status section to In Review/);
+});
+
 test("buildAssignBacklogItemToAgentFeatureDetails includes both Jira and local backlog context", () => {
   const assignBacklogItemToAgent = setupAssignBacklogItemToAgentModule();
   const details = assignBacklogItemToAgent.buildAssignBacklogItemToAgentFeatureDetails(
@@ -77,6 +96,20 @@ test("buildAssignBacklogItemToAgentFeatureDetails includes both Jira and local b
     /Local backlog item Feature: Replicate backlog matching on assign flow \(feature-replicate-backlog-matching-on-assign-flow\.md\)/
   );
   assert.match(details, /Local backlog description:/);
+});
+
+test("buildAssignBacklogItemToAgentFeatureDetails supports local backlog only mode", () => {
+  const assignBacklogItemToAgent = setupAssignBacklogItemToAgentModule();
+  const details = assignBacklogItemToAgent.buildAssignBacklogItemToAgentFeatureDetails(
+    undefined,
+    getFixtureBacklogItem()
+  );
+
+  assert.doesNotMatch(details, /Jira item ANTIGRAVIT-123/);
+  assert.match(
+    details,
+    /Local backlog item Feature: Replicate backlog matching on assign flow \(feature-replicate-backlog-matching-on-assign-flow\.md\)/
+  );
 });
 
 test("renderAssignBacklogItemToAgentHtml renders both selects and matching sync logic", () => {
@@ -97,14 +130,39 @@ test("renderAssignBacklogItemToAgentHtml renders both selects and matching sync 
   assert.match(html, /Assign Backlog Item to Agent/);
   assert.match(html, /Jira Backlog Item/);
   assert.match(html, /Local Backlog Item/);
+  assert.match(html, /id="use-jira" type="checkbox"[^>]*checked[^>]*>/);
   assert.match(html, /id="issue-select"/);
   assert.match(html, /id="backlog-item-select"/);
   assert.match(html, /Eligible local backlog items: 1\./);
   assert.match(html, /function findMatchingBacklogItem\(issue\)/);
   assert.match(html, /function findMatchingIssue\(backlogItem\)/);
+  assert.match(html, /function syncJiraState\(\)/);
   assert.match(html, /syncSelections\("issue"\)/);
   assert.match(html, /syncSelections\("backlog"\)/);
+  assert.match(html, /issueKey: useJiraInput\.checked \? issueSelect\.value : ""/);
+  assert.match(html, /useJira: useJiraInput\.checked/);
   assert.match(html, /backlogItemPath: String\(backlogItemSelect\.value \|\| ""\)\.trim\(\)/);
+});
+
+test("renderAssignBacklogItemToAgentHtml hides the Jira section when Jira is disabled", () => {
+  const assignBacklogItemToAgent = setupAssignBacklogItemToAgentModule();
+  const html = assignBacklogItemToAgent.renderAssignBacklogItemToAgentHtml(
+    { cspSource: "vscode-webview:" },
+    [getFixtureIssue()],
+    {
+      agentCommandOptions: ["codex"],
+      backlogItems: [getFixtureBacklogItem()],
+      initialAgentCommand: "codex",
+      projectKey: "ANTIGRAVIT",
+      selectedBacklogItemPath: getFixtureBacklogItem().filePath,
+      selectedIssueKey: "",
+      useJira: false
+    }
+  );
+
+  assert.match(html, /id="use-jira" type="checkbox"[^>]*>/);
+  assert.match(html, /id="jira-section" hidden/);
+  assert.match(html, /issueSelect\.disabled = !useJiraInput\.checked/);
 });
 
 test("renderAssignBacklogItemToAgentHtml emits a syntactically valid webview script", () => {

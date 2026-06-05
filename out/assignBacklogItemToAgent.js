@@ -13,14 +13,15 @@ function escapeHtml(value) {
         .replace(/'/g, "&#39;");
 }
 function buildAssignBacklogItemToAgentFeatureDetails(issue, backlogItem) {
-    const metadata = [issue.issueTypeName, issue.statusName].filter(Boolean).join(", ");
-    const sections = [
-        metadata
+    const sections = [];
+    if (issue) {
+        const metadata = [issue.issueTypeName, issue.statusName].filter(Boolean).join(", ");
+        sections.push(metadata
             ? `Jira item ${issue.key} (${metadata}): ${issue.summary}`
-            : `Jira item ${issue.key}: ${issue.summary}`
-    ];
-    if (issue.description?.trim()) {
-        sections.push(`Jira description:\n${issue.description.trim()}`);
+            : `Jira item ${issue.key}: ${issue.summary}`);
+        if (issue.description?.trim()) {
+            sections.push(`Jira description:\n${issue.description.trim()}`);
+        }
     }
     if (backlogItem) {
         sections.push(`Local backlog item ${backlogItem.displayName} (${backlogItem.fileName}) at ${backlogItem.filePath}`);
@@ -35,10 +36,16 @@ function buildAssignBacklogItemToAgentPrompt(issue, agentLabel, jiraEmail = "", 
     const backlogInstructions = backlogItem
         ? ` Also inspect local backlog item ${backlogItem.displayName} (${backlogItem.fileName}) at ${backlogItem.filePath}. Use that markdown file as part of the task context. Add each assumption you make to its ## Notes section using lines that start with AGENT ASSUMPTION:. If you finish successfully, add an AGENT SOLUTION: note describing briefly how you solved it and update that local backlog item's ## Status section to In Review.`
         : "";
-    const jiraAccessInstructions = agentLabel === "Codex" && trimmedJiraEmail
+    const jiraAccessInstructions = issue && agentLabel === "Codex" && trimmedJiraEmail
         ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as ${trimmedJiraEmail}, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using ${trimmedJiraEmail}. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as ${trimmedJiraEmail}, then continue with the MCP-backed Jira actions.`
         : "";
-    return `work on Jira Item ${issue.key} - ${issue.summary}.${backlogInstructions} Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMPTION:. If you finish the work successfully, commit your changes using the commit message format Jira Item ${issue.key} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issue.key} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+    if (issue) {
+        return `work on Jira Item ${issue.key} - ${issue.summary}.${backlogInstructions} Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMPTION:. If you finish the work successfully, commit your changes using the commit message format Jira Item ${issue.key} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issue.key} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+    }
+    if (!backlogItem) {
+        return `work on the selected local backlog item only. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and keep the completed work on the current branch.`;
+    }
+    return `work on local backlog item ${backlogItem.displayName} (${backlogItem.fileName}) at ${backlogItem.filePath}. Use that markdown file as the source of truth for the task context. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to its ## Notes section using lines that start with AGENT ASSUMPTION:. If you finish successfully, commit your changes using the commit message format Backlog Item ${backlogItem.fileName} by Agent ${agentLabel}, add an AGENT SOLUTION: note describing briefly how you solved it, and update that local backlog item's ## Status section to In Review. Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
 }
 function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
     const nonce = (0, settings_1.getNonce)();
@@ -50,6 +57,7 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
         options.backlogItems.some((item) => item.filePath === options.selectedBacklogItemPath)
         ? options.selectedBacklogItemPath
         : "";
+    const useJira = options.useJira !== false;
     const backlogStatusMessage = options.backlogStatusMessage ||
         (options.backlogItems.length > 0
             ? `Eligible local backlog items: ${String(options.backlogItems.length)}.`
@@ -79,6 +87,8 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
       .command-list-controls { display: grid; gap: 8px; }
       .current-branch-title { font-size: 18px; font-weight: 600; }
       .current-branch-value { color: #7cc7ff; }
+      .header-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+      .header-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
       .panel-section {
         display: grid;
         gap: 10px;
@@ -87,6 +97,7 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
         border-radius: 10px;
         background: color-mix(in srgb, var(--vscode-editorWidget-background, var(--vscode-sideBar-background)) 82%, transparent);
       }
+      .panel-section.is-disabled { opacity: 0.65; }
       .section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--vscode-descriptionForeground); }
       .hint { font-size: 12px; color: var(--vscode-descriptionForeground); }
       .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
@@ -100,7 +111,13 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
   </head>
   <body>
     <form id="assign-jira-item-to-agent-form">
-      <div class="current-branch-title">Jira Project: <span class="current-branch-value">${escapeHtml(options.projectKey)}</span></div>
+      <div class="header-row">
+        <div class="current-branch-title">Jira Project: <span class="current-branch-value">${escapeHtml(options.projectKey)}</span></div>
+        <label class="header-toggle" for="use-jira">
+          <input id="use-jira" type="checkbox" ${useJira ? "checked" : ""} />
+          <span>Use Jira</span>
+        </label>
+      </div>
       <label>
         Agent Harness Command
         <div class="command-list-controls">
@@ -109,7 +126,7 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
         </div>
         <span class="hint">Starts with the selected Agentic Harness execution command from settings. Pick a saved command or type your own for this Jira assignment.</span>
       </label>
-      <section class="panel-section">
+      <section class="panel-section${useJira ? "" : " is-disabled"}" id="jira-section" ${useJira ? "" : 'hidden'}>
         <div class="section-title">Jira Backlog Item</div>
         <label>
           Jira Item
@@ -151,6 +168,8 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
       const issueHint = document.getElementById("issue-hint");
       const backlogItemSelect = document.getElementById("backlog-item-select");
       const backlogHint = document.getElementById("backlog-hint");
+      const useJiraInput = document.getElementById("use-jira");
+      const jiraSection = document.getElementById("jira-section");
       const cancelButton = document.getElementById("cancel-button");
       const errorMessage = document.getElementById("error-message");
 
@@ -270,6 +289,10 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
       }
 
       function syncSelections(origin) {
+        if (!useJiraInput.checked && origin === "backlog") {
+          return;
+        }
+
         if (origin === "issue") {
           backlogItemSelect.value = findMatchingBacklogItem(getSelectedIssue())?.filePath || "";
           updateBacklogHint();
@@ -280,6 +303,13 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
           issueSelect.value = findMatchingIssue(getSelectedBacklogItem())?.key || "";
           updateIssueHint();
         }
+      }
+
+      function syncJiraState() {
+        jiraSection.hidden = !useJiraInput.checked;
+        jiraSection.classList.toggle("is-disabled", !useJiraInput.checked);
+        issueSelect.disabled = !useJiraInput.checked;
+        updateIssueHint();
       }
 
       const customCommandOption = document.createElement("option");
@@ -324,6 +354,11 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
         syncSelections("backlog");
       });
 
+      useJiraInput.addEventListener("change", () => {
+        errorMessage.textContent = "";
+        syncJiraState();
+      });
+
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "assign";
@@ -332,18 +367,24 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
           agentCommandInput.focus();
           return;
         }
-        if (!issueSelect.value) {
+        if (useJiraInput.checked && !issueSelect.value) {
           errorMessage.textContent = "Select a Jira item.";
           issueSelect.focus();
+          return;
+        }
+        if (!useJiraInput.checked && !backlogItemSelect.value) {
+          errorMessage.textContent = "Select a local backlog item.";
+          backlogItemSelect.focus();
           return;
         }
         vscode.postMessage({
           type: "submitAssignJiraItemToAgent",
           payload: {
             action,
-            issueKey: issueSelect.value,
+            issueKey: useJiraInput.checked ? issueSelect.value : "",
             backlogItemPath: String(backlogItemSelect.value || "").trim(),
-            agentCommand: agentCommandInput.value.trim()
+            agentCommand: agentCommandInput.value.trim(),
+            useJira: useJiraInput.checked
           }
         });
       });
@@ -360,6 +401,7 @@ function renderAssignBacklogItemToAgentHtml(webview, issues, options) {
       if (!initialSelectedBacklogItemPath && issueSelect.value) {
         syncSelections("issue");
       }
+      syncJiraState();
       updateIssueHint();
       updateBacklogHint();
       agentCommandInput.value = initialAgentCommand || "";
