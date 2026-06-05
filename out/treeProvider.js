@@ -304,6 +304,7 @@ const JIRA_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
+const ADLC_ACTION_COLOR = new vscode.ThemeColor("charts.red");
 const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
 const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
 const CLOUD_ARCHITECT_ICON_PATH = vscode.Uri.file(path.resolve(__dirname, "..", "Resources", "cloud-architect.svg"));
@@ -627,7 +628,7 @@ function getQuickActionItems() {
     };
     items.push(setFeatureFlag);
     const adlc = new NodeItem({ kind: "category", label: "ADLC" }, vscode.TreeItemCollapsibleState.Collapsed);
-    adlc.iconPath = new vscode.ThemeIcon("folder", FEATURE_FLAG_ACTION_COLOR);
+    adlc.iconPath = new vscode.ThemeIcon("folder", ADLC_ACTION_COLOR);
     adlc.tooltip = "ADLC roles coming soon.";
     items.push(adlc);
     if (!savedJiraProjectKey) {
@@ -779,42 +780,42 @@ function getUpdateProjectConfigItems() {
 }
 function getAdlcItems() {
     const productDesigner = new NodeItem({ kind: "action", label: "Product Designer" }, vscode.TreeItemCollapsibleState.None);
-    productDesigner.iconPath = new vscode.ThemeIcon("edit", FEATURE_FLAG_ACTION_COLOR);
+    productDesigner.iconPath = new vscode.ThemeIcon("edit", ADLC_ACTION_COLOR);
     productDesigner.tooltip = "Open the Product Designer runner form.";
     productDesigner.command = {
         command: productDesigner_1.PRODUCT_DESIGNER_COMMAND,
         title: "Open Product Designer"
     };
     const businessAnalyst = new NodeItem({ kind: "action", label: "Business Analyst" }, vscode.TreeItemCollapsibleState.None);
-    businessAnalyst.iconPath = new vscode.ThemeIcon("note", FEATURE_FLAG_ACTION_COLOR);
+    businessAnalyst.iconPath = new vscode.ThemeIcon("note", ADLC_ACTION_COLOR);
     businessAnalyst.tooltip = "Open the Business Analyst runner form.";
     businessAnalyst.command = {
         command: businessAnalyst_1.BUSINESS_ANALYST_COMMAND,
         title: "Open Business Analyst"
     };
     const solutionArchitect = new NodeItem({ kind: "action", label: "Solution Architect" }, vscode.TreeItemCollapsibleState.None);
-    solutionArchitect.iconPath = new vscode.ThemeIcon("symbol-structure", FEATURE_FLAG_ACTION_COLOR);
+    solutionArchitect.iconPath = new vscode.ThemeIcon("symbol-structure", ADLC_ACTION_COLOR);
     solutionArchitect.tooltip = "Open the Solution Architect runner form.";
     solutionArchitect.command = {
         command: solutionArchitect_1.SOLUTION_ARCHITECT_COMMAND,
         title: "Open Solution Architect"
     };
-    const estimator = new NodeItem({ kind: "action", label: "Estimator" }, vscode.TreeItemCollapsibleState.None);
-    estimator.iconPath = new vscode.ThemeIcon("graph", FEATURE_FLAG_ACTION_COLOR);
-    estimator.tooltip = "Open the Estimator runner form.";
+    const estimator = new NodeItem({ kind: "action", label: "Estimate Project" }, vscode.TreeItemCollapsibleState.None);
+    estimator.iconPath = new vscode.ThemeIcon("graph", ADLC_ACTION_COLOR);
+    estimator.tooltip = "Open the Estimate Project runner form.";
     estimator.command = {
         command: estimator_1.ESTIMATOR_COMMAND,
-        title: "Open Estimator"
+        title: "Open Estimate Project"
     };
-    const planExecution = new NodeItem({ kind: "action", label: "Plan Execution" }, vscode.TreeItemCollapsibleState.None);
-    planExecution.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
-    planExecution.tooltip = "Open the Plan Execution runner form.";
+    const planExecution = new NodeItem({ kind: "action", label: "Create Execution Plan" }, vscode.TreeItemCollapsibleState.None);
+    planExecution.iconPath = new vscode.ThemeIcon("map", ADLC_ACTION_COLOR);
+    planExecution.tooltip = "Open the Create Execution Plan runner form.";
     planExecution.command = {
         command: planExecution_1.PLAN_EXECUTION_COMMAND,
-        title: "Open Plan Execution"
+        title: "Open Create Execution Plan"
     };
     const developer = new NodeItem({ kind: "action", label: "Develop Execution Plan" }, vscode.TreeItemCollapsibleState.None);
-    developer.iconPath = new vscode.ThemeIcon("play-circle", FEATURE_FLAG_ACTION_COLOR);
+    developer.iconPath = new vscode.ThemeIcon("play-circle", ADLC_ACTION_COLOR);
     developer.tooltip = "Open the Develop Execution Plan runner form.";
     developer.command = {
         command: developer_1.DEVELOPER_COMMAND,

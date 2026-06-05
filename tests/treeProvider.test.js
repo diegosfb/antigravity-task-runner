@@ -226,6 +226,8 @@ test("quick actions include ADLC after feature flag with runner actions", async 
   const adlcItem = rootItems[adlcIndex];
   assert.equal(adlcItem.collapsibleState, 1);
   assert.equal(adlcItem.command, undefined);
+  assert.equal(adlcItem.iconPath.id, "folder");
+  assert.equal(adlcItem.iconPath.color.id, "charts.red");
 
   const adlcChildren = await provider.getChildren(adlcItem);
   assert.deepEqual(
@@ -234,8 +236,8 @@ test("quick actions include ADLC after feature flag with runner actions", async 
       "Product Designer",
       "Business Analyst",
       "Solution Architect",
-      "Estimator",
-      "Plan Execution",
+      "Estimate Project",
+      "Create Execution Plan",
       "Develop Execution Plan"
     ]
   );
@@ -245,4 +247,8 @@ test("quick actions include ADLC after feature flag with runner actions", async 
   assert.equal(adlcChildren[3].command?.command, "antigravity.openEstimator");
   assert.equal(adlcChildren[4].command?.command, "antigravity.openPlanExecution");
   assert.equal(adlcChildren[5].command?.command, "antigravity.openDeveloper");
+  for (const item of adlcChildren) {
+    assert.equal(item.iconPath.color.id, "charts.red");
+  }
+  assert.equal(adlcChildren[4].iconPath.id, "map");
 });

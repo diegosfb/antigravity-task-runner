@@ -216,11 +216,7 @@ export function activate(context: vscode.ExtensionContext) {
   const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBrightBlue");
   const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
   const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
-  const PRODUCT_DESIGNER_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiMagenta");
-  const BUSINESS_ANALYST_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
-  const ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
-  const PLAN_EXECUTION_ACTION_COLOR = new vscode.ThemeColor("charts.orange");
-  const DEVELOPER_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiGreen");
+  const ADLC_ACTION_COLOR = new vscode.ThemeColor("charts.red");
   context.subscriptions.push(outputChannel);
   initLogger(outputChannel);
 
@@ -300,8 +296,8 @@ export function activate(context: vscode.ExtensionContext) {
     const terminal = vscode.window.createTerminal({
       name: "Product Designer",
       cwd: values.workspace,
-      iconPath: new vscode.ThemeIcon("edit", PRODUCT_DESIGNER_ACTION_COLOR),
-      color: PRODUCT_DESIGNER_ACTION_COLOR
+      iconPath: new vscode.ThemeIcon("edit", ADLC_ACTION_COLOR),
+      color: ADLC_ACTION_COLOR
     });
     terminal.show();
     terminal.sendText(buildProductDesignerCommand(values), true);
@@ -313,8 +309,8 @@ export function activate(context: vscode.ExtensionContext) {
     const terminal = vscode.window.createTerminal({
       name: "Business Analyst",
       cwd: values.workspace,
-      iconPath: new vscode.ThemeIcon("note", BUSINESS_ANALYST_ACTION_COLOR),
-      color: BUSINESS_ANALYST_ACTION_COLOR
+      iconPath: new vscode.ThemeIcon("note", ADLC_ACTION_COLOR),
+      color: ADLC_ACTION_COLOR
     });
     terminal.show();
     terminal.sendText(buildBusinessAnalystCommand(values), true);
@@ -326,8 +322,8 @@ export function activate(context: vscode.ExtensionContext) {
     const terminal = vscode.window.createTerminal({
       name: "Solution Architect",
       cwd: values.workspace,
-      iconPath: new vscode.ThemeIcon("symbol-structure", BUSINESS_ANALYST_ACTION_COLOR),
-      color: BUSINESS_ANALYST_ACTION_COLOR
+      iconPath: new vscode.ThemeIcon("symbol-structure", ADLC_ACTION_COLOR),
+      color: ADLC_ACTION_COLOR
     });
     terminal.show();
     terminal.sendText(buildSolutionArchitectCommand(values), true);
@@ -337,10 +333,10 @@ export function activate(context: vscode.ExtensionContext) {
     values: EstimatorFormValues
   ): void => {
     const terminal = vscode.window.createTerminal({
-      name: "Estimator",
+      name: "Estimate Project",
       cwd: values.workspace,
-      iconPath: new vscode.ThemeIcon("graph", ESTIMATOR_ACTION_COLOR),
-      color: ESTIMATOR_ACTION_COLOR
+      iconPath: new vscode.ThemeIcon("graph", ADLC_ACTION_COLOR),
+      color: ADLC_ACTION_COLOR
     });
     terminal.show();
     terminal.sendText(buildEstimatorCommand(values), true);
@@ -350,10 +346,10 @@ export function activate(context: vscode.ExtensionContext) {
     values: PlanExecutionFormValues
   ): void => {
     const terminal = vscode.window.createTerminal({
-      name: "Plan Execution",
+      name: "Create Execution Plan",
       cwd: values.workspace,
-      iconPath: new vscode.ThemeIcon("circle-large-outline", PLAN_EXECUTION_ACTION_COLOR),
-      color: PLAN_EXECUTION_ACTION_COLOR
+      iconPath: new vscode.ThemeIcon("map", ADLC_ACTION_COLOR),
+      color: ADLC_ACTION_COLOR
     });
     terminal.show();
     terminal.sendText(buildPlanExecutionCommand(values), true);
@@ -365,8 +361,8 @@ export function activate(context: vscode.ExtensionContext) {
     const terminal = vscode.window.createTerminal({
       name: "Develop Execution Plan",
       cwd: values.workspace,
-      iconPath: new vscode.ThemeIcon("play-circle", DEVELOPER_ACTION_COLOR),
-      color: DEVELOPER_ACTION_COLOR
+      iconPath: new vscode.ThemeIcon("play-circle", ADLC_ACTION_COLOR),
+      color: ADLC_ACTION_COLOR
     });
     terminal.show();
     terminal.sendText(buildDeveloperCommand(values), true);
@@ -6162,7 +6158,7 @@ export function activate(context: vscode.ExtensionContext) {
       const initialValues = sanitizeEstimatorFormValues(savedValues, workspaceRoot);
       const panel = vscode.window.createWebviewPanel(
         "antigravityEstimator",
-        "Estimator",
+        "Estimate Project",
         vscode.ViewColumn.Active,
         {
           enableScripts: true,
@@ -6213,13 +6209,13 @@ export function activate(context: vscode.ExtensionContext) {
               values
             );
             launchEstimatorInNewTerminal(values);
-            void vscode.window.showInformationMessage("Opened Estimator terminal.");
+            void vscode.window.showInformationMessage("Opened Estimate Project terminal.");
             panel.dispose();
           } catch (error) {
             const messageText = error instanceof Error ? error.message : String(error);
             void panel.webview.postMessage({
               type: "estimatorError",
-              payload: { message: `Failed to open Estimator terminal: ${messageText}` }
+              payload: { message: `Failed to open Estimate Project terminal: ${messageText}` }
             });
           }
         },
@@ -6241,7 +6237,7 @@ export function activate(context: vscode.ExtensionContext) {
       const initialValues = sanitizePlanExecutionFormValues(savedValues, workspaceRoot);
       const panel = vscode.window.createWebviewPanel(
         "antigravityPlanExecution",
-        "Plan Execution",
+        "Create Execution Plan",
         vscode.ViewColumn.Active,
         {
           enableScripts: true,
@@ -6292,13 +6288,13 @@ export function activate(context: vscode.ExtensionContext) {
               values
             );
             launchPlanExecutionInNewTerminal(values);
-            void vscode.window.showInformationMessage("Opened Plan Execution terminal.");
+            void vscode.window.showInformationMessage("Opened Create Execution Plan terminal.");
             panel.dispose();
           } catch (error) {
             const messageText = error instanceof Error ? error.message : String(error);
             void panel.webview.postMessage({
               type: "planExecutionError",
-              payload: { message: `Failed to open Plan Execution terminal: ${messageText}` }
+              payload: { message: `Failed to open Create Execution Plan terminal: ${messageText}` }
             });
           }
         },
