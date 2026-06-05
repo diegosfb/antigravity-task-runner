@@ -128,100 +128,33 @@ function normalizeBacklogItemCompletedMatchText(value) {
         .trim()
         .toLowerCase();
 }
-function normalizeBacklogItemCompletedSlug(value) {
-    return normalizeBacklogItemCompletedMatchText(value)
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-}
-function stripBacklogItemDisplayNamePrefix(value) {
-    return (value ?? "").replace(/^[^:]+:\s*/, "").trim();
-}
-function stripBacklogItemFileNamePrefix(value) {
-    return path.basename(value ?? "", path.extname(value ?? "")).replace(/^[a-z0-9]+-/, "").trim();
-}
 function findUniqueMatch(items, predicate) {
     const matches = items.filter(predicate);
     return matches.length === 1 ? matches[0] : undefined;
 }
-function findUniqueDescriptionMatch(items, descriptions, getDescriptions) {
-    const normalizedDescriptions = descriptions
-        .map((description) => normalizeBacklogItemCompletedMatchText(description))
-        .filter(Boolean);
-    if (normalizedDescriptions.length === 0) {
+function findUniqueDescriptionMatch(items, description, getDescription) {
+    const normalizedDescription = normalizeBacklogItemCompletedMatchText(description);
+    if (!normalizedDescription) {
         return undefined;
     }
-    const exactMatch = findUniqueMatch(items, (item) => getDescriptions(item)
-        .map((description) => normalizeBacklogItemCompletedMatchText(description))
-        .some((description) => normalizedDescriptions.includes(description)));
+    const exactMatch = findUniqueMatch(items, (item) => normalizeBacklogItemCompletedMatchText(getDescription(item)) === normalizedDescription);
     if (exactMatch) {
         return exactMatch;
     }
     return findUniqueMatch(items, (item) => {
-        const normalizedItemDescriptions = getDescriptions(item)
-            .map((description) => normalizeBacklogItemCompletedMatchText(description))
-            .filter(Boolean);
-        return normalizedItemDescriptions.some((itemDescription) => normalizedDescriptions.some((description) => itemDescription.includes(description) || description.includes(itemDescription)));
+        const normalizedItemDescription = normalizeBacklogItemCompletedMatchText(getDescription(item));
+        return Boolean(normalizedItemDescription) &&
+            (normalizedItemDescription.includes(normalizedDescription) ||
+                normalizedDescription.includes(normalizedItemDescription));
     });
-}
-function findBacklogItemBySummary(summary, backlogItems) {
-    const normalizedSummary = normalizeBacklogItemCompletedMatchText(summary);
-    if (normalizedSummary) {
-        const summaryMatch = findUniqueMatch(backlogItems, (item) => {
-            const titleVariants = [
-                item.displayName,
-                stripBacklogItemDisplayNamePrefix(item.displayName)
-            ];
-            return titleVariants.some((candidate) => normalizeBacklogItemCompletedMatchText(candidate) === normalizedSummary);
-        });
-        if (summaryMatch) {
-            return summaryMatch;
-        }
-    }
-    const normalizedSummarySlug = normalizeBacklogItemCompletedSlug(summary);
-    if (!normalizedSummarySlug) {
-        return undefined;
-    }
-    return findUniqueMatch(backlogItems, (item) => {
-        const slugCandidates = [
-            item.displayName,
-            stripBacklogItemDisplayNamePrefix(item.displayName),
-            item.fileName,
-            stripBacklogItemFileNamePrefix(item.fileName)
-        ];
-        return slugCandidates.some((candidate) => normalizeBacklogItemCompletedSlug(candidate) === normalizedSummarySlug);
-    });
-}
-function findJiraIssueBySummary(summary, issues) {
-    const normalizedSummary = normalizeBacklogItemCompletedMatchText(summary);
-    if (normalizedSummary) {
-        const summaryMatch = findUniqueMatch(issues, (issue) => normalizeBacklogItemCompletedMatchText(issue.summary) === normalizedSummary);
-        if (summaryMatch) {
-            return summaryMatch;
-        }
-    }
-    const normalizedSummarySlug = normalizeBacklogItemCompletedSlug(summary);
-    if (!normalizedSummarySlug) {
-        return undefined;
-    }
-    return findUniqueMatch(issues, (issue) => normalizeBacklogItemCompletedSlug(issue.summary) === normalizedSummarySlug);
 }
 function findMatchingBacklogItemForJiraIssue(issue, backlogItems) {
-    const descriptionMatch = findUniqueDescriptionMatch(backlogItems, [issue?.description], (item) => [item.description, item.summary]);
-    if (descriptionMatch) {
-        return descriptionMatch;
-    }
-    return findBacklogItemBySummary(issue?.summary, backlogItems);
+    const descriptionMatch = findUniqueDescriptionMatch(backlogItems, issue?.description, (item) => item.description);
+    return descriptionMatch;
 }
 function findMatchingJiraIssueForBacklogItem(backlogItem, issues) {
-    const descriptionMatch = findUniqueDescriptionMatch(issues, [backlogItem?.description, backlogItem?.summary], (issue) => [issue.description]);
-    if (descriptionMatch) {
-        return descriptionMatch;
-    }
-    const matchedIssueByTitle = findJiraIssueBySummary(backlogItem?.displayName, issues);
-    if (matchedIssueByTitle) {
-        return matchedIssueByTitle;
-    }
-    return findJiraIssueBySummary(stripBacklogItemFileNamePrefix(backlogItem?.fileName), issues);
+    const descriptionMatch = findUniqueDescriptionMatch(issues, backlogItem?.description, (issue) => issue.description);
+    return descriptionMatch;
 }
 function upsertBacklogItemCompletedStatus(markdown, statusName = "In Review") {
     const normalizedMarkdown = normalizeLineEndings(markdown).trimEnd();
@@ -339,6 +272,12 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       .detail-value {
         font-size: 13px;
         word-break: break-word;
+      }
+      pre.detail-value {
+        margin: 0;
+        white-space: pre-wrap;
+        font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
+        overflow-x: auto;
       }
       input,
       select,
@@ -483,6 +422,14 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
         </div>
       </section>
 
+      <section class="section">
+        <p class="section-title">Compared Result</p>
+        <div class="detail-card">
+          <span class="detail-label">Compared Result</span>
+          <pre id="comparedResult" class="detail-value"></pre>
+        </div>
+      </section>
+
       <div id="errorMessage" class="error" aria-live="polite"></div>
 
       <div class="actions">
@@ -512,6 +459,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       const issueType = document.getElementById("issueType");
       const issueStatus = document.getElementById("issueStatus");
       const issueProject = document.getElementById("issueProject");
+      const comparedResult = document.getElementById("comparedResult");
       let draftSaveTimer;
       let backlogReloadTimer;
 
@@ -536,134 +484,129 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
           .toLowerCase();
       }
 
-      function normalizeSlug(value) {
-        return normalizeMatchText(value)
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "");
-      }
-
-      function stripDisplayNamePrefix(value) {
-        return String(value || "").replace(/^[^:]+: */, "").trim();
-      }
-
-      function stripFileNamePrefix(value) {
-        return String(value || "")
-          .replace(/^.*[\\\\/]/, "")
-          .replace(/\\.md$/i, "")
-          .replace(/^[a-z0-9]+-/, "")
-          .trim();
-      }
-
       function findUniqueMatch(items, predicate) {
         const matches = items.filter(predicate);
         return matches.length === 1 ? matches[0] : undefined;
       }
 
-      function findUniqueDescriptionMatch(items, descriptions, getDescriptions) {
-        const normalizedDescriptions = descriptions
-          .map((description) => normalizeMatchText(description))
-          .filter(Boolean);
-        if (normalizedDescriptions.length === 0) {
+      function findUniqueDescriptionMatch(items, description, getDescription) {
+        const normalizedDescription = normalizeMatchText(description);
+        if (!normalizedDescription) {
           return undefined;
         }
 
         const exactMatch = findUniqueMatch(
           items,
-          (item) =>
-            getDescriptions(item)
-              .map((description) => normalizeMatchText(description))
-              .some((description) => normalizedDescriptions.includes(description))
+          (item) => normalizeMatchText(getDescription(item)) === normalizedDescription
         );
         if (exactMatch) {
           return exactMatch;
         }
 
         return findUniqueMatch(items, (item) => {
-          const normalizedItemDescriptions = getDescriptions(item)
-            .map((description) => normalizeMatchText(description))
-            .filter(Boolean);
-          return normalizedItemDescriptions.some((itemDescription) =>
-            normalizedDescriptions.some(
-              (description) =>
-                itemDescription.includes(description) || description.includes(itemDescription)
-            )
-          );
+          const normalizedItemDescription = normalizeMatchText(getDescription(item));
+          return Boolean(normalizedItemDescription) &&
+            (normalizedItemDescription.includes(normalizedDescription) ||
+              normalizedDescription.includes(normalizedItemDescription));
         });
-      }
-
-      function findMatchingBacklogItemBySummary(summary) {
-        const normalizedSummary = normalizeMatchText(summary);
-        if (normalizedSummary) {
-          const summaryMatch = findUniqueMatch(backlogItems, (item) =>
-            [item.displayName, stripDisplayNamePrefix(item.displayName)].some(
-              (candidate) => normalizeMatchText(candidate) === normalizedSummary
-            )
-          );
-          if (summaryMatch) {
-            return summaryMatch;
-          }
-        }
-
-        const normalizedSummarySlug = normalizeSlug(summary);
-        if (!normalizedSummarySlug) {
-          return undefined;
-        }
-
-        return findUniqueMatch(backlogItems, (item) =>
-          [
-            item.displayName,
-            stripDisplayNamePrefix(item.displayName),
-            item.fileName,
-            stripFileNamePrefix(item.fileName)
-          ].some((candidate) => normalizeSlug(candidate) === normalizedSummarySlug)
-        );
-      }
-
-      function findMatchingIssueBySummary(summary) {
-        const normalizedSummary = normalizeMatchText(summary);
-        if (normalizedSummary) {
-          const summaryMatch = findUniqueMatch(
-            issues,
-            (issue) => normalizeMatchText(issue.summary) === normalizedSummary
-          );
-          if (summaryMatch) {
-            return summaryMatch;
-          }
-        }
-
-        const normalizedSummarySlug = normalizeSlug(summary);
-        if (!normalizedSummarySlug) {
-          return undefined;
-        }
-
-        return findUniqueMatch(issues, (issue) => normalizeSlug(issue.summary) === normalizedSummarySlug);
       }
 
       function findMatchingBacklogItem(issue) {
         const descriptionMatch = findUniqueDescriptionMatch(
           backlogItems,
-          [issue?.description],
-          (item) => [item.description, item.summary]
+          issue?.description,
+          (item) => item.description
         );
-        if (descriptionMatch) {
-          return descriptionMatch;
-        }
-        return findMatchingBacklogItemBySummary(issue?.summary);
+        return descriptionMatch;
       }
 
       function findMatchingIssue(backlogItem) {
         const descriptionMatch = findUniqueDescriptionMatch(
           issues,
-          [backlogItem?.description, backlogItem?.summary],
-          (issue) => [issue.description]
+          backlogItem?.description,
+          (issue) => issue.description
         );
-        if (descriptionMatch) {
-          return descriptionMatch;
+        return descriptionMatch;
+      }
+
+      function formatComparedValue(value) {
+        return value ? value : "(empty)";
+      }
+
+      function buildComparisonLine(leftValue, rightValue) {
+        const normalizedLeft = normalizeMatchText(leftValue);
+        const normalizedRight = normalizeMatchText(rightValue);
+        const exactMatch = Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight);
+        const containsMatch = Boolean(
+          normalizedLeft &&
+          normalizedRight &&
+          (normalizedLeft.includes(normalizedRight) || normalizedRight.includes(normalizedLeft))
+        );
+
+        return [
+          "raw left: " + formatComparedValue(leftValue),
+          "normalized left: " + formatComparedValue(normalizedLeft),
+          "raw right: " + formatComparedValue(rightValue),
+          "normalized right: " + formatComparedValue(normalizedRight),
+          "exact match: " + (exactMatch ? "yes" : "no"),
+          "contains match: " + (containsMatch ? "yes" : "no")
+        ].join("\\n");
+      }
+
+      function updateComparedResult(origin) {
+        const selectedIssue = getSelectedIssue();
+        const selectedBacklogItem = getSelectedBacklogItem();
+        const lines = [
+          "origin: " + origin,
+          "",
+          "selected jira item: " + (selectedIssue ? selectedIssue.key + " - " + selectedIssue.summary : "(none)"),
+          "selected local backlog item: " + (selectedBacklogItem ? selectedBacklogItem.displayName + " (" + selectedBacklogItem.fileName + ")" : "(none)"),
+          ""
+        ];
+
+        lines.push("jira -> local comparisons:");
+        if (!selectedIssue) {
+          lines.push("(no jira item selected)");
+        } else if (backlogItems.length === 0) {
+          lines.push("(no local backlog items loaded)");
+        } else {
+          backlogItems.forEach((item, index) => {
+            lines.push("");
+            lines.push("[" + String(index + 1) + "] " + item.displayName + " (" + item.fileName + ")");
+            lines.push(buildComparisonLine(selectedIssue.description, item.description));
+          });
+          const matchingBacklogItem = findMatchingBacklogItem(selectedIssue);
+          lines.push("");
+          lines.push(
+            "unique local match: " +
+              (matchingBacklogItem
+                ? matchingBacklogItem.displayName + " (" + matchingBacklogItem.fileName + ")"
+                : "(none)")
+          );
         }
-        return (
-          findMatchingIssueBySummary(backlogItem?.displayName) ||
-          findMatchingIssueBySummary(stripFileNamePrefix(backlogItem?.fileName))
-        );
+
+        lines.push("");
+        lines.push("local -> jira comparisons:");
+        if (!selectedBacklogItem) {
+          lines.push("(no local backlog item selected)");
+        } else if (!useJiraInput.checked) {
+          lines.push("(jira disabled)");
+        } else if (issues.length === 0) {
+          lines.push("(no jira items loaded)");
+        } else {
+          issues.forEach((issue, index) => {
+            lines.push("");
+            lines.push("[" + String(index + 1) + "] " + issue.key + " - " + issue.summary);
+            lines.push(buildComparisonLine(selectedBacklogItem.description, issue.description));
+          });
+          const matchingIssue = findMatchingIssue(selectedBacklogItem);
+          lines.push("");
+          lines.push(
+            "unique jira match: " + (matchingIssue ? matchingIssue.key + " - " + matchingIssue.summary : "(none)")
+          );
+        }
+
+        comparedResult.textContent = lines.join("\\n");
       }
 
       function updateSelectedIssueDetails() {
@@ -712,6 +655,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
           const matchingBacklogItem = findMatchingBacklogItem(getSelectedIssue());
           backlogItemPathInput.value = matchingBacklogItem?.filePath || "";
           updateSelectedBacklogItemDetails();
+          updateComparedResult(origin);
           return;
         }
 
@@ -719,7 +663,11 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
           const matchingIssue = findMatchingIssue(getSelectedBacklogItem());
           issueKeyInput.value = matchingIssue?.key || "";
           updateSelectedIssueDetails();
+          updateComparedResult(origin);
+          return;
         }
+
+        updateComparedResult(origin);
       }
 
       function getPayload() {
@@ -736,6 +684,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
         jiraSection.classList.toggle("is-disabled", !useJiraInput.checked);
         issueKeyInput.disabled = !useJiraInput.checked;
         updateSelectedIssueDetails();
+        updateComparedResult("jira-state");
       }
 
       function queueDraftSave() {
@@ -833,6 +782,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
             syncSelections("backlog");
           } else {
             updateSelectedBacklogItemDetails();
+            updateComparedResult("backlog-reload");
           }
           syncRunButton();
           queueDraftSave();
@@ -844,6 +794,7 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
           renderBacklogItemOptions("");
           backlogFolderStatus.textContent = message.payload?.message || "Unable to load local backlog items.";
           updateSelectedBacklogItemDetails();
+          updateComparedResult("backlog-error");
           syncRunButton();
         }
       });
@@ -855,6 +806,8 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
         syncSelections("issue");
       } else if (backlogItemPathInput.value) {
         syncSelections("backlog");
+      } else {
+        updateComparedResult("initial");
       }
       updateSelectedBacklogItemDetails();
       syncRunButton();

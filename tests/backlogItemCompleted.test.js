@@ -185,7 +185,7 @@ test("findMatching helpers treat a unique contained description as a cross-match
   );
 });
 
-test("findMatching helpers fall back to Jira summary and backlog title when descriptions are empty", () => {
+test("findMatching helpers do not fall back to Jira summary and backlog title when descriptions are empty", () => {
   const backlogItemCompleted = setupBacklogItemCompletedModule();
   const backlogItems = [
     {
@@ -211,12 +211,12 @@ test("findMatching helpers fall back to Jira summary and backlog title when desc
   ];
 
   assert.equal(
-    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems)?.filePath,
-    "/tmp/epic-test-item.md"
+    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems),
+    undefined
   );
   assert.equal(
-    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues)?.key,
-    "ANTIGRAVIT-17"
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues),
+    undefined
   );
 });
 
@@ -255,80 +255,44 @@ test("findMatching helpers return undefined when no cross-match exists", () => {
   );
 });
 
-test("findMatching helpers leave ambiguous summary matches unresolved", () => {
+test("findMatching helpers leave ambiguous description matches unresolved", () => {
   const backlogItemCompleted = setupBacklogItemCompletedModule();
   const backlogItems = [
     {
-      description: "",
-      displayName: "Epic: Duplicate Item",
-      fileName: "epic-duplicate-item.md",
-      filePath: "/tmp/epic-duplicate-item.md",
+      description: "Duplicate description",
+      displayName: "Feature: Duplicate Item",
+      fileName: "feature-duplicate-item.md",
+      filePath: "/tmp/feature-duplicate-item.md",
       statusName: "To Do",
       summary: ""
     }
   ];
   const issues = [
     {
-      description: "",
+      description: "Duplicate description",
       id: "31",
       issueTypeName: "Epic",
       key: "ANTIGRAVIT-31",
       projectKey: "ANTIGRAVIT",
       projectName: "Antigravity",
       statusName: "To Do",
-      summary: "Duplicate Item"
+      summary: "Duplicate Item A"
     },
     {
-      description: "",
+      description: "Duplicate description",
       id: "32",
       issueTypeName: "Story",
       key: "ANTIGRAVIT-32",
       projectKey: "ANTIGRAVIT",
       projectName: "Antigravity",
       statusName: "In Progress",
-      summary: "Duplicate Item"
+      summary: "Duplicate Item B"
     }
   ];
 
   assert.equal(
     backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues),
     undefined
-  );
-});
-
-test("findMatching helpers use backlog summary text when description is blank", () => {
-  const backlogItemCompleted = setupBacklogItemCompletedModule();
-  const backlogItems = [
-    {
-      description: "",
-      displayName: "Epic: Test Item",
-      fileName: "epic-test-item.md",
-      filePath: "/tmp/epic-test-item.md",
-      statusName: "To Do",
-      summary: "Provision the test workspace and validate the generated environments."
-    }
-  ];
-  const issues = [
-    {
-      description:
-        "Provision the test workspace and validate the generated environments. Confirm the default GitHub environments are created as part of setup.",
-      id: "17",
-      issueTypeName: "Epic",
-      key: "ANTIGRAVIT-17",
-      projectKey: "ANTIGRAVIT",
-      projectName: "Antigravity",
-      statusName: "In Progress",
-      summary: "Different Jira summary"
-    }
-  ];
-
-  assert.equal(
-    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems)?.filePath,
-    "/tmp/epic-test-item.md"
-  );
-  assert.equal(
-    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues)?.key,
-    "ANTIGRAVIT-17"
   );
 });
 
@@ -402,9 +366,10 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /loadBacklogItemCompletedBacklogItems/);
   assert.match(html, /saveBacklogItemCompletedDraft/);
   assert.match(html, /Mark Completed/);
+  assert.match(html, /Compared Result/);
   assert.match(html, /<span class="detail-label">Jira Project<\/span>/);
   assert.match(html, /id="useJira"/);
-  assert.ok(html.includes('replace(/^[^:]+: */, "")'));
+  assert.match(html, /id="comparedResult"/);
   assert.match(html, /<option value="TASK-2" selected>TASK-2 - Second item<\/option>/);
   assert.match(html, /feature-second-item\.md/);
   assert.match(

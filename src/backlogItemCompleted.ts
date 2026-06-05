@@ -162,20 +162,6 @@ export function normalizeBacklogItemCompletedMatchText(value: string | undefined
     .toLowerCase();
 }
 
-function normalizeBacklogItemCompletedSlug(value: string | undefined): string {
-  return normalizeBacklogItemCompletedMatchText(value)
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function stripBacklogItemDisplayNamePrefix(value: string | undefined): string {
-  return (value ?? "").replace(/^[^:]+:\s*/, "").trim();
-}
-
-function stripBacklogItemFileNamePrefix(value: string | undefined): string {
-  return path.basename(value ?? "", path.extname(value ?? "")).replace(/^[a-z0-9]+-/, "").trim();
-}
-
 function findUniqueMatch<T>(items: T[], predicate: (item: T) => boolean): T | undefined {
   const matches = items.filter(predicate);
   return matches.length === 1 ? matches[0] : undefined;
@@ -183,102 +169,28 @@ function findUniqueMatch<T>(items: T[], predicate: (item: T) => boolean): T | un
 
 function findUniqueDescriptionMatch<T>(
   items: T[],
-  descriptions: Array<string | undefined>,
-  getDescriptions: (item: T) => Array<string | undefined>
+  description: string | undefined,
+  getDescription: (item: T) => string | undefined
 ): T | undefined {
-  const normalizedDescriptions = descriptions
-    .map((description) => normalizeBacklogItemCompletedMatchText(description))
-    .filter(Boolean);
-  if (normalizedDescriptions.length === 0) {
+  const normalizedDescription = normalizeBacklogItemCompletedMatchText(description);
+  if (!normalizedDescription) {
     return undefined;
   }
 
   const exactMatch = findUniqueMatch(
     items,
-    (item) =>
-      getDescriptions(item)
-        .map((description) => normalizeBacklogItemCompletedMatchText(description))
-        .some((description) => normalizedDescriptions.includes(description))
+    (item) => normalizeBacklogItemCompletedMatchText(getDescription(item)) === normalizedDescription
   );
   if (exactMatch) {
     return exactMatch;
   }
 
   return findUniqueMatch(items, (item) => {
-    const normalizedItemDescriptions = getDescriptions(item)
-      .map((description) => normalizeBacklogItemCompletedMatchText(description))
-      .filter(Boolean);
-    return normalizedItemDescriptions.some((itemDescription) =>
-      normalizedDescriptions.some(
-        (description) =>
-          itemDescription.includes(description) || description.includes(itemDescription)
-      )
-    );
+    const normalizedItemDescription = normalizeBacklogItemCompletedMatchText(getDescription(item));
+    return Boolean(normalizedItemDescription) &&
+      (normalizedItemDescription.includes(normalizedDescription) ||
+        normalizedDescription.includes(normalizedItemDescription));
   });
-}
-
-function findBacklogItemBySummary(
-  summary: string | undefined,
-  backlogItems: BacklogItemCompletedLocalItem[]
-): BacklogItemCompletedLocalItem | undefined {
-  const normalizedSummary = normalizeBacklogItemCompletedMatchText(summary);
-  if (normalizedSummary) {
-    const summaryMatch = findUniqueMatch(backlogItems, (item) => {
-      const titleVariants = [
-        item.displayName,
-        stripBacklogItemDisplayNamePrefix(item.displayName)
-      ];
-      return titleVariants.some(
-        (candidate) => normalizeBacklogItemCompletedMatchText(candidate) === normalizedSummary
-      );
-    });
-    if (summaryMatch) {
-      return summaryMatch;
-    }
-  }
-
-  const normalizedSummarySlug = normalizeBacklogItemCompletedSlug(summary);
-  if (!normalizedSummarySlug) {
-    return undefined;
-  }
-
-  return findUniqueMatch(backlogItems, (item) => {
-    const slugCandidates = [
-      item.displayName,
-      stripBacklogItemDisplayNamePrefix(item.displayName),
-      item.fileName,
-      stripBacklogItemFileNamePrefix(item.fileName)
-    ];
-    return slugCandidates.some(
-      (candidate) => normalizeBacklogItemCompletedSlug(candidate) === normalizedSummarySlug
-    );
-  });
-}
-
-function findJiraIssueBySummary(
-  summary: string | undefined,
-  issues: JiraIssueSummary[]
-): JiraIssueSummary | undefined {
-  const normalizedSummary = normalizeBacklogItemCompletedMatchText(summary);
-  if (normalizedSummary) {
-    const summaryMatch = findUniqueMatch(
-      issues,
-      (issue) => normalizeBacklogItemCompletedMatchText(issue.summary) === normalizedSummary
-    );
-    if (summaryMatch) {
-      return summaryMatch;
-    }
-  }
-
-  const normalizedSummarySlug = normalizeBacklogItemCompletedSlug(summary);
-  if (!normalizedSummarySlug) {
-    return undefined;
-  }
-
-  return findUniqueMatch(
-    issues,
-    (issue) => normalizeBacklogItemCompletedSlug(issue.summary) === normalizedSummarySlug
-  );
 }
 
 export function findMatchingBacklogItemForJiraIssue(
@@ -287,35 +199,22 @@ export function findMatchingBacklogItemForJiraIssue(
 ): BacklogItemCompletedLocalItem | undefined {
   const descriptionMatch = findUniqueDescriptionMatch(
     backlogItems,
-    [issue?.description],
-    (item) => [item.description, item.summary]
+    issue?.description,
+    (item) => item.description
   );
-  if (descriptionMatch) {
-    return descriptionMatch;
-  }
-  return findBacklogItemBySummary(issue?.summary, backlogItems);
+  return descriptionMatch;
 }
 
 export function findMatchingJiraIssueForBacklogItem(
-  backlogItem: Pick<
-    BacklogItemCompletedLocalItem,
-    "description" | "displayName" | "fileName" | "summary"
-  > | undefined,
+  backlogItem: Pick<BacklogItemCompletedLocalItem, "description"> | undefined,
   issues: JiraIssueSummary[]
 ): JiraIssueSummary | undefined {
   const descriptionMatch = findUniqueDescriptionMatch(
     issues,
-    [backlogItem?.description, backlogItem?.summary],
-    (issue) => [issue.description]
+    backlogItem?.description,
+    (issue) => issue.description
   );
-  if (descriptionMatch) {
-    return descriptionMatch;
-  }
-  const matchedIssueByTitle = findJiraIssueBySummary(backlogItem?.displayName, issues);
-  if (matchedIssueByTitle) {
-    return matchedIssueByTitle;
-  }
-  return findJiraIssueBySummary(stripBacklogItemFileNamePrefix(backlogItem?.fileName), issues);
+  return descriptionMatch;
 }
 
 export function upsertBacklogItemCompletedStatus(markdown: string, statusName = "In Review"): string {
@@ -454,6 +353,12 @@ export function renderBacklogItemCompletedHtml(
       .detail-value {
         font-size: 13px;
         word-break: break-word;
+      }
+      pre.detail-value {
+        margin: 0;
+        white-space: pre-wrap;
+        font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
+        overflow-x: auto;
       }
       input,
       select,
@@ -598,6 +503,14 @@ export function renderBacklogItemCompletedHtml(
         </div>
       </section>
 
+      <section class="section">
+        <p class="section-title">Compared Result</p>
+        <div class="detail-card">
+          <span class="detail-label">Compared Result</span>
+          <pre id="comparedResult" class="detail-value"></pre>
+        </div>
+      </section>
+
       <div id="errorMessage" class="error" aria-live="polite"></div>
 
       <div class="actions">
@@ -627,6 +540,7 @@ export function renderBacklogItemCompletedHtml(
       const issueType = document.getElementById("issueType");
       const issueStatus = document.getElementById("issueStatus");
       const issueProject = document.getElementById("issueProject");
+      const comparedResult = document.getElementById("comparedResult");
       let draftSaveTimer;
       let backlogReloadTimer;
 
@@ -651,134 +565,129 @@ export function renderBacklogItemCompletedHtml(
           .toLowerCase();
       }
 
-      function normalizeSlug(value) {
-        return normalizeMatchText(value)
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "");
-      }
-
-      function stripDisplayNamePrefix(value) {
-        return String(value || "").replace(/^[^:]+: */, "").trim();
-      }
-
-      function stripFileNamePrefix(value) {
-        return String(value || "")
-          .replace(/^.*[\\\\/]/, "")
-          .replace(/\\.md$/i, "")
-          .replace(/^[a-z0-9]+-/, "")
-          .trim();
-      }
-
       function findUniqueMatch(items, predicate) {
         const matches = items.filter(predicate);
         return matches.length === 1 ? matches[0] : undefined;
       }
 
-      function findUniqueDescriptionMatch(items, descriptions, getDescriptions) {
-        const normalizedDescriptions = descriptions
-          .map((description) => normalizeMatchText(description))
-          .filter(Boolean);
-        if (normalizedDescriptions.length === 0) {
+      function findUniqueDescriptionMatch(items, description, getDescription) {
+        const normalizedDescription = normalizeMatchText(description);
+        if (!normalizedDescription) {
           return undefined;
         }
 
         const exactMatch = findUniqueMatch(
           items,
-          (item) =>
-            getDescriptions(item)
-              .map((description) => normalizeMatchText(description))
-              .some((description) => normalizedDescriptions.includes(description))
+          (item) => normalizeMatchText(getDescription(item)) === normalizedDescription
         );
         if (exactMatch) {
           return exactMatch;
         }
 
         return findUniqueMatch(items, (item) => {
-          const normalizedItemDescriptions = getDescriptions(item)
-            .map((description) => normalizeMatchText(description))
-            .filter(Boolean);
-          return normalizedItemDescriptions.some((itemDescription) =>
-            normalizedDescriptions.some(
-              (description) =>
-                itemDescription.includes(description) || description.includes(itemDescription)
-            )
-          );
+          const normalizedItemDescription = normalizeMatchText(getDescription(item));
+          return Boolean(normalizedItemDescription) &&
+            (normalizedItemDescription.includes(normalizedDescription) ||
+              normalizedDescription.includes(normalizedItemDescription));
         });
-      }
-
-      function findMatchingBacklogItemBySummary(summary) {
-        const normalizedSummary = normalizeMatchText(summary);
-        if (normalizedSummary) {
-          const summaryMatch = findUniqueMatch(backlogItems, (item) =>
-            [item.displayName, stripDisplayNamePrefix(item.displayName)].some(
-              (candidate) => normalizeMatchText(candidate) === normalizedSummary
-            )
-          );
-          if (summaryMatch) {
-            return summaryMatch;
-          }
-        }
-
-        const normalizedSummarySlug = normalizeSlug(summary);
-        if (!normalizedSummarySlug) {
-          return undefined;
-        }
-
-        return findUniqueMatch(backlogItems, (item) =>
-          [
-            item.displayName,
-            stripDisplayNamePrefix(item.displayName),
-            item.fileName,
-            stripFileNamePrefix(item.fileName)
-          ].some((candidate) => normalizeSlug(candidate) === normalizedSummarySlug)
-        );
-      }
-
-      function findMatchingIssueBySummary(summary) {
-        const normalizedSummary = normalizeMatchText(summary);
-        if (normalizedSummary) {
-          const summaryMatch = findUniqueMatch(
-            issues,
-            (issue) => normalizeMatchText(issue.summary) === normalizedSummary
-          );
-          if (summaryMatch) {
-            return summaryMatch;
-          }
-        }
-
-        const normalizedSummarySlug = normalizeSlug(summary);
-        if (!normalizedSummarySlug) {
-          return undefined;
-        }
-
-        return findUniqueMatch(issues, (issue) => normalizeSlug(issue.summary) === normalizedSummarySlug);
       }
 
       function findMatchingBacklogItem(issue) {
         const descriptionMatch = findUniqueDescriptionMatch(
           backlogItems,
-          [issue?.description],
-          (item) => [item.description, item.summary]
+          issue?.description,
+          (item) => item.description
         );
-        if (descriptionMatch) {
-          return descriptionMatch;
-        }
-        return findMatchingBacklogItemBySummary(issue?.summary);
+        return descriptionMatch;
       }
 
       function findMatchingIssue(backlogItem) {
         const descriptionMatch = findUniqueDescriptionMatch(
           issues,
-          [backlogItem?.description, backlogItem?.summary],
-          (issue) => [issue.description]
+          backlogItem?.description,
+          (issue) => issue.description
         );
-        if (descriptionMatch) {
-          return descriptionMatch;
+        return descriptionMatch;
+      }
+
+      function formatComparedValue(value) {
+        return value ? value : "(empty)";
+      }
+
+      function buildComparisonLine(leftValue, rightValue) {
+        const normalizedLeft = normalizeMatchText(leftValue);
+        const normalizedRight = normalizeMatchText(rightValue);
+        const exactMatch = Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight);
+        const containsMatch = Boolean(
+          normalizedLeft &&
+          normalizedRight &&
+          (normalizedLeft.includes(normalizedRight) || normalizedRight.includes(normalizedLeft))
+        );
+
+        return [
+          "raw left: " + formatComparedValue(leftValue),
+          "normalized left: " + formatComparedValue(normalizedLeft),
+          "raw right: " + formatComparedValue(rightValue),
+          "normalized right: " + formatComparedValue(normalizedRight),
+          "exact match: " + (exactMatch ? "yes" : "no"),
+          "contains match: " + (containsMatch ? "yes" : "no")
+        ].join("\\n");
+      }
+
+      function updateComparedResult(origin) {
+        const selectedIssue = getSelectedIssue();
+        const selectedBacklogItem = getSelectedBacklogItem();
+        const lines = [
+          "origin: " + origin,
+          "",
+          "selected jira item: " + (selectedIssue ? selectedIssue.key + " - " + selectedIssue.summary : "(none)"),
+          "selected local backlog item: " + (selectedBacklogItem ? selectedBacklogItem.displayName + " (" + selectedBacklogItem.fileName + ")" : "(none)"),
+          ""
+        ];
+
+        lines.push("jira -> local comparisons:");
+        if (!selectedIssue) {
+          lines.push("(no jira item selected)");
+        } else if (backlogItems.length === 0) {
+          lines.push("(no local backlog items loaded)");
+        } else {
+          backlogItems.forEach((item, index) => {
+            lines.push("");
+            lines.push("[" + String(index + 1) + "] " + item.displayName + " (" + item.fileName + ")");
+            lines.push(buildComparisonLine(selectedIssue.description, item.description));
+          });
+          const matchingBacklogItem = findMatchingBacklogItem(selectedIssue);
+          lines.push("");
+          lines.push(
+            "unique local match: " +
+              (matchingBacklogItem
+                ? matchingBacklogItem.displayName + " (" + matchingBacklogItem.fileName + ")"
+                : "(none)")
+          );
         }
-        return (
-          findMatchingIssueBySummary(backlogItem?.displayName) ||
-          findMatchingIssueBySummary(stripFileNamePrefix(backlogItem?.fileName))
-        );
+
+        lines.push("");
+        lines.push("local -> jira comparisons:");
+        if (!selectedBacklogItem) {
+          lines.push("(no local backlog item selected)");
+        } else if (!useJiraInput.checked) {
+          lines.push("(jira disabled)");
+        } else if (issues.length === 0) {
+          lines.push("(no jira items loaded)");
+        } else {
+          issues.forEach((issue, index) => {
+            lines.push("");
+            lines.push("[" + String(index + 1) + "] " + issue.key + " - " + issue.summary);
+            lines.push(buildComparisonLine(selectedBacklogItem.description, issue.description));
+          });
+          const matchingIssue = findMatchingIssue(selectedBacklogItem);
+          lines.push("");
+          lines.push(
+            "unique jira match: " + (matchingIssue ? matchingIssue.key + " - " + matchingIssue.summary : "(none)")
+          );
+        }
+
+        comparedResult.textContent = lines.join("\\n");
       }
 
       function updateSelectedIssueDetails() {
@@ -827,6 +736,7 @@ export function renderBacklogItemCompletedHtml(
           const matchingBacklogItem = findMatchingBacklogItem(getSelectedIssue());
           backlogItemPathInput.value = matchingBacklogItem?.filePath || "";
           updateSelectedBacklogItemDetails();
+          updateComparedResult(origin);
           return;
         }
 
@@ -834,7 +744,11 @@ export function renderBacklogItemCompletedHtml(
           const matchingIssue = findMatchingIssue(getSelectedBacklogItem());
           issueKeyInput.value = matchingIssue?.key || "";
           updateSelectedIssueDetails();
+          updateComparedResult(origin);
+          return;
         }
+
+        updateComparedResult(origin);
       }
 
       function getPayload() {
@@ -851,6 +765,7 @@ export function renderBacklogItemCompletedHtml(
         jiraSection.classList.toggle("is-disabled", !useJiraInput.checked);
         issueKeyInput.disabled = !useJiraInput.checked;
         updateSelectedIssueDetails();
+        updateComparedResult("jira-state");
       }
 
       function queueDraftSave() {
@@ -948,6 +863,7 @@ export function renderBacklogItemCompletedHtml(
             syncSelections("backlog");
           } else {
             updateSelectedBacklogItemDetails();
+            updateComparedResult("backlog-reload");
           }
           syncRunButton();
           queueDraftSave();
@@ -959,6 +875,7 @@ export function renderBacklogItemCompletedHtml(
           renderBacklogItemOptions("");
           backlogFolderStatus.textContent = message.payload?.message || "Unable to load local backlog items.";
           updateSelectedBacklogItemDetails();
+          updateComparedResult("backlog-error");
           syncRunButton();
         }
       });
@@ -970,6 +887,8 @@ export function renderBacklogItemCompletedHtml(
         syncSelections("issue");
       } else if (backlogItemPathInput.value) {
         syncSelections("backlog");
+      } else {
+        updateComparedResult("initial");
       }
       updateSelectedBacklogItemDetails();
       syncRunButton();
