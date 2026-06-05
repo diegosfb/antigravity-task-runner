@@ -636,6 +636,7 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out blocked and of
               id: "10002",
               key: "TASK-2",
               fields: {
+                description: "Reviewed work can unblock this",
                 summary: "Blocked by reviewed work",
                 issuetype: { name: "Task" },
                 project: { key: "TASK", name: "Task Runner" },
@@ -662,6 +663,7 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out blocked and of
               id: "10003",
               key: "TASK-3",
               fields: {
+                description: "No blockers remain",
                 summary: "Unblocked issue",
                 issuetype: { name: "Task" },
                 project: { key: "TASK", name: "Task Runner" },
@@ -785,9 +787,17 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out blocked and of
     issues.map((issue) => issue.key),
     ["TASK-2", "TASK-3", "TASK-4", "TASK-5", "TASK-6"]
   );
+  assert.deepEqual(
+    issues.slice(0, 2).map((issue) => ({ key: issue.key, description: issue.description })),
+    [
+      { key: "TASK-2", description: "Reviewed work can unblock this" },
+      { key: "TASK-3", description: "No blockers remain" }
+    ]
+  );
   assert.ok(issues.every((issue) => issue.projectKey === "TASK"));
   assert.deepEqual(capturedSearchRequest.fields, [
     "summary",
+    "description",
     "issuetype",
     "project",
     "status",

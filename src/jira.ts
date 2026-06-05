@@ -612,7 +612,7 @@ async function searchOpenUnassignedTodoJiraIssueSearchResultsForProject(
     method: "POST",
     apiPath: "/rest/api/3/search/jql",
     body: {
-      fields: ["summary", "issuetype", "project", "status", "issuelinks"],
+      fields: ["summary", "description", "issuetype", "project", "status", "issuelinks"],
       jql:
         `project = "${normalizedProjectKey}" AND assignee IS EMPTY AND statusCategory = "To Do" ORDER BY updated DESC`,
       maxResults: 100
