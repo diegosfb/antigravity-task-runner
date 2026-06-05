@@ -147,6 +147,14 @@ import {
   type EstimatorFormValues
 } from "./estimator";
 import {
+  PLAN_EXECUTION_COMMAND,
+  buildPlanExecutionCommand,
+  getMissingPlanExecutionFields,
+  renderPlanExecutionHtml,
+  sanitizePlanExecutionFormValues,
+  type PlanExecutionFormValues
+} from "./planExecution";
+import {
   SOLUTION_ARCHITECT_COMMAND,
   buildSolutionArchitectCommand,
   getMissingSolutionArchitectFields,
@@ -203,6 +211,7 @@ export function activate(context: vscode.ExtensionContext) {
   const PRODUCT_DESIGNER_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiMagenta");
   const BUSINESS_ANALYST_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
   const ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiYellow");
+  const PLAN_EXECUTION_ACTION_COLOR = new vscode.ThemeColor("charts.orange");
   context.subscriptions.push(outputChannel);
   initLogger(outputChannel);
 
@@ -326,6 +335,19 @@ export function activate(context: vscode.ExtensionContext) {
     });
     terminal.show();
     terminal.sendText(buildEstimatorCommand(values), true);
+  };
+
+  const launchPlanExecutionInNewTerminal = (
+    values: PlanExecutionFormValues
+  ): void => {
+    const terminal = vscode.window.createTerminal({
+      name: "Plan Execution",
+      cwd: values.workspace,
+      iconPath: new vscode.ThemeIcon("play-circle", PLAN_EXECUTION_ACTION_COLOR),
+      color: PLAN_EXECUTION_ACTION_COLOR
+    });
+    terminal.show();
+    terminal.sendText(buildPlanExecutionCommand(values), true);
   };
 
   const getProjectScopedStateKey = (prefix: string): string => {
@@ -6176,6 +6198,85 @@ export function activate(context: vscode.ExtensionContext) {
             void panel.webview.postMessage({
               type: "estimatorError",
               payload: { message: `Failed to open Estimator terminal: ${messageText}` }
+            });
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(PLAN_EXECUTION_COMMAND, async () => {
+      const openWorkspaceRoot = getWorkspaceRoot();
+      const rootPath = getRootPath();
+      const workspaceRoot = rootPath
+        ? resolveProjectWorkspaceRoot(getRepoRoot(rootPath))
+        : resolveProjectWorkspaceRoot(openWorkspaceRoot);
+      const savedValues = context.workspaceState.get<Partial<PlanExecutionFormValues>>(
+        getProjectScopedStateKey("planExecutionForm")
+      );
+      const initialValues = sanitizePlanExecutionFormValues(savedValues, workspaceRoot);
+      const panel = vscode.window.createWebviewPanel(
+        "antigravityPlanExecution",
+        "Plan Execution",
+        vscode.ViewColumn.Active,
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true
+        }
+      );
+      panel.webview.html = renderPlanExecutionHtml(panel.webview, initialValues);
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          if (!message) return;
+          if (message.type === "cancelPlanExecution") {
+            panel.dispose();
+            return;
+          }
+          if (message.type === "savePlanExecutionDraft") {
+            const draftValues = sanitizePlanExecutionFormValues(
+              message.payload as Partial<PlanExecutionFormValues> | undefined,
+              workspaceRoot
+            );
+            await context.workspaceState.update(
+              getProjectScopedStateKey("planExecutionForm"),
+              draftValues
+            );
+            return;
+          }
+          if (message.type !== "runPlanExecution") {
+            return;
+          }
+
+          const values = sanitizePlanExecutionFormValues(
+            message.payload as Partial<PlanExecutionFormValues> | undefined,
+            workspaceRoot
+          );
+          const missingFields = getMissingPlanExecutionFields(values);
+          if (missingFields.length > 0) {
+            void panel.webview.postMessage({
+              type: "planExecutionError",
+              payload: {
+                message: `Fill in the required fields: ${missingFields.join(", ")}.`
+              }
+            });
+            return;
+          }
+
+          try {
+            await context.workspaceState.update(
+              getProjectScopedStateKey("planExecutionForm"),
+              values
+            );
+            launchPlanExecutionInNewTerminal(values);
+            void vscode.window.showInformationMessage("Opened Plan Execution terminal.");
+            panel.dispose();
+          } catch (error) {
+            const messageText = error instanceof Error ? error.message : String(error);
+            void panel.webview.postMessage({
+              type: "planExecutionError",
+              payload: { message: `Failed to open Plan Execution terminal: ${messageText}` }
             });
           }
         },

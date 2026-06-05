@@ -21,6 +21,7 @@ const terminal_1 = require("./terminal");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const businessAnalyst_1 = require("./businessAnalyst");
 const estimator_1 = require("./estimator");
+const planExecution_1 = require("./planExecution");
 const productDesigner_1 = require("./productDesigner");
 const solutionArchitect_1 = require("./solutionArchitect");
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
@@ -804,13 +805,17 @@ function getAdlcItems() {
         command: estimator_1.ESTIMATOR_COMMAND,
         title: "Open Estimator"
     };
-    const pendingItems = ["Plan Execution", "Developer"].map((label) => {
-        const item = new NodeItem({ kind: "action", label }, vscode.TreeItemCollapsibleState.None);
-        item.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
-        item.tooltip = "Coming soon.";
-        return item;
-    });
-    return [productDesigner, businessAnalyst, solutionArchitect, estimator, ...pendingItems];
+    const planExecution = new NodeItem({ kind: "action", label: "Plan Execution" }, vscode.TreeItemCollapsibleState.None);
+    planExecution.iconPath = new vscode.ThemeIcon("play-circle", FEATURE_FLAG_ACTION_COLOR);
+    planExecution.tooltip = "Open the Plan Execution runner form.";
+    planExecution.command = {
+        command: planExecution_1.PLAN_EXECUTION_COMMAND,
+        title: "Open Plan Execution"
+    };
+    const developer = new NodeItem({ kind: "action", label: "Developer" }, vscode.TreeItemCollapsibleState.None);
+    developer.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
+    developer.tooltip = "Coming soon.";
+    return [productDesigner, businessAnalyst, solutionArchitect, estimator, planExecution, developer];
 }
 function getPrReviewerItems() {
     const reviewPullRequest = new NodeItem({ kind: "action", label: "Review a Pull Request" }, vscode.TreeItemCollapsibleState.None);

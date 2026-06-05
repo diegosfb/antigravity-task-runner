@@ -211,7 +211,7 @@ test("shouldHideAddonsEntry hides dot-prefixed files and directories inside conf
   fs.rmSync(addonsRoot, { recursive: true, force: true });
 });
 
-test("quick actions include ADLC after feature flag with static child roles", async () => {
+test("quick actions include ADLC after feature flag with runner actions", async () => {
   const { AntigravityViewProvider } = setupTreeProviderModule();
   const provider = new AntigravityViewProvider();
 
@@ -243,5 +243,6 @@ test("quick actions include ADLC after feature flag with static child roles", as
   assert.equal(adlcChildren[1].command?.command, "antigravity.openBusinessAnalyst");
   assert.equal(adlcChildren[2].command?.command, "antigravity.openSolutionArchitect");
   assert.equal(adlcChildren[3].command?.command, "antigravity.openEstimator");
-  assert.ok(adlcChildren.slice(4).every((item) => item.command === undefined));
+  assert.equal(adlcChildren[4].command?.command, "antigravity.openPlanExecution");
+  assert.equal(adlcChildren[5].command, undefined);
 });

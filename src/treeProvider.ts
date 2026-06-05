@@ -12,6 +12,7 @@ import {
 } from "./cloudArchitectReview";
 import { BUSINESS_ANALYST_COMMAND } from "./businessAnalyst";
 import { ESTIMATOR_COMMAND } from "./estimator";
+import { PLAN_EXECUTION_COMMAND } from "./planExecution";
 import { PRODUCT_DESIGNER_COMMAND } from "./productDesigner";
 import { SOLUTION_ARCHITECT_COMMAND } from "./solutionArchitect";
 
@@ -1057,16 +1058,25 @@ function getAdlcItems(): NodeItem[] {
     title: "Open Estimator"
   };
 
-  const pendingItems = ["Plan Execution", "Developer"].map((label) => {
-    const item = new NodeItem(
-      { kind: "action", label },
-      vscode.TreeItemCollapsibleState.None
-    );
-    item.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
-    item.tooltip = "Coming soon.";
-    return item;
-  });
-  return [productDesigner, businessAnalyst, solutionArchitect, estimator, ...pendingItems];
+  const planExecution = new NodeItem(
+    { kind: "action", label: "Plan Execution" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  planExecution.iconPath = new vscode.ThemeIcon("play-circle", FEATURE_FLAG_ACTION_COLOR);
+  planExecution.tooltip = "Open the Plan Execution runner form.";
+  planExecution.command = {
+    command: PLAN_EXECUTION_COMMAND,
+    title: "Open Plan Execution"
+  };
+
+  const developer = new NodeItem(
+    { kind: "action", label: "Developer" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  developer.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
+  developer.tooltip = "Coming soon.";
+
+  return [productDesigner, businessAnalyst, solutionArchitect, estimator, planExecution, developer];
 }
 
 function getPrReviewerItems(): NodeItem[] {
