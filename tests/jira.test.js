@@ -5,6 +5,7 @@ const http = require("node:http");
 const {
   createJiraProject,
   INVALID_JIRA_TOKEN_MESSAGE,
+  searchOpenTodoOrInProgressJiraIssuesForProject,
   searchOpenTodoJiraIssuesForProject,
   searchOpenUnassignedTodoJiraIssuesForAssignment,
   transitionJiraIssueToReviewOrDone,
@@ -869,6 +870,107 @@ test("searchOpenTodoJiraIssuesForProject returns all To Do issues for the select
     "status"
   ]);
   assert.match(capturedSearchRequest.jql, /^project = "TASK" AND statusCategory = "To Do"/);
+});
+
+test("searchOpenTodoOrInProgressJiraIssuesForProject includes To Do and In Progress descriptions", async (t) => {
+  let capturedSearchRequest = null;
+
+  const server = http.createServer(async (request, response) => {
+    if (request.url === "/rest/api/3/search/jql" && request.method === "POST") {
+      capturedSearchRequest = await readJsonBody(request);
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          issues: [
+            {
+              id: "31001",
+              key: "TASK-310",
+              fields: {
+                description: {
+                  type: "doc",
+                  version: 1,
+                  content: [
+                    {
+                      type: "bulletList",
+                      content: [
+                        {
+                          type: "listItem",
+                          content: [
+                            {
+                              type: "paragraph",
+                              content: [{ type: "text", text: "First line" }]
+                            }
+                          ]
+                        },
+                        {
+                          type: "listItem",
+                          content: [
+                            {
+                              type: "paragraph",
+                              content: [{ type: "text", text: "Second line" }]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                issuetype: { name: "Task" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "In Progress" },
+                summary: "In progress issue"
+              }
+            },
+            {
+              id: "31002",
+              key: "TASK-311",
+              fields: {
+                description: "Simple todo description",
+                issuetype: { name: "Story" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "To Do" },
+                summary: "Todo issue"
+              }
+            }
+          ]
+        })
+      );
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ errorMessages: ["Unexpected endpoint"] }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  const issues = await searchOpenTodoOrInProgressJiraIssuesForProject(
+    {
+      baseUrl: `http://127.0.0.1:${port}`,
+      email: "person@example.com",
+      apiToken: "secret-token"
+    },
+    "TASK"
+  );
+
+  assert.deepEqual(capturedSearchRequest.fields, [
+    "summary",
+    "description",
+    "issuetype",
+    "project",
+    "status",
+    "assignee"
+  ]);
+  assert.match(capturedSearchRequest.jql, /^project = "TASK" AND status in \("To Do", "In Progress"\)/);
+  assert.deepEqual(
+    issues.map((issue) => ({ key: issue.key, description: issue.description })),
+    [
+      { key: "TASK-310", description: "First line Second line" },
+      { key: "TASK-311", description: "Simple todo description" }
+    ]
+  );
 });
 
 test("searchOpenUnassignedTodoJiraIssuesForAssignment reloads missing blocker statuses before filtering", async (t) => {

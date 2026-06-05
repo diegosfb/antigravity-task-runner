@@ -72,7 +72,7 @@ import {
   searchOpenUnassignedTodoJiraIssuesForAssignment,
   searchOpenUnassignedTodoJiraIssuesForProject,
   assignJiraIssueToCurrentUser,
-  searchOpenAssignedJiraIssuesForCurrentUser,
+  searchOpenTodoOrInProgressJiraIssuesForProject,
   transitionJiraIssueToStatus,
   transitionJiraIssueToReviewOrDone,
   updateJiraIssueSummaryAndLabels,
@@ -177,10 +177,15 @@ import {
 } from "./backlogItem";
 import {
   BACKLOG_ITEM_COMPLETED_COMMAND,
+  findMatchingBacklogItemForJiraIssue,
+  findMatchingJiraIssueForBacklogItem,
   getMissingBacklogItemCompletedFields,
   getDefaultBacklogItemCompletedValues,
+  loadBacklogItemsForCompletion,
+  type BacklogItemCompletedLocalItem,
   renderBacklogItemCompletedHtml,
   sanitizeBacklogItemCompletedFormValues,
+  upsertBacklogItemCompletedStatus,
   type BacklogItemCompletedFormValues
 } from "./backlogItemCompleted";
 
@@ -4998,10 +5003,10 @@ export function activate(context: vscode.ExtensionContext) {
         issues = await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: `Loading your Jira items in ${projectKey}`,
+            title: `Loading Jira items in ${projectKey}`,
             cancellable: false
           },
-          async () => searchOpenAssignedJiraIssuesForCurrentUser(credentials, projectKey)
+          async () => searchOpenTodoOrInProgressJiraIssuesForProject(credentials, projectKey)
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -5009,23 +5014,49 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      if (issues.length === 0) {
-        void vscode.window.showInformationMessage(
-          `No Jira tickets assigned to you in To Do or In Progress were found for project ${projectKey}.`
-        );
-        return;
-      }
+      const defaultValues = getDefaultBacklogItemCompletedValues(projectKey, repoRoot);
 
       const savedValues = context.workspaceState.get<Partial<BacklogItemCompletedFormValues>>(
         getProjectScopedStateKey("backlogItemCompletedForm")
       );
       const initialValues = sanitizeBacklogItemCompletedFormValues(
         savedValues,
-        projectKey
+        projectKey,
+        repoRoot
+      );
+      let initialBacklogItems: BacklogItemCompletedLocalItem[] = [];
+      let backlogLoadError = "";
+      try {
+        initialBacklogItems = loadBacklogItemsForCompletion(initialValues.backlogDir);
+      } catch (error) {
+        backlogLoadError = error instanceof Error ? error.message : String(error);
+      }
+
+      if (issues.length === 0 && initialBacklogItems.length === 0) {
+        void vscode.window.showInformationMessage(
+          backlogLoadError
+            ? `No Jira or local backlog items are ready to complete. ${backlogLoadError}`
+            : `No Jira items in To Do or In Progress or eligible local backlog items were found for project ${projectKey}.`
+        );
+        return;
+      }
+
+      const savedBacklogItem = initialBacklogItems.find(
+        (item) => item.filePath === initialValues.backlogItemPath
+      );
+      const matchedIssueForSavedBacklogItem = findMatchingJiraIssueForBacklogItem(
+        savedBacklogItem,
+        issues
       );
       const selectedIssueKey = issues.some((issue) => issue.key === initialValues.issueKey)
         ? initialValues.issueKey
-        : issues[0]?.key ?? "";
+        : matchedIssueForSavedBacklogItem?.key ?? issues[0]?.key ?? "";
+      const initialIssue = issues.find((issue) => issue.key === selectedIssueKey);
+      const matchedBacklogItem = findMatchingBacklogItemForJiraIssue(initialIssue, initialBacklogItems);
+      const selectedBacklogItemPath =
+        matchedBacklogItem?.filePath ??
+        savedBacklogItem?.filePath ??
+        "";
       const panel = vscode.window.createWebviewPanel(
         "antigravityBacklogItemCompleted",
         "Backlog Item Completed",
@@ -5038,11 +5069,14 @@ export function activate(context: vscode.ExtensionContext) {
       panel.webview.html = renderBacklogItemCompletedHtml(
         panel.webview,
         {
-          ...getDefaultBacklogItemCompletedValues(projectKey),
+          ...defaultValues,
           ...initialValues,
+          backlogItemPath: selectedBacklogItemPath,
           issueKey: selectedIssueKey
         },
-        issues
+        issues,
+        initialBacklogItems,
+        backlogLoadError
       );
       panel.webview.onDidReceiveMessage(
         async (message) => {
@@ -5054,12 +5088,38 @@ export function activate(context: vscode.ExtensionContext) {
           if (message.type === "saveBacklogItemCompletedDraft") {
             const draftValues = sanitizeBacklogItemCompletedFormValues(
               message.payload as Partial<BacklogItemCompletedFormValues> | undefined,
-              projectKey
+              projectKey,
+              repoRoot
             );
             await context.workspaceState.update(
               getProjectScopedStateKey("backlogItemCompletedForm"),
               draftValues
             );
+            return;
+          }
+          if (message.type === "loadBacklogItemCompletedBacklogItems") {
+            const draftValues = sanitizeBacklogItemCompletedFormValues(
+              message.payload as Partial<BacklogItemCompletedFormValues> | undefined,
+              projectKey,
+              repoRoot
+            );
+            try {
+              const backlogItems = loadBacklogItemsForCompletion(draftValues.backlogDir);
+              void panel.webview.postMessage({
+                type: "backlogItemCompletedBacklogItemsLoaded",
+                payload: {
+                  items: backlogItems
+                }
+              });
+            } catch (error) {
+              const messageText = error instanceof Error ? error.message : String(error);
+              void panel.webview.postMessage({
+                type: "backlogItemCompletedBacklogItemsError",
+                payload: {
+                  message: messageText
+                }
+              });
+            }
             return;
           }
           if (message.type !== "runBacklogItemCompleted") {
@@ -5068,7 +5128,8 @@ export function activate(context: vscode.ExtensionContext) {
 
           const values = sanitizeBacklogItemCompletedFormValues(
             message.payload as Partial<BacklogItemCompletedFormValues> | undefined,
-            projectKey
+            projectKey,
+            repoRoot
           );
           const missingFields = getMissingBacklogItemCompletedFields(values);
           if (missingFields.length > 0) {
@@ -5081,43 +5142,88 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          const selectedIssue = issues.find((issue) => issue.key === values.issueKey);
-          if (!selectedIssue) {
+          const selectedIssue = values.issueKey
+            ? issues.find((issue) => issue.key === values.issueKey)
+            : undefined;
+          if (values.issueKey && !selectedIssue) {
             void panel.webview.postMessage({
               type: "backlogItemCompletedError",
               payload: {
-                message: "The selected backlog item is no longer available. Reopen the page and try again."
+                message: "The selected Jira item is no longer available. Reopen the page and try again."
               }
             });
             return;
           }
 
           try {
+            const backlogItems = values.backlogItemPath
+              ? loadBacklogItemsForCompletion(values.backlogDir)
+              : [];
+            const selectedBacklogItem = values.backlogItemPath
+              ? backlogItems.find((item) => item.filePath === values.backlogItemPath)
+              : undefined;
+            if (values.backlogItemPath && !selectedBacklogItem) {
+              void panel.webview.postMessage({
+                type: "backlogItemCompletedError",
+                payload: {
+                  message:
+                    "The selected local backlog item is no longer available. Reopen the page and try again."
+                }
+              });
+              return;
+            }
+
             await context.workspaceState.update(
               getProjectScopedStateKey("backlogItemCompletedForm"),
               values
             );
-            const transitionResult = await vscode.window.withProgress(
+
+            const completionMessage = await vscode.window.withProgress(
               {
                 location: vscode.ProgressLocation.Notification,
-                title: `Completing ${selectedIssue.key} in Jira`,
+                title:
+                  selectedIssue && selectedBacklogItem
+                    ? `Completing ${selectedIssue.key} and ${path.basename(selectedBacklogItem.filePath)}`
+                    : selectedIssue
+                      ? `Completing ${selectedIssue.key} in Jira`
+                      : `Updating ${path.basename(selectedBacklogItem?.filePath ?? "backlog item")}`,
                 cancellable: false
               },
-              async () =>
-                transitionJiraIssueToReviewOrDone(
-                  credentials,
-                  projectKey,
-                  selectedIssue.key
-                )
+              async () => {
+                const messages: string[] = [];
+
+                if (selectedIssue) {
+                  const transitionResult = await transitionJiraIssueToReviewOrDone(
+                    credentials,
+                    projectKey,
+                    selectedIssue.key
+                  );
+                  messages.push(
+                    transitionResult.statusName === "In Review"
+                      ? `Moved Jira item ${selectedIssue.key} to In Review.`
+                      : transitionResult.fallbackReason
+                        ? `Moved Jira item ${selectedIssue.key} to Done because ${transitionResult.fallbackReason}`
+                        : `Moved Jira item ${selectedIssue.key} to Done.`
+                  );
+                }
+
+                if (selectedBacklogItem) {
+                  const existingMarkdown = fs.readFileSync(selectedBacklogItem.filePath, "utf8");
+                  fs.writeFileSync(
+                    selectedBacklogItem.filePath,
+                    upsertBacklogItemCompletedStatus(existingMarkdown, "In Review"),
+                    "utf8"
+                  );
+                  messages.push(
+                    `Updated local backlog item ${path.basename(selectedBacklogItem.filePath)} to In Review.`
+                  );
+                }
+
+                return messages.join(" ");
+              }
             );
 
-            const transitionMessage =
-              transitionResult.statusName === "In Review"
-                ? `Moved backlog item ${selectedIssue.key} to In Review.`
-                : transitionResult.fallbackReason
-                  ? `Moved backlog item ${selectedIssue.key} to Done because ${transitionResult.fallbackReason}`
-                  : `Moved backlog item ${selectedIssue.key} to Done.`;
-            void vscode.window.showInformationMessage(transitionMessage);
+            void vscode.window.showInformationMessage(completionMessage);
             panel.dispose();
           } catch (error) {
             const messageText = error instanceof Error ? error.message : String(error);
