@@ -18,8 +18,8 @@ export type DeveloperFormValues = {
   agentScriptPath: string;
 };
 
-function getDefaultSourceOutputFolder(projectDescriptionDir: string): string {
-  return projectDescriptionDir ? path.join(projectDescriptionDir, "src") : "";
+function getDefaultSourceOutputFolder(workspace: string): string {
+  return workspace ? path.join(workspace, "src") : "";
 }
 
 function getDefaultProjectInputs(workspace: string): Pick<
@@ -29,7 +29,7 @@ function getDefaultProjectInputs(workspace: string): Pick<
   const projectDescriptionDir = workspace ? path.join(workspace, "docs", "project_description") : "";
   return {
     projectDescriptionDir,
-    sourceOutputFolder: getDefaultSourceOutputFolder(projectDescriptionDir),
+    sourceOutputFolder: getDefaultSourceOutputFolder(workspace),
     executionPlanFile: workspace ? path.join(workspace, "docs", "project-execution-plan.md") : "",
     backlogDir: workspace ? path.join(workspace, "docs", "backlog") : "",
     architectureDir: workspace ? path.join(workspace, "docs", "architecture") : ""
@@ -78,7 +78,7 @@ export function sanitizeDeveloperFormValues(
     sourceOutputFolder:
       typeof values?.sourceOutputFolder === "string"
         ? values.sourceOutputFolder.trim()
-        : getDefaultSourceOutputFolder(projectDescriptionDir),
+        : getDefaultSourceOutputFolder(workspace),
     executionPlanFile:
       typeof values?.executionPlanFile === "string"
         ? values.executionPlanFile.trim()
@@ -368,15 +368,15 @@ export function renderDeveloperHtml(
         return [normalizedBase, ...parts].join(separator);
       }
 
-      function getDefaultSourceOutputFolder(projectDescriptionDir) {
-        return projectDescriptionDir ? joinPath(projectDescriptionDir, "src") : "";
+      function getDefaultSourceOutputFolder(workspace) {
+        return workspace ? joinPath(workspace, "src") : "";
       }
 
       function getDefaultFolders(workspace) {
         const projectDescriptionDir = workspace ? joinPath(workspace, "docs", "project_description") : "";
         return {
           projectDescriptionDir,
-          sourceOutputFolder: getDefaultSourceOutputFolder(projectDescriptionDir),
+          sourceOutputFolder: getDefaultSourceOutputFolder(workspace),
           executionPlanFile: workspace ? joinPath(workspace, "docs", "project-execution-plan.md") : "",
           backlogDir: workspace ? joinPath(workspace, "docs", "backlog") : "",
           architectureDir: workspace ? joinPath(workspace, "docs", "architecture") : ""
@@ -389,7 +389,7 @@ export function renderDeveloperHtml(
           projectDescriptionDirInput.value = defaults.projectDescriptionDir;
         }
         if (sourceOutputFolderInput.dataset.userModified !== "true") {
-          sourceOutputFolderInput.value = getDefaultSourceOutputFolder(projectDescriptionDirInput.value.trim());
+          sourceOutputFolderInput.value = defaults.sourceOutputFolder;
         }
         if (executionPlanFileInput.dataset.userModified !== "true") {
           executionPlanFileInput.value = defaults.executionPlanFile;
@@ -408,7 +408,7 @@ export function renderDeveloperHtml(
           projectDescriptionDirInput.value.trim() !== defaults.projectDescriptionDir
         );
         sourceOutputFolderInput.dataset.userModified = String(
-          sourceOutputFolderInput.value.trim() !== getDefaultSourceOutputFolder(projectDescriptionDirInput.value.trim())
+          sourceOutputFolderInput.value.trim() !== defaults.sourceOutputFolder
         );
         executionPlanFileInput.dataset.userModified = String(
           executionPlanFileInput.value.trim() !== defaults.executionPlanFile
@@ -464,16 +464,17 @@ export function renderDeveloperHtml(
           projectDescriptionDirInput.value.trim() !== defaults.projectDescriptionDir
         );
         if (sourceOutputFolderInput.dataset.userModified !== "true") {
-          sourceOutputFolderInput.value = getDefaultSourceOutputFolder(projectDescriptionDirInput.value.trim());
+          sourceOutputFolderInput.value = defaults.sourceOutputFolder;
         }
         sourceOutputFolderInput.dataset.userModified = String(
-          sourceOutputFolderInput.value.trim() !== getDefaultSourceOutputFolder(projectDescriptionDirInput.value.trim())
+          sourceOutputFolderInput.value.trim() !== defaults.sourceOutputFolder
         );
       });
 
       sourceOutputFolderInput.addEventListener("input", () => {
+        const defaults = getDefaultFolders(workspaceInput.value.trim());
         sourceOutputFolderInput.dataset.userModified = String(
-          sourceOutputFolderInput.value.trim() !== getDefaultSourceOutputFolder(projectDescriptionDirInput.value.trim())
+          sourceOutputFolderInput.value.trim() !== defaults.sourceOutputFolder
         );
       });
 
