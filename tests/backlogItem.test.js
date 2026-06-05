@@ -5,6 +5,8 @@ const {
   normalizeBacklogFileSegment,
   buildBacklogItemFileName,
   buildBacklogItemTemplate,
+  deriveBacklogSummary,
+  extractAcceptanceCriteria,
   resolveBacklogItemFilePath
 } = require("../out/backlogItem.js");
 
@@ -45,6 +47,69 @@ test("buildBacklogItemTemplate matches the backlog scaffold", () => {
 ## Description
 
 ## Acceptance Criteria
+
+## Dependencies
+
+## Notes
+
+## Estimation
+`
+  );
+});
+
+test("deriveBacklogSummary uses the first sentence before acceptance criteria", () => {
+  assert.equal(
+    deriveBacklogSummary(`Players can move active pieces left and right using the keyboard. This should feel responsive.
+
+Acceptance Criteria
+- Arrow keys move the active piece horizontally
+- Input is ignored when the game is over`),
+    "Players can move active pieces left and right using the keyboard."
+  );
+});
+
+test("extractAcceptanceCriteria returns inline and multiline acceptance criteria text", () => {
+  assert.equal(
+    extractAcceptanceCriteria(`Gameplay controls need to be defined.
+
+Acceptance Criteria:
+- Left arrow moves left
+- Right arrow moves right`),
+    `- Left arrow moves left
+- Right arrow moves right`
+  );
+});
+
+test("buildBacklogItemTemplate populates summary, description, and acceptance criteria from description", () => {
+  assert.equal(
+    buildBacklogItemTemplate({
+      issueType: "Feature",
+      summary: "Add Falling Movement and Rotation",
+      description: `Players can move active pieces left and right using the keyboard. This should feel responsive.
+
+Acceptance Criteria
+- Arrow keys move the active piece horizontally
+- Input is ignored when the game is over`
+    }),
+    `# Feature: Add Falling Movement and Rotation
+
+## Summary
+Players can move active pieces left and right using the keyboard.
+
+## Epic Reference
+
+## Specification Reference (optional)
+
+## Description
+Players can move active pieces left and right using the keyboard. This should feel responsive.
+
+Acceptance Criteria
+- Arrow keys move the active piece horizontally
+- Input is ignored when the game is over
+
+## Acceptance Criteria
+- Arrow keys move the active piece horizontally
+- Input is ignored when the game is over
 
 ## Dependencies
 

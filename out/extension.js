@@ -3705,7 +3705,8 @@ function activate(context) {
             await fs.promises.mkdir(resolvedBacklogDir, { recursive: true });
             await fs.promises.writeFile(backlogFilePath, (0, backlogItem_1.buildBacklogItemTemplate)({
                 issueType: jiraItem.issueType,
-                summary: jiraItem.summary
+                summary: jiraItem.summary,
+                description: jiraItem.description
             }), "utf8");
         }
         catch (error) {

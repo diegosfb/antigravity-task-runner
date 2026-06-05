@@ -4660,7 +4660,8 @@ export function activate(context: vscode.ExtensionContext) {
           backlogFilePath,
           buildBacklogItemTemplate({
             issueType: jiraItem.issueType,
-            summary: jiraItem.summary
+            summary: jiraItem.summary,
+            description: jiraItem.description
           }),
           "utf8"
         );
