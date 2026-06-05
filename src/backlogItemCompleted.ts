@@ -178,6 +178,32 @@ function findUniqueMatch<T>(items: T[], predicate: (item: T) => boolean): T | un
   return matches.length === 1 ? matches[0] : undefined;
 }
 
+function findUniqueDescriptionMatch<T>(
+  items: T[],
+  description: string | undefined,
+  getDescription: (item: T) => string | undefined
+): T | undefined {
+  const normalizedDescription = normalizeBacklogItemCompletedMatchText(description);
+  if (!normalizedDescription) {
+    return undefined;
+  }
+
+  const exactMatch = findUniqueMatch(
+    items,
+    (item) => normalizeBacklogItemCompletedMatchText(getDescription(item)) === normalizedDescription
+  );
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  return findUniqueMatch(items, (item) => {
+    const normalizedItemDescription = normalizeBacklogItemCompletedMatchText(getDescription(item));
+    return Boolean(normalizedItemDescription) &&
+      (normalizedItemDescription.includes(normalizedDescription) ||
+        normalizedDescription.includes(normalizedItemDescription));
+  });
+}
+
 function findBacklogItemBySummary(
   summary: string | undefined,
   backlogItems: BacklogItemCompletedLocalItem[]
@@ -246,15 +272,13 @@ export function findMatchingBacklogItemForJiraIssue(
   issue: Pick<JiraIssueSummary, "description" | "summary"> | undefined,
   backlogItems: BacklogItemCompletedLocalItem[]
 ): BacklogItemCompletedLocalItem | undefined {
-  const normalizedDescription = normalizeBacklogItemCompletedMatchText(issue?.description);
-  if (normalizedDescription) {
-    const descriptionMatch = findUniqueMatch(
-      backlogItems,
-      (item) => normalizeBacklogItemCompletedMatchText(item.description) === normalizedDescription
-    );
-    if (descriptionMatch) {
-      return descriptionMatch;
-    }
+  const descriptionMatch = findUniqueDescriptionMatch(
+    backlogItems,
+    issue?.description,
+    (item) => item.description
+  );
+  if (descriptionMatch) {
+    return descriptionMatch;
   }
   return findBacklogItemBySummary(issue?.summary, backlogItems);
 }
@@ -263,15 +287,13 @@ export function findMatchingJiraIssueForBacklogItem(
   backlogItem: Pick<BacklogItemCompletedLocalItem, "description" | "displayName" | "fileName"> | undefined,
   issues: JiraIssueSummary[]
 ): JiraIssueSummary | undefined {
-  const normalizedDescription = normalizeBacklogItemCompletedMatchText(backlogItem?.description);
-  if (normalizedDescription) {
-    const descriptionMatch = findUniqueMatch(
-      issues,
-      (issue) => normalizeBacklogItemCompletedMatchText(issue.description) === normalizedDescription
-    );
-    if (descriptionMatch) {
-      return descriptionMatch;
-    }
+  const descriptionMatch = findUniqueDescriptionMatch(
+    issues,
+    backlogItem?.description,
+    (issue) => issue.description
+  );
+  if (descriptionMatch) {
+    return descriptionMatch;
   }
   const matchedIssueByTitle = findJiraIssueBySummary(backlogItem?.displayName, issues);
   if (matchedIssueByTitle) {
@@ -636,6 +658,28 @@ export function renderBacklogItemCompletedHtml(
         return matches.length === 1 ? matches[0] : undefined;
       }
 
+      function findUniqueDescriptionMatch(items, description, getDescription) {
+        const normalizedDescription = normalizeMatchText(description);
+        if (!normalizedDescription) {
+          return undefined;
+        }
+
+        const exactMatch = findUniqueMatch(
+          items,
+          (item) => normalizeMatchText(getDescription(item)) === normalizedDescription
+        );
+        if (exactMatch) {
+          return exactMatch;
+        }
+
+        return findUniqueMatch(items, (item) => {
+          const normalizedItemDescription = normalizeMatchText(getDescription(item));
+          return Boolean(normalizedItemDescription) &&
+            (normalizedItemDescription.includes(normalizedDescription) ||
+              normalizedDescription.includes(normalizedItemDescription));
+        });
+      }
+
       function findMatchingBacklogItemBySummary(summary) {
         const normalizedSummary = normalizeMatchText(summary);
         if (normalizedSummary) {
@@ -685,29 +729,25 @@ export function renderBacklogItemCompletedHtml(
       }
 
       function findMatchingBacklogItem(issue) {
-        const normalizedDescription = normalizeMatchText(issue?.description);
-        if (normalizedDescription) {
-          const descriptionMatch = findUniqueMatch(
-            backlogItems,
-            (item) => normalizeMatchText(item.description) === normalizedDescription
-          );
-          if (descriptionMatch) {
-            return descriptionMatch;
-          }
+        const descriptionMatch = findUniqueDescriptionMatch(
+          backlogItems,
+          issue?.description,
+          (item) => item.description
+        );
+        if (descriptionMatch) {
+          return descriptionMatch;
         }
         return findMatchingBacklogItemBySummary(issue?.summary);
       }
 
       function findMatchingIssue(backlogItem) {
-        const normalizedDescription = normalizeMatchText(backlogItem?.description);
-        if (normalizedDescription) {
-          const descriptionMatch = findUniqueMatch(
-            issues,
-            (issue) => normalizeMatchText(issue.description) === normalizedDescription
-          );
-          if (descriptionMatch) {
-            return descriptionMatch;
-          }
+        const descriptionMatch = findUniqueDescriptionMatch(
+          issues,
+          backlogItem?.description,
+          (issue) => issue.description
+        );
+        if (descriptionMatch) {
+          return descriptionMatch;
         }
         return (
           findMatchingIssueBySummary(backlogItem?.displayName) ||

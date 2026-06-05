@@ -148,6 +148,41 @@ test("findMatching helpers compare Jira descriptions with backlog description se
   );
 });
 
+test("findMatching helpers treat a unique contained description as a cross-match", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const backlogItems = [
+    {
+      description: "Provision the test workspace and validate the generated environments.",
+      displayName: "Epic: Test Item",
+      fileName: "epic-test-item.md",
+      filePath: "/tmp/epic-test-item.md",
+      statusName: "To Do"
+    }
+  ];
+  const issues = [
+    {
+      description:
+        "Provision the test workspace and validate the generated environments. Confirm the default GitHub environments are created as part of setup.",
+      id: "17",
+      issueTypeName: "Epic",
+      key: "ANTIGRAVIT-17",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "In Progress",
+      summary: "Different summary text"
+    }
+  ];
+
+  assert.equal(
+    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems)?.filePath,
+    "/tmp/epic-test-item.md"
+  );
+  assert.equal(
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues)?.key,
+    "ANTIGRAVIT-17"
+  );
+});
+
 test("findMatching helpers fall back to Jira summary and backlog title when descriptions are empty", () => {
   const backlogItemCompleted = setupBacklogItemCompletedModule();
   const backlogItems = [
