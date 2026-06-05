@@ -1,3 +1,4 @@
+import * as path from "path";
 import * as vscode from "vscode";
 import { getNonce } from "./settings";
 import { quoteShellArg } from "./utils";
@@ -18,12 +19,19 @@ export type ProductDesignerFormValues = {
 export function getDefaultProductDesignerValues(
   workspaceRoot?: string
 ): ProductDesignerFormValues {
+  const projectDescriptionDir = workspaceRoot
+    ? path.join(workspaceRoot, "docs", "project_description")
+    : "";
+  const meetingsRecordingsFolder = workspaceRoot
+    ? path.join(workspaceRoot, "docs", "project_meeting_notes")
+    : "";
+
   return {
     agentHarness: "Codex",
     agentModel: "",
     agentIntelligence: "",
-    projectDescriptionDir: "",
-    meetingsRecordingsFolder: "",
+    projectDescriptionDir,
+    meetingsRecordingsFolder,
     workspace: workspaceRoot ?? "",
     projectConfluence: "",
     agentScriptPath: ""

@@ -26,7 +26,7 @@ function setupProductDesignerModule() {
   return productDesigner;
 }
 
-test("getDefaultProductDesignerValues defaults harness to Codex and the provided workspace path", () => {
+test("getDefaultProductDesignerValues defaults harness and project folders from the provided workspace path", () => {
   const productDesigner = setupProductDesignerModule();
   const defaults = productDesigner.getDefaultProductDesignerValues("/tmp/project");
 
@@ -34,8 +34,8 @@ test("getDefaultProductDesignerValues defaults harness to Codex and the provided
     agentHarness: "Codex",
     agentModel: "",
     agentIntelligence: "",
-    projectDescriptionDir: "",
-    meetingsRecordingsFolder: "",
+    projectDescriptionDir: "/tmp/project/docs/project_description",
+    meetingsRecordingsFolder: "/tmp/project/docs/project_meeting_notes",
     workspace: "/tmp/project",
     projectConfluence: "",
     agentScriptPath: ""

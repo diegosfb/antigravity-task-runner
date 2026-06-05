@@ -6,16 +6,23 @@ exports.sanitizeProductDesignerFormValues = sanitizeProductDesignerFormValues;
 exports.getMissingProductDesignerFields = getMissingProductDesignerFields;
 exports.buildProductDesignerCommand = buildProductDesignerCommand;
 exports.renderProductDesignerHtml = renderProductDesignerHtml;
+const path = require("path");
 const settings_1 = require("./settings");
 const utils_1 = require("./utils");
 exports.PRODUCT_DESIGNER_COMMAND = "antigravity.openProductDesigner";
 function getDefaultProductDesignerValues(workspaceRoot) {
+    const projectDescriptionDir = workspaceRoot
+        ? path.join(workspaceRoot, "docs", "project_description")
+        : "";
+    const meetingsRecordingsFolder = workspaceRoot
+        ? path.join(workspaceRoot, "docs", "project_meeting_notes")
+        : "";
     return {
         agentHarness: "Codex",
         agentModel: "",
         agentIntelligence: "",
-        projectDescriptionDir: "",
-        meetingsRecordingsFolder: "",
+        projectDescriptionDir,
+        meetingsRecordingsFolder,
         workspace: workspaceRoot ?? "",
         projectConfluence: "",
         agentScriptPath: ""
