@@ -556,57 +556,24 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
       function updateComparedResult(origin) {
         const selectedIssue = getSelectedIssue();
         const selectedBacklogItem = getSelectedBacklogItem();
-        const lines = [
+        const matchingBacklogItem = selectedIssue ? findMatchingBacklogItem(selectedIssue) : undefined;
+        const matchingIssue = selectedBacklogItem ? findMatchingIssue(selectedBacklogItem) : undefined;
+        comparedResult.textContent = [
           "origin: " + origin,
           "",
           "selected jira item: " + (selectedIssue ? selectedIssue.key + " - " + selectedIssue.summary : "(none)"),
           "selected local backlog item: " + (selectedBacklogItem ? selectedBacklogItem.displayName + " (" + selectedBacklogItem.fileName + ")" : "(none)"),
-          ""
-        ];
-
-        lines.push("jira -> local comparisons:");
-        if (!selectedIssue) {
-          lines.push("(no jira item selected)");
-        } else if (backlogItems.length === 0) {
-          lines.push("(no local backlog items loaded)");
-        } else {
-          backlogItems.forEach((item, index) => {
-            lines.push("");
-            lines.push("[" + String(index + 1) + "] " + item.displayName + " (" + item.fileName + ")");
-            lines.push(buildComparisonLine(selectedIssue.description, item.description));
-          });
-          const matchingBacklogItem = findMatchingBacklogItem(selectedIssue);
-          lines.push("");
-          lines.push(
-            "unique local match: " +
-              (matchingBacklogItem
-                ? matchingBacklogItem.displayName + " (" + matchingBacklogItem.fileName + ")"
-                : "(none)")
-          );
-        }
-
-        lines.push("");
-        lines.push("local -> jira comparisons:");
-        if (!selectedBacklogItem) {
-          lines.push("(no local backlog item selected)");
-        } else if (!useJiraInput.checked) {
-          lines.push("(jira disabled)");
-        } else if (issues.length === 0) {
-          lines.push("(no jira items loaded)");
-        } else {
-          issues.forEach((issue, index) => {
-            lines.push("");
-            lines.push("[" + String(index + 1) + "] " + issue.key + " - " + issue.summary);
-            lines.push(buildComparisonLine(selectedBacklogItem.description, issue.description));
-          });
-          const matchingIssue = findMatchingIssue(selectedBacklogItem);
-          lines.push("");
-          lines.push(
-            "unique jira match: " + (matchingIssue ? matchingIssue.key + " - " + matchingIssue.summary : "(none)")
-          );
-        }
-
-        comparedResult.textContent = lines.join("\\n");
+          "",
+          "selected jira description vs selected md ## Description:",
+          buildComparisonLine(selectedIssue?.description, selectedBacklogItem?.description),
+          "",
+          "unique local match from selected jira description: " +
+            (matchingBacklogItem
+              ? matchingBacklogItem.displayName + " (" + matchingBacklogItem.fileName + ")"
+              : "(none)"),
+          "unique jira match from selected md description: " +
+            (matchingIssue ? matchingIssue.key + " - " + matchingIssue.summary : "(none)")
+        ].join("\\n");
       }
 
       function updateSelectedIssueDetails() {
