@@ -379,8 +379,11 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /<span class="detail-label">Jira Project<\/span>/);
   assert.match(html, /id="useJira"/);
   assert.match(html, /<option value="TASK-2" selected>TASK-2 - Second item<\/option>/);
+  assert.match(html, /detail-grid-split/);
+  assert.match(html, /detail-stack/);
   assert.match(html, /<span class="detail-label">Description<\/span>/);
   assert.match(html, /<span class="detail-label">Local Type<\/span>/);
+  assert.doesNotMatch(html, /Local Description/);
   assert.doesNotMatch(html, /Available Jira Items/);
   assert.match(html, /feature-second-item\.md/);
   assert.doesNotMatch(html, /Transition Rule/);

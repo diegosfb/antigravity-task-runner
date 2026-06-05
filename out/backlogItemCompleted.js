@@ -261,13 +261,24 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
         color: var(--vscode-descriptionForeground);
       }
       label,
-      .detail-grid {
+      .detail-grid,
+      .detail-grid-split,
+      .detail-stack {
         display: grid;
         gap: 6px;
         font-size: 13px;
       }
       .detail-grid {
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+      .detail-grid-split {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+      .detail-stack {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 16px;
       }
       .detail-card {
         display: grid;
@@ -349,6 +360,11 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
         color: var(--vscode-button-secondaryForeground);
         background: var(--vscode-button-secondaryBackground);
       }
+      @media (max-width: 900px) {
+        .detail-grid-split {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
@@ -378,22 +394,24 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
           </select>
         </label>
         <div class="hint">Eligible Jira backlog items: ${String(issues.length)}.</div>
-        <div class="detail-grid">
+        <div class="detail-grid-split">
           <div class="detail-card">
             <span class="detail-label">Description</span>
             <span id="issueSummary" class="detail-value"></span>
           </div>
-          <div class="detail-card">
-            <span class="detail-label">Type</span>
-            <span id="issueType" class="detail-value"></span>
-          </div>
-          <div class="detail-card">
-            <span class="detail-label">Current Status</span>
-            <span id="issueStatus" class="detail-value"></span>
-          </div>
-          <div class="detail-card">
-            <span class="detail-label">Project</span>
-            <span id="issueProject" class="detail-value"></span>
+          <div class="detail-stack">
+            <div class="detail-card">
+              <span class="detail-label">Type</span>
+              <span id="issueType" class="detail-value"></span>
+            </div>
+            <div class="detail-card">
+              <span class="detail-label">Current Status</span>
+              <span id="issueStatus" class="detail-value"></span>
+            </div>
+            <div class="detail-card">
+              <span class="detail-label">Project</span>
+              <span id="issueProject" class="detail-value"></span>
+            </div>
           </div>
         </div>
       </section>
@@ -412,18 +430,20 @@ function renderBacklogItemCompletedHtml(webview, initialValues, issues, backlogI
             ${backlogOptions}
           </select>
         </label>
-        <div class="detail-grid">
+        <div class="detail-grid-split">
           <div class="detail-card">
-            <span class="detail-label">Local Description</span>
+            <span class="detail-label">Description</span>
             <span id="backlogItemDescription" class="detail-value"></span>
           </div>
-          <div class="detail-card">
-            <span class="detail-label">Local Type</span>
-            <span id="backlogItemType" class="detail-value"></span>
-          </div>
-          <div class="detail-card">
-            <span class="detail-label">Current Local Status</span>
-            <span id="backlogItemStatus" class="detail-value"></span>
+          <div class="detail-stack">
+            <div class="detail-card">
+              <span class="detail-label">Local Type</span>
+              <span id="backlogItemType" class="detail-value"></span>
+            </div>
+            <div class="detail-card">
+              <span class="detail-label">Current Local Status</span>
+              <span id="backlogItemStatus" class="detail-value"></span>
+            </div>
           </div>
         </div>
       </section>
