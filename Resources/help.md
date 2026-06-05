@@ -1,237 +1,440 @@
-# Task Runner Usage
+# Task Runner Help
 
-This document describes the items that appear in the Task Runner sidebar and what each one does. Some items are always visible. Others only appear when the repository is already a Git repo, when Jira is configured, or when autocommit is running.
+This guide describes Task Runner as it is currently implemented in this repository for `v4.10.106`.
 
-## Before You Start
+It is intentionally source-of-truth to the extension code. If the UI, an older screenshot, or an older help document says something different, trust this file. Items marked **Under development** exist in code but are incomplete, partially surfaced, or still inconsistent.
 
-- Open the `Task Runner` view from the VS Code activity bar.
-- Use the settings gear button for the built-in Task Runner settings screen, or edit raw `antigravity.*` values in VS Code `settings.json`.
-- Jira items work best when the repo has a valid `.env` with Jira credentials and a saved `JIRA_PROJECT_KEY`.
-- Claude items expect the `claude` CLI and local Claude config to be available.
+## Quick Start
 
-## Settings
+1. Open the `Task Runner` activity bar view.
+2. Use the title bar buttons:
+   - `Settings` opens the built-in Task Runner settings page.
+   - `Open Help Doc` opens this help document in Markdown preview.
+3. Configure the basics first:
+   - `antigravity.buildCommand`
+   - `antigravity.projectTestingCommand`
+   - `antigravity.agenticHarnessExecutionCommand`
+   - `antigravity.lightAgenticHarnessExecutionCommand`
+   - `antigravity.jiraBaseUrl`
+   - `antigravity.jiraEmail`
+   - `antigravity.jiraApiToken`
+4. If you use Jira flows, make sure the repo has a root `.env` with `JIRA_PROJECT_KEY`, or use `Select/Set Jira Project` to save it.
+5. If you use Claude routing, keep `~/.claude/settings.json` and `~/.claude/routerconfig.json` in good shape.
 
-Task Runner settings can be edited in two places:
+## What The Sidebar Shows
 
-- Click the settings gear in the `Task Runner` view for the built-in settings page.
-- Open VS Code Settings or `settings.json` and edit the raw `antigravity.*` keys directly.
+The current top-level order is:
 
-As a rule of thumb, save repo-specific behavior in Workspace settings and personal machine-specific values in User settings.
+1. AI launchers and build/test actions
+2. Linked folders such as `~/.gemini/antigravity`, `~/.claude`, `~/.codex`, and optional custom add-ons
+3. Quick actions and categories
+4. `Claude Plugins`
+5. `Agents`
+6. `Skills`
+7. `Workflows`
 
-### Paths, folders, and linked content
+Some items only appear when prerequisites are met:
 
-| Setting | Used by | What it controls |
+- Git repository actions appear only when the workspace already has a `.git` folder.
+- `Merge branch to main` appears only when the current branch is not `main`.
+- Jira backlog actions depend on a saved `JIRA_PROJECT_KEY` in the repo `.env`.
+- `Cloud Architect Review` stays visible, but is effectively disabled until the repo looks like it contains cloud or infrastructure files.
+- `Revert Changes` appears only when autocommit is already running.
+
+## Prerequisites
+
+Task Runner does not bundle the underlying CLIs. Different features expect different tools to exist on your machine.
+
+| Requirement | Used by |
+| --- | --- |
+| `git` | Repo flows, branch actions, tagging, PR flows, commit flows |
+| `gh` authenticated with GitHub | `Init Repository`, `Audit Secrets & Variables`, repo bootstrap scripts |
+| `claude` | `Claude Terminal`, Claude agents/plugins listing, some harness flows |
+| `codex` | `Codex Terminal`, some harness choices, some ADLC workflows |
+| `opencode` | `Opencode`, optional harness choices |
+| `ollama` | `Ollama Claude`, `Ollama Codex` |
+| `zip` | Explorer `Backup-Compress` |
+| `/Applications/DiffMerge.app` on macOS | Explorer `DiffMerge` actions |
+
+## Settings Reference
+
+Use the title-bar gear button or VS Code settings to edit `antigravity.*`.
+
+### Core Settings
+
+| Setting | What it controls | Used by |
 | --- | --- | --- |
-| `antigravity.rootPath` | Agents, workflows, project assets | Repo-relative path to the antigravity folder that contains agent and workflow content. Leave it at the default unless the repo stores that folder somewhere else. |
-| `antigravity.workspaceProjectPath` | `Workspace Setup`, environment/config scripts | Folder where workspace files are extracted or downloaded. Relative values are resolved from the repo root. |
-| `antigravity.workflowsFolder` | `Workflows` section | Base folder searched for workflow markdown before Task Runner falls back to bundled workflows. |
-| `antigravity.customAgenticPlatformAddons` | Linked folders section | Extra local folder to show in the sidebar so you can browse custom shared assets. |
-| `antigravity.antigravityWorkspaceProject` | `Update Agentic Workspace` | Local folder path where the `antigravity-workspace` repo should live when Task Runner refreshes shared workspace assets. This is an advanced setting and is usually edited only in raw settings. |
+| `antigravity.rootPath` | Main Antigravity content root. Defaults to `./.agent/antigravity`. If that does not exist, the extension falls back to the workspace root. | Repo root detection, agents, workflows |
+| `antigravity.workspaceProjectPath` | Where workspace files should be created or downloaded. Relative values are resolved from the repo root. | `Setup Workspace`, internal workspace bootstrap flows |
+| `antigravity.workflowsFolder` | Extra workflow lookup root. Task Runner checks `<folder>/workflows/<name>/WORKFLOW.md` and `<folder>/<name>/WORKFLOW.md` before falling back to bundled workflows. | `Approve a Pull Request` and other workflow lookups |
+| `antigravity.terminalName` | Shared VS Code terminal name for normal Task Runner script runs. | Build/test/scripts |
+| `antigravity.agentTerminalName` | VS Code terminal name used for agent-oriented persistent terminals. | Agent launches and some helper actions |
+| `antigravity.buildCommand` | Exact build command to run. | `Build Project` |
+| `antigravity.projectTestingCommand` | Exact test command to run. | `Run Project Tests`, PR and merge flows |
+| `antigravity.defaultGithubCodeReviewer` | Default reviewer suggestion passed into the PR flow. | `Create Pull Request` |
+| `antigravity.enableDebugLogging` | Enables extra logs in the `Antigravity Task Runner` output channel. | Troubleshooting |
 
-### Build, Git, and terminal behavior
+### Agent And Harness Settings
 
-| Setting | Used by | What it controls |
+| Setting | What it controls | Used by |
 | --- | --- | --- |
-| `antigravity.terminalName` | Workflow and repo scripts | Terminal name used for the regular Task Runner script terminal. |
-| `antigravity.agentTerminalName` | Agent launches | Terminal name used when Task Runner runs an agent-oriented command. |
-| `antigravity.buildCommand` | `Build Project` | Exact build command Task Runner runs for the project. |
-| `antigravity.projectTestingCommand` | `Run Project Tests`, PR and merge scripts | Exact test command Task Runner runs when a flow wants project validation. |
-| `antigravity.defaultGithubCodeReviewer` | `Create Pull Request` | Default GitHub reviewer suggestion shown in the PR flow. |
-| `antigravity.createReleaseBranchWhenCreatingReleases` | `Create Repo Release` | When enabled, release creation also creates, checks out, and pushes a release branch named for the release. |
-| `antigravity.autoUpdateClaudeMd` | `Autocommit Start` | When enabled, starting autocommit also asks Claude to refresh `CLAUDE.md`. |
-| `antigravity.enableDebugLogging` | Antigravity output channel | When enabled, Task Runner writes extra debug logs to the extension output. |
-| `antigravity.useAgentForGithubRepositoryManagement` | `Commit` | Switches GitHub repo management to prefer agent-driven flows. In the current implementation this mainly affects `Commit`: when enabled, the commit flow delegates message generation and commit execution to the selected light agent harness instead of the built-in local message generator. |
+| `antigravity.antigravityPath` | Path to the legacy `antigravity` executable. | Legacy agent launch command |
+| `antigravity.antigravityArgs` | Argument template for the legacy `antigravity` executable. Supports `{agent}` and `{agentFile}`. | Legacy agent launch command |
+| `antigravity.agenticHarnessExecutionCommand` | Primary harness command. | Jira-to-agent flows, feature flagging, review helpers, setup helpers |
+| `antigravity.agenticHarnessExecutionCommands` | Saved presets for the primary harness command. | Settings UI dropdown |
+| `antigravity.lightAgenticHarnessExecutionCommand` | Lightweight harness command. | Agent-driven commit flow and lightweight prompt tasks |
+| `antigravity.lightAgenticHarnessExecutionCommands` | Saved presets for the light harness command. | Settings UI dropdown |
+| `antigravity.useAgentForGithubRepositoryManagement` | When enabled, GitHub-repo management flows prefer the light harness instead of the built-in local commit-message generator. | `Commit`, PR preflight, merge preflight |
 
-### Jira settings
+### Jira Settings
 
-| Setting | Used by | What it controls |
+| Setting | What it controls | Used by |
 | --- | --- | --- |
-| `antigravity.jiraBaseUrl` | All Jira actions | Jira site base URL, usually your Atlassian cloud URL. |
-| `antigravity.jiraEmail` | All Jira actions | Jira account email used for API authentication. |
-| `antigravity.jiraApiToken` | All Jira actions | Jira API token used for API authentication. Treat this as a secret and do not commit it to Git. |
+| `antigravity.jiraBaseUrl` | Jira site URL | All Jira-backed flows |
+| `antigravity.jiraEmail` | Jira account email | All Jira-backed flows |
+| `antigravity.jiraApiToken` | Jira API token | All Jira-backed flows |
 
-### Agent and harness commands
+### Repo And Content Settings
 
-| Setting | Used by | What it controls |
+| Setting | What it controls | Used by |
 | --- | --- | --- |
-| `antigravity.antigravityPath` | Agent launches that still use the Antigravity executable | Path to the `antigravity` executable. Change it only if the command is not on your PATH or you want a custom binary. |
-| `antigravity.antigravityArgs` | Same executable-based agent launches | Argument template passed to the `antigravity` executable. It supports `{agent}` and `{agentFile}` placeholders. |
-| `antigravity.agenticHarnessExecutionCommand` | Main agentic actions | Primary harness command used for heavier agent-driven actions such as `Assign Jira Item to Agent`, `Agentic review of Merge`, and `Set Feature Flag for changes`. |
-| `antigravity.agenticHarnessExecutionCommands` | Settings command picker | Saved list of selectable main harness commands. Add values here if you want more options in the settings dropdown. |
-| `antigravity.lightAgenticHarnessExecutionCommand` | Lightweight agentic actions | Lighter or cheaper harness command used for smaller prompt-driven tasks. If `Use Agent for Github Repository Management` is enabled, `Commit` uses this lighter harness path. |
-| `antigravity.lightAgenticHarnessExecutionCommands` | Settings command picker | Saved list of selectable light harness commands. Edit it when you want different quick-select options in the settings UI. |
+| `antigravity.customAgenticPlatformAddons` | Extra local folder to show in the linked-folder section. | Sidebar linked folders |
+| `antigravity.createReleaseBranchWhenCreatingReleases` | If enabled, repo release creation also creates and pushes a release branch. | `Create Repo Release` |
+| `antigravity.autoUpdateClaudeMd` | If autocommit start is used, also asks Claude to update `CLAUDE.md`. | Internal autocommit flow |
 
-### Setup repos
+### Advanced Settings
 
-| Setting | Used by | What it controls |
+These exist today but are mainly used by advanced or partially surfaced commands.
+
+| Setting | What it controls |
+| --- | --- |
+| `antigravity.antigravityWorkspaceProject` | Local path to the `antigravity-workspace` checkout used by `Update Agentic Workspace` |
+| `antigravity.claudeSetupGithub` | Source repo URL for `Update Agentic Setup` |
+| `antigravity.geminiSetupGithub` | Source repo URL for `Update Agentic Setup` |
+| `antigravity.codexSetupGithub` | Source repo URL for `Update Agentic Setup` |
+
+## Sidebar Reference
+
+### AI Launchers And Project Commands
+
+| Item | What it does | Notes |
 | --- | --- | --- |
-| `antigravity.claudeSetupGithub` | `Update Agentic Setup` | GitHub repo URL used when refreshing Claude setup files. This is an advanced setup value. |
-| `antigravity.geminiSetupGithub` | `Update Agentic Setup` | GitHub repo URL used when refreshing Gemini setup files. This is an advanced setup value. |
-| `antigravity.codexSetupGithub` | `Update Agentic Setup` | GitHub repo URL used when refreshing Codex setup files. This is an advanced setup value. |
+| `Claude Terminal` | Opens an external OS terminal in the repo root and runs `claude`. | If Claude is configured to use a local liteLLM endpoint, Task Runner auto-starts liteLLM first. See the dedicated section below. |
+| `Codex Terminal` | Opens an external OS terminal in the repo root and runs `codex`. | Sidebar only right now, not a contributed Command Palette command. |
+| `Ollama Claude` | Opens an external OS terminal and runs `ollama launch claude --model glm-5:cloud --yes`. | Requires `ollama`. |
+| `Ollama Codex` | Opens an external OS terminal and runs `ollama launch codex --model glm-5:cloud --yes`. | Requires `ollama`. Sidebar only right now. |
+| `Opencode` | Opens an external OS terminal in the repo root and runs `opencode`. | Sidebar only right now. |
+| `Set Claude Model` | Opens a model/router configuration page and writes the selected Claude routing values. | Creates `~/.claude/routerconfig.json` from `routerconfig.example.json` if needed. |
+| `Build Project` | Runs `antigravity.buildCommand` in a VS Code task terminal. | Fails fast if the setting is blank. |
+| `Run Project Tests` | Runs `antigravity.projectTestingCommand` in a VS Code task terminal. | Fails fast if the setting is blank. |
 
-## Launchers And Linked Folders
+### Linked Folders And Browsers
 
-| Item | What it does | How to use it | When it appears |
-| --- | --- | --- | --- |
-| `Claude Terminal` | Opens a new terminal in the repo root and runs `claude`. Before launching, Task Runner checks Claude's `ANTHROPIC_BASE_URL`. If that value points at `localhost` or `127.0.0.1`, Task Runner treats Claude as using a local liteLLM proxy, runs the configured liteLLM start command, waits for the health check to pass, and only then launches `claude`. | Click it when you want an interactive Claude session rooted in the current project. See `Claude + local liteLLM setup` below for the exact files and keys. | Always |
-| `Set Claude Model` | Opens a model-selection panel for Claude and applies the chosen router, model, effort level, and internal behavior. If `~/.claude/routerconfig.json` does not exist yet, Task Runner creates it from `routerconfig.example.json` and opens it. | Click it, choose the desired router and model, then apply the change. | Always |
-| `Run liteLLM OpenAI` | Runs the configured `tool-run.litellm-openai` command from Claude router config in the secondary terminal. | Use it when your Claude setup depends on a local liteLLM service. | Always |
-| `Build Project` | Runs the command stored in `antigravity.buildCommand`. | Set the build command in Task Runner settings, then click the item. | Always |
-| `Run Project Tests` | Runs the command stored in `antigravity.projectTestingCommand`. | Set the test command in Task Runner settings, then click the item. | Always |
-| `antigravity` folder | Lets you browse the home Antigravity folder at `~/.gemini/antigravity`. | Expand it to inspect bundled workflows, files, and helper content. | When `~/.gemini/antigravity` exists |
-| `claude` folder | Lets you browse `~/.claude`. | Expand it to inspect Claude settings, workflows, plugins, or local files. | When `~/.claude` exists |
-| `codex` folder | Lets you browse `~/.codex`. | Expand it to inspect Codex-related local files and settings. | When `~/.codex` exists |
-| Custom add-ons folder | Lets you browse the folder configured in `antigravity.customAgenticPlatformAddons`. | Set the add-ons path in settings, then expand the folder to browse reusable assets. | When the setting is configured and the folder exists |
+| Item | What it shows | Appears when |
+| --- | --- | --- |
+| `antigravity` | `~/.gemini/antigravity` | That folder exists |
+| `claude` | `~/.claude` | That folder exists |
+| `codex` | `~/.codex` | That folder exists |
+| Custom add-ons folder | The folder from `antigravity.customAgenticPlatformAddons` | The setting is configured and the folder exists |
+| `Claude Plugins` | Output of `claude plugin list` | Always shown; contents depend on CLI availability |
+| `Agents` | Output of `claude agents` | Always shown; contents depend on CLI availability |
+| `Skills` | Project skills from `.agent/skills` and `.claude/skills`, user skills from `~/.claude/skills`, and enabled plugin skills from the Claude plugin cache | Always shown |
+| `Workflows` | Markdown files under `~/.gemini/antigravity/workflows` | When that folder exists |
 
-## Claude + Local liteLLM Setup
+### Quick Actions
 
-Task Runner decides whether it should auto-start liteLLM when you click `Claude Terminal` by checking Claude's `ANTHROPIC_BASE_URL`.
+| Item | What it does | Notes |
+| --- | --- | --- |
+| `Update Project Config` | Category containing focused harness-driven update prompts. | Children are listed below. |
+| `Assign Backlog Item to Agent` | Lets you pick a Jira backlog item and/or local backlog markdown item, choose an agent harness command, then either assign it or run `Grill Me`. | Requires valid Jira settings. If `Use Jira` is enabled, the repo also needs `JIRA_PROJECT_KEY`. |
+| `Init Repository` | Creates or connects a Git repo and GitHub repo, then bootstraps repo defaults. | Visible only when the project is not already a Git repo. Also creates CI/CD workflow files, `.gitignore`, `.env.example`, default GitHub environments (`dev`, `qa`, `stage`, `prod`), commits, and pushes. |
+| `Set Feature Flag for changes` | Opens the selected harness with a prompt to wrap behavior changes in `.env` feature flags and add them to `.env.example`. | Always visible. |
+| `ADLC` | Category of role-based runner forms. | The tooltip still says "coming soon", but the forms are implemented. See the ADLC section below. |
+| `Select/Set Jira Project` | Lets you save an existing Jira project key or launch agentic creation of a company-managed Jira Software project. | Visible when the repo does not already have `JIRA_PROJECT_KEY` in its root `.env`. |
+| `Create Backlog item` | Opens a form to create a local backlog markdown file and, optionally, create the matching Jira item too. | Visible when `JIRA_PROJECT_KEY` is already saved. |
+| `Take Jira Item (Assign)` | Assigns an eligible unassigned Jira item to you and moves it to `In Progress`. | Visible when `JIRA_PROJECT_KEY` is already saved. |
+| `Backlog Item Completed` | Moves a Jira item to `In Review`, or to `Done` if review is unavailable, and can also update the local backlog file status. | Visible when `JIRA_PROJECT_KEY` is already saved. |
+| `Increment Major Version` | Runs the repo bump script with `major`. | Sidebar only right now. |
+| `Increment Minor Version` | Runs the repo bump script with `minor`. | Sidebar only right now. |
+| `Increment Patch Version` | Runs the repo bump script with `patch`. | Sidebar only right now. |
+| `Cloud Architect Review` | Copies the bundled `cloud-architect` skill into the project and launches the selected harness with an infrastructure review prompt. | Stays visible, but behaves as disabled when no cloud/infrastructure signals are detected. |
+| `Feature Estimator` | Estimates a single feature from either a Jira `To Do` item or free text, or runs `Grill Me` on the same input. | Sidebar only right now. Copies the `estimator` or `grill-me` skill into the project first. |
+| `Explain Me` | Copies the `explain-me` skill into the project and asks the selected harness to explain the solution and the latest uncommitted changes. | Sidebar only right now. |
+| `Revert Changes` | Runs the autocommit revert script. | Appears only when autocommit is already running. |
+| `SOP Manual` | Opens the project SOP at `Resources/sop.md` if present, otherwise downloads and opens the bundled SOP. | Right-click the item to copy the SOP into the project. |
 
-### Where Task Runner reads that value
+### `Update Project Config` Children
 
-1. Project override first: `<repo>/.agent/claude/settings.json`
-2. Global fallback: `~/.claude/settings.json`
+| Item | What it does |
+| --- | --- |
+| `Update Github Actions` | Opens the selected harness with the GitHub Actions update prompt. |
+| `Update Tests` | Opens the selected harness with the test and Postman update prompt. |
+| `Update AGENTS.md` | Opens the selected harness with the progressive-disclosure `AGENTS.md` update prompt. Requires an existing `AGENTS.md` in the configured workspace path. |
 
-Task Runner reads `env.ANTHROPIC_BASE_URL` from those files in that order. If the project-level file exists, it wins.
+### Repository Actions
 
-### What counts as "local liteLLM"
+`Repository Actions` appears only when the workspace is already a Git repository.
 
-- If `ANTHROPIC_BASE_URL` starts with `http://localhost`
-- Or if it starts with `http://127.0.0.1`
+| Item | What it does | Notes |
+| --- | --- | --- |
+| `Commit` | Saves files, stages changes, excludes `.env` and `config/.env`, and creates a commit. | If `antigravity.useAgentForGithubRepositoryManagement` is enabled, the light harness is asked to commit automatically. Otherwise the extension generates a local commit message. |
+| `Create Repo Release` | Runs the release workflow. | In this repo type it bumps the patch version, builds, packages the VSIX, commits, pushes, creates a GitHub release, and respects `antigravity.createReleaseBranchWhenCreatingReleases`. |
+| `Create Feature Branch` | Opens a branch form and launches the branch creation script. | Supports `Feature`, `Bug Fix`, `Jira Task`, and `Hot Fix`. `Jira Task` expects `feature/JIRA-123-short-name`. |
+| `Create Pull Request` | Runs the PR workflow in a persistent terminal. | Preflight tries to commit outstanding changes first and can use the configured test command. |
+| `Merge branch to main` | Launches the merge-to-main script for the current branch. | Only shown when the current branch is not `main`. |
+| `Go To Branch` | Lets you switch branches. | If you have uncommitted changes, the flow offers `Commit Changes` or `Discard All Changes` before checkout. |
+| `Pull Remote and merge` | Updates local `main`, merges it into the current branch, runs tests if configured, and pushes the branch. | Only meaningful off `main`. |
+| `Agentic review of Merge` | Opens the selected harness with a merge review prompt focused on the current branch vs `main`. | Requires a clean worktree. |
 
-When that happens, clicking `Claude Terminal` will:
+### ADLC Role Runners
 
-1. Run the `Run liteLLM OpenAI` action internally
-2. Start the command stored at `~/.claude/routerconfig.json` under `tool-run.litellm-openai`
-3. Wait for `http://localhost:4000/health`
-4. Launch `claude`
+The ADLC section is a set of advanced forms that launch a user-supplied script with normalized arguments. These flows do not bundle the script for you. Each form requires an `Agent Script Path`, and most default their file/folder inputs under `<repo>/workspace/...`.
 
-### Important current limitation
+| Item | Purpose | Main required inputs |
+| --- | --- | --- |
+| `Product Designer` | Launch a product-design runner script. | Agent harness, workspace folder, project description folder, agent script path |
+| `Business Analyst` | Launch a business-analyst runner script. | Agent harness, workspace folder, specs folder, agent script path |
+| `Solution Architect` | Launch a solution-architecture runner script. | Agent harness, workspace folder, project description folder, specs folder, agent script path |
+| `Estimate Project` | Launch a project-level estimation runner script. | Agent harness, workspace folder, project description folder, architecture folder, backlog folder, agent script path |
+| `Create Execution Plan` | Launch an execution-planning runner script. | Agent harness, workspace folder, project description folder, architecture folder, backlog folder, agent script path |
+| `Develop Execution Plan` | Launch a development runner script against an execution plan. | Agent harness, workspace folder, execution plan file, architecture folder, backlog folder, agent script path |
 
-- The readiness check is hardcoded to `http://localhost:4000/health`.
-- In practice, that means the local liteLLM setup should use port `4000` if you want the auto-start behavior to work cleanly.
+ADLC notes:
 
-### Easiest way to configure it
+- `Business Analyst`, `Estimate Project`, `Create Execution Plan`, and `Develop Execution Plan` can also pass Jira credentials and Jira project info when `Enable Jira` is turned on.
+- The forms save draft values in workspace state, so reopening them usually restores your last inputs.
+- The current ADLC category tooltip still says "coming soon", but the forms are already wired and usable.
 
-Use the `Set Claude Model` item in the Task Runner sidebar.
+## Claude Terminal And Local liteLLM
 
-1. Click `Set Claude Model`
-2. If `~/.claude/routerconfig.json` does not exist yet, Task Runner creates it from `routerconfig.example.json`
-3. Choose the `LiteLLM` router
-4. Choose the model you want Claude to use through liteLLM
-5. Apply the change
+`Claude Terminal` has special startup logic when Claude is configured to talk to a local liteLLM proxy.
 
-That flow writes the selected router's `baseurl`, auth token, API key, and model into `~/.claude/settings.json`, and if the router has a `post_run` entry such as `litellm-openai`, it also runs the matching command from `tool-run`.
+### How Task Runner decides to auto-start liteLLM
 
-### Manual configuration files
+It reads `ANTHROPIC_BASE_URL` in this order:
 
-Global Claude settings example in `~/.claude/settings.json`:
+1. `<repo>/.agent/claude/settings.json`
+2. `~/.claude/settings.json`
 
-```json
-{
-  "env": {
-    "ANTHROPIC_BASE_URL": "http://localhost:4000",
-    "ANTHROPIC_MODEL": "openai/gpt-5.2-codex",
-    "ANTHROPIC_API_KEY": "<your-api-key-if-needed>",
-    "ANTHROPIC_AUTH_TOKEN": ""
-  }
-}
+If the value starts with either:
+
+- `http://localhost`
+- `http://127.0.0.1`
+
+Task Runner treats Claude as using local liteLLM.
+
+### What happens then
+
+1. It runs `Run liteLLM OpenAI` internally.
+2. That command reads `tool-run.litellm-openai` from `~/.claude/routerconfig.json`.
+3. It waits for `http://localhost:4000/health`.
+4. If the health check succeeds, it launches `claude` in a new external terminal.
+
+### Important limitation
+
+The readiness check is currently hardcoded to `http://localhost:4000/health`.
+
+If your local liteLLM server uses a different port, the Claude auto-start flow will not consider it ready.
+
+### `Set Claude Model`
+
+`Set Claude Model` opens a form driven by `~/.claude/routerconfig.json`.
+
+Current behavior:
+
+- If `~/.claude/routerconfig.json` does not exist, Task Runner creates it from:
+  - `<repo>/routerconfig.example.json` when available, otherwise
+  - the extension's bundled `routerconfig.example.json`
+- The form reads router settings such as:
+  - `baseurl`
+  - `auth_token`
+  - `apikey`
+  - `models`
+  - `post_run`
+  - `mandatory_params`
+- Applying a selection writes the resulting Claude settings and may run the router's post-run tool command.
+
+## Jira And Local Backlog Behavior
+
+Task Runner now treats Jira items and local backlog markdown files as related but separate sources of truth.
+
+### Repo-level Jira key
+
+The saved Jira project key is read from the repo root `.env`:
+
+```env
+JIRA_PROJECT_KEY=ABC
 ```
 
-Optional project-specific override in `<repo>/.agent/claude/settings.json`:
+Several sidebar states depend on that value.
 
-```json
-{
-  "env": {
-    "ANTHROPIC_BASE_URL": "http://localhost:4000"
-  }
-}
+### Local backlog defaults
+
+Most local backlog flows default to:
+
+```text
+docs/backlog
 ```
 
-liteLLM launch command example in `~/.claude/routerconfig.json`:
+### `Create Backlog item`
 
-```json
-{
-  "tool-run": {
-    "litellm-openai": "OPENAI_API_KEY=<your-key> LITELLM_DROP_PARAMS=true litellm --model openai/gpt-5.2-codex"
-  },
-  "LiteLLM-settings": {
-    "baseurl": "http://localhost:4000",
-    "post_run": "litellm-openai"
-  }
-}
-```
+Current behavior:
 
-### Which file should you edit
+- Always creates a local markdown backlog file.
+- Can also create the matching Jira item when `Create on JIRA` is checked.
+- Supports a `Grill Me` path that reviews the draft item instead of creating it immediately.
 
-- Edit `~/.claude/settings.json` if you want one global Claude setup across projects.
-- Edit `<repo>/.agent/claude/settings.json` if this repo should override your normal global Claude endpoint.
-- Edit `~/.claude/routerconfig.json` if you need to change how liteLLM is launched or which router/model options appear in `Set Claude Model`.
+### `Assign Backlog Item to Agent`
 
-### Common failure mode
+Current behavior:
 
-If `ANTHROPIC_BASE_URL` points to `localhost` but `tool-run.litellm-openai` is missing from `~/.claude/routerconfig.json`, `Claude Terminal` will recognize that you want local liteLLM but will have no start command to run. In that case, fix `routerconfig.json` first.
+- Lets you choose:
+  - a Jira item,
+  - a local backlog item,
+  - or both when the descriptions match cleanly
+- Lets you override the harness command for that assignment
+- `Assign`:
+  - updates the Jira summary to append `- By Agent <HarnessLabel>`
+  - adds a Jira label such as `developed-by-agent-codex`
+  - assigns the issue to you
+  - moves it to `In Progress`
+  - launches the selected harness with Jira and backlog context
+- `Grill Me`:
+  - copies the `grill-me` skill into the project
+  - launches the same item as a review prompt without changing Jira first
 
-## Quick Actions
+### `Backlog Item Completed`
 
-| Item | What it does | How to use it | When it appears |
-| --- | --- | --- | --- |
-| `Setup Workspace` | Opens a project template picker populated from the latest `Resources/project-templates.json` downloaded from the Task Runner GitHub repo, downloads the latest `CLAUDE.md` and `AGENTS.md` guide files into the target workspace root, creates `.agent` and `.claude` there, downloads `jira-project-creation` into `.agent/skills/`, then launches the selected Agentic Harness to download the chosen starter project into the configured workspace path using that template's URL and instructions. | Use it before `Workspace Setup` when you want to seed the workspace with a starter project. | Always |
-| `Update Project Config` | A collapsed section right after `Setup Workspace` that groups agent-driven project configuration and project guide updates. | Expand it when you want to run one of the focused project config update prompts below. | Always |
-| `Update Github Actions` | Runs the selected Agentic Harness with the prompt `Update the project Github actions to match the project setup`. | Use it when the repository workflows need to be brought in line with the current project structure and setup. | Inside `Update Project Config` |
-| `Update Tests` | Runs the selected Agentic Harness with the prompt `Update the project unit tests, integration tests and postman scripts`. | Use it when the unit tests, integration tests, or Postman scripts need to catch up with the current project behavior. | Inside `Update Project Config` |
-| `Update AGENTS.md` | Opens the selected Agentic Harness with the progressive-disclosure refactor prompt for the workspace `AGENTS.md`. | Use it after setup when the project instructions need to be refreshed to match the current repo conventions and structure. | Inside `Update Project Config` |
-| `Workspace Setup` | Runs the bundled `workspace-setup.sh --force` script in the configured workspace project path. This is the main bootstrap action for creating the workspace structure. It creates the agentic project folders and executes the project scaffolding scripts. | Use it when starting a repo or when the workspace files need to be regenerated. | Always |
-| 🧠 `Assign Jira Item to Agent` | Lets you choose an eligible Jira item and an agent harness command. `Assign` updates the Jira summary and labels, assigns the issue to you with a label explaining that it is being worked on by an agent and not by you, moves it to `In Progress`, and launches the selected agent for that issue. `Grill Me` downloads the latest `grill-me` skill from the Task Runner GitHub `Resources` folder into the project’s `.agent/skills` and `.claude/skills`, then launches the selected Agentic Harness in prompt mode to review that same selected Jira item without assigning it first. | Use it either to hand a Jira task to an agent-driven workflow or to pressure-test the selected Jira item before assignment. Requires Jira credentials and a saved `JIRA_PROJECT_KEY`. | Always, but effectively requires Jira setup |
-| `Init Repository` | Initializes Git for the current project, asks for the repository name, and can remove nested `.git` folders before running the init script. | Use it the first time a project becomes a Git repository. | Only when the current project does not already have a `.git` folder |
-| 🤖 `Commit` | Saves files, stages changes, excludes `.env` and `config/.env`, generates a commit message using the Light Agentic Harnes execution commands, and creates the commit. The Commit action only uses an agent if antigravity.useAgentForGithubRepositoryManagement is enabled.| Use it for a normal local checkpoint after making changes. | Only when the project is already a Git repo |
-| `Create Repo Release` | Prompts for an optional description and runs the release/tag script. It respects the `antigravity.createReleaseBranchWhenCreatingReleases` setting. | Use it when you want to create and push a versioned release tag. | Only when the project is already a Git repo |
-| `Create Feature Branch` | Opens a dialog for branch type and branch name, normalizes the branch name, optionally helps with Jira task naming, and runs the branch creation script. | Use it to start a new `feature/`, `fix/`, or `hotfix/` branch in the expected format. | Only when the project is already a Git repo |
-| 🤖 `Create Pull Request` | Starts the PR creation workflow in a terminal, using the default reviewer setting and the configured test command when available. | Use it after your feature branch is ready for review and already includes the latest `main`. | Only when the project is already a Git repo |
-| `Merge branch to main` | Runs the merge-to-main workflow for the current branch after checking that you are not already on `main`. | Use it when your current feature branch is ready to be merged into `main`. | Only when the project is a Git repo and the current branch is not `main` |
-| `Go To Branch` | Shows available branches, lets you pick one, and switches to it after the usual commit/discard safety checks. | Use it to change branches from inside the sidebar. | Only when the project is already a Git repo |
-| `Pull Remote and merge` | Updates local `main`, merges it into the current branch, runs tests if configured, and pushes the branch. | Use it to sync your working branch with the latest remote `main` before review or merge. | Only when the project is a Git repo and the current branch is not `main` |
-| 🧠 `Agentic review of Merge` | Opens an agentic review terminal with a prompt focused on reviewing the merge result against `main`. It uses the agent harness selected in the settings | Use it after syncing a branch with `main` and before final review. The working tree must be clean. | Only when the project is a Git repo and the current branch is not `main` |
-| 🧠 `Set Feature Flag for changes` | Opens an agentic prompt that asks the harness to wrap new or modified behavior changes in `.env`-driven feature flags and add them to `.env.example`. It uses the agent harness selected in the settings| Use it when you need a safe rollout path for new behavior. | Always |
-| `Select/Set Jira Project` | Chooses and saves the Jira project key for the repo. If, inside that same dialog, you click Create Jira Project, Task Runner downloads the latest `jira-project-creation` skill from the Task Runner GitHub `Resources` folder into the project’s `.agent/skills` and `.claude/skills`, then uses the Agentic Harness configured in settings to create and configure a new project in Jira. | Use it before any Jira issue actions if the repo has not been linked to a Jira project yet. | When no `JIRA_PROJECT_KEY` is saved for the repo |
-| `Create Backlog item` | Opens a form where you choose the issue type and enter the summary and description. `Create` creates the Jira issue normally. `Grill Me` downloads the latest `grill-me` skill from the Task Runner GitHub `Resources` folder into the project’s `.agent/skills` and `.claude/skills`, then launches the selected Agentic Harness in prompt mode using that draft Jira item information instead of creating the ticket immediately. | Use it to either create a new Jira task directly from the sidebar or stress-test the draft item before creating it. | When a Jira project key is already saved |
-| `Take Jira Item (Assign)` | Shows available unassigned Jira items, assigns the selected one to you, and moves it to `In Progress`. | Use it when you want to pick up an existing Jira item yourself. | When a Jira project key is already saved |
-| `Backlog Item Completed` | Opens a page where you choose one of your active Jira items and move it to `In Review`, or `Done` if review is unavailable. | Use it when your work on a backlog item is complete and you want a fuller form flow than a popup. | When a Jira project key is already saved |
-| `Increment Major Version` | Runs the version bump script with `major`. | Use it for a breaking-release version bump. | Always |
-| `Increment Minor Version` | Runs the version bump script with `minor`. | Use it for a backward-compatible feature release. | Always |
-| `Increment Patch Version` | Runs the version bump script with `patch`. | Use it for a bug-fix or small maintenance release. | Always |
-| `Cloud Architect Review` | Downloads the latest `cloud-architect` skill from the Task Runner GitHub `Resources` folder into the project’s `.agent/skills` and `.claude/skills`, then launches the selected Agentic Harness in prompt mode with the infrastructure review prompt. It stays visible but is disabled when the repo does not appear to contain cloud infrastructure. | Use it when the repository includes deployment or infrastructure files and you want an agent to review sizing and cloud setup choices. | Always, but disabled when no cloud infrastructure signals are detected |
-| `Feature Estimator` | Opens a configuration page where you can work from either one Jira item in `To Do` or a free-text feature description. `Estimate` downloads the latest `estimator` skill from the Task Runner GitHub `Resources` folder into the project’s `.agent/skills` and `.claude/skills`, then launches the selected Agentic Harness in prompt mode with the estimation request. `Grill Me` downloads the latest `grill-me` skill into the same project skill folders, then launches the selected Agentic Harness in prompt mode to review that same selected feature. | Use it when you want either a quick effort and staffing estimate or a more probing feature review based on the same Jira/text input. | Always |
-| `Explain Me` | Downloads the latest `explain-me` skill from the Task Runner GitHub `Resources` folder into the project’s `.agent/skills` and `.claude/skills`, then launches the selected Agentic Harness in prompt mode with a request to explain the whole solution and the latest uncommitted changes. | Use it when you want a guided walkthrough of the project plus a focused explanation of what has changed locally. | Always |
-| `Autocommit Start` | Starts the autocommit background workflow. | Use it when you want periodic automated checkpoints. A GitHub remote must already exist. | When autocommit is not already running |
-| `Autocommit Stop` | Stops the autocommit background workflow. | Use it when you no longer want automated checkpoints. | When autocommit is already running |
-| `Revert Changes` | Runs the autocommit revert script. | Use it to roll back the current autocommit change set. | Only when autocommit is already running |
-| `SOP Manual` | Downloads the configured SOP markdown file to a temp file and opens it in VS Code. | Use it when you need the current SOP reference while working in the repo. | Always |
+Current behavior:
+
+- Can complete a Jira item, a local backlog item, or both together
+- Moves Jira to `In Review` when possible
+- Falls back to `Done` when `In Review` is not available
+- Updates the local backlog markdown `## Status` section to `In Review`
 
 ## Dynamic Sections
 
-| Item | What it does | How to use it |
+### Claude Plugins
+
+- Source: `claude plugin list`
+- Right click a plugin to enable or disable it
+- Enabled plugins also contribute skills to the `Skills` section when those skills exist in the Claude plugin cache
+
+### Agents
+
+- Source: `claude agents`
+- Clicking an item runs `claude --agent <name>` in the current repo
+- The list can include user, plugin, built-in, and project agents depending on your Claude setup
+
+### Skills
+
+Task Runner merges skills from:
+
+- `<repo>/.agent/skills`
+- `<repo>/.claude/skills`
+- `~/.claude/skills`
+- enabled Claude plugin caches under `~/.claude/plugins/cache/.../skills`
+
+Clicking a skill opens its `SKILL.md`.
+
+### Workflows
+
+- Source: markdown files in `~/.gemini/antigravity/workflows`
+- Clicking a workflow does one of two things:
+  - if the repo has `scripts/<workflow-name>.sh`, it runs that script
+  - otherwise it opens the workflow markdown
+
+## Right-Click Actions In The Sidebar
+
+| Action | Applies to | What it does |
 | --- | --- | --- |
-| `Claude Plugins` | Lists Claude plugins from `claude plugin list`. Each plugin shows whether it is enabled or disabled. | Expand the section, then right-click a plugin to enable or disable it. |
-| `Agents` | Lists Claude agents from `claude agents`. Clicking an item opens a terminal that runs `claude --agent <name>` in the current repo. | Expand the section and click the agent you want to run. |
-| `Skills` | Lists skills from project skill folders, user skill folders, and enabled plugin skill caches. Clicking an item opens its `SKILL.md`. | Expand the section and open a skill when you want to inspect its instructions or reuse it. |
-| `Workflows` | Lists markdown workflows from `~/.gemini/antigravity/workflows`. Clicking an item runs `./scripts/<workflow-name>.sh` if that script exists in the repo; otherwise it opens the workflow markdown. | Expand the section and click the workflow you want to run or inspect. |
+| `Copy Path` | Linked files and folders | Copies the absolute path |
+| `Open` | Linked files and folders | Opens the file in the editor or opens the folder externally |
+| `Add to project` | Linked files and folders | Creates a symlink in the repo root |
+| `Add to Custom Skills` | Skill folders or `SKILL.md` files | Creates a symlink into `.agent/skills` |
+| `Add to Custom Agents` | Agent folders or agent markdown files | Creates a symlink into `.agent/agents` |
+| `Enable Plugin` | Disabled plugin entries | Runs `claude plugin enable <plugin>` |
+| `Disable Plugin` | Enabled plugin entries | Runs `claude plugin disable <plugin>` |
+| `Bring to Project` | `SOP Manual` | Copies the bundled SOP into `Resources/sop.md` |
 
-## Right-Click Actions
+## Command Palette And Explorer Features Outside The Current Sidebar
 
-| Action | Applies to | What it does | How to use it |
-| --- | --- | --- | --- |
-| `Copy Path` | Folder and file items in the sidebar | Copies the selected item's absolute path to the clipboard. | Right-click the item and choose `Copy Path`. |
-| `Open Path` | Folder and file items in the sidebar | Opens a folder externally or opens a file in the editor. | Right-click the item and choose `Open Path`. |
-| `Add To Project` | Folder and file items in linked trees | Creates a symlink in the project root that points to the selected item. | Use it when you want a linked asset directly in the repo root. |
-| `Add To Custom Skills` | Skill folders or `SKILL.md` files | Creates a symlink into `.agent/skills` so the skill becomes part of the project skill set. | Use it to promote a reusable skill into the current project's custom skills. |
-| `Add To Custom Agents` | Agent folders or `AGENT.md` files | Creates a symlink into `.agent/agents` so the agent becomes part of the project agent set. | Use it to promote a reusable agent into the current project's custom agents. |
-| `Enable Plugin` | Disabled plugin entries | Runs `claude plugin enable <plugin>`. | Right-click a disabled plugin entry under `Claude Plugins`. |
-| `Disable Plugin` | Enabled plugin entries | Runs `claude plugin disable <plugin>`. | Right-click an enabled plugin entry under `Claude Plugins`. |
+These features are implemented today, but they are not all visible in the main sidebar.
 
-## Practical Reading Of The Sidebar
+### Command Palette
 
-- The first block is for Claude launch and build/test commands.
-- The middle block is for repo setup, Git flow, Jira flow, versioning, autocommit, and project helper actions.
-- The lower block is for reusable assets: plugins, agents, skills, workflows, and linked folders.
-- If an item looks gray or does not appear, Task Runner is usually waiting on a missing prerequisite such as Git initialization, a GitHub remote, Jira setup, or a config value in settings.
+| Command | Current status | What it does |
+| --- | --- | --- |
+| `Antigravity: Open Help Doc` | Available now | Opens the latest `help.md` via Markdown preview |
+| `Antigravity: Settings` | Available now | Opens the built-in settings webview |
+| `Antigravity: Run liteLLM OpenAI` | Available now | Runs the `tool-run.litellm-openai` command from `~/.claude/routerconfig.json` in the shared Task Runner terminal |
+| `Antigravity: Open OpenClaude Terminal` | Available now | Runs `openclaude` in a persistent VS Code terminal |
+| `Antigravity: Create CLAUDE.md` | Available now | Launches the CLAUDE initialization/update flow |
+| `Antigravity: Create AGENTS.md` | Available now | Launches the AGENTS initialization/update flow |
+| `Antigravity: Update Agentic Workspace` | Available now | Runs `update-agentic-workspace.sh` against `antigravity.antigravityWorkspaceProject` |
+| `Antigravity: Audit Secrets & Variables` | Available now | Scans `.github/workflows`, documents required items in `.env`, compares against GitHub repo and environment secrets/variables, and can prompt to set missing ones through `gh` |
+| `Antigravity: Review a Pull Request` | Available now | Lets you pick a remote PR branch and checks it out locally after worktree safety checks |
+| `Antigravity: Approve a Pull Request` | Available now | Launches the selected harness against the `approve_pull_request` workflow |
+| `Antigravity: Feedback on Pull Request` | **Under development** | Currently only shows an informational message |
+| `Antigravity: Setup Workspace` | **Under development** | Opens a template picker, creates workspace support folders and harness links, then launches the selected harness to fetch the chosen template into `antigravity.workspaceProjectPath` |
+| `Antigravity: Create Repo Tag` | Available now | Creates and pushes an annotated `v<package.json version>` Git tag |
+
+### Explorer Context Menu
+
+| Command | Scope | What it does |
+| --- | --- | --- |
+| `Backup-Compress` | Files and folders in Explorer | Creates a timestamped `.zip` beside the selected item |
+| `DiffMerge` | One selected file | Opens `/Applications/DiffMerge.app` with that file |
+| `DiffMerge files` | Two or three selected files | Opens `/Applications/DiffMerge.app` with the selected files |
+
+`DiffMerge` is currently macOS-specific because the extension hardcodes `/Applications/DiffMerge.app`.
+
+## Remote Resource Behavior
+
+Several features intentionally fetch the latest shared resources from the Task Runner GitHub repository instead of only using packaged local files.
+
+That currently applies to:
+
+- `Open Help Doc`
+- `SOP Manual`
+- `Setup Workspace` templates
+- Bundled skills copied into a project, such as:
+  - `jira-project-creation`
+  - `grill-me`
+  - `estimator`
+  - `explain-me`
+  - `cloud-architect`
+
+This means a freshly opened help page or copied skill can reflect the latest content from the repo's `main` branch.
+
+## Under Development And Known Gaps
+
+These are the main areas where the implementation is real but the experience is not fully polished yet.
+
+- `Setup Workspace` is only partially wired today.
+  - It already loads live project templates, creates support folders such as `.agent`, `.claude`, `.codex`, and `.opencode`, and launches the selected harness.
+  - Helper code already exists to copy `CLAUDE.md`, `AGENTS.md`, and bundled setup skills, but that copy step is not currently executed in the main command path.
+- `ADLC` works, but the sidebar tooltip still says `ADLC roles coming soon.`
+- `Feedback on Pull Request` is still a placeholder.
+- Autocommit is only partially surfaced.
+  - The revert command is wired.
+  - The internal start/stop command exists.
+  - The main sidebar does not currently expose a normal `Autocommit Start` or `Autocommit Stop` entry.
+- Several commands are implemented and reachable from sidebar clicks, but not contributed as standalone Command Palette commands.
+  - Examples: `Codex Terminal`, `Ollama Codex`, `Opencode`, `Feature Estimator`, `Explain Me`, `Cloud Architect Review`, and the version bump commands.
+
+## Practical Tips
+
+- If a sidebar item looks disabled or does nothing useful, check prerequisites first:
+  - Git repo present
+  - `JIRA_PROJECT_KEY` present in repo `.env`
+  - required CLI installed
+  - required setting filled in
+- If a Jira flow fails, verify both:
+  - Jira credentials in `antigravity.*` settings
+  - the repo `.env` contains the right `JIRA_PROJECT_KEY`
+- If `Claude Terminal` fails unexpectedly, inspect:
+  - `<repo>/.agent/claude/settings.json`
+  - `~/.claude/settings.json`
+  - `~/.claude/routerconfig.json`
+- If a bundled resource looks stale, remember that help, SOP, templates, and copied skills are intentionally fetched from the GitHub-backed resource provider.
