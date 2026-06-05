@@ -12,6 +12,7 @@ import {
 } from "./cloudArchitectReview";
 import { BUSINESS_ANALYST_COMMAND } from "./businessAnalyst";
 import { PRODUCT_DESIGNER_COMMAND } from "./productDesigner";
+import { SOLUTION_ARCHITECT_COMMAND } from "./solutionArchitect";
 
 const execAsync = promisify(exec);
 
@@ -1033,11 +1034,18 @@ function getAdlcItems(): NodeItem[] {
     title: "Open Business Analyst"
   };
 
-  const pendingItems = [
-    "Solution Architect",
-    "Estimator",
-    "Developer"
-  ].map((label) => {
+  const solutionArchitect = new NodeItem(
+    { kind: "action", label: "Solution Architect" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  solutionArchitect.iconPath = new vscode.ThemeIcon("symbol-structure", FEATURE_FLAG_ACTION_COLOR);
+  solutionArchitect.tooltip = "Open the Solution Architect runner form.";
+  solutionArchitect.command = {
+    command: SOLUTION_ARCHITECT_COMMAND,
+    title: "Open Solution Architect"
+  };
+
+  const pendingItems = ["Estimator", "Developer"].map((label) => {
     const item = new NodeItem(
       { kind: "action", label },
       vscode.TreeItemCollapsibleState.None
@@ -1047,7 +1055,7 @@ function getAdlcItems(): NodeItem[] {
     return item;
   });
 
-  return [productDesigner, businessAnalyst, ...pendingItems];
+  return [productDesigner, businessAnalyst, solutionArchitect, ...pendingItems];
 }
 
 function getPrReviewerItems(): NodeItem[] {

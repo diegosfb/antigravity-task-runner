@@ -30,6 +30,7 @@ const explainMe_1 = require("./explainMe");
 const deployAgenticLib_1 = require("./deployAgenticLib");
 const businessAnalyst_1 = require("./businessAnalyst");
 const productDesigner_1 = require("./productDesigner");
+const solutionArchitect_1 = require("./solutionArchitect");
 function getRepoPackageVersion(repoRoot) {
     try {
         const packageJsonPath = path.join(repoRoot, "package.json");
@@ -121,6 +122,16 @@ function activate(context) {
         });
         terminal.show();
         terminal.sendText((0, businessAnalyst_1.buildBusinessAnalystCommand)(values), true);
+    };
+    const launchSolutionArchitectInNewTerminal = (values) => {
+        const terminal = vscode.window.createTerminal({
+            name: "Solution Architect",
+            cwd: values.workspace,
+            iconPath: new vscode.ThemeIcon("symbol-structure", BUSINESS_ANALYST_ACTION_COLOR),
+            color: BUSINESS_ANALYST_ACTION_COLOR
+        });
+        terminal.show();
+        terminal.sendText((0, solutionArchitect_1.buildSolutionArchitectCommand)(values), true);
     };
     const getProjectScopedStateKey = (prefix) => {
         const workspaceRoot = (0, utils_1.getWorkspaceRoot)();
@@ -4649,6 +4660,60 @@ function activate(context) {
                 void panel.webview.postMessage({
                     type: "businessAnalystError",
                     payload: { message: `Failed to open Business Analyst terminal: ${messageText}` }
+                });
+            }
+        }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand(solutionArchitect_1.SOLUTION_ARCHITECT_COMMAND, async () => {
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const workspaceRoot = rootPath
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("solutionArchitectForm"));
+        const initialValues = (0, solutionArchitect_1.sanitizeSolutionArchitectFormValues)(savedValues, workspaceRoot);
+        const panel = vscode.window.createWebviewPanel("antigravitySolutionArchitect", "Solution Architect", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, solutionArchitect_1.renderSolutionArchitectHtml)(panel.webview, initialValues);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelSolutionArchitect") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "saveSolutionArchitectDraft") {
+                const draftValues = (0, solutionArchitect_1.sanitizeSolutionArchitectFormValues)(message.payload, workspaceRoot);
+                await context.workspaceState.update(getProjectScopedStateKey("solutionArchitectForm"), draftValues);
+                return;
+            }
+            if (message.type !== "runSolutionArchitect") {
+                return;
+            }
+            const values = (0, solutionArchitect_1.sanitizeSolutionArchitectFormValues)(message.payload, workspaceRoot);
+            const missingFields = (0, solutionArchitect_1.getMissingSolutionArchitectFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "solutionArchitectError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            try {
+                await context.workspaceState.update(getProjectScopedStateKey("solutionArchitectForm"), values);
+                launchSolutionArchitectInNewTerminal(values);
+                void vscode.window.showInformationMessage("Opened Solution Architect terminal.");
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "solutionArchitectError",
+                    payload: { message: `Failed to open Solution Architect terminal: ${messageText}` }
                 });
             }
         }, undefined, context.subscriptions);

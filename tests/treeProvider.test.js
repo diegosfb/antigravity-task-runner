@@ -240,5 +240,6 @@ test("quick actions include ADLC after feature flag with static child roles", as
   );
   assert.equal(adlcChildren[0].command?.command, "antigravity.openProductDesigner");
   assert.equal(adlcChildren[1].command?.command, "antigravity.openBusinessAnalyst");
-  assert.ok(adlcChildren.slice(2).every((item) => item.command === undefined));
+  assert.equal(adlcChildren[2].command?.command, "antigravity.openSolutionArchitect");
+  assert.ok(adlcChildren.slice(3).every((item) => item.command === undefined));
 });

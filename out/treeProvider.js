@@ -21,6 +21,7 @@ const terminal_1 = require("./terminal");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const businessAnalyst_1 = require("./businessAnalyst");
 const productDesigner_1 = require("./productDesigner");
+const solutionArchitect_1 = require("./solutionArchitect");
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
 class NodeItem extends vscode.TreeItem {
     constructor(payload, collapsibleState) {
@@ -788,17 +789,20 @@ function getAdlcItems() {
         command: businessAnalyst_1.BUSINESS_ANALYST_COMMAND,
         title: "Open Business Analyst"
     };
-    const pendingItems = [
-        "Solution Architect",
-        "Estimator",
-        "Developer"
-    ].map((label) => {
+    const solutionArchitect = new NodeItem({ kind: "action", label: "Solution Architect" }, vscode.TreeItemCollapsibleState.None);
+    solutionArchitect.iconPath = new vscode.ThemeIcon("symbol-structure", FEATURE_FLAG_ACTION_COLOR);
+    solutionArchitect.tooltip = "Open the Solution Architect runner form.";
+    solutionArchitect.command = {
+        command: solutionArchitect_1.SOLUTION_ARCHITECT_COMMAND,
+        title: "Open Solution Architect"
+    };
+    const pendingItems = ["Estimator", "Developer"].map((label) => {
         const item = new NodeItem({ kind: "action", label }, vscode.TreeItemCollapsibleState.None);
         item.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
         item.tooltip = "Coming soon.";
         return item;
     });
-    return [productDesigner, businessAnalyst, ...pendingItems];
+    return [productDesigner, businessAnalyst, solutionArchitect, ...pendingItems];
 }
 function getPrReviewerItems() {
     const reviewPullRequest = new NodeItem({ kind: "action", label: "Review a Pull Request" }, vscode.TreeItemCollapsibleState.None);
