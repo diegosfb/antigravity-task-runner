@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.10.47",
+  "version": "4.10.71",
   "publisher": "diegosfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -173,6 +173,26 @@
         "title": "Antigravity: Open Product Designer"
       },
       {
+        "command": "antigravity.openBusinessAnalyst",
+        "title": "Antigravity: Open Business Analyst"
+      },
+      {
+        "command": "antigravity.openSolutionArchitect",
+        "title": "Antigravity: Open Solution Architect"
+      },
+      {
+        "command": "antigravity.openEstimator",
+        "title": "Antigravity: Open Estimate Project"
+      },
+      {
+        "command": "antigravity.openPlanExecution",
+        "title": "Antigravity: Open Create Execution Plan"
+      },
+      {
+        "command": "antigravity.openDeveloper",
+        "title": "Antigravity: Open Develop Execution Plan"
+      },
+      {
         "command": "antigravity.reviewPullRequest",
         "title": "Antigravity: Review a Pull Request"
       },
@@ -247,8 +267,8 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Task Runner v4.10.47",
-          "contextualTitle": "Task Runner v4.10.47",
+          "name": "Task Runner v4.10.71",
+          "contextualTitle": "Task Runner v4.10.71",
           "icon": "Resources/taskrunner.svg"
         }
       ]

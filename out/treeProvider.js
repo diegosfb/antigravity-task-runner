@@ -628,7 +628,7 @@ function getQuickActionItems() {
     };
     items.push(setFeatureFlag);
     const adlc = new NodeItem({ kind: "category", label: "ADLC" }, vscode.TreeItemCollapsibleState.Collapsed);
-    adlc.iconPath = new vscode.ThemeIcon("folder", ADLC_ACTION_COLOR);
+    adlc.iconPath = new vscode.ThemeIcon("hubot", ADLC_ACTION_COLOR);
     adlc.tooltip = "ADLC roles coming soon.";
     items.push(adlc);
     if (!savedJiraProjectKey) {

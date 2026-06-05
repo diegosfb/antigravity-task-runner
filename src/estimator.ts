@@ -132,7 +132,7 @@ export function renderEstimatorHtml(
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Estimator</title>
+    <title>Estimate Project</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -463,7 +463,7 @@ export function renderEstimatorHtml(
         if (!message || typeof message !== "object") return;
         if (message.type === "estimatorError") {
           errorMessage.textContent =
-            message.payload?.message || "Unable to start Estimator.";
+            message.payload?.message || "Unable to start Estimate Project.";
         }
       });
     </script>

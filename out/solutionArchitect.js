@@ -14,8 +14,8 @@ function getDefaultProjectInputs(workspace) {
     return {
         projectDescriptionDir: workspace ? path.join(workspace, "docs", "project_description") : "",
         specsDir: workspace ? path.join(workspace, "docs", "specs") : "",
-        architectureGuidelinesFile: workspace
-            ? path.join(workspace, "docs", "architecture_guidelines.md")
+        architectureGuidelinesFolder: workspace
+            ? path.join(workspace, "docs", "architecture", "architecture_guidelines")
             : "",
         backlogDir: workspace ? path.join(workspace, "docs", "backlog") : ""
     };
@@ -30,7 +30,7 @@ function getDefaultSolutionArchitectValues(workspaceRoot) {
         workspace,
         projectDescriptionDir: projectInputs.projectDescriptionDir,
         specsDir: projectInputs.specsDir,
-        architectureGuidelinesFile: projectInputs.architectureGuidelinesFile,
+        architectureGuidelinesFolder: projectInputs.architectureGuidelinesFolder,
         backlogDir: projectInputs.backlogDir,
         agentScriptPath: ""
     };
@@ -38,6 +38,10 @@ function getDefaultSolutionArchitectValues(workspaceRoot) {
 function sanitizeSolutionArchitectFormValues(values, workspaceRoot) {
     const defaults = getDefaultSolutionArchitectValues(workspaceRoot);
     const workspace = typeof values?.workspace === "string" ? values.workspace.trim() : defaults.workspace;
+    const defaultProjectInputs = getDefaultProjectInputs(workspace);
+    const legacyArchitectureGuidelinesFile = typeof values?.architectureGuidelinesFile === "string"
+        ? values.architectureGuidelinesFile.trim()
+        : "";
     return {
         agentHarness: typeof values?.agentHarness === "string" ? values.agentHarness.trim() : defaults.agentHarness,
         agentModel: typeof values?.agentModel === "string" ? values.agentModel.trim() : defaults.agentModel,
@@ -45,16 +49,16 @@ function sanitizeSolutionArchitectFormValues(values, workspaceRoot) {
         workspace,
         projectDescriptionDir: typeof values?.projectDescriptionDir === "string"
             ? values.projectDescriptionDir.trim()
-            : getDefaultProjectInputs(workspace).projectDescriptionDir,
+            : defaultProjectInputs.projectDescriptionDir,
         specsDir: typeof values?.specsDir === "string"
             ? values.specsDir.trim()
-            : getDefaultProjectInputs(workspace).specsDir,
-        architectureGuidelinesFile: typeof values?.architectureGuidelinesFile === "string"
-            ? values.architectureGuidelinesFile.trim()
-            : getDefaultProjectInputs(workspace).architectureGuidelinesFile,
+            : defaultProjectInputs.specsDir,
+        architectureGuidelinesFolder: typeof values?.architectureGuidelinesFolder === "string"
+            ? values.architectureGuidelinesFolder.trim()
+            : legacyArchitectureGuidelinesFile || defaultProjectInputs.architectureGuidelinesFolder,
         backlogDir: typeof values?.backlogDir === "string"
             ? values.backlogDir.trim()
-            : getDefaultProjectInputs(workspace).backlogDir,
+            : defaultProjectInputs.backlogDir,
         agentScriptPath: typeof values?.agentScriptPath === "string" ? values.agentScriptPath.trim() : defaults.agentScriptPath
     };
 }
@@ -84,8 +88,8 @@ function buildSolutionArchitectCommand(values) {
         "--harness",
         (0, utils_1.quoteShellArg)(values.agentHarness)
     ];
-    if (values.architectureGuidelinesFile) {
-        parts.push("--architecture-guidelines", (0, utils_1.quoteShellArg)(values.architectureGuidelinesFile));
+    if (values.architectureGuidelinesFolder) {
+        parts.push("--architecture-guidelines-folder", (0, utils_1.quoteShellArg)(values.architectureGuidelinesFolder));
     }
     if (values.agentModel) {
         parts.push("--model", (0, utils_1.quoteShellArg)(values.agentModel));
@@ -255,8 +259,8 @@ function renderSolutionArchitectHtml(webview, initialValues) {
         </label>
 
         <label>
-          <span>Project Architecture guidelines file</span>
-          <input id="architectureGuidelinesFile" name="architectureGuidelinesFile" value="${escapeHtml(initialValues.architectureGuidelinesFile)}" />
+          <span>Project Architecture guidelines folder</span>
+          <input id="architectureGuidelinesFolder" name="architectureGuidelinesFolder" value="${escapeHtml(initialValues.architectureGuidelinesFolder)}" />
         </label>
 
         <label>
@@ -292,7 +296,7 @@ function renderSolutionArchitectHtml(webview, initialValues) {
       const workspaceInput = document.getElementById("workspace");
       const projectDescriptionDirInput = document.getElementById("projectDescriptionDir");
       const specsDirInput = document.getElementById("specsDir");
-      const architectureGuidelinesFileInput = document.getElementById("architectureGuidelinesFile");
+      const architectureGuidelinesFolderInput = document.getElementById("architectureGuidelinesFolder");
       const backlogDirInput = document.getElementById("backlogDir");
       const agentScriptPathInput = document.getElementById("agentScriptPath");
       const requiredFields = [
@@ -316,7 +320,7 @@ function renderSolutionArchitectHtml(webview, initialValues) {
         return {
           projectDescriptionDir: workspace ? joinPath(workspace, "docs", "project_description") : "",
           specsDir: workspace ? joinPath(workspace, "docs", "specs") : "",
-          architectureGuidelinesFile: workspace ? joinPath(workspace, "docs", "architecture_guidelines.md") : "",
+          architectureGuidelinesFolder: workspace ? joinPath(workspace, "docs", "architecture", "architecture_guidelines") : "",
           backlogDir: workspace ? joinPath(workspace, "docs", "backlog") : ""
         };
       }
@@ -329,8 +333,8 @@ function renderSolutionArchitectHtml(webview, initialValues) {
         if (specsDirInput.dataset.userModified !== "true") {
           specsDirInput.value = defaults.specsDir;
         }
-        if (architectureGuidelinesFileInput.dataset.userModified !== "true") {
-          architectureGuidelinesFileInput.value = defaults.architectureGuidelinesFile;
+        if (architectureGuidelinesFolderInput.dataset.userModified !== "true") {
+          architectureGuidelinesFolderInput.value = defaults.architectureGuidelinesFolder;
         }
         if (backlogDirInput.dataset.userModified !== "true") {
           backlogDirInput.value = defaults.backlogDir;
@@ -343,8 +347,8 @@ function renderSolutionArchitectHtml(webview, initialValues) {
           projectDescriptionDirInput.value.trim() !== defaults.projectDescriptionDir
         );
         specsDirInput.dataset.userModified = String(specsDirInput.value.trim() !== defaults.specsDir);
-        architectureGuidelinesFileInput.dataset.userModified = String(
-          architectureGuidelinesFileInput.value.trim() !== defaults.architectureGuidelinesFile
+        architectureGuidelinesFolderInput.dataset.userModified = String(
+          architectureGuidelinesFolderInput.value.trim() !== defaults.architectureGuidelinesFolder
         );
         backlogDirInput.dataset.userModified = String(backlogDirInput.value.trim() !== defaults.backlogDir);
       }
@@ -358,7 +362,7 @@ function renderSolutionArchitectHtml(webview, initialValues) {
           workspace: String(data.get("workspace") || "").trim(),
           projectDescriptionDir: String(data.get("projectDescriptionDir") || "").trim(),
           specsDir: String(data.get("specsDir") || "").trim(),
-          architectureGuidelinesFile: String(data.get("architectureGuidelinesFile") || "").trim(),
+          architectureGuidelinesFolder: String(data.get("architectureGuidelinesFolder") || "").trim(),
           backlogDir: String(data.get("backlogDir") || "").trim(),
           agentScriptPath: String(data.get("agentScriptPath") || "").trim()
         };
@@ -397,10 +401,10 @@ function renderSolutionArchitectHtml(webview, initialValues) {
         specsDirInput.dataset.userModified = String(specsDirInput.value.trim() !== defaults.specsDir);
       });
 
-      architectureGuidelinesFileInput.addEventListener("input", () => {
+      architectureGuidelinesFolderInput.addEventListener("input", () => {
         const defaults = getDefaultFolders(workspaceInput.value.trim());
-        architectureGuidelinesFileInput.dataset.userModified = String(
-          architectureGuidelinesFileInput.value.trim() !== defaults.architectureGuidelinesFile
+        architectureGuidelinesFolderInput.dataset.userModified = String(
+          architectureGuidelinesFolderInput.value.trim() !== defaults.architectureGuidelinesFolder
         );
       });
 

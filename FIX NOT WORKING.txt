@@ -12,3 +12,5 @@ add
 Run with Ollama
 Assign backlog md to Agent similat to Assign Jira Item to Agent
 
+
+Add JIRA credentials passing them by argument when using the ADLC items

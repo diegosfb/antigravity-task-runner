@@ -133,7 +133,7 @@ export function renderPlanExecutionHtml(
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Plan Execution</title>
+    <title>Create Execution Plan</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -464,7 +464,7 @@ export function renderPlanExecutionHtml(
         if (!message || typeof message !== "object") return;
         if (message.type === "planExecutionError") {
           errorMessage.textContent =
-            message.payload?.message || "Unable to start Plan Execution.";
+            message.payload?.message || "Unable to start Create Execution Plan.";
         }
       });
     </script>

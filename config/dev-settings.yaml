@@ -1,4 +1,0 @@
-Environment: DEV
-Purpose: Local development and iterations
-Infrastructure: config/Infrastructure/local.yaml
-# Note: This environment uses purely in-memory state (no DB/Cache required)

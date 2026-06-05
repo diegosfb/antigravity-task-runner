@@ -226,7 +226,7 @@ test("quick actions include ADLC after feature flag with runner actions", async 
   const adlcItem = rootItems[adlcIndex];
   assert.equal(adlcItem.collapsibleState, 1);
   assert.equal(adlcItem.command, undefined);
-  assert.equal(adlcItem.iconPath.id, "folder");
+  assert.equal(adlcItem.iconPath.id, "hubot");
   assert.equal(adlcItem.iconPath.color.id, "charts.red");
 
   const adlcChildren = await provider.getChildren(adlcItem);
