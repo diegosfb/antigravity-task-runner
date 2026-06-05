@@ -372,18 +372,14 @@ test("renderBacklogItemCompletedHtml renders the page structure and issue detail
   assert.match(html, /loadBacklogItemCompletedBacklogItems/);
   assert.match(html, /saveBacklogItemCompletedDraft/);
   assert.match(html, /Mark Completed/);
-  assert.match(html, /Comp\. Result/);
   assert.match(html, /<span class="detail-label">Jira Project<\/span>/);
   assert.match(html, /id="useJira"/);
-  assert.match(html, /id="comparedResult"/);
   assert.match(html, /<option value="TASK-2" selected>TASK-2 - Second item<\/option>/);
   assert.match(html, /<span class="detail-label">Description<\/span>/);
   assert.match(html, /<span class="detail-label">Local Type<\/span>/);
   assert.match(html, /feature-second-item\.md/);
-  assert.match(
-    html,
-    /Selected Jira items move to In Review, or Done when review is unavailable\. Selected local backlog files get a Status of In Review\./
-  );
+  assert.doesNotMatch(html, /Transition Rule/);
+  assert.doesNotMatch(html, /Comp\. Result/);
 });
 
 test("renderBacklogItemCompletedHtml emits a syntactically valid webview script", () => {

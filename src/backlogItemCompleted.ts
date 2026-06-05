@@ -516,22 +516,6 @@ export function renderBacklogItemCompletedHtml(
         </div>
       </section>
 
-      <section class="section">
-        <p class="section-title">Execution</p>
-        <div class="detail-card">
-          <span class="detail-label">Transition Rule</span>
-          <span class="detail-value">Selected Jira items move to In Review, or Done when review is unavailable. Selected local backlog files get a Status of In Review.</span>
-        </div>
-      </section>
-
-      <section class="section">
-        <p class="section-title">Comp. Result</p>
-        <div class="detail-card">
-          <span class="detail-label">Comp. Result</span>
-          <pre id="comparedResult" class="detail-value"></pre>
-        </div>
-      </section>
-
       <div id="errorMessage" class="error" aria-live="polite"></div>
 
       <div class="actions">
@@ -562,7 +546,6 @@ export function renderBacklogItemCompletedHtml(
       const issueType = document.getElementById("issueType");
       const issueStatus = document.getElementById("issueStatus");
       const issueProject = document.getElementById("issueProject");
-      const comparedResult = document.getElementById("comparedResult");
       let draftSaveTimer;
       let backlogReloadTimer;
 
@@ -632,53 +615,6 @@ export function renderBacklogItemCompletedHtml(
         return descriptionMatch;
       }
 
-      function formatComparedValue(value) {
-        return value ? value : "(empty)";
-      }
-
-      function buildComparisonLine(leftValue, rightValue) {
-        const normalizedLeft = normalizeMatchText(leftValue);
-        const normalizedRight = normalizeMatchText(rightValue);
-        const exactMatch = Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight);
-        const containsMatch = Boolean(
-          normalizedLeft &&
-          normalizedRight &&
-          (normalizedLeft.includes(normalizedRight) || normalizedRight.includes(normalizedLeft))
-        );
-
-        return [
-          "raw left: " + formatComparedValue(leftValue),
-          "normalized left: " + formatComparedValue(normalizedLeft),
-          "raw right: " + formatComparedValue(rightValue),
-          "normalized right: " + formatComparedValue(normalizedRight),
-          "exact match: " + (exactMatch ? "yes" : "no"),
-          "contains match: " + (containsMatch ? "yes" : "no")
-        ].join("\\n");
-      }
-
-      function updateComparedResult(origin) {
-        const selectedIssue = getSelectedIssue();
-        const selectedBacklogItem = getSelectedBacklogItem();
-        const matchingBacklogItem = selectedIssue ? findMatchingBacklogItem(selectedIssue) : undefined;
-        const matchingIssue = selectedBacklogItem ? findMatchingIssue(selectedBacklogItem) : undefined;
-        comparedResult.textContent = [
-          "origin: " + origin,
-          "",
-          "selected jira item: " + (selectedIssue ? selectedIssue.key + " - " + selectedIssue.summary : "(none)"),
-          "selected local backlog item: " + (selectedBacklogItem ? selectedBacklogItem.displayName + " (" + selectedBacklogItem.fileName + ")" : "(none)"),
-          "",
-          "selected jira description vs selected md ## Description:",
-          buildComparisonLine(selectedIssue?.description, selectedBacklogItem?.description),
-          "",
-          "unique local match from selected jira description: " +
-            (matchingBacklogItem
-              ? matchingBacklogItem.displayName + " (" + matchingBacklogItem.fileName + ")"
-              : "(none)"),
-          "unique jira match from selected md description: " +
-            (matchingIssue ? matchingIssue.key + " - " + matchingIssue.summary : "(none)")
-        ].join("\\n");
-      }
-
       function updateSelectedIssueDetails() {
         const selectedIssue = getSelectedIssue();
         issueSummary.textContent = selectedIssue?.description || "";
@@ -726,7 +662,6 @@ export function renderBacklogItemCompletedHtml(
           const matchingBacklogItem = findMatchingBacklogItem(getSelectedIssue());
           backlogItemPathInput.value = matchingBacklogItem?.filePath || "";
           updateSelectedBacklogItemDetails();
-          updateComparedResult(origin);
           return;
         }
 
@@ -734,11 +669,7 @@ export function renderBacklogItemCompletedHtml(
           const matchingIssue = findMatchingIssue(getSelectedBacklogItem());
           issueKeyInput.value = matchingIssue?.key || "";
           updateSelectedIssueDetails();
-          updateComparedResult(origin);
-          return;
         }
-
-        updateComparedResult(origin);
       }
 
       function getPayload() {
@@ -755,7 +686,6 @@ export function renderBacklogItemCompletedHtml(
         jiraSection.classList.toggle("is-disabled", !useJiraInput.checked);
         issueKeyInput.disabled = !useJiraInput.checked;
         updateSelectedIssueDetails();
-        updateComparedResult("jira-state");
       }
 
       function queueDraftSave() {
@@ -853,7 +783,6 @@ export function renderBacklogItemCompletedHtml(
             syncSelections("backlog");
           } else {
             updateSelectedBacklogItemDetails();
-            updateComparedResult("backlog-reload");
           }
           syncRunButton();
           queueDraftSave();
@@ -865,7 +794,6 @@ export function renderBacklogItemCompletedHtml(
           renderBacklogItemOptions("");
           backlogFolderStatus.textContent = message.payload?.message || "Unable to load local backlog items.";
           updateSelectedBacklogItemDetails();
-          updateComparedResult("backlog-error");
           syncRunButton();
         }
       });
@@ -877,8 +805,6 @@ export function renderBacklogItemCompletedHtml(
         syncSelections("issue");
       } else if (backlogItemPathInput.value) {
         syncSelections("backlog");
-      } else {
-        updateComparedResult("initial");
       }
       updateSelectedBacklogItemDetails();
       syncRunButton();
