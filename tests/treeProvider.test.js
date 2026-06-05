@@ -271,6 +271,7 @@ test("top-level Claude actions include terminal launcher entries", async () => {
   assert.equal(ollamaClaudeIndex, codexTerminalIndex + 1);
   assert.equal(ollamaCodexIndex, ollamaClaudeIndex + 1);
   assert.equal(opencodeIndex, ollamaCodexIndex + 1);
+  assert.equal(rootLabels.includes("Run liteLLM OpenAI"), false);
 });
 
 test("quick actions group repository commands under Repository Actions", async () => {
