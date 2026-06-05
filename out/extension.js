@@ -1712,8 +1712,11 @@ function activate(context) {
         border-radius: 6px;
       }
       textarea { min-height: 140px; resize: vertical; }
-      .current-branch-title { font-size: 18px; font-weight: 600; }
+      .current-branch-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 18px; font-weight: 600; }
       .current-branch-value { color: #7cc7ff; }
+      .current-branch-title.is-disabled { opacity: 0.45; }
+      .inline-checkbox { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; }
+      .inline-checkbox input { width: auto; margin: 0; }
       .hint { font-size: 12px; color: var(--vscode-descriptionForeground); }
       .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
       .actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -1726,7 +1729,13 @@ function activate(context) {
   </head>
   <body>
     <form id="jira-item-form">
-      <div class="current-branch-title">Jira Project: <span class="current-branch-value">${projectKey}</span></div>
+      <div class="current-branch-title" id="jira-project-title">
+        <span>Jira Project: <span class="current-branch-value">${projectKey}</span></span>
+        <label class="inline-checkbox">
+          <input id="create-on-jira" type="checkbox" checked />
+          <span>Create on JIRA</span>
+        </label>
+      </div>
       <label>
         Item Type
         <select id="issue-type"></select>
@@ -1759,6 +1768,8 @@ function activate(context) {
       const issueNameInput = document.getElementById("issue-name");
       const issueDescriptionInput = document.getElementById("issue-description");
       const backlogDirInput = document.getElementById("backlog-dir");
+      const createOnJiraInput = document.getElementById("create-on-jira");
+      const jiraProjectTitle = document.getElementById("jira-project-title");
       const errorMessage = document.getElementById("error-message");
       const form = document.getElementById("jira-item-form");
       const cancelButton = document.getElementById("cancel-button");
@@ -1774,11 +1785,18 @@ function activate(context) {
         vscode.postMessage({ type: "cancelCreateJiraItem" });
       });
 
+      const syncJiraProjectState = () => {
+        jiraProjectTitle.classList.toggle("is-disabled", !createOnJiraInput.checked);
+      };
+
+      createOnJiraInput.addEventListener("change", syncJiraProjectState);
+
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "create";
         const payload = {
           action,
+          createOnJira: createOnJiraInput.checked,
           issueType: issueTypeSelect.value,
           summary: issueNameInput.value.trim(),
           description: issueDescriptionInput.value.trim(),
@@ -1805,6 +1823,7 @@ function activate(context) {
       });
 
       issueTypeSelect.value = issueTypes[0];
+      syncJiraProjectState();
       issueNameInput.focus();
     </script>
   </body>
@@ -1832,6 +1851,7 @@ function activate(context) {
                 return;
             const payload = message.payload || {};
             const action = payload.action === "grillMe" ? "grillMe" : "create";
+            const createOnJira = payload.createOnJira !== false;
             const issueType = typeof payload.issueType === "string" ? payload.issueType.trim() : "";
             const summary = typeof payload.summary === "string" ? payload.summary.trim() : "";
             const description = typeof payload.description === "string" ? payload.description.trim() : "";
@@ -1857,7 +1877,7 @@ function activate(context) {
                 });
                 return;
             }
-            resolveOnce({ action, issueType, summary, description, backlogDir });
+            resolveOnce({ action, createOnJira, issueType, summary, description, backlogDir });
             panel.dispose();
         }, undefined, context.subscriptions);
     });
@@ -3684,22 +3704,24 @@ function activate(context) {
             return;
         }
         let createdIssue;
-        try {
-            createdIssue = await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: "Creating Jira item",
-                cancellable: false
-            }, async () => (0, jira_1.createJiraIssue)(credentials, {
-                projectKey,
-                issueTypeName: jiraItem.issueType,
-                summary: jiraItem.summary,
-                description: jiraItem.description
-            }));
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to create Jira item: ${message}`);
-            return;
+        if (jiraItem.createOnJira) {
+            try {
+                createdIssue = await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: "Creating Jira item",
+                    cancellable: false
+                }, async () => (0, jira_1.createJiraIssue)(credentials, {
+                    projectKey,
+                    issueTypeName: jiraItem.issueType,
+                    summary: jiraItem.summary,
+                    description: jiraItem.description
+                }));
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Failed to create Jira item: ${message}`);
+                return;
+            }
         }
         try {
             await fs.promises.mkdir(resolvedBacklogDir, { recursive: true });
@@ -3711,10 +3733,16 @@ function activate(context) {
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Created Jira ${jiraItem.issueType} ${createdIssue.key}, but failed to create ${backlogFileName}: ${message}`);
+            const prefix = createdIssue
+                ? `Created Jira ${jiraItem.issueType} ${createdIssue.key}, but failed to create ${backlogFileName}:`
+                : `Failed to create ${backlogFileName}:`;
+            void vscode.window.showErrorMessage(`${prefix} ${message}`);
             return;
         }
-        void vscode.window.showInformationMessage(`Created Jira ${jiraItem.issueType} ${createdIssue.key} in project ${projectKey} and added ${backlogFileName}.`);
+        const successMessage = createdIssue
+            ? `Created Jira ${jiraItem.issueType} ${createdIssue.key} in project ${projectKey} and added ${backlogFileName}.`
+            : `Added ${backlogFileName} without creating a Jira item.`;
+        void vscode.window.showInformationMessage(successMessage);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.takeJiraItemAssign", async () => {
         const rootPath = (0, utils_1.getRootPath)();
