@@ -3127,10 +3127,7 @@ function activate(context) {
                     return;
                 }
             }
-            (0, terminal_1.runInPersistentTerminal)((0, terminal_1.getAgentTerminalName)(), [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "claude"], {
-                iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
-                color: terminal_1.CLAUDE_ACTION_COLOR
-            });
+            await (0, terminal_1.openCommandInExternalTerminal)(repoRoot, "claude");
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);

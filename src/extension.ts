@@ -16,6 +16,7 @@ import {
   buildAgenticHarnessPromptCommand,
   buildAgenticHarnessFileCommand,
   buildLightAgenticHarnessPromptCommand,
+  openCommandInExternalTerminal,
   runClaudeInitAndUpdateInPersistentTerminal,
   runCodexInitAndUpdateInPersistentTerminal,
   getAgentTerminalName,
@@ -3894,10 +3895,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
         }
-        runInPersistentTerminal(getAgentTerminalName(), [`cd ${quoteShellArg(repoRoot)}`, "claude"], {
-          iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
-          color: CLAUDE_ACTION_COLOR
-        });
+        await openCommandInExternalTerminal(repoRoot, "claude");
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(`Claude Terminal failed: ${message}`);

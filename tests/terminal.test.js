@@ -48,6 +48,11 @@ test("runInPersistentTerminal is a function", () => {
   assert.equal(typeof terminal.runInPersistentTerminal, "function");
 });
 
+test("openCommandInExternalTerminal is a function", () => {
+  const terminal = setupTerminalModule();
+  assert.equal(typeof terminal.openCommandInExternalTerminal, "function");
+});
+
 test("runCommandInTaskTerminal is an async function", () => {
   const terminal = setupTerminalModule();
   assert.equal(typeof terminal.runCommandInTaskTerminal, "function");
@@ -81,4 +86,35 @@ test("runCodexInitAndUpdateInPersistentTerminal is an async function", () => {
 test("runClaudePromptInPersistentTerminal is a function", () => {
   const terminal = setupTerminalModule();
   assert.equal(typeof terminal.runClaudePromptInPersistentTerminal, "function");
+});
+
+test("buildExternalTerminalLaunchSpecs uses Terminal.app automation on macOS", () => {
+  const terminal = setupTerminalModule();
+  const specs = terminal.buildExternalTerminalLaunchSpecs("/tmp/project root", "claude", "darwin");
+
+  assert.equal(specs.length, 1);
+  assert.equal(specs[0].command, "osascript");
+  assert.match(specs[0].args.join(" "), /tell application "Terminal" to activate/);
+  assert.match(specs[0].args.join(" "), /cd \\"\/tmp\/project root\\" && claude/);
+});
+
+test("buildExternalTerminalLaunchSpecs uses cmd start on Windows", () => {
+  const terminal = setupTerminalModule();
+  const specs = terminal.buildExternalTerminalLaunchSpecs("C:\\Projects\\Task Runner", "claude", "win32");
+
+  assert.equal(specs.length, 1);
+  assert.equal(specs[0].command, "cmd.exe");
+  assert.deepEqual(specs[0].args.slice(0, 5), ["/c", "start", "\"Claude Terminal\"", "cmd.exe", "/k"]);
+  assert.match(specs[0].args[5], /cd \/d "C:\\Projects\\Task Runner" && claude/);
+});
+
+test("buildExternalTerminalLaunchSpecs provides Linux terminal fallbacks", () => {
+  const terminal = setupTerminalModule();
+  const specs = terminal.buildExternalTerminalLaunchSpecs("/tmp/project root", "claude", "linux");
+
+  assert.deepEqual(
+    specs.map((spec) => spec.command),
+    ["x-terminal-emulator", "gnome-terminal", "konsole", "xterm"]
+  );
+  assert.ok(JSON.stringify(specs).includes('cd \\"/tmp/project root\\" && claude'));
 });

@@ -4,6 +4,8 @@ exports.CLAUDE_ACTION_COLOR = void 0;
 exports.getAgentTerminalName = getAgentTerminalName;
 exports.runInSecondaryTerminal = runInSecondaryTerminal;
 exports.runInPersistentTerminal = runInPersistentTerminal;
+exports.buildExternalTerminalLaunchSpecs = buildExternalTerminalLaunchSpecs;
+exports.openCommandInExternalTerminal = openCommandInExternalTerminal;
 exports.runCommandInTaskTerminal = runCommandInTaskTerminal;
 exports.buildAgenticHarnessPromptCommand = buildAgenticHarnessPromptCommand;
 exports.buildAgenticHarnessFileCommand = buildAgenticHarnessFileCommand;
@@ -12,6 +14,7 @@ exports.runClaudeInitAndUpdateInPersistentTerminal = runClaudeInitAndUpdateInPer
 exports.runCodexInitAndUpdateInPersistentTerminal = runCodexInitAndUpdateInPersistentTerminal;
 exports.runClaudePromptInPersistentTerminal = runClaudePromptInPersistentTerminal;
 const vscode = require("vscode");
+const child_process_1 = require("child_process");
 const logger_1 = require("./logger");
 const settings_1 = require("./settings");
 const agenticHarnessCommand_1 = require("./agenticHarnessCommand");
@@ -45,6 +48,86 @@ function runInPersistentTerminal(name, lines, options = {}) {
     for (const line of lines) {
         terminal.sendText(line, true);
     }
+}
+function quoteAppleScriptString(value) {
+    return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+function buildExternalTerminalLaunchSpecs(repoRoot, command, platform = process.platform) {
+    if (platform === "darwin") {
+        const commandLine = `cd ${(0, utils_1.quoteShellArg)(repoRoot)} && ${command}`;
+        return [
+            {
+                command: "osascript",
+                args: [
+                    "-e",
+                    'tell application "Terminal" to activate',
+                    "-e",
+                    `tell application "Terminal" to do script ${quoteAppleScriptString(commandLine)}`
+                ],
+                cwd: repoRoot
+            }
+        ];
+    }
+    if (platform === "win32") {
+        const commandLine = `cd /d "${repoRoot.replace(/"/g, '""')}" && ${command}`;
+        return [
+            {
+                command: "cmd.exe",
+                args: ["/c", "start", "\"Claude Terminal\"", "cmd.exe", "/k", commandLine],
+                cwd: repoRoot
+            }
+        ];
+    }
+    const shellCommand = `cd ${(0, utils_1.quoteShellArg)(repoRoot)} && ${command}`;
+    return [
+        {
+            command: "x-terminal-emulator",
+            args: ["-e", "bash", "-lc", shellCommand],
+            cwd: repoRoot
+        },
+        {
+            command: "gnome-terminal",
+            args: ["--", "bash", "-lc", shellCommand],
+            cwd: repoRoot
+        },
+        {
+            command: "konsole",
+            args: ["-e", "bash", "-lc", shellCommand],
+            cwd: repoRoot
+        },
+        {
+            command: "xterm",
+            args: ["-e", "bash", "-lc", shellCommand],
+            cwd: repoRoot
+        }
+    ];
+}
+async function openCommandInExternalTerminal(repoRoot, command) {
+    const launchSpecs = buildExternalTerminalLaunchSpecs(repoRoot, command);
+    const errors = [];
+    for (const spec of launchSpecs) {
+        try {
+            await new Promise((resolve, reject) => {
+                const child = (0, child_process_1.spawn)(spec.command, spec.args, {
+                    cwd: spec.cwd,
+                    detached: true,
+                    shell: false,
+                    stdio: "ignore"
+                });
+                child.once("error", reject);
+                child.once("spawn", () => {
+                    child.unref();
+                    resolve();
+                });
+            });
+            return;
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            errors.push(`${spec.command}: ${message}`);
+        }
+    }
+    throw new Error(`Unable to launch an external terminal. ${errors.join("; ")}`);
 }
 async function runCommandInTaskTerminal(name, commandLine, options = {}) {
     const scope = options.cwd
