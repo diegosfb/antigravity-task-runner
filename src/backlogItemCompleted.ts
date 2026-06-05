@@ -458,9 +458,9 @@ export function renderBacklogItemCompletedHtml(
       </section>
 
       <section class="section">
-        <p class="section-title">Backlog Item</p>
+        <p class="section-title">JIRA Backlog Item</p>
         <label>
-          <span class="required">Assigned Item</span>
+          <span class="required">JIRA Item to Mark Completed</span>
           <select id="issueKey" name="issueKey">
             <option value="">— No Jira item selected —</option>
             ${options}
