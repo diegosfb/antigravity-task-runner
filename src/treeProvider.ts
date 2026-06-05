@@ -1063,7 +1063,7 @@ function getAdlcItems(): NodeItem[] {
     { kind: "action", label: "Plan Execution" },
     vscode.TreeItemCollapsibleState.None
   );
-  planExecution.iconPath = new vscode.ThemeIcon("play-circle", FEATURE_FLAG_ACTION_COLOR);
+  planExecution.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
   planExecution.tooltip = "Open the Plan Execution runner form.";
   planExecution.command = {
     command: PLAN_EXECUTION_COMMAND,
@@ -1074,7 +1074,7 @@ function getAdlcItems(): NodeItem[] {
     { kind: "action", label: "Develop Execution Plan" },
     vscode.TreeItemCollapsibleState.None
   );
-  developer.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
+  developer.iconPath = new vscode.ThemeIcon("play-circle", FEATURE_FLAG_ACTION_COLOR);
   developer.tooltip = "Open the Develop Execution Plan runner form.";
   developer.command = {
     command: DEVELOPER_COMMAND,

@@ -807,14 +807,14 @@ function getAdlcItems() {
         title: "Open Estimator"
     };
     const planExecution = new NodeItem({ kind: "action", label: "Plan Execution" }, vscode.TreeItemCollapsibleState.None);
-    planExecution.iconPath = new vscode.ThemeIcon("play-circle", FEATURE_FLAG_ACTION_COLOR);
+    planExecution.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
     planExecution.tooltip = "Open the Plan Execution runner form.";
     planExecution.command = {
         command: planExecution_1.PLAN_EXECUTION_COMMAND,
         title: "Open Plan Execution"
     };
     const developer = new NodeItem({ kind: "action", label: "Develop Execution Plan" }, vscode.TreeItemCollapsibleState.None);
-    developer.iconPath = new vscode.ThemeIcon("circle-large-outline", FEATURE_FLAG_ACTION_COLOR);
+    developer.iconPath = new vscode.ThemeIcon("play-circle", FEATURE_FLAG_ACTION_COLOR);
     developer.tooltip = "Open the Develop Execution Plan runner form.";
     developer.command = {
         command: developer_1.DEVELOPER_COMMAND,

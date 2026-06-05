@@ -153,7 +153,7 @@ function activate(context) {
         const terminal = vscode.window.createTerminal({
             name: "Plan Execution",
             cwd: values.workspace,
-            iconPath: new vscode.ThemeIcon("play-circle", PLAN_EXECUTION_ACTION_COLOR),
+            iconPath: new vscode.ThemeIcon("circle-large-outline", PLAN_EXECUTION_ACTION_COLOR),
             color: PLAN_EXECUTION_ACTION_COLOR
         });
         terminal.show();
@@ -163,7 +163,7 @@ function activate(context) {
         const terminal = vscode.window.createTerminal({
             name: "Develop Execution Plan",
             cwd: values.workspace,
-            iconPath: new vscode.ThemeIcon("circle-large-outline", DEVELOPER_ACTION_COLOR),
+            iconPath: new vscode.ThemeIcon("play-circle", DEVELOPER_ACTION_COLOR),
             color: DEVELOPER_ACTION_COLOR
         });
         terminal.show();
