@@ -98,7 +98,7 @@
       },
       {
         "command": "antigravity.completeJiraItem",
-        "title": "Antigravity: Jira Item Completed"
+        "title": "Antigravity: Backlog Item Completed"
       },
       {
         "command": "antigravity.updateAgenticWorkspace",

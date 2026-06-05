@@ -655,11 +655,11 @@ function getQuickActionItems() {
             title: "Take Jira Item (Assign)"
         };
         items.push(takeJiraItemAssign);
-        const completeJiraItem = new NodeItem({ kind: "action", label: "Jira Item Completed" }, vscode.TreeItemCollapsibleState.None);
+        const completeJiraItem = new NodeItem({ kind: "action", label: "Backlog Item Completed" }, vscode.TreeItemCollapsibleState.None);
         completeJiraItem.iconPath = new vscode.ThemeIcon("pass", JIRA_ACTION_COLOR);
         completeJiraItem.command = {
             command: "antigravity.completeJiraItem",
-            title: "Jira Item Completed"
+            title: "Backlog Item Completed"
         };
         items.push(completeJiraItem);
     }

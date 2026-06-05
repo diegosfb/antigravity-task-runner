@@ -35,6 +35,7 @@ const estimator_1 = require("./estimator");
 const planExecution_1 = require("./planExecution");
 const solutionArchitect_1 = require("./solutionArchitect");
 const backlogItem_1 = require("./backlogItem");
+const backlogItemCompleted_1 = require("./backlogItemCompleted");
 function getRepoPackageVersion(repoRoot) {
     try {
         const packageJsonPath = path.join(repoRoot, "package.json");
@@ -3909,7 +3910,7 @@ function activate(context) {
         await launchAgentForJiraItem(repoRoot, agentLabel, issue.key, issue.summary, selection.agentCommand);
         void vscode.window.showInformationMessage(`${issue.key} was assigned to ${credentials.email}, moved to In Progress, and launched with the selected agent harness command.`);
     }));
-    context.subscriptions.push(vscode.commands.registerCommand("antigravity.completeJiraItem", async () => {
+    context.subscriptions.push(vscode.commands.registerCommand(backlogItemCompleted_1.BACKLOG_ITEM_COMPLETED_COMMAND, async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
             void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
@@ -3922,7 +3923,7 @@ function activate(context) {
             return;
         }
         if (!projectKey) {
-            void vscode.window.showErrorMessage("Jira Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository.");
+            void vscode.window.showErrorMessage("Backlog Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository.");
             provider.refresh();
             return;
         }
@@ -3943,41 +3944,79 @@ function activate(context) {
             void vscode.window.showInformationMessage(`No Jira tickets assigned to you in To Do or In Progress were found for project ${projectKey}.`);
             return;
         }
-        const selection = await vscode.window.showQuickPick(issues.map((issue) => ({
-            label: issue.key,
-            description: issue.summary,
-            detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName]
-                .filter(Boolean)
-                .join(" • "),
-            issue
-        })), {
-            title: "Jira Item Completed",
-            placeHolder: `Select one of your Jira tickets in ${projectKey} to move into In Review, or Done if review is unavailable`,
-            matchOnDescription: true,
-            matchOnDetail: true
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("backlogItemCompletedForm"));
+        const initialValues = (0, backlogItemCompleted_1.sanitizeBacklogItemCompletedFormValues)(savedValues, projectKey);
+        const selectedIssueKey = issues.some((issue) => issue.key === initialValues.issueKey)
+            ? initialValues.issueKey
+            : issues[0]?.key ?? "";
+        const panel = vscode.window.createWebviewPanel("antigravityBacklogItemCompleted", "Backlog Item Completed", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
         });
-        if (!selection)
-            return;
-        const confirm = await vscode.window.showInformationMessage(`Move ${selection.issue.key} to In Review, or Done if review is unavailable?`, { modal: true }, "Mark Completed");
-        if (confirm !== "Mark Completed")
-            return;
-        try {
-            const transitionResult = await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Completing ${selection.issue.key} in Jira`,
-                cancellable: false
-            }, async () => (0, jira_1.transitionJiraIssueToReviewOrDone)(credentials, projectKey, selection.issue.key));
-            const transitionMessage = transitionResult.statusName === "In Review"
-                ? `Moved Jira item ${selection.issue.key} to In Review.`
-                : transitionResult.fallbackReason
-                    ? `Moved Jira item ${selection.issue.key} to Done because ${transitionResult.fallbackReason}`
-                    : `Moved Jira item ${selection.issue.key} to Done.`;
-            void vscode.window.showInformationMessage(transitionMessage);
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to update Jira item: ${message}`);
-        }
+        panel.webview.html = (0, backlogItemCompleted_1.renderBacklogItemCompletedHtml)(panel.webview, {
+            ...(0, backlogItemCompleted_1.getDefaultBacklogItemCompletedValues)(projectKey),
+            ...initialValues,
+            issueKey: selectedIssueKey
+        }, issues);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelBacklogItemCompleted") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "saveBacklogItemCompletedDraft") {
+                const draftValues = (0, backlogItemCompleted_1.sanitizeBacklogItemCompletedFormValues)(message.payload, projectKey);
+                await context.workspaceState.update(getProjectScopedStateKey("backlogItemCompletedForm"), draftValues);
+                return;
+            }
+            if (message.type !== "runBacklogItemCompleted") {
+                return;
+            }
+            const values = (0, backlogItemCompleted_1.sanitizeBacklogItemCompletedFormValues)(message.payload, projectKey);
+            const missingFields = (0, backlogItemCompleted_1.getMissingBacklogItemCompletedFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "backlogItemCompletedError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            const selectedIssue = issues.find((issue) => issue.key === values.issueKey);
+            if (!selectedIssue) {
+                void panel.webview.postMessage({
+                    type: "backlogItemCompletedError",
+                    payload: {
+                        message: "The selected backlog item is no longer available. Reopen the page and try again."
+                    }
+                });
+                return;
+            }
+            try {
+                await context.workspaceState.update(getProjectScopedStateKey("backlogItemCompletedForm"), values);
+                const transitionResult = await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Completing ${selectedIssue.key} in Jira`,
+                    cancellable: false
+                }, async () => (0, jira_1.transitionJiraIssueToReviewOrDone)(credentials, projectKey, selectedIssue.key));
+                const transitionMessage = transitionResult.statusName === "In Review"
+                    ? `Moved backlog item ${selectedIssue.key} to In Review.`
+                    : transitionResult.fallbackReason
+                        ? `Moved backlog item ${selectedIssue.key} to Done because ${transitionResult.fallbackReason}`
+                        : `Moved backlog item ${selectedIssue.key} to Done.`;
+                void vscode.window.showInformationMessage(transitionMessage);
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "backlogItemCompletedError",
+                    payload: { message: `Failed to update backlog item: ${messageText}` }
+                });
+            }
+        }, undefined, context.subscriptions);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.incrementMajorVersion", async () => {
         await (0, scripts_1.runRepoScript)("bump-version", ["major"]);

@@ -175,6 +175,14 @@ import {
   buildBacklogItemTemplate,
   resolveBacklogItemFilePath
 } from "./backlogItem";
+import {
+  BACKLOG_ITEM_COMPLETED_COMMAND,
+  getMissingBacklogItemCompletedFields,
+  getDefaultBacklogItemCompletedValues,
+  renderBacklogItemCompletedHtml,
+  sanitizeBacklogItemCompletedFormValues,
+  type BacklogItemCompletedFormValues
+} from "./backlogItemCompleted";
 
 type GitInputBox = {
   value: string;
@@ -4962,7 +4970,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("antigravity.completeJiraItem", async () => {
+    vscode.commands.registerCommand(BACKLOG_ITEM_COMPLETED_COMMAND, async () => {
       const rootPath = getRootPath();
       if (!rootPath) {
         void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
@@ -4979,7 +4987,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       if (!projectKey) {
         void vscode.window.showErrorMessage(
-          "Jira Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository."
+          "Backlog Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository."
         );
         provider.refresh();
         return;
@@ -5008,59 +5016,120 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const selection = await vscode.window.showQuickPick(
-        issues.map((issue) => ({
-          label: issue.key,
-          description: issue.summary,
-          detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName]
-            .filter(Boolean)
-            .join(" • "),
-          issue
-        })),
+      const savedValues = context.workspaceState.get<Partial<BacklogItemCompletedFormValues>>(
+        getProjectScopedStateKey("backlogItemCompletedForm")
+      );
+      const initialValues = sanitizeBacklogItemCompletedFormValues(
+        savedValues,
+        projectKey
+      );
+      const selectedIssueKey = issues.some((issue) => issue.key === initialValues.issueKey)
+        ? initialValues.issueKey
+        : issues[0]?.key ?? "";
+      const panel = vscode.window.createWebviewPanel(
+        "antigravityBacklogItemCompleted",
+        "Backlog Item Completed",
+        vscode.ViewColumn.Active,
         {
-          title: "Jira Item Completed",
-          placeHolder:
-            `Select one of your Jira tickets in ${projectKey} to move into In Review, or Done if review is unavailable`,
-          matchOnDescription: true,
-          matchOnDetail: true
+          enableScripts: true,
+          retainContextWhenHidden: true
         }
       );
-
-      if (!selection) return;
-
-      const confirm = await vscode.window.showInformationMessage(
-        `Move ${selection.issue.key} to In Review, or Done if review is unavailable?`,
-        { modal: true },
-        "Mark Completed"
+      panel.webview.html = renderBacklogItemCompletedHtml(
+        panel.webview,
+        {
+          ...getDefaultBacklogItemCompletedValues(projectKey),
+          ...initialValues,
+          issueKey: selectedIssueKey
+        },
+        issues
       );
-      if (confirm !== "Mark Completed") return;
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          if (!message) return;
+          if (message.type === "cancelBacklogItemCompleted") {
+            panel.dispose();
+            return;
+          }
+          if (message.type === "saveBacklogItemCompletedDraft") {
+            const draftValues = sanitizeBacklogItemCompletedFormValues(
+              message.payload as Partial<BacklogItemCompletedFormValues> | undefined,
+              projectKey
+            );
+            await context.workspaceState.update(
+              getProjectScopedStateKey("backlogItemCompletedForm"),
+              draftValues
+            );
+            return;
+          }
+          if (message.type !== "runBacklogItemCompleted") {
+            return;
+          }
 
-      try {
-        const transitionResult = await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: `Completing ${selection.issue.key} in Jira`,
-            cancellable: false
-          },
-          async () =>
-            transitionJiraIssueToReviewOrDone(
-              credentials,
-              projectKey,
-              selection.issue.key
-            )
-        );
+          const values = sanitizeBacklogItemCompletedFormValues(
+            message.payload as Partial<BacklogItemCompletedFormValues> | undefined,
+            projectKey
+          );
+          const missingFields = getMissingBacklogItemCompletedFields(values);
+          if (missingFields.length > 0) {
+            void panel.webview.postMessage({
+              type: "backlogItemCompletedError",
+              payload: {
+                message: `Fill in the required fields: ${missingFields.join(", ")}.`
+              }
+            });
+            return;
+          }
 
-        const transitionMessage =
-          transitionResult.statusName === "In Review"
-            ? `Moved Jira item ${selection.issue.key} to In Review.`
-            : transitionResult.fallbackReason
-              ? `Moved Jira item ${selection.issue.key} to Done because ${transitionResult.fallbackReason}`
-              : `Moved Jira item ${selection.issue.key} to Done.`;
-        void vscode.window.showInformationMessage(transitionMessage);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(`Failed to update Jira item: ${message}`);
-      }
+          const selectedIssue = issues.find((issue) => issue.key === values.issueKey);
+          if (!selectedIssue) {
+            void panel.webview.postMessage({
+              type: "backlogItemCompletedError",
+              payload: {
+                message: "The selected backlog item is no longer available. Reopen the page and try again."
+              }
+            });
+            return;
+          }
+
+          try {
+            await context.workspaceState.update(
+              getProjectScopedStateKey("backlogItemCompletedForm"),
+              values
+            );
+            const transitionResult = await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: `Completing ${selectedIssue.key} in Jira`,
+                cancellable: false
+              },
+              async () =>
+                transitionJiraIssueToReviewOrDone(
+                  credentials,
+                  projectKey,
+                  selectedIssue.key
+                )
+            );
+
+            const transitionMessage =
+              transitionResult.statusName === "In Review"
+                ? `Moved backlog item ${selectedIssue.key} to In Review.`
+                : transitionResult.fallbackReason
+                  ? `Moved backlog item ${selectedIssue.key} to Done because ${transitionResult.fallbackReason}`
+                  : `Moved backlog item ${selectedIssue.key} to Done.`;
+            void vscode.window.showInformationMessage(transitionMessage);
+            panel.dispose();
+          } catch (error) {
+            const messageText = error instanceof Error ? error.message : String(error);
+            void panel.webview.postMessage({
+              type: "backlogItemCompletedError",
+              payload: { message: `Failed to update backlog item: ${messageText}` }
+            });
+          }
+        },
+        undefined,
+        context.subscriptions
+      );
     })
   );
 
