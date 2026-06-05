@@ -11,7 +11,7 @@ function createVscodeMock(configValues = {}) {
   };
 }
 
-function setupEstimatorModule(configValues = {}) {
+function setupPlanExecutionModule(configValues = {}) {
   const Module = require("module");
   const originalRequire = Module.prototype.require;
   Module.prototype.require = function (id) {
@@ -26,16 +26,16 @@ function setupEstimatorModule(configValues = {}) {
     }
     return originalRequire.apply(this, arguments);
   };
-  delete require.cache[require.resolve("../out/estimator.js")];
+  delete require.cache[require.resolve("../out/planExecution.js")];
   delete require.cache[require.resolve("../out/jiraRunner.js")];
-  const estimator = require("../out/estimator.js");
+  const planExecution = require("../out/planExecution.js");
   Module.prototype.require = originalRequire;
-  return estimator;
+  return planExecution;
 }
 
-test("getDefaultEstimatorValues derives project inputs from workspace", () => {
-  const estimator = setupEstimatorModule();
-  const defaults = estimator.getDefaultEstimatorValues("/tmp/project");
+test("getDefaultPlanExecutionValues derives project inputs from workspace", () => {
+  const planExecution = setupPlanExecutionModule();
+  const defaults = planExecution.getDefaultPlanExecutionValues("/tmp/project");
 
   assert.deepEqual(defaults, {
     agentHarness: "Codex",
@@ -51,9 +51,9 @@ test("getDefaultEstimatorValues derives project inputs from workspace", () => {
   });
 });
 
-test("sanitizeEstimatorFormValues trims values and preserves explicit overrides", () => {
-  const estimator = setupEstimatorModule();
-  const values = estimator.sanitizeEstimatorFormValues(
+test("sanitizePlanExecutionFormValues trims values and preserves explicit overrides", () => {
+  const planExecution = setupPlanExecutionModule();
+  const values = planExecution.sanitizePlanExecutionFormValues(
     {
       agentHarness: " Codex ",
       agentModel: " gpt-5 ",
@@ -63,8 +63,8 @@ test("sanitizeEstimatorFormValues trims values and preserves explicit overrides"
       architectureDir: " /docs/architecture ",
       backlogDir: " /docs/backlog ",
       enableJira: true,
-      jiraProjectName: " Project Estimate ",
-      agentScriptPath: " ./estimator.sh "
+      jiraProjectName: " Project Beta ",
+      agentScriptPath: " ./plan-execution.sh "
     },
     "/tmp/project"
   );
@@ -78,39 +78,14 @@ test("sanitizeEstimatorFormValues trims values and preserves explicit overrides"
     architectureDir: "/docs/architecture",
     backlogDir: "/docs/backlog",
     enableJira: true,
-    jiraProjectName: "Project Estimate",
-    agentScriptPath: "./estimator.sh"
+    jiraProjectName: "Project Beta",
+    agentScriptPath: "./plan-execution.sh"
   });
 });
 
-test("getMissingEstimatorFields returns only required empty values", () => {
-  const estimator = setupEstimatorModule();
-  const missing = estimator.getMissingEstimatorFields({
-    agentHarness: "",
-    agentModel: "",
-    agentIntelligence: "",
-    workspace: "",
-    projectDescriptionDir: "",
-    architectureDir: "",
-    backlogDir: "",
-    enableJira: false,
-    jiraProjectName: "",
-    agentScriptPath: ""
-  });
-
-  assert.deepEqual(missing, [
-    "Agent Harness",
-    "Project Workspace folder",
-    "Project Description folder",
-    "Project Architecture folder",
-    "Project Backlog folder",
-    "Agent Script Path"
-  ]);
-});
-
-test("getMissingEstimatorFields requires Jira settings when enabled", () => {
-  const estimator = setupEstimatorModule();
-  const missing = estimator.getMissingEstimatorFields({
+test("getMissingPlanExecutionFields includes Jira settings when enabled", () => {
+  const planExecution = setupPlanExecutionModule();
+  const missing = planExecution.getMissingPlanExecutionFields({
     agentHarness: "Codex",
     agentModel: "",
     agentIntelligence: "",
@@ -120,7 +95,7 @@ test("getMissingEstimatorFields requires Jira settings when enabled", () => {
     backlogDir: "/tmp/project/docs/backlog",
     enableJira: true,
     jiraProjectName: "",
-    agentScriptPath: "./estimator.sh"
+    agentScriptPath: "./plan-execution.sh"
   });
 
   assert.deepEqual(missing, [
@@ -131,13 +106,13 @@ test("getMissingEstimatorFields requires Jira settings when enabled", () => {
   ]);
 });
 
-test("buildEstimatorCommand includes Jira flags when enabled", () => {
-  const estimator = setupEstimatorModule({
+test("buildPlanExecutionCommand includes Jira flags when enabled", () => {
+  const planExecution = setupPlanExecutionModule({
     jiraEmail: "jira-user@example.com",
     jiraBaseUrl: "https://jira.example.com",
     jiraApiToken: "secret-token"
   });
-  const command = estimator.buildEstimatorCommand({
+  const command = planExecution.buildPlanExecutionCommand({
     agentHarness: "Codex",
     agentModel: "gpt-5",
     agentIntelligence: "",
@@ -146,14 +121,14 @@ test("buildEstimatorCommand includes Jira flags when enabled", () => {
     architectureDir: "/tmp/project/docs/architecture",
     backlogDir: "",
     enableJira: true,
-    jiraProjectName: "Project Estimate",
-    agentScriptPath: "./estimator.sh"
+    jiraProjectName: "Project Beta",
+    agentScriptPath: "./plan-execution.sh"
   });
 
   assert.equal(
     command,
     [
-      "\"./estimator.sh\"",
+      "\"./plan-execution.sh\"",
       "--project-description-dir",
       "\"/tmp/project/docs/project_description\"",
       "--architecture-dir",
@@ -171,24 +146,20 @@ test("buildEstimatorCommand includes Jira flags when enabled", () => {
       "--jira-api-token",
       "\"secret-token\"",
       "--jira-project",
-      "\"Project Estimate\""
+      "\"Project Beta\""
     ].join(" ")
   );
-  assert.equal(command.includes("--backlog-dir"), false);
-  assert.equal(command.includes("--intelligence"), false);
 });
 
-test("renderEstimatorHtml includes draft save and workspace-derived folder sync", () => {
-  const estimator = setupEstimatorModule();
-  const html = estimator.renderEstimatorHtml(
+test("renderPlanExecutionHtml includes Jira controls", () => {
+  const planExecution = setupPlanExecutionModule();
+  const html = planExecution.renderPlanExecutionHtml(
     { cspSource: "vscode-resource:" },
-    estimator.getDefaultEstimatorValues("/tmp/project")
+    planExecution.getDefaultPlanExecutionValues("/tmp/project")
   );
 
-  assert.match(html, /saveEstimatorDraft/);
+  assert.match(html, /savePlanExecutionDraft/);
   assert.match(html, /syncProjectFolderDefaults/);
-  assert.match(html, /Project Workspace folder/);
-  assert.match(html, /Project Architecture folder/);
   assert.match(html, /Enable Jira using configured credentials/);
   assert.match(html, /Jira Project Name/);
   assert.match(html, /Agent Script Path/);

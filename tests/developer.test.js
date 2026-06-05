@@ -1,15 +1,21 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-function createVscodeMock() {
-  return {};
+function createVscodeMock(configValues = {}) {
+  return {
+    workspace: {
+      getConfiguration: () => ({
+        get: (key) => configValues[key]
+      })
+    }
+  };
 }
 
-function setupDeveloperModule() {
+function setupDeveloperModule(configValues = {}) {
   const Module = require("module");
   const originalRequire = Module.prototype.require;
   Module.prototype.require = function (id) {
-    if (id === "vscode") return createVscodeMock();
+    if (id === "vscode") return createVscodeMock(configValues);
     if (id === "./settings") {
       return { getNonce: () => "nonce" };
     }
@@ -21,6 +27,7 @@ function setupDeveloperModule() {
     return originalRequire.apply(this, arguments);
   };
   delete require.cache[require.resolve("../out/developer.js")];
+  delete require.cache[require.resolve("../out/jiraRunner.js")];
   const developer = require("../out/developer.js");
   Module.prototype.require = originalRequire;
   return developer;
@@ -40,6 +47,8 @@ test("getDefaultDeveloperValues derives project inputs from workspace", () => {
     executionPlanFile: "/tmp/project/docs/project-execution-plan.md",
     backlogDir: "/tmp/project/docs/backlog",
     architectureDir: "/tmp/project/docs/architecture",
+    enableJira: false,
+    jiraProjectName: "",
     agentScriptPath: ""
   });
 });
@@ -57,6 +66,8 @@ test("sanitizeDeveloperFormValues trims values and preserves explicit overrides"
       executionPlanFile: " /docs/project-execution-plan.md ",
       backlogDir: " /docs/backlog ",
       architectureDir: " /docs/architecture ",
+      enableJira: true,
+      jiraProjectName: " Project Gamma ",
       agentScriptPath: " ./developer.sh "
     },
     "/tmp/project"
@@ -72,6 +83,8 @@ test("sanitizeDeveloperFormValues trims values and preserves explicit overrides"
     executionPlanFile: "/docs/project-execution-plan.md",
     backlogDir: "/docs/backlog",
     architectureDir: "/docs/architecture",
+    enableJira: true,
+    jiraProjectName: "Project Gamma",
     agentScriptPath: "./developer.sh"
   });
 });
@@ -101,6 +114,8 @@ test("getMissingDeveloperFields returns only required empty values", () => {
     executionPlanFile: "",
     backlogDir: "",
     architectureDir: "",
+    enableJira: false,
+    jiraProjectName: "",
     agentScriptPath: ""
   });
 
@@ -115,8 +130,37 @@ test("getMissingDeveloperFields returns only required empty values", () => {
   ]);
 });
 
-test("buildDeveloperCommand includes required flags and non-empty optional flags", () => {
+test("getMissingDeveloperFields requires Jira settings when enabled", () => {
   const developer = setupDeveloperModule();
+  const missing = developer.getMissingDeveloperFields({
+    agentHarness: "Codex",
+    agentModel: "",
+    agentIntelligence: "",
+    workspace: "/tmp/project",
+    projectDescriptionDir: "/tmp/project/docs/project_description",
+    sourceOutputFolder: "/tmp/project/src",
+    executionPlanFile: "/tmp/project/docs/project-execution-plan.md",
+    backlogDir: "/tmp/project/docs/backlog",
+    architectureDir: "/tmp/project/docs/architecture",
+    enableJira: true,
+    jiraProjectName: "",
+    agentScriptPath: "./developer.sh"
+  });
+
+  assert.deepEqual(missing, [
+    "Jira Project Name",
+    "Jira Username setting",
+    "Jira URL setting",
+    "Jira API Token setting"
+  ]);
+});
+
+test("buildDeveloperCommand includes Jira flags when enabled", () => {
+  const developer = setupDeveloperModule({
+    jiraEmail: "jira-user@example.com",
+    jiraBaseUrl: "https://jira.example.com",
+    jiraApiToken: "secret-token"
+  });
   const command = developer.buildDeveloperCommand({
     agentHarness: "Codex",
     agentModel: "gpt-5",
@@ -127,6 +171,8 @@ test("buildDeveloperCommand includes required flags and non-empty optional flags
     executionPlanFile: "/tmp/project/docs/project-execution-plan.md",
     backlogDir: "",
     architectureDir: "/tmp/project/docs/architecture",
+    enableJira: true,
+    jiraProjectName: "Project Gamma",
     agentScriptPath: "./developer.sh"
   });
 
@@ -147,7 +193,15 @@ test("buildDeveloperCommand includes required flags and non-empty optional flags
       "--harness",
       "\"Codex\"",
       "--model",
-      "\"gpt-5\""
+      "\"gpt-5\"",
+      "--jira-username",
+      "\"jira-user@example.com\"",
+      "--jira-url",
+      "\"https://jira.example.com\"",
+      "--jira-api-token",
+      "\"secret-token\"",
+      "--jira-project",
+      "\"Project Gamma\""
     ].join(" ")
   );
   assert.equal(command.includes("--backlog-dir"), false);
@@ -167,5 +221,7 @@ test("renderDeveloperHtml includes draft save and workspace-derived input sync",
   assert.match(html, /Project Execution Plan file/);
   assert.match(html, /Project Backlog folder/);
   assert.match(html, /Project Architecture folder/);
+  assert.match(html, /Enable Jira using configured credentials/);
+  assert.match(html, /Jira Project Name/);
   assert.match(html, /Agent Script Path/);
 });

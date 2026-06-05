@@ -7,6 +7,7 @@ exports.getMissingBusinessAnalystFields = getMissingBusinessAnalystFields;
 exports.buildBusinessAnalystCommand = buildBusinessAnalystCommand;
 exports.renderBusinessAnalystHtml = renderBusinessAnalystHtml;
 const path = require("path");
+const jiraRunner_1 = require("./jiraRunner");
 const settings_1 = require("./settings");
 const utils_1 = require("./utils");
 exports.BUSINESS_ANALYST_COMMAND = "antigravity.openBusinessAnalyst";
@@ -39,7 +40,7 @@ function getDefaultBusinessAnalystValues(workspaceRoot) {
         workspace,
         specsDir: projectFolders.specsDir,
         backlogDir: projectFolders.backlogDir,
-        jiraProjectKey: "",
+        ...(0, jiraRunner_1.getDefaultJiraRunnerValues)(),
         agentScriptPath: ""
     };
 }
@@ -48,6 +49,17 @@ function sanitizeBusinessAnalystFormValues(values, workspaceRoot) {
     const workspace = typeof values?.workspace === "string" ? values.workspace.trim() : defaults.workspace;
     const specsDir = typeof values?.specsDir === "string" ? values.specsDir.trim() : defaults.specsDir;
     const backlogDir = typeof values?.backlogDir === "string" ? values.backlogDir.trim() : defaults.backlogDir;
+    const jiraValues = (0, jiraRunner_1.sanitizeJiraRunnerValues)({
+        enableJira: values?.enableJira === true ||
+            (typeof values?.jiraProjectName === "string" && values.jiraProjectName.trim().length > 0) ||
+            (typeof values?.jiraProjectKey === "string" &&
+                (values.jiraProjectKey || "").trim().length > 0),
+        jiraProjectName: typeof values?.jiraProjectName === "string"
+            ? values.jiraProjectName
+            : typeof values?.jiraProjectKey === "string"
+                ? (values.jiraProjectKey || "")
+                : defaults.jiraProjectName
+    });
     return {
         agentHarness: typeof values?.agentHarness === "string" ? values.agentHarness.trim() : defaults.agentHarness,
         agentModel: typeof values?.agentModel === "string" ? values.agentModel.trim() : defaults.agentModel,
@@ -55,7 +67,7 @@ function sanitizeBusinessAnalystFormValues(values, workspaceRoot) {
         workspace,
         specsDir: normalizeLegacyProjectFolder(specsDir, workspace, "specs"),
         backlogDir: normalizeLegacyProjectFolder(backlogDir, workspace, "backlog"),
-        jiraProjectKey: typeof values?.jiraProjectKey === "string" ? values.jiraProjectKey.trim() : defaults.jiraProjectKey,
+        ...jiraValues,
         agentScriptPath: typeof values?.agentScriptPath === "string" ? values.agentScriptPath.trim() : defaults.agentScriptPath
     };
 }
@@ -69,6 +81,7 @@ function getMissingBusinessAnalystFields(values) {
         missing.push("Project Specs folder");
     if (!values.agentScriptPath)
         missing.push("Agent Script Path");
+    missing.push(...(0, jiraRunner_1.getMissingJiraRunnerFields)(values));
     return missing;
 }
 function buildBusinessAnalystCommand(values) {
@@ -87,9 +100,7 @@ function buildBusinessAnalystCommand(values) {
     if (values.agentIntelligence) {
         parts.push("--intelligence", (0, utils_1.quoteShellArg)(values.agentIntelligence));
     }
-    if (values.jiraProjectKey) {
-        parts.push("--jira-project-key", (0, utils_1.quoteShellArg)(values.jiraProjectKey));
-    }
+    parts.push(...(0, jiraRunner_1.buildJiraRunnerArgs)(values));
     return parts.join(" ");
 }
 function escapeHtml(value) {
@@ -159,6 +170,10 @@ function renderBusinessAnalystHtml(webview, initialValues) {
       button {
         font: inherit;
       }
+      input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+      }
       input {
         width: 100%;
         box-sizing: border-box;
@@ -175,6 +190,11 @@ function renderBusinessAnalystHtml(webview, initialValues) {
       .required::after {
         content: " *";
         color: var(--vscode-errorForeground);
+      }
+      .checkbox-label {
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        column-gap: 10px;
       }
       .error {
         min-height: 18px;
@@ -250,10 +270,28 @@ function renderBusinessAnalystHtml(webview, initialValues) {
           <span>Project Backlog folder</span>
           <input id="backlogDir" name="backlogDir" value="${escapeHtml(initialValues.backlogDir)}" />
         </label>
+      </section>
 
+      <section class="section">
+        <p class="section-title">Jira</p>
+        <label class="checkbox-label">
+          <input
+            id="enableJira"
+            name="enableJira"
+            type="checkbox"
+            ${initialValues.enableJira ? "checked" : ""}
+          />
+          <span>Enable Jira using configured credentials</span>
+        </label>
         <label>
-          <span>Jira Project Key</span>
-          <input id="jiraProjectKey" name="jiraProjectKey" value="${escapeHtml(initialValues.jiraProjectKey)}" />
+          <span>Jira Project Name</span>
+          <input
+            id="jiraProjectName"
+            name="jiraProjectName"
+            value="${escapeHtml(initialValues.jiraProjectName)}"
+            ${initialValues.enableJira ? "" : "disabled"}
+          />
+          <span class="hint">Uses Jira Username, Jira URL, and Jira API Token from the Antigravity settings.</span>
         </label>
       </section>
 
@@ -284,6 +322,8 @@ function renderBusinessAnalystHtml(webview, initialValues) {
       const workspaceInput = document.getElementById("workspace");
       const specsDirInput = document.getElementById("specsDir");
       const backlogDirInput = document.getElementById("backlogDir");
+      const enableJiraInput = document.getElementById("enableJira");
+      const jiraProjectNameInput = document.getElementById("jiraProjectName");
       const agentScriptPathInput = document.getElementById("agentScriptPath");
       const requiredFields = [
         agentHarnessInput,
@@ -333,9 +373,14 @@ function renderBusinessAnalystHtml(webview, initialValues) {
           workspace: String(data.get("workspace") || "").trim(),
           specsDir: String(data.get("specsDir") || "").trim(),
           backlogDir: String(data.get("backlogDir") || "").trim(),
-          jiraProjectKey: String(data.get("jiraProjectKey") || "").trim(),
+          enableJira: enableJiraInput.checked,
+          jiraProjectName: String(data.get("jiraProjectName") || "").trim(),
           agentScriptPath: String(data.get("agentScriptPath") || "").trim()
         };
+      }
+
+      function syncJiraFields() {
+        jiraProjectNameInput.disabled = !enableJiraInput.checked;
       }
 
       function queueDraftSave() {
@@ -351,7 +396,9 @@ function renderBusinessAnalystHtml(webview, initialValues) {
       }
 
       function syncRunButton() {
-        runButton.disabled = requiredFields.some((field) => !field.value.trim());
+        runButton.disabled =
+          requiredFields.some((field) => !field.value.trim()) ||
+          (enableJiraInput.checked && !jiraProjectNameInput.value.trim());
       }
 
       workspaceInput.addEventListener("input", () => {
@@ -367,6 +414,12 @@ function renderBusinessAnalystHtml(webview, initialValues) {
       backlogDirInput.addEventListener("input", () => {
         const defaults = getDefaultFolders(workspaceInput.value.trim());
         backlogDirInput.dataset.userModified = String(backlogDirInput.value.trim() !== defaults.backlogDir);
+      });
+
+      enableJiraInput.addEventListener("change", () => {
+        syncJiraFields();
+        syncRunButton();
+        queueDraftSave();
       });
 
       form.addEventListener("input", () => {
@@ -387,6 +440,11 @@ function renderBusinessAnalystHtml(webview, initialValues) {
           syncRunButton();
           return;
         }
+        if (payload.enableJira && !payload.jiraProjectName) {
+          errorMessage.textContent = "Fill in Jira Project Name before running with Jira enabled.";
+          syncRunButton();
+          return;
+        }
         vscode.setState(payload);
         vscode.postMessage({
           type: "runBusinessAnalyst",
@@ -403,6 +461,7 @@ function renderBusinessAnalystHtml(webview, initialValues) {
       });
 
       refreshProjectFolderFlags();
+      syncJiraFields();
       vscode.setState(initialValues);
       syncRunButton();
     </script>

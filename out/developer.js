@@ -7,6 +7,7 @@ exports.getMissingDeveloperFields = getMissingDeveloperFields;
 exports.buildDeveloperCommand = buildDeveloperCommand;
 exports.renderDeveloperHtml = renderDeveloperHtml;
 const path = require("path");
+const jiraRunner_1 = require("./jiraRunner");
 const settings_1 = require("./settings");
 const utils_1 = require("./utils");
 exports.DEVELOPER_COMMAND = "antigravity.openDeveloper";
@@ -36,6 +37,7 @@ function getDefaultDeveloperValues(workspaceRoot) {
         executionPlanFile: projectInputs.executionPlanFile,
         backlogDir: projectInputs.backlogDir,
         architectureDir: projectInputs.architectureDir,
+        ...(0, jiraRunner_1.getDefaultJiraRunnerValues)(),
         agentScriptPath: ""
     };
 }
@@ -43,6 +45,11 @@ function sanitizeDeveloperFormValues(values, workspaceRoot) {
     const defaults = getDefaultDeveloperValues(workspaceRoot);
     const workspace = typeof values?.workspace === "string" ? values.workspace.trim() : defaults.workspace;
     const defaultProjectInputs = getDefaultProjectInputs(workspace);
+    const jiraValues = (0, jiraRunner_1.sanitizeJiraRunnerValues)({
+        enableJira: values?.enableJira === true ||
+            (typeof values?.jiraProjectName === "string" && values.jiraProjectName.trim().length > 0),
+        jiraProjectName: values?.jiraProjectName
+    });
     const projectDescriptionDir = typeof values?.projectDescriptionDir === "string"
         ? values.projectDescriptionDir.trim()
         : defaultProjectInputs.projectDescriptionDir;
@@ -66,6 +73,7 @@ function sanitizeDeveloperFormValues(values, workspaceRoot) {
         architectureDir: typeof values?.architectureDir === "string"
             ? values.architectureDir.trim()
             : defaultProjectInputs.architectureDir,
+        ...jiraValues,
         agentScriptPath: typeof values?.agentScriptPath === "string" ? values.agentScriptPath.trim() : defaults.agentScriptPath
     };
 }
@@ -85,6 +93,7 @@ function getMissingDeveloperFields(values) {
         missing.push("Project Architecture folder");
     if (!values.agentScriptPath)
         missing.push("Agent Script Path");
+    missing.push(...(0, jiraRunner_1.getMissingJiraRunnerFields)(values));
     return missing;
 }
 function buildDeveloperCommand(values) {
@@ -111,6 +120,7 @@ function buildDeveloperCommand(values) {
     if (values.agentIntelligence) {
         parts.push("--intelligence", (0, utils_1.quoteShellArg)(values.agentIntelligence));
     }
+    parts.push(...(0, jiraRunner_1.buildJiraRunnerArgs)(values));
     return parts.join(" ");
 }
 function escapeHtml(value) {
@@ -180,6 +190,10 @@ function renderDeveloperHtml(webview, initialValues) {
       button {
         font: inherit;
       }
+      input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+      }
       input {
         width: 100%;
         box-sizing: border-box;
@@ -196,6 +210,11 @@ function renderDeveloperHtml(webview, initialValues) {
       .required::after {
         content: " *";
         color: var(--vscode-errorForeground);
+      }
+      .checkbox-label {
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        column-gap: 10px;
       }
       .error {
         min-height: 18px;
@@ -290,6 +309,29 @@ function renderDeveloperHtml(webview, initialValues) {
       </section>
 
       <section class="section">
+        <p class="section-title">Jira</p>
+        <label class="checkbox-label">
+          <input
+            id="enableJira"
+            name="enableJira"
+            type="checkbox"
+            ${initialValues.enableJira ? "checked" : ""}
+          />
+          <span>Enable Jira using configured credentials</span>
+        </label>
+        <label>
+          <span>Jira Project Name</span>
+          <input
+            id="jiraProjectName"
+            name="jiraProjectName"
+            value="${escapeHtml(initialValues.jiraProjectName)}"
+            ${initialValues.enableJira ? "" : "disabled"}
+          />
+          <span class="hint">Uses Jira Username, Jira URL, and Jira API Token from the Antigravity settings.</span>
+        </label>
+      </section>
+
+      <section class="section">
         <p class="section-title">Execution</p>
         <label>
           <span class="required">Agent Script Path</span>
@@ -319,6 +361,8 @@ function renderDeveloperHtml(webview, initialValues) {
       const executionPlanFileInput = document.getElementById("executionPlanFile");
       const backlogDirInput = document.getElementById("backlogDir");
       const architectureDirInput = document.getElementById("architectureDir");
+      const enableJiraInput = document.getElementById("enableJira");
+      const jiraProjectNameInput = document.getElementById("jiraProjectName");
       const agentScriptPathInput = document.getElementById("agentScriptPath");
       const requiredFields = [
         agentHarnessInput,
@@ -404,8 +448,14 @@ function renderDeveloperHtml(webview, initialValues) {
           executionPlanFile: String(data.get("executionPlanFile") || "").trim(),
           backlogDir: String(data.get("backlogDir") || "").trim(),
           architectureDir: String(data.get("architectureDir") || "").trim(),
+          enableJira: enableJiraInput.checked,
+          jiraProjectName: String(data.get("jiraProjectName") || "").trim(),
           agentScriptPath: String(data.get("agentScriptPath") || "").trim()
         };
+      }
+
+      function syncJiraFields() {
+        jiraProjectNameInput.disabled = !enableJiraInput.checked;
       }
 
       function queueDraftSave() {
@@ -421,7 +471,9 @@ function renderDeveloperHtml(webview, initialValues) {
       }
 
       function syncRunButton() {
-        runButton.disabled = requiredFields.some((field) => !field.value.trim());
+        runButton.disabled =
+          requiredFields.some((field) => !field.value.trim()) ||
+          (enableJiraInput.checked && !jiraProjectNameInput.value.trim());
       }
 
       workspaceInput.addEventListener("input", () => {
@@ -470,6 +522,12 @@ function renderDeveloperHtml(webview, initialValues) {
         );
       });
 
+      enableJiraInput.addEventListener("change", () => {
+        syncJiraFields();
+        syncRunButton();
+        queueDraftSave();
+      });
+
       form.addEventListener("input", () => {
         errorMessage.textContent = "";
         syncRunButton();
@@ -491,6 +549,7 @@ function renderDeveloperHtml(webview, initialValues) {
         if (!payload.backlogDir) missing.push("Project Backlog folder");
         if (!payload.architectureDir) missing.push("Project Architecture folder");
         if (!payload.agentScriptPath) missing.push("Agent Script Path");
+        if (payload.enableJira && !payload.jiraProjectName) missing.push("Jira Project Name");
         if (missing.length > 0) {
           errorMessage.textContent = "Fill in the required fields: " + missing.join(", ") + ".";
           syncRunButton();
@@ -505,12 +564,15 @@ function renderDeveloperHtml(webview, initialValues) {
 
       Object.entries(vscode.getState() || initialValues).forEach(([key, value]) => {
         const input = form.elements.namedItem(key);
-        if (input && "value" in input) {
+        if (input instanceof HTMLInputElement && input.type === "checkbox") {
+          input.checked = value === true;
+        } else if (input && "value" in input) {
           input.value = typeof value === "string" ? value : "";
         }
       });
       refreshProjectFolderFlags();
       syncProjectFolderDefaults();
+      syncJiraFields();
       syncRunButton();
 
       window.addEventListener("message", (event) => {

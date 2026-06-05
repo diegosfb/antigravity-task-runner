@@ -1,20 +1,25 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-function createVscodeMock() {
+function createVscodeMock(configValues = {}) {
   return {
-    workspace: { getConfiguration: () => ({ get: () => undefined }) }
+    workspace: {
+      getConfiguration: () => ({
+        get: (key) => configValues[key]
+      })
+    }
   };
 }
 
-function setupBusinessAnalystModule() {
+function setupBusinessAnalystModule(configValues = {}) {
   const Module = require("module");
   const originalRequire = Module.prototype.require;
   Module.prototype.require = function (id) {
-    if (id === "vscode") return createVscodeMock();
+    if (id === "vscode") return createVscodeMock(configValues);
     return originalRequire.apply(this, arguments);
   };
   delete require.cache[require.resolve("../out/businessAnalyst.js")];
+  delete require.cache[require.resolve("../out/jiraRunner.js")];
   const moduleExports = require("../out/businessAnalyst.js");
   Module.prototype.require = originalRequire;
   return moduleExports;
@@ -31,7 +36,8 @@ test("getDefaultBusinessAnalystValues derives project folders from workspace", (
     workspace: "/tmp/project/workspace",
     specsDir: "/tmp/project/workspace/docs/specs",
     backlogDir: "/tmp/project/workspace/docs/backlog",
-    jiraProjectKey: "",
+    enableJira: false,
+    jiraProjectName: "",
     agentScriptPath: ""
   });
 });
@@ -46,7 +52,8 @@ test("sanitizeBusinessAnalystFormValues trims input and preserves explicit overr
       workspace: " /tmp/project/workspace ",
       specsDir: " /custom/specs ",
       backlogDir: " /custom/backlog ",
-      jiraProjectKey: " PROJ ",
+      enableJira: true,
+      jiraProjectName: " Project Alpha ",
       agentScriptPath: " ./workspace/scripts/ba-agent "
     },
     "/tmp/project/workspace"
@@ -59,7 +66,8 @@ test("sanitizeBusinessAnalystFormValues trims input and preserves explicit overr
     workspace: "/tmp/project/workspace",
     specsDir: "/custom/specs",
     backlogDir: "/custom/backlog",
-    jiraProjectKey: "PROJ",
+    enableJira: true,
+    jiraProjectName: "Project Alpha",
     agentScriptPath: "./workspace/scripts/ba-agent"
   });
 });
@@ -90,7 +98,8 @@ test("getMissingBusinessAnalystFields lists only mandatory fields", () => {
     workspace: "",
     specsDir: "",
     backlogDir: "",
-    jiraProjectKey: "",
+    enableJira: false,
+    jiraProjectName: "",
     agentScriptPath: ""
   });
 
@@ -102,8 +111,34 @@ test("getMissingBusinessAnalystFields lists only mandatory fields", () => {
   ]);
 });
 
-test("buildBusinessAnalystCommand includes required and non-empty optional flags", () => {
-  const { buildBusinessAnalystCommand } = setupBusinessAnalystModule();
+test("getMissingBusinessAnalystFields requires Jira settings when Jira is enabled", () => {
+  const { getMissingBusinessAnalystFields } = setupBusinessAnalystModule();
+  const missing = getMissingBusinessAnalystFields({
+    agentHarness: "Codex",
+    agentModel: "",
+    agentIntelligence: "",
+    workspace: "/tmp/project/workspace",
+    specsDir: "/tmp/project/workspace/docs/specs",
+    backlogDir: "",
+    enableJira: true,
+    jiraProjectName: "",
+    agentScriptPath: "./workspace/scripts/ba-agent"
+  });
+
+  assert.deepEqual(missing, [
+    "Jira Project Name",
+    "Jira Username setting",
+    "Jira URL setting",
+    "Jira API Token setting"
+  ]);
+});
+
+test("buildBusinessAnalystCommand includes Jira flags when enabled", () => {
+  const { buildBusinessAnalystCommand } = setupBusinessAnalystModule({
+    jiraEmail: "jira-user@example.com",
+    jiraBaseUrl: "https://jira.example.com",
+    jiraApiToken: "secret-token"
+  });
   const command = buildBusinessAnalystCommand({
     agentHarness: "Codex",
     agentModel: "gpt-5",
@@ -111,7 +146,8 @@ test("buildBusinessAnalystCommand includes required and non-empty optional flags
     workspace: "/tmp/project/workspace",
     specsDir: "/tmp/project/workspace/docs/specs",
     backlogDir: "",
-    jiraProjectKey: "PROJ",
+    enableJira: true,
+    jiraProjectName: "Project Alpha",
     agentScriptPath: "./workspace/scripts/ba-agent"
   });
 
@@ -127,8 +163,14 @@ test("buildBusinessAnalystCommand includes required and non-empty optional flags
       "\"Codex\"",
       "--model",
       "\"gpt-5\"",
-      "--jira-project-key",
-      "\"PROJ\""
+      "--jira-username",
+      "\"jira-user@example.com\"",
+      "--jira-url",
+      "\"https://jira.example.com\"",
+      "--jira-api-token",
+      "\"secret-token\"",
+      "--jira-project",
+      "\"Project Alpha\""
     ].join(" ")
   );
   assert.doesNotMatch(command, /--backlog-dir/);
@@ -149,5 +191,7 @@ test("renderBusinessAnalystHtml includes draft save and workspace-derived folder
   assert.match(html, /syncProjectFolderDefaults/);
   assert.match(html, /Project Workspace folder/);
   assert.match(html, /Project Specs folder/);
+  assert.match(html, /Enable Jira using configured credentials/);
+  assert.match(html, /Jira Project Name/);
   assert.match(html, /Agent Script Path/);
 });
