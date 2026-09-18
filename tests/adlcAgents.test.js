@@ -206,7 +206,7 @@ test("getAdlcAgentDiagramHtml returns the Product, BA, UX, and Architect Agent d
   assert.match(getAdlcAgentDiagramHtml("ux"), /Design Package/);
 
   assert.match(getAdlcAgentDiagramHtml("architect"), /Specifications Directory/);
-  assert.match(getAdlcAgentDiagramHtml("architect"), /Product Context/);
+  assert.match(getAdlcAgentDiagramHtml("architect"), /<div class="diagram-box">PRD<\/div>/);
   assert.match(getAdlcAgentDiagramHtml("architect"), /Development Guidelines/);
   assert.match(getAdlcAgentDiagramHtml("architect"), /Architect Agent/);
   assert.match(getAdlcAgentDiagramHtml("architect"), /Architecture Document/);
@@ -524,9 +524,11 @@ inputs:
       "docs/project_description/PRD.md"
     );
     assert.equal(definition.inputs.find((i) => i.name === "product_context").type, "file");
+    assert.equal(definition.inputs.find((i) => i.name === "product_context").label, "PRD");
     assert.match(definition.diagramHtml, /Architect Agent/);
     assert.match(definition.diagramHtml, /Specifications Directory/);
     assert.match(definition.diagramHtml, /Architecture Document/);
+    assert.match(definition.diagramHtml, /<div class="diagram-box">PRD<\/div>/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -582,6 +584,7 @@ inputs:
 
     const productContext = definition.inputs.find((i) => i.name === "product_context");
     assert.equal(productContext.type, "file");
+    assert.equal(productContext.label, "PRD");
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -603,6 +606,24 @@ test("applyAdlcAgentInputTypeOverrides narrows product_context to file for both 
   assert.equal(overriddenForArchitect.find((i) => i.name === "product_context").type, "file");
 
   const untouched = applyAdlcAgentInputTypeOverrides("ux", inputs);
+  assert.deepEqual(untouched, inputs);
+});
+
+test("applyAdlcAgentInputLabelOverrides labels product_context as PRD for both Architect Agent and Architecture Review Agent", () => {
+  const { applyAdlcAgentInputLabelOverrides } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "specifications_directory", description: "", type: "directory", required: true },
+    { name: "product_context", description: "", type: "file", required: false }
+  ];
+
+  const overriddenForReview = applyAdlcAgentInputLabelOverrides("architecture-review", inputs);
+  assert.equal(overriddenForReview.find((i) => i.name === "specifications_directory").label, undefined);
+  assert.equal(overriddenForReview.find((i) => i.name === "product_context").label, "PRD");
+
+  const overriddenForArchitect = applyAdlcAgentInputLabelOverrides("architect", inputs);
+  assert.equal(overriddenForArchitect.find((i) => i.name === "product_context").label, "PRD");
+
+  const untouched = applyAdlcAgentInputLabelOverrides("ux", inputs);
   assert.deepEqual(untouched, inputs);
 });
 
@@ -680,6 +701,36 @@ test("renderAdlcAgentRunHtml renders harness, model, input fields, and actions",
   assert.match(html, /id="cancel-button"/);
   assert.match(html, /<button type="submit">Execute<\/button>/);
   assert.match(html, /type: "adlcAgentExecute"/);
+});
+
+test("renderAdlcAgentRunHtml shows an input's label when set, while keeping data-input-name as the real name", () => {
+  const { renderAdlcAgentRunHtml } = setupAdlcAgentsModule();
+  const html = renderAdlcAgentRunHtml(
+    { cspSource: "vscode-resource:" },
+    {
+      id: "architect",
+      label: "Architect Agent",
+      folder: "architect-agent",
+      filePath: "",
+      description: "",
+      inputs: [
+        {
+          name: "product_context",
+          description: "Approved PRD and supporting product context.",
+          type: "file",
+          required: false,
+          defaultValue: "docs/project_description/PRD.md",
+          label: "PRD"
+        }
+      ]
+    },
+    { defaultHarness: "claude", defaultModel: "" }
+  );
+
+  assert.match(html, /<code>PRD<\/code>/);
+  assert.doesNotMatch(html, /<code>product_context<\/code>/);
+  assert.match(html, /data-input-name="product_context"/);
+  assert.match(html, /data-browse="product_context"/);
 });
 
 test("filterUserFacingAdlcInputs hides BA Agent's supporting_evidence and alternative_input_contract, and only for ba-agent", () => {

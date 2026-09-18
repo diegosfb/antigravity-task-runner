@@ -43,6 +43,7 @@ export type AdlcAgentInput = {
   type: string;
   required: boolean;
   defaultValue?: string;
+  label?: string;
 };
 
 // Conventional repo paths for an agent's inputs, per the workflow described in
@@ -108,6 +109,24 @@ export function applyAdlcAgentInputTypeOverrides(entryId: string, inputs: AdlcAg
   return inputs.map((input) => {
     const override = overrides[input.name];
     return override === undefined ? input : { ...input, type: override };
+  });
+}
+
+// Friendlier display label for an input, shown on the run page in place of
+// its raw frontmatter name (e.g. "product_context" reads as "PRD" for the
+// architect agents, since that is always what it points to). The underlying
+// name is unchanged -- it is still what request.inputs and the prompt key by.
+const ADLC_AGENT_INPUT_LABEL_OVERRIDES: Record<string, Record<string, string>> = {
+  architect: { product_context: "PRD" },
+  "architecture-review": { product_context: "PRD" }
+};
+
+export function applyAdlcAgentInputLabelOverrides(entryId: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
+  const overrides = ADLC_AGENT_INPUT_LABEL_OVERRIDES[entryId];
+  if (!overrides) return inputs;
+  return inputs.map((input) => {
+    const override = overrides[input.name];
+    return override === undefined ? input : { ...input, label: override };
   });
 }
 
@@ -217,7 +236,7 @@ const ADLC_AGENT_DIAGRAM_HTML: Record<string, string> = {
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
               <div class="diagram-box">Specifications Directory</div>
-              <div class="diagram-box">Product Context</div>
+              <div class="diagram-box">PRD</div>
               <div class="diagram-box">Development Guidelines</div>
             </div>
           </div>
@@ -377,11 +396,14 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
   const { description, inputs } = parseAdlcAgentFrontmatter(markdown);
   const visibleInputs = applyAdlcAgentInputOrder(
     entry.id,
-    applyAdlcAgentInputTypeOverrides(
+    applyAdlcAgentInputLabelOverrides(
       entry.id,
-      applyAdlcAgentInputRequiredOverrides(
+      applyAdlcAgentInputTypeOverrides(
         entry.id,
-        applyAdlcAgentInputDefaults(entry.id, filterUserFacingAdlcInputs(inputs, entry.id))
+        applyAdlcAgentInputRequiredOverrides(
+          entry.id,
+          applyAdlcAgentInputDefaults(entry.id, filterUserFacingAdlcInputs(inputs, entry.id))
+        )
       )
     )
   );
@@ -525,7 +547,7 @@ export function renderAdlcAgentRunHtml(
       const browseKind = getAdlcInputBrowseKind(input.type);
       return `
       <label>
-        <span><code>${escapeHtml(input.name)}</code> <span class="badge${input.required ? " badge-required" : ""}">${input.required ? "required" : "optional"}</span>${input.type ? ` <span class="hint">${escapeHtml(input.type)}</span>` : ""}</span>
+        <span><code>${escapeHtml(input.label || input.name)}</code> <span class="badge${input.required ? " badge-required" : ""}">${input.required ? "required" : "optional"}</span>${input.type ? ` <span class="hint">${escapeHtml(input.type)}</span>` : ""}</span>
         <div class="input-row">
           <input type="text" data-input-name="${escapeHtml(input.name)}" data-required="${input.required ? "true" : "false"}" value="${escapeHtml(input.defaultValue || "")}" autocomplete="off" />
           <button type="button" data-browse="${escapeHtml(input.name)}" data-kind="${browseKind}">Browse…</button>
