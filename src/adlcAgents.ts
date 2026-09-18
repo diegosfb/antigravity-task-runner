@@ -139,8 +139,8 @@ export function applyAdlcAgentInputLabelOverrides(entryId: string, inputs: AdlcA
 // order and are placed after the listed ones.
 const ADLC_AGENT_INPUT_ORDER: Record<string, string[]> = {
   "architecture-review": [
-    "specifications_directory",
     "existing_architecture_package",
+    "specifications_directory",
     "development_guidelines",
     "product_context"
   ]
@@ -254,8 +254,8 @@ const ADLC_AGENT_DIAGRAM_HTML: Record<string, string> = {
           <div class="diagram-group">
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Specifications Directory</div>
               <div class="diagram-box">Existing Architecture Package</div>
+              <div class="diagram-box">Specifications Directory</div>
               <div class="diagram-box">Development Guidelines</div>
               <div class="diagram-box">PRD</div>
             </div>

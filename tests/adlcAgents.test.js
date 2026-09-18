@@ -217,6 +217,10 @@ test("getAdlcAgentDiagramHtml returns the Product, BA, UX, Architect, and Archit
   assert.match(getAdlcAgentDiagramHtml("architecture-review"), /<div class="diagram-box">PRD<\/div>/);
   assert.match(getAdlcAgentDiagramHtml("architecture-review"), /Architecture Review Agent/);
   assert.match(getAdlcAgentDiagramHtml("architecture-review"), /Review Findings/);
+  assert.ok(
+    getAdlcAgentDiagramHtml("architecture-review").indexOf("Existing Architecture Package") <
+      getAdlcAgentDiagramHtml("architecture-review").indexOf("Specifications Directory")
+  );
 
   assert.equal(getAdlcAgentDiagramHtml("code-review"), undefined);
 });
@@ -360,7 +364,7 @@ test("applyAdlcAgentInputRequiredOverrides tightens Architecture Review Agent's 
   assert.equal(overridden.find((i) => i.name === "existing_architecture_package").required, true);
 });
 
-test("applyAdlcAgentInputOrder moves Architecture Review Agent's existing_architecture_package before development_guidelines", () => {
+test("applyAdlcAgentInputOrder moves Architecture Review Agent's existing_architecture_package to be first", () => {
   const { applyAdlcAgentInputOrder } = setupAdlcAgentsModule();
   const inputs = [
     { name: "specifications_directory", description: "", type: "directory", required: true },
@@ -372,7 +376,7 @@ test("applyAdlcAgentInputOrder moves Architecture Review Agent's existing_archit
   const ordered = applyAdlcAgentInputOrder("architecture-review", inputs);
   assert.deepEqual(
     ordered.map((i) => i.name),
-    ["specifications_directory", "existing_architecture_package", "development_guidelines", "product_context"]
+    ["existing_architecture_package", "specifications_directory", "development_guidelines", "product_context"]
   );
 
   const untouched = applyAdlcAgentInputOrder("architect", inputs);
@@ -391,7 +395,7 @@ test("applyAdlcAgentInputOrder keeps unlisted inputs in their original relative 
   const ordered = applyAdlcAgentInputOrder("architecture-review", inputs);
   assert.deepEqual(
     ordered.map((i) => i.name),
-    ["specifications_directory", "existing_architecture_package", "extra_one", "extra_two"]
+    ["existing_architecture_package", "specifications_directory", "extra_one", "extra_two"]
   );
 });
 
@@ -585,7 +589,7 @@ inputs:
 
     assert.deepEqual(
       definition.inputs.map((i) => i.name),
-      ["specifications_directory", "existing_architecture_package", "development_guidelines", "product_context"]
+      ["existing_architecture_package", "specifications_directory", "development_guidelines", "product_context"]
     );
     const existingArchitecturePackage = definition.inputs.find((i) => i.name === "existing_architecture_package");
     assert.equal(existingArchitecturePackage.required, true);
