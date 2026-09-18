@@ -408,6 +408,73 @@ test("filterUserFacingAdlcInputs hides Coding Agent's repository_state and feedb
   );
 });
 
+test("filterUserFacingAdlcInputs hides all of Code Review Agent's real inputs, and only for code-review", () => {
+  const { isAdlcAgentHiddenInput, filterUserFacingAdlcInputs } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "review_candidate", description: "", type: "repository_state", required: true },
+    { name: "verification_evidence", description: "", type: "structured_data", required: true },
+    { name: "governing_contracts", description: "", type: "files_or_structured_data", required: true },
+    { name: "prior_review_context", description: "", type: "structured_data", required: false }
+  ];
+
+  for (const input of inputs) {
+    assert.equal(isAdlcAgentHiddenInput("code-review", input.name), true, `${input.name} should be hidden for code-review`);
+  }
+  assert.equal(isAdlcAgentHiddenInput("ux", "review_candidate"), false);
+
+  assert.deepEqual(filterUserFacingAdlcInputs(inputs, "code-review"), []);
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "ux").map((input) => input.name),
+    inputs.map((input) => input.name)
+  );
+});
+
+test("loadAdlcAgentDefinition hides all of Code Review Agent's real inputs", () => {
+  const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
+  const codeReviewAgentMarkdown = `---
+name: code-review-agent
+description: The quality gate.
+inputs:
+  required:
+    - name: review_candidate
+      description: Tested branch or pull request and complete diff.
+      type: repository_state
+    - name: verification_evidence
+      description: Test PASS and required validation results.
+      type: structured_data
+    - name: governing_contracts
+      description: Backlog scope, specifications, acceptance criteria, ADRs, and design constraints.
+      type: files_or_structured_data
+    - name: workflow_configuration
+      description: Pull-request merge gate and repository workflow configuration.
+      type: file
+  optional:
+    - name: prior_review_context
+      description: Earlier findings, responses, and tracked defect references.
+      type: structured_data
+---
+# Code review agent
+`;
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
+  try {
+    fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "code-review-agent"), { recursive: true });
+    fs.writeFileSync(
+      path.join(repoRoot, ".agents", "agents", "code-review-agent", "code-review-agent.md"),
+      codeReviewAgentMarkdown
+    );
+
+    const definition = loadAdlcAgentDefinition(repoRoot, {
+      id: "code-review",
+      label: "Code Review Agent",
+      folder: "code-review-agent"
+    });
+
+    assert.deepEqual(definition.inputs, []);
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test("loadAdlcAgentDefinition labels and defaults Coding Agent's backlog_item, hides repository_state and feedback_context", () => {
   const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
   const developerAgentMarkdown = `---

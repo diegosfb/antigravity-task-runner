@@ -462,7 +462,8 @@ const ADLC_AGENT_HIDDEN_INPUTS: Record<string, string[]> = {
     "prior_test_evidence",
     "red_team_target"
   ],
-  coding: ["repository_state", "feedback_context"]
+  coding: ["repository_state", "feedback_context"],
+  "code-review": ["review_candidate", "verification_evidence", "governing_contracts", "prior_review_context"]
 };
 
 export function isAdlcAgentHiddenInput(entryId: string, name: string): boolean {
