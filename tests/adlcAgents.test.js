@@ -200,7 +200,7 @@ test("getAdlcAgentDiagramHtml returns the Product, BA, UX, Architect, and Archit
   assert.match(getAdlcAgentDiagramHtml("ba"), /BA Agent/);
   assert.match(getAdlcAgentDiagramHtml("ba"), /Specifications/);
 
-  assert.match(getAdlcAgentDiagramHtml("ux"), /Approved Product Context/);
+  assert.match(getAdlcAgentDiagramHtml("ux"), /<div class="diagram-box">Specifications Directory<\/div>/);
   assert.match(getAdlcAgentDiagramHtml("ux"), /Architecture Package/);
   assert.match(getAdlcAgentDiagramHtml("ux"), /UX Agent/);
   assert.match(getAdlcAgentDiagramHtml("ux"), /Design Package/);
@@ -464,13 +464,15 @@ inputs:
     const approvedProductContext = definition.inputs.find((i) => i.name === "approved_product_context");
     assert.equal(approvedProductContext.defaultValue, "docs/specs");
     assert.equal(approvedProductContext.required, true);
+    assert.equal(approvedProductContext.type, "directory");
+    assert.equal(approvedProductContext.label, "Specifications Directory");
 
     const architecturePackage = definition.inputs.find((i) => i.name === "architecture_package");
     assert.equal(architecturePackage.defaultValue, "docs/architecture");
     assert.equal(architecturePackage.required, false);
 
     assert.match(definition.diagramHtml, /UX Agent/);
-    assert.match(definition.diagramHtml, /Approved Product Context/);
+    assert.match(definition.diagramHtml, /<div class="diagram-box">Specifications Directory<\/div>/);
     assert.match(definition.diagramHtml, /Architecture Package/);
     assert.match(definition.diagramHtml, /Design Package/);
   } finally {
@@ -635,6 +637,36 @@ test("applyAdlcAgentInputLabelOverrides labels product_context as PRD for both A
   assert.equal(overriddenForArchitect.find((i) => i.name === "product_context").label, "PRD");
 
   const untouched = applyAdlcAgentInputLabelOverrides("ux", inputs);
+  assert.deepEqual(untouched, inputs);
+});
+
+test("applyAdlcAgentInputTypeOverrides narrows UX Agent's approved_product_context to directory, others untouched", () => {
+  const { applyAdlcAgentInputTypeOverrides } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "approved_product_context", description: "", type: "files", required: true },
+    { name: "architecture_package", description: "", type: "files_or_directory", required: false }
+  ];
+
+  const overridden = applyAdlcAgentInputTypeOverrides("ux", inputs);
+  assert.equal(overridden.find((i) => i.name === "approved_product_context").type, "directory");
+  assert.equal(overridden.find((i) => i.name === "architecture_package").type, "files_or_directory");
+
+  const untouched = applyAdlcAgentInputTypeOverrides("architect", inputs);
+  assert.deepEqual(untouched, inputs);
+});
+
+test("applyAdlcAgentInputLabelOverrides labels UX Agent's approved_product_context as Specifications Directory, others untouched", () => {
+  const { applyAdlcAgentInputLabelOverrides } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "approved_product_context", description: "", type: "directory", required: true },
+    { name: "architecture_package", description: "", type: "files_or_directory", required: false }
+  ];
+
+  const overridden = applyAdlcAgentInputLabelOverrides("ux", inputs);
+  assert.equal(overridden.find((i) => i.name === "approved_product_context").label, "Specifications Directory");
+  assert.equal(overridden.find((i) => i.name === "architecture_package").label, undefined);
+
+  const untouched = applyAdlcAgentInputLabelOverrides("architect", inputs);
   assert.deepEqual(untouched, inputs);
 });
 

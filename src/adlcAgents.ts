@@ -100,7 +100,8 @@ export function applyAdlcAgentInputRequiredOverrides(entryId: string, inputs: Ad
 // is always the single PRD file, never a directory).
 const ADLC_AGENT_INPUT_TYPE_OVERRIDES: Record<string, Record<string, string>> = {
   architect: { product_context: "file" },
-  "architecture-review": { product_context: "file" }
+  "architecture-review": { product_context: "file" },
+  ux: { approved_product_context: "directory" }
 };
 
 export function applyAdlcAgentInputTypeOverrides(entryId: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
@@ -118,7 +119,8 @@ export function applyAdlcAgentInputTypeOverrides(entryId: string, inputs: AdlcAg
 // name is unchanged -- it is still what request.inputs and the prompt key by.
 const ADLC_AGENT_INPUT_LABEL_OVERRIDES: Record<string, Record<string, string>> = {
   architect: { product_context: "PRD" },
-  "architecture-review": { product_context: "PRD" }
+  "architecture-review": { product_context: "PRD" },
+  ux: { approved_product_context: "Specifications Directory" }
 };
 
 export function applyAdlcAgentInputLabelOverrides(entryId: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
@@ -219,7 +221,7 @@ const ADLC_AGENT_DIAGRAM_HTML: Record<string, string> = {
           <div class="diagram-group">
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Approved Product Context</div>
+              <div class="diagram-box">Specifications Directory</div>
               <div class="diagram-box">Architecture Package</div>
             </div>
           </div>
