@@ -72,3 +72,12 @@ Create feature branch
 Detected uncommitted changes on main. They must be committed before creating a new branch.
 Enter a commit message for the changes that should be included before creating the new branch. 
 Should use the commit item instead of asking for a message  
+
+
+
+
+
+
+
+
+1- USE /Applications/kdiff3.app/Contents/MacOS/kdiff3 file1.txt file2.txt to compare files.

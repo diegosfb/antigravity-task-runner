@@ -1,0 +1,13 @@
+name: CD
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: qa
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        run: echo "Deploying version ${{ github.ref_name }} to QA"
