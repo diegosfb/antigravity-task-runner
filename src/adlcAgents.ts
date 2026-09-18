@@ -391,7 +391,7 @@ const ADLC_AGENT_HIDDEN_INPUTS: Record<string, string[]> = {
   ba: ["supporting_evidence", "alternative_input_contract"],
   ux: ["research_and_evidence", "existing_experience_system"],
   architect: ["existing_architecture_package"],
-  "project-planner": ["design_stream", "backlog_destination"]
+  "project-planner": ["design_stream", "backlog_destination", "execution_evidence"]
 };
 
 export function isAdlcAgentHiddenInput(entryId: string, name: string): boolean {

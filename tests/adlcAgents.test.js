@@ -704,7 +704,7 @@ test("applyAdlcAgentInputLabelOverrides labels UX Agent's approved_product_conte
   assert.deepEqual(untouched, inputs);
 });
 
-test("loadAdlcAgentDefinition labels and defaults requirements_stream and technical_stream, hides design_stream and backlog_destination", () => {
+test("loadAdlcAgentDefinition labels and defaults requirements_stream and technical_stream, hides design_stream, backlog_destination, and execution_evidence", () => {
   const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
   const projectPlannerMarkdown = `---
 name: project-planner-agent
@@ -730,6 +730,9 @@ inputs:
     - name: existing_backlog
       description: Current items, dependencies, estimates, and statuses.
       type: files_or_structured_data
+    - name: execution_evidence
+      description: Test failures, verification results, and estimate-drift signals.
+      type: structured_data
 ---
 # Project planner agent
 `;
@@ -945,19 +948,21 @@ test("filterUserFacingAdlcInputs hides Architect Agent's existing_architecture_p
   );
 });
 
-test("filterUserFacingAdlcInputs hides Project Planner Agent's design_stream and backlog_destination, and only for project-planner", () => {
+test("filterUserFacingAdlcInputs hides Project Planner Agent's design_stream, backlog_destination, and execution_evidence, and only for project-planner", () => {
   const { isAdlcAgentHiddenInput, filterUserFacingAdlcInputs } = setupAdlcAgentsModule();
   const inputs = [
     { name: "requirements_stream", description: "", type: "files_or_structured_data", required: true },
     { name: "technical_stream", description: "", type: "files_or_structured_data", required: true },
     { name: "design_stream", description: "", type: "files_or_structured_data", required: true },
-    { name: "backlog_destination", description: "", type: "structured_data", required: true }
+    { name: "backlog_destination", description: "", type: "structured_data", required: true },
+    { name: "execution_evidence", description: "", type: "structured_data", required: false }
   ];
 
   assert.equal(isAdlcAgentHiddenInput("project-planner", "design_stream"), true);
   assert.equal(isAdlcAgentHiddenInput("project-planner", "backlog_destination"), true);
+  assert.equal(isAdlcAgentHiddenInput("project-planner", "execution_evidence"), true);
   assert.equal(isAdlcAgentHiddenInput("project-planner", "requirements_stream"), false);
-  assert.equal(isAdlcAgentHiddenInput("ux", "design_stream"), false);
+  assert.equal(isAdlcAgentHiddenInput("ux", "execution_evidence"), false);
 
   assert.deepEqual(
     filterUserFacingAdlcInputs(inputs, "project-planner").map((input) => input.name),
