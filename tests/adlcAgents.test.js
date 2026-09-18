@@ -318,28 +318,32 @@ test("applyAdlcAgentInputDefaults prefills Architect Agent's specifications_dire
   assert.equal(withDefaults.find((i) => i.name === "existing_architecture_package").defaultValue, undefined);
 });
 
-test("applyAdlcAgentInputDefaults prefills Project Planner Agent's requirements_stream", () => {
+test("applyAdlcAgentInputDefaults prefills Project Planner Agent's requirements_stream and technical_stream", () => {
   const { applyAdlcAgentInputDefaults } = setupAdlcAgentsModule();
   const inputs = [
     { name: "requirements_stream", description: "", type: "files_or_structured_data", required: true },
-    { name: "technical_stream", description: "", type: "files_or_structured_data", required: true }
+    { name: "technical_stream", description: "", type: "files_or_structured_data", required: true },
+    { name: "design_stream", description: "", type: "files_or_structured_data", required: true }
   ];
 
   const withDefaults = applyAdlcAgentInputDefaults("project-planner", inputs);
   assert.equal(withDefaults.find((i) => i.name === "requirements_stream").defaultValue, "docs/specs");
-  assert.equal(withDefaults.find((i) => i.name === "technical_stream").defaultValue, undefined);
+  assert.equal(withDefaults.find((i) => i.name === "technical_stream").defaultValue, "docs/architecture");
+  assert.equal(withDefaults.find((i) => i.name === "design_stream").defaultValue, undefined);
 });
 
-test("applyAdlcAgentInputLabelOverrides labels Project Planner Agent's requirements_stream as Specifications Folder", () => {
+test("applyAdlcAgentInputLabelOverrides labels Project Planner Agent's requirements_stream and technical_stream", () => {
   const { applyAdlcAgentInputLabelOverrides } = setupAdlcAgentsModule();
   const inputs = [
     { name: "requirements_stream", description: "", type: "files_or_structured_data", required: true },
-    { name: "technical_stream", description: "", type: "files_or_structured_data", required: true }
+    { name: "technical_stream", description: "", type: "files_or_structured_data", required: true },
+    { name: "design_stream", description: "", type: "files_or_structured_data", required: true }
   ];
 
   const overridden = applyAdlcAgentInputLabelOverrides("project-planner", inputs);
   assert.equal(overridden.find((i) => i.name === "requirements_stream").label, "Specifications Folder");
-  assert.equal(overridden.find((i) => i.name === "technical_stream").label, undefined);
+  assert.equal(overridden.find((i) => i.name === "technical_stream").label, "Architecture Documents");
+  assert.equal(overridden.find((i) => i.name === "design_stream").label, undefined);
 });
 
 test("applyAdlcAgentInputDefaults also prefills Architecture Review Agent's existing_architecture_package", () => {
@@ -698,7 +702,7 @@ test("applyAdlcAgentInputLabelOverrides labels UX Agent's approved_product_conte
   assert.deepEqual(untouched, inputs);
 });
 
-test("loadAdlcAgentDefinition labels and defaults Project Planner Agent's requirements_stream as Specifications Folder", () => {
+test("loadAdlcAgentDefinition labels and defaults Project Planner Agent's requirements_stream and technical_stream", () => {
   const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
   const projectPlannerMarkdown = `---
 name: project-planner-agent
@@ -740,8 +744,8 @@ inputs:
     assert.equal(requirementsStream.label, "Specifications Folder");
 
     const technicalStream = definition.inputs.find((i) => i.name === "technical_stream");
-    assert.equal(technicalStream.defaultValue, undefined);
-    assert.equal(technicalStream.label, undefined);
+    assert.equal(technicalStream.defaultValue, "docs/architecture");
+    assert.equal(technicalStream.label, "Architecture Documents");
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
