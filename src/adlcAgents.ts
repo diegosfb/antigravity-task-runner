@@ -93,6 +93,31 @@ export function applyAdlcAgentInputRequiredOverrides(entryId: string, inputs: Ad
   });
 }
 
+// Overrides the run-page display order of an agent's inputs away from their
+// order in the frontmatter (e.g. Architecture Review Agent should see
+// existing_architecture_package -- the package it is reviewing -- before
+// development_guidelines). Names not listed keep their original relative
+// order and are placed after the listed ones.
+const ADLC_AGENT_INPUT_ORDER: Record<string, string[]> = {
+  "architecture-review": [
+    "specifications_directory",
+    "existing_architecture_package",
+    "development_guidelines",
+    "product_context"
+  ]
+};
+
+export function applyAdlcAgentInputOrder(entryId: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
+  const order = ADLC_AGENT_INPUT_ORDER[entryId];
+  if (!order) return inputs;
+  const orderIndex = new Map(order.map((name, index) => [name, index]));
+  return [...inputs].sort((a, b) => {
+    const aIndex = orderIndex.get(a.name) ?? order.length;
+    const bIndex = orderIndex.get(b.name) ?? order.length;
+    return aIndex - bIndex;
+  });
+}
+
 // Folder an agent draws artifacts from by convention when it declares no
 // explicit input fields (e.g. product-agent's notes, meeting analyses,
 // product descriptions, and briefs). Materialized as an editable
@@ -165,6 +190,23 @@ const ADLC_AGENT_DIAGRAM_HTML: Record<string, string> = {
           <div class="diagram-box diagram-box-emphasis">UX Agent</div>
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box">Design Package</div>
+        </div>
+      </div>`,
+  architect: `
+      <div class="diagram">
+        <div class="diagram-row">
+          <div class="diagram-group">
+            <div class="diagram-group-label">Inputs</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box">Specifications Directory</div>
+              <div class="diagram-box">Product Context</div>
+              <div class="diagram-box">Development Guidelines</div>
+            </div>
+          </div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box diagram-box-emphasis">Architect Agent</div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box">Architecture Document</div>
         </div>
       </div>`
 };
@@ -315,9 +357,12 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
   const filePath = getAdlcAgentFilePath(repoRoot, entry.folder);
   const markdown = fs.readFileSync(filePath, "utf8");
   const { description, inputs } = parseAdlcAgentFrontmatter(markdown);
-  const visibleInputs = applyAdlcAgentInputRequiredOverrides(
+  const visibleInputs = applyAdlcAgentInputOrder(
     entry.id,
-    applyAdlcAgentInputDefaults(entry.id, filterUserFacingAdlcInputs(inputs, entry.id))
+    applyAdlcAgentInputRequiredOverrides(
+      entry.id,
+      applyAdlcAgentInputDefaults(entry.id, filterUserFacingAdlcInputs(inputs, entry.id))
+    )
   );
   const defaultArtifactsDir = getAdlcAgentDefaultArtifactsDir(entry.folder);
   return {

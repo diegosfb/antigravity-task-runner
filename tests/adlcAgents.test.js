@@ -188,7 +188,7 @@ test("loadAdlcAgentDefinition adds an editable artifacts_directory input for pro
   }
 });
 
-test("getAdlcAgentDiagramHtml returns the Product, BA, and UX Agent diagrams, and undefined for other agents", () => {
+test("getAdlcAgentDiagramHtml returns the Product, BA, UX, and Architect Agent diagrams, and undefined for other agents", () => {
   const { getAdlcAgentDiagramHtml } = setupAdlcAgentsModule();
   assert.match(getAdlcAgentDiagramHtml("product"), /Meeting Notes Folder/);
   assert.match(getAdlcAgentDiagramHtml("product"), /Project Description File/);
@@ -205,7 +205,13 @@ test("getAdlcAgentDiagramHtml returns the Product, BA, and UX Agent diagrams, an
   assert.match(getAdlcAgentDiagramHtml("ux"), /UX Agent/);
   assert.match(getAdlcAgentDiagramHtml("ux"), /Design Package/);
 
-  assert.equal(getAdlcAgentDiagramHtml("architect"), undefined);
+  assert.match(getAdlcAgentDiagramHtml("architect"), /Specifications Directory/);
+  assert.match(getAdlcAgentDiagramHtml("architect"), /Product Context/);
+  assert.match(getAdlcAgentDiagramHtml("architect"), /Development Guidelines/);
+  assert.match(getAdlcAgentDiagramHtml("architect"), /Architect Agent/);
+  assert.match(getAdlcAgentDiagramHtml("architect"), /Architecture Document/);
+
+  assert.equal(getAdlcAgentDiagramHtml("architecture-review"), undefined);
 });
 
 test("catalog maps story labels to agent folders and detects deployed agents", () => {
@@ -347,6 +353,41 @@ test("applyAdlcAgentInputRequiredOverrides tightens Architecture Review Agent's 
   assert.equal(overridden.find((i) => i.name === "existing_architecture_package").required, true);
 });
 
+test("applyAdlcAgentInputOrder moves Architecture Review Agent's existing_architecture_package before development_guidelines", () => {
+  const { applyAdlcAgentInputOrder } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "specifications_directory", description: "", type: "directory", required: true },
+    { name: "development_guidelines", description: "", type: "file", required: false },
+    { name: "existing_architecture_package", description: "", type: "directory_or_files", required: true },
+    { name: "product_context", description: "", type: "file_or_directory", required: false }
+  ];
+
+  const ordered = applyAdlcAgentInputOrder("architecture-review", inputs);
+  assert.deepEqual(
+    ordered.map((i) => i.name),
+    ["specifications_directory", "existing_architecture_package", "development_guidelines", "product_context"]
+  );
+
+  const untouched = applyAdlcAgentInputOrder("architect", inputs);
+  assert.deepEqual(untouched, inputs);
+});
+
+test("applyAdlcAgentInputOrder keeps unlisted inputs in their original relative order, after the listed ones", () => {
+  const { applyAdlcAgentInputOrder } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "extra_one", description: "", type: "file", required: false },
+    { name: "specifications_directory", description: "", type: "directory", required: true },
+    { name: "extra_two", description: "", type: "file", required: false },
+    { name: "existing_architecture_package", description: "", type: "directory_or_files", required: true }
+  ];
+
+  const ordered = applyAdlcAgentInputOrder("architecture-review", inputs);
+  assert.deepEqual(
+    ordered.map((i) => i.name),
+    ["specifications_directory", "existing_architecture_package", "extra_one", "extra_two"]
+  );
+});
+
 test("loadAdlcAgentDefinition prefills BA Agent's approved_prd and existing_specifications defaults", () => {
   const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
@@ -482,6 +523,9 @@ inputs:
       definition.inputs.find((i) => i.name === "product_context").defaultValue,
       "docs/project_description/PRD.md"
     );
+    assert.match(definition.diagramHtml, /Architect Agent/);
+    assert.match(definition.diagramHtml, /Specifications Directory/);
+    assert.match(definition.diagramHtml, /Architecture Document/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -529,7 +573,7 @@ inputs:
 
     assert.deepEqual(
       definition.inputs.map((i) => i.name),
-      ["specifications_directory", "development_guidelines", "existing_architecture_package", "product_context"]
+      ["specifications_directory", "existing_architecture_package", "development_guidelines", "product_context"]
     );
     const existingArchitecturePackage = definition.inputs.find((i) => i.name === "existing_architecture_package");
     assert.equal(existingArchitecturePackage.required, true);
@@ -748,7 +792,14 @@ test("renderAdlcAgentRunHtml renders the diagram after the description, only whe
 
   const withoutDiagram = renderAdlcAgentRunHtml(
     { cspSource: "vscode-resource:" },
-    { id: "architect", label: "Architect Agent", folder: "architect-agent", filePath: "", description: "Designs solution architecture.", inputs: [] },
+    {
+      id: "architecture-review",
+      label: "Architecture Review Agent",
+      folder: "architect-agent",
+      filePath: "",
+      description: "Designs solution architecture.",
+      inputs: []
+    },
     { defaultHarness: "claude", defaultModel: "" }
   );
   assert.doesNotMatch(withoutDiagram, /class="diagram"/);
