@@ -1,0 +1,10 @@
+{
+  "name": "agent-usage-monitor",
+  "version": "0.1.0",
+  "description": "Local token, context, rate-limit, and cost dashboard for Claude Code and Codex on macOS.",
+  "author": {
+    "name": "DSFB"
+  },
+  "license": "MIT",
+  "keywords": ["cost", "tokens", "context", "statusline", "dashboard"]
+}

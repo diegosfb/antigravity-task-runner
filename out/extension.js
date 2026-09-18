@@ -3021,10 +3021,7 @@ function activate(context) {
                     return;
                 }
             }
-            (0, terminal_1.runInPersistentTerminal)((0, terminal_1.getAgentTerminalName)(), [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "claude"], {
-                iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
-                color: terminal_1.CLAUDE_ACTION_COLOR
-            });
+            launchToolTerminal(repoRoot, [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "claude"]);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -3038,10 +3035,102 @@ function activate(context) {
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        (0, terminal_1.runInPersistentTerminal)((0, terminal_1.getAgentTerminalName)(), [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "ollama launch claude"], {
-            iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
-            color: terminal_1.CLAUDE_ACTION_COLOR
-        });
+        launchToolTerminal(repoRoot, [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "ollama launch claude"]);
+    }));
+    function launchToolTerminal(repoRoot, commands) {
+        if ((0, settings_1.getUseExternalTerminal)()) {
+            const scriptContent = ["#!/bin/bash", ...commands].join("\n") + "\n";
+            const scriptPath = path.join(os.tmpdir(), `antigravity-tool-${Date.now()}.sh`);
+            fs.writeFileSync(scriptPath, scriptContent, { mode: 0o755 });
+            const safePath = scriptPath.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+            (0, child_process_1.exec)(`osascript -e 'tell application "Terminal" to do script "bash ${safePath}"'`);
+        }
+        else {
+            (0, terminal_1.runInPersistentTerminal)((0, terminal_1.getAgentTerminalName)(), commands, {
+                iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
+                color: terminal_1.CLAUDE_ACTION_COLOR
+            });
+        }
+    }
+    function launchAgentMonitor(repoRoot, agent) {
+        const installCheck = `which agent-usage-monitor > /dev/null 2>&1 || (cd plugins/agent-usage-monitor && python3 scripts/agent-usage-monitor.py install)`;
+        launchToolTerminal(repoRoot, [
+            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+            installCheck,
+            `agent-usage-monitor launch ${agent}`
+        ]);
+    }
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openAgentMonitorClaudeTerminal", async () => {
+        (0, logger_1.log)(`[openAgentMonitorClaudeTerminal] triggered`);
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                (0, logger_1.log)(`[openAgentMonitorClaudeTerminal] ERROR: rootPath not set`);
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.log)(`[openAgentMonitorClaudeTerminal] repoRoot: ${repoRoot}`);
+            launchAgentMonitor(repoRoot, "claude");
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Agent Monitor Claude Terminal failed: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openAgentMonitorCodexTerminal", async () => {
+        (0, logger_1.log)(`[openAgentMonitorCodexTerminal] triggered`);
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                (0, logger_1.log)(`[openAgentMonitorCodexTerminal] ERROR: rootPath not set`);
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.log)(`[openAgentMonitorCodexTerminal] repoRoot: ${repoRoot}`);
+            launchAgentMonitor(repoRoot, "codex");
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Agent Monitor Codex Terminal failed: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openAgentMonitorOpenCodeTerminal", async () => {
+        (0, logger_1.log)(`[openAgentMonitorOpenCodeTerminal] triggered`);
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                (0, logger_1.log)(`[openAgentMonitorOpenCodeTerminal] ERROR: rootPath not set`);
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.log)(`[openAgentMonitorOpenCodeTerminal] repoRoot: ${repoRoot}`);
+            launchAgentMonitor(repoRoot, "opencode");
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Agent Monitor OpenCode Terminal failed: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOllamaCodexTerminal", async () => {
+        (0, logger_1.log)(`[openOllamaCodexTerminal] triggered`);
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                (0, logger_1.log)(`[openOllamaCodexTerminal] ERROR: rootPath not set`);
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.log)(`[openOllamaCodexTerminal] repoRoot: ${repoRoot}`);
+            launchToolTerminal(repoRoot, [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "ollama launch codex"]);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Ollama Codex Terminal failed: ${message}`);
+        }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOpenClaudeTerminal", async () => {
         const rootPath = (0, utils_1.getRootPath)();
@@ -3054,6 +3143,46 @@ function activate(context) {
             iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR
         });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openCodexTerminal", async () => {
+        (0, logger_1.log)(`[openCodexTerminal] triggered`);
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                (0, logger_1.log)(`[openCodexTerminal] ERROR: rootPath not set`);
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.log)(`[openCodexTerminal] repoRoot: ${repoRoot}`);
+            const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
+            launchToolTerminal(repoRoot, [
+                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
+                `codex -C ${(0, utils_1.quoteShellArg)(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${(0, utils_1.quoteShellArg)(trustOverride)}`
+            ]);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Codex Terminal failed: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOpencodeTerminal", async () => {
+        (0, logger_1.log)(`[openOpencodeTerminal] triggered`);
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                (0, logger_1.log)(`[openOpencodeTerminal] ERROR: rootPath not set`);
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            (0, logger_1.log)(`[openOpencodeTerminal] repoRoot: ${repoRoot}`);
+            launchToolTerminal(repoRoot, [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "opencode"]);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Opencode Terminal failed: ${message}`);
+        }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.setClaudeModel", async () => {
         const routerConfigPath = path.join(os.homedir(), ".claude", "routerconfig.json");

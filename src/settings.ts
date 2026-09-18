@@ -232,6 +232,11 @@ export function getUseAgentForGithubRepositoryManagement(): boolean {
   return config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true;
 }
 
+export function getUseExternalTerminal(): boolean {
+  const config = vscode.workspace.getConfiguration("antigravity");
+  return config.get<boolean>("useExternalTerminal") ?? true;
+}
+
 function getExtensionSettingsFields(): SettingsField[] {
   const config = vscode.workspace.getConfiguration("antigravity");
   const savedAgenticHarnessExecutionCommands = mergeUniqueStrings(
@@ -382,6 +387,15 @@ function getExtensionSettingsFields(): SettingsField[] {
       value: "",
       type: "checkbox",
       checked: config.get<boolean>("useAgentForGithubRepositoryManagement") ?? true
+    },
+    {
+      key: "useExternalTerminal",
+      label: "Launch terminals in external terminal app",
+      description: "When enabled, Claude, Codex, Opencode, Ollama and Agent Monitor terminals open in a separate terminal window outside VS Code. When disabled, they use the VS Code integrated terminal.",
+      placeholder: "",
+      value: "",
+      type: "checkbox",
+      checked: config.get<boolean>("useExternalTerminal") ?? true
     },
     {
       key: "agenticHarnessExecutionCommand",

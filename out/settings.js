@@ -14,6 +14,7 @@ exports.getDefaultGithubCodeReviewer = getDefaultGithubCodeReviewer;
 exports.getBuildCommand = getBuildCommand;
 exports.getProjectTestingCommand = getProjectTestingCommand;
 exports.getUseAgentForGithubRepositoryManagement = getUseAgentForGithubRepositoryManagement;
+exports.getUseExternalTerminal = getUseExternalTerminal;
 exports.renderAntigravitySettingsHtml = renderAntigravitySettingsHtml;
 exports.renderAgenticSetupHtml = renderAgenticSetupHtml;
 exports.renderClaudeModelConfigHtml = renderClaudeModelConfigHtml;
@@ -193,6 +194,10 @@ function getUseAgentForGithubRepositoryManagement() {
     const config = vscode.workspace.getConfiguration("antigravity");
     return config.get("useAgentForGithubRepositoryManagement") ?? true;
 }
+function getUseExternalTerminal() {
+    const config = vscode.workspace.getConfiguration("antigravity");
+    return config.get("useExternalTerminal") ?? true;
+}
 function getExtensionSettingsFields() {
     const config = vscode.workspace.getConfiguration("antigravity");
     const savedAgenticHarnessExecutionCommands = mergeUniqueStrings(DEFAULT_AGENTIC_HARNESS_EXECUTION_COMMANDS, config.get("agenticHarnessExecutionCommands"));
@@ -328,6 +333,15 @@ function getExtensionSettingsFields() {
             value: "",
             type: "checkbox",
             checked: config.get("useAgentForGithubRepositoryManagement") ?? true
+        },
+        {
+            key: "useExternalTerminal",
+            label: "Launch terminals in external terminal app",
+            description: "When enabled, Claude, Codex, Opencode, Ollama and Agent Monitor terminals open in a separate terminal window outside VS Code. When disabled, they use the VS Code integrated terminal.",
+            placeholder: "",
+            value: "",
+            type: "checkbox",
+            checked: config.get("useExternalTerminal") ?? true
         },
         {
             key: "agenticHarnessExecutionCommand",

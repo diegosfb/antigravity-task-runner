@@ -1,0 +1,62 @@
+Category
+
+Command
+
+What it does
+
+Model and Configuration
+
+/switch-model
+
+Opens the model selector to change the current model.
+
+Context and Session
+
+/compact
+
+Triggers manual context compaction.
+
+/settings
+
+Opens the Settings overlay (theme, bash, compaction).
+
+/sessions
+
+Session manager (browse, resume, rename, delete).
+
+Skills
+
+/skills
+
+Skills Manager (discover, install, delete).
+
+Agents
+
+/agents
+
+Interactive agent manager.
+
+MCP
+(Model Context Protocol)
+
+/mcp
+
+Interactive MCP manager.
+
+Help
+
+/help
+
+Displays the available commands (excludes hidden ones).
+
+Plugin
+
+/plugin
+
+Opens the Plugin Manager (install, enable, delete).
+
+Check Points
+
+/timeline
+
+Open the timeline picker to view and restore checkpoints from this session.

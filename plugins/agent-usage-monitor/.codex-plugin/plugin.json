@@ -1,0 +1,17 @@
+{
+  "name": "agent-usage-monitor",
+  "version": "0.1.0",
+  "description": "Local token, context, rate-limit, and cost dashboard for Codex and Claude Code on macOS.",
+  "author": {
+    "name": "DSFB"
+  },
+  "interface": {
+    "displayName": "Agent Usage Monitor",
+    "shortDescription": "Monitor tokens, context, limits, and estimated cost.",
+    "longDescription": "Adds a privacy-preserving local status line and optional tmux sidebar for Codex and Claude Code on macOS.",
+    "developerName": "DSFB",
+    "category": "Productivity",
+    "capabilities": ["local telemetry", "terminal dashboard"],
+    "defaultPrompt": "Help me install or use Agent Usage Monitor."
+  }
+}

@@ -34,18 +34,6 @@ class AntigravityViewProvider {
     }
     async getChildren(element) {
         if (!element) {
-            const antigravityRoot = (0, utils_1.getAntigravityHomePath)();
-            const antigravityLabel = antigravityRoot ? path.basename(antigravityRoot) : ".antigravity";
-            const antigravityItem = new NodeItem({ kind: "folder", label: antigravityLabel, filePath: antigravityRoot }, antigravityRoot
-                ? vscode.TreeItemCollapsibleState.Collapsed
-                : vscode.TreeItemCollapsibleState.None);
-            antigravityItem.iconPath = new vscode.ThemeIcon("folder");
-            antigravityItem.contextValue = "antigravityFolderItem";
-            if (!antigravityRoot) {
-                antigravityItem.label = "Missing ~/.gemini/antigravity";
-                antigravityItem.iconPath = new vscode.ThemeIcon("warning");
-                antigravityItem.tooltip = `Expected ${path.join(os.homedir(), ".gemini", "antigravity")} to exist.`;
-            }
             const separatorItem = new NodeItem({ kind: "separator", label: "────────" }, vscode.TreeItemCollapsibleState.None);
             separatorItem.tooltip = "";
             separatorItem.contextValue = "antigravitySeparator";
@@ -54,16 +42,14 @@ class AntigravityViewProvider {
             const actionSeparator = new NodeItem({ kind: "separator", label: "────────" }, vscode.TreeItemCollapsibleState.None);
             actionSeparator.tooltip = "";
             actionSeparator.contextValue = "antigravitySeparator";
-            const claudeSeparator = new NodeItem({ kind: "separator", label: "────────" }, vscode.TreeItemCollapsibleState.None);
-            claudeSeparator.tooltip = "";
-            claudeSeparator.contextValue = "antigravitySeparator";
             const agents = new NodeItem({ kind: "category", label: "Agents" }, vscode.TreeItemCollapsibleState.Collapsed);
             agents.iconPath = new vscode.ThemeIcon("organization", new vscode.ThemeColor("charts.purple"));
             const skills = new NodeItem({ kind: "category", label: "Skills" }, vscode.TreeItemCollapsibleState.Collapsed);
             skills.iconPath = new vscode.ThemeIcon("symbol-method", new vscode.ThemeColor("charts.purple"));
             const workflows = new NodeItem({ kind: "category", label: "Workflows" }, vscode.TreeItemCollapsibleState.Collapsed);
             workflows.iconPath = new vscode.ThemeIcon("run-all", new vscode.ThemeColor("charts.purple"));
-            const linkedFolderItems = getLinkedFolderItems();
+            const agenticHarnessAndAddOns = new NodeItem({ kind: "category", label: "Agentic Harness and AddOns" }, vscode.TreeItemCollapsibleState.Collapsed);
+            agenticHarnessAndAddOns.iconPath = new vscode.ThemeIcon("package", new vscode.ThemeColor("charts.purple"));
             const claudePluginsPath = path.join(os.homedir(), ".claude", "plugins");
             const claudePlugins = new NodeItem({ kind: "folder", label: "Claude Plugins", filePath: claudePluginsPath }, vscode.TreeItemCollapsibleState.Collapsed);
             claudePlugins.iconPath = new vscode.ThemeIcon("extensions", new vscode.ThemeColor("charts.purple"));
@@ -71,17 +57,18 @@ class AntigravityViewProvider {
             claudePlugins.contextValue = "antigravityFolderItem";
             return [
                 ...claudeItems,
-                claudeSeparator,
-                antigravityItem,
-                ...linkedFolderItems,
                 actionSeparator,
                 ...actionItems,
                 separatorItem,
+                agenticHarnessAndAddOns,
                 claudePlugins,
                 agents,
                 skills,
                 workflows
             ];
+        }
+        if (element.kind === "category" && element.label === "Agentic Harness and AddOns") {
+            return getAgenticHarnessAndAddOnsItems();
         }
         if (element.kind === "category" && element.label === "Agents") {
             return this.getAgentItems();
@@ -91,6 +78,12 @@ class AntigravityViewProvider {
         }
         if (element.kind === "category" && element.label === "Workflows") {
             return this.getWorkflowItems();
+        }
+        if (element.kind === "category" && element.label === "Ollama Terminals") {
+            return getOllamaTerminalItems();
+        }
+        if (element.kind === "category" && element.label === "Agent Monitor Terminals") {
+            return getAgentMonitorTerminalItems();
         }
         if (element.kind === "category" && element.label === "PR Reviewer") {
             return getPrReviewerItems();
@@ -458,6 +451,24 @@ function parsePluginListOutput(output) {
 const ANSI_CSI_PATTERN = /\x1b\[[0-9;]*[A-Za-z]/g;
 // eslint-disable-next-line no-control-regex
 const ANSI_OSC_PATTERN = /\x1b\][^\x07]*\x07/g;
+function buildAntigravityItem() {
+    const antigravityRoot = (0, utils_1.getAntigravityHomePath)();
+    const antigravityLabel = antigravityRoot ? path.basename(antigravityRoot) : ".antigravity";
+    const antigravityItem = new NodeItem({ kind: "folder", label: antigravityLabel, filePath: antigravityRoot }, antigravityRoot
+        ? vscode.TreeItemCollapsibleState.Collapsed
+        : vscode.TreeItemCollapsibleState.None);
+    antigravityItem.iconPath = new vscode.ThemeIcon("folder");
+    antigravityItem.contextValue = "antigravityFolderItem";
+    if (!antigravityRoot) {
+        antigravityItem.label = "Missing ~/.gemini/antigravity";
+        antigravityItem.iconPath = new vscode.ThemeIcon("warning");
+        antigravityItem.tooltip = `Expected ${path.join(os.homedir(), ".gemini", "antigravity")} to exist.`;
+    }
+    return antigravityItem;
+}
+function getAgenticHarnessAndAddOnsItems() {
+    return [buildAntigravityItem(), ...getLinkedFolderItems()];
+}
 function getLinkedFolderItems() {
     const folders = [...TOP_LEVEL_LINKED_FOLDERS];
     const rawAddons = vscode.workspace.getConfiguration("antigravity").get("customAgenticPlatformAddons") || "";
@@ -774,6 +785,18 @@ function getClaudeActionItems() {
         command: "antigravity.openClaudeTerminal",
         title: "Open Claude Terminal"
     };
+    const codexTerminal = new NodeItem({ kind: "action", label: "Codex Terminal" }, vscode.TreeItemCollapsibleState.None);
+    codexTerminal.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    codexTerminal.command = {
+        command: "antigravity.openCodexTerminal",
+        title: "Open Codex Terminal"
+    };
+    const opencodeTerminal = new NodeItem({ kind: "action", label: "Opencode Terminal" }, vscode.TreeItemCollapsibleState.None);
+    opencodeTerminal.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    opencodeTerminal.command = {
+        command: "antigravity.openOpencodeTerminal",
+        title: "Open Opencode Terminal"
+    };
     const setClaudeModel = new NodeItem({ kind: "action", label: "Set Claude Model" }, vscode.TreeItemCollapsibleState.None);
     setClaudeModel.iconPath = new vscode.ThemeIcon("repo", CLAUDE_MODEL_ACTION_COLOR);
     setClaudeModel.command = {
@@ -798,6 +821,46 @@ function getClaudeActionItems() {
         command: "antigravity.runProjectTests",
         title: "Run Project Tests"
     };
-    return [item, setClaudeModel, runLiteLLMOpenAI, buildProject, runProjectTests];
+    const ollamaTerminals = new NodeItem({ kind: "category", label: "Ollama Terminals" }, vscode.TreeItemCollapsibleState.Collapsed);
+    ollamaTerminals.iconPath = new vscode.ThemeIcon("terminal", terminal_1.CLAUDE_ACTION_COLOR);
+    const agentMonitorTerminals = new NodeItem({ kind: "category", label: "Agent Monitor Terminals" }, vscode.TreeItemCollapsibleState.Collapsed);
+    agentMonitorTerminals.iconPath = new vscode.ThemeIcon("terminal", terminal_1.CLAUDE_ACTION_COLOR);
+    return [item, codexTerminal, opencodeTerminal, ollamaTerminals, agentMonitorTerminals, setClaudeModel, runLiteLLMOpenAI, buildProject, runProjectTests];
+}
+function getOllamaTerminalItems() {
+    const ollamaClaude = new NodeItem({ kind: "action", label: "Ollama Claude" }, vscode.TreeItemCollapsibleState.None);
+    ollamaClaude.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    ollamaClaude.command = {
+        command: "antigravity.openOllamaClaudeTerminal",
+        title: "Open Ollama Claude Terminal"
+    };
+    const ollamaCodex = new NodeItem({ kind: "action", label: "Ollama Codex" }, vscode.TreeItemCollapsibleState.None);
+    ollamaCodex.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    ollamaCodex.command = {
+        command: "antigravity.openOllamaCodexTerminal",
+        title: "Open Ollama Codex Terminal"
+    };
+    return [ollamaClaude, ollamaCodex];
+}
+function getAgentMonitorTerminalItems() {
+    const monitorClaude = new NodeItem({ kind: "action", label: "Agent Monitor Claude" }, vscode.TreeItemCollapsibleState.None);
+    monitorClaude.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    monitorClaude.command = {
+        command: "antigravity.openAgentMonitorClaudeTerminal",
+        title: "Open Agent Monitor Claude Terminal"
+    };
+    const monitorCodex = new NodeItem({ kind: "action", label: "Agent Monitor Codex" }, vscode.TreeItemCollapsibleState.None);
+    monitorCodex.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    monitorCodex.command = {
+        command: "antigravity.openAgentMonitorCodexTerminal",
+        title: "Open Agent Monitor Codex Terminal"
+    };
+    const monitorOpenCode = new NodeItem({ kind: "action", label: "Agent Monitor OpenCode" }, vscode.TreeItemCollapsibleState.None);
+    monitorOpenCode.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    monitorOpenCode.command = {
+        command: "antigravity.openAgentMonitorOpenCodeTerminal",
+        title: "Open Agent Monitor OpenCode Terminal"
+    };
+    return [monitorClaude, monitorCodex, monitorOpenCode];
 }
 //# sourceMappingURL=treeProvider.js.map

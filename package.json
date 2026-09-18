@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.10.34",
+  "version": "4.12.3",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -53,8 +53,32 @@
         "title": "Antigravity: Open Ollama Claude"
       },
       {
+        "command": "antigravity.openOllamaCodexTerminal",
+        "title": "Antigravity: Open Ollama Codex Terminal"
+      },
+      {
+        "command": "antigravity.openAgentMonitorClaudeTerminal",
+        "title": "Antigravity: Open Agent Monitor Claude Terminal"
+      },
+      {
+        "command": "antigravity.openAgentMonitorCodexTerminal",
+        "title": "Antigravity: Open Agent Monitor Codex Terminal"
+      },
+      {
+        "command": "antigravity.openAgentMonitorOpenCodeTerminal",
+        "title": "Antigravity: Open Agent Monitor OpenCode Terminal"
+      },
+      {
         "command": "antigravity.openOpenClaudeTerminal",
         "title": "Antigravity: Open OpenClaude Terminal"
+      },
+      {
+        "command": "antigravity.openCodexTerminal",
+        "title": "Antigravity: Open Codex Terminal"
+      },
+      {
+        "command": "antigravity.openOpencodeTerminal",
+        "title": "Antigravity: Open Opencode Terminal"
       },
       {
         "command": "antigravity.setClaudeModel",
@@ -243,7 +267,7 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Tasky Runner v4.10.34",
+          "name": "Tasky Runner v4.12.3",
           "icon": "Resources/taskrunner.svg"
         }
       ]
@@ -437,6 +461,11 @@
           "type": "boolean",
           "default": true,
           "description": "When enabled, agent-driven flows are preferred for GitHub repository management tasks."
+        },
+        "antigravity.useExternalTerminal": {
+          "type": "boolean",
+          "default": true,
+          "description": "When enabled, Claude, Codex, Opencode, Ollama and Agent Monitor terminals open in a separate terminal window outside VS Code."
         },
         "antigravity.agenticHarnessExecutionCommand": {
           "type": "string",
