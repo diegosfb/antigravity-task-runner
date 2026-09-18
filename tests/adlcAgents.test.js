@@ -248,6 +248,28 @@ test("applyAdlcAgentInputDefaults prefills UX Agent's approved_product_context a
   assert.equal(withDefaults.find((i) => i.name === "research_and_evidence").defaultValue, undefined);
 });
 
+test("applyAdlcAgentInputDefaults prefills Architect Agent's specifications_directory, product_context, and development_guidelines", () => {
+  const { applyAdlcAgentInputDefaults } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "specifications_directory", description: "", type: "directory", required: true },
+    { name: "development_guidelines", description: "", type: "file", required: false },
+    { name: "existing_architecture_package", description: "", type: "directory_or_files", required: false },
+    { name: "product_context", description: "", type: "file_or_directory", required: false }
+  ];
+
+  const withDefaults = applyAdlcAgentInputDefaults("architect-agent", inputs);
+  assert.equal(withDefaults.find((i) => i.name === "specifications_directory").defaultValue, "docs/specs");
+  assert.equal(
+    withDefaults.find((i) => i.name === "development_guidelines").defaultValue,
+    "docs/architecture/development_guidelines.md"
+  );
+  assert.equal(
+    withDefaults.find((i) => i.name === "product_context").defaultValue,
+    "docs/project_description/PRD.md"
+  );
+  assert.equal(withDefaults.find((i) => i.name === "existing_architecture_package").defaultValue, undefined);
+});
+
 test("applyAdlcAgentInputRequiredOverrides relaxes UX Agent's architecture_package to optional, others untouched", () => {
   const { applyAdlcAgentInputRequiredOverrides } = setupAdlcAgentsModule();
   const inputs = [
@@ -335,6 +357,63 @@ inputs:
     const architecturePackage = definition.inputs.find((i) => i.name === "architecture_package");
     assert.equal(architecturePackage.defaultValue, "docs/architecture");
     assert.equal(architecturePackage.required, false);
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("loadAdlcAgentDefinition defaults Architect Agent's inputs and hides existing_architecture_package", () => {
+  const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
+  const architectAgentMarkdown = `---
+name: architect-agent
+description: Designs solution architecture from approved specifications.
+inputs:
+  required:
+    - name: specifications_directory
+      description: Approved specifications and technical constraints.
+      type: directory
+    - name: workflow_configuration
+      description: Approval and judge-gate configuration.
+      type: file
+  optional:
+    - name: development_guidelines
+      description: Binding project engineering guidelines.
+      type: file
+    - name: existing_architecture_package
+      description: Existing architecture, diagrams, and ADRs.
+      type: directory_or_files
+    - name: product_context
+      description: Approved PRD and supporting product context.
+      type: file_or_directory
+---
+# Architect agent
+`;
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
+  try {
+    fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "architect-agent"), { recursive: true });
+    fs.writeFileSync(
+      path.join(repoRoot, ".agents", "agents", "architect-agent", "architect-agent.md"),
+      architectAgentMarkdown
+    );
+
+    const definition = loadAdlcAgentDefinition(repoRoot, { id: "architect", label: "Architect Agent", folder: "architect-agent" });
+
+    assert.deepEqual(
+      definition.inputs.map((i) => i.name),
+      ["specifications_directory", "development_guidelines", "product_context"]
+    );
+    assert.equal(
+      definition.inputs.find((i) => i.name === "specifications_directory").defaultValue,
+      "docs/specs"
+    );
+    assert.equal(
+      definition.inputs.find((i) => i.name === "development_guidelines").defaultValue,
+      "docs/architecture/development_guidelines.md"
+    );
+    assert.equal(
+      definition.inputs.find((i) => i.name === "product_context").defaultValue,
+      "docs/project_description/PRD.md"
+    );
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -460,6 +539,29 @@ test("filterUserFacingAdlcInputs hides UX Agent's research_and_evidence and exis
   );
   assert.deepEqual(
     filterUserFacingAdlcInputs(inputs, "architect-agent").map((input) => input.name),
+    inputs.map((input) => input.name)
+  );
+});
+
+test("filterUserFacingAdlcInputs hides Architect Agent's existing_architecture_package, and only for architect-agent", () => {
+  const { isAdlcAgentHiddenInput, filterUserFacingAdlcInputs } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "specifications_directory", description: "", type: "directory", required: true },
+    { name: "development_guidelines", description: "", type: "file", required: false },
+    { name: "existing_architecture_package", description: "", type: "directory_or_files", required: false },
+    { name: "product_context", description: "", type: "file_or_directory", required: false }
+  ];
+
+  assert.equal(isAdlcAgentHiddenInput("architect-agent", "existing_architecture_package"), true);
+  assert.equal(isAdlcAgentHiddenInput("architect-agent", "development_guidelines"), false);
+  assert.equal(isAdlcAgentHiddenInput("ux-agent", "existing_architecture_package"), false);
+
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "architect-agent").map((input) => input.name),
+    ["specifications_directory", "development_guidelines", "product_context"]
+  );
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "ux-agent").map((input) => input.name),
     inputs.map((input) => input.name)
   );
 });

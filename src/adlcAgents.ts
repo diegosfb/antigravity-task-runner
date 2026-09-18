@@ -57,6 +57,11 @@ const ADLC_AGENT_INPUT_DEFAULTS: Record<string, Record<string, string>> = {
   "ux-agent": {
     approved_product_context: path.posix.join("docs", "specs"),
     architecture_package: path.posix.join("docs", "architecture")
+  },
+  "architect-agent": {
+    specifications_directory: path.posix.join("docs", "specs"),
+    product_context: path.posix.join("docs", "project_description", "PRD.md"),
+    development_guidelines: path.posix.join("docs", "architecture", "development_guidelines.md")
   }
 };
 
@@ -192,7 +197,8 @@ export function isAdlcAutoConfigInput(name: string): boolean {
 // default artifacts directory or the free-form additional instructions).
 const ADLC_AGENT_HIDDEN_INPUTS: Record<string, string[]> = {
   "ba-agent": ["supporting_evidence", "alternative_input_contract"],
-  "ux-agent": ["research_and_evidence", "existing_experience_system"]
+  "ux-agent": ["research_and_evidence", "existing_experience_system"],
+  "architect-agent": ["existing_architecture_package"]
 };
 
 export function isAdlcAgentHiddenInput(folder: string, name: string): boolean {
