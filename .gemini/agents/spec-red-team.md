@@ -1,0 +1,1 @@
+../../.agents/agents/spec-validation-agent/subagents/spec-red-team/spec-red-team.md

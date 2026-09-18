@@ -1,0 +1,4 @@
+interface:
+  display_name: "Simplify"
+  short_description: "Build the smallest safe solution that works"
+  default_prompt: "Use $simplify to implement or refine this change with the smallest safe, maintainable diff."

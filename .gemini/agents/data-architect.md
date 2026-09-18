@@ -1,0 +1,1 @@
+../../.agents/agents/architect-agent/subagents/data-architect/data-architect.md

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Meeting Insights"
+  short_description: "Turn transcripts into traceable product evidence"
+  default_prompt: "Use $meeting-insights to turn these meeting notes or transcripts into a verified meeting-analysis.md."
+policy:
+  allow_implicit_invocation: true

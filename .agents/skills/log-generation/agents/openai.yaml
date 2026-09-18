@@ -1,0 +1,4 @@
+interface:
+  display_name: "Log Generation"
+  short_description: "Structured logging and validation across stacks"
+  default_prompt: "Add or improve structured logging with local vs cloud configs, then validate and report results."

@@ -1,0 +1,1 @@
+../../.agents/agents/architect-agent/subagents/blockchain-architect/blockchain-architect.md

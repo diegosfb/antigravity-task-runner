@@ -111,6 +111,10 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
       ];
     }
 
+    if (element.kind === "category" && element.label === "Deploy Agentic Libraries") {
+      return getDeployAgenticLibrariesItems();
+    }
+
     if (element.kind === "category" && element.label === "Agentic Harness and AddOns") {
       return getAgenticHarnessAndAddOnsItems();
     }
@@ -635,17 +639,14 @@ function getQuickActionItems(): NodeItem[] {
   };
   items.push(setupWorkspace);
 
-  const updateProjectConfig = new NodeItem(
-    { kind: "category", label: "Update Project Config" },
+  const deployAgenticLibraries = new NodeItem(
+    { kind: "category", label: "Deploy Agentic Libraries" },
     vscode.TreeItemCollapsibleState.Collapsed
   );
-  updateProjectConfig.iconPath = new vscode.ThemeIcon(
-    "settings-gear",
-    UPDATE_PROJECT_CONFIG_ACTION_COLOR
-  );
-  updateProjectConfig.tooltip =
-    "Expand to update project configuration with the selected Agentic Harness.";
-  items.push(updateProjectConfig);
+  deployAgenticLibraries.iconPath = new vscode.ThemeIcon("cloud-upload", QUICK_ACTION_COLOR);
+  deployAgenticLibraries.tooltip = "Deploy agentic libraries to the current workspace.";
+  items.push(deployAgenticLibraries);
+
 
 
   const assignJiraItemToAgent = new NodeItem(
@@ -954,6 +955,62 @@ function getQuickActionItems(): NodeItem[] {
   items.push(sopManual);
 
   return items;
+}
+
+function getDeployAgenticLibrariesItems(): NodeItem[] {
+  const deployColor = new vscode.ThemeColor("charts.blue");
+
+  const deploySdlc = new NodeItem(
+    { kind: "action", label: "Deploy SDLC" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  deploySdlc.iconPath = new vscode.ThemeIcon("cloud-upload", deployColor);
+  deploySdlc.command = {
+    command: "antigravity.deployAgenticLibSdlc",
+    title: "Deploy SDLC"
+  };
+
+  const deploySdlcExtended = new NodeItem(
+    { kind: "action", label: "Deploy SDLC Extended" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  deploySdlcExtended.iconPath = new vscode.ThemeIcon("cloud-upload", deployColor);
+  deploySdlcExtended.command = {
+    command: "antigravity.deployAgenticLibSdlcExtended",
+    title: "Deploy SDLC Extended"
+  };
+
+  const deployProfessionalServices = new NodeItem(
+    { kind: "action", label: "Deploy Professional Services" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  deployProfessionalServices.iconPath = new vscode.ThemeIcon("cloud-upload", deployColor);
+  deployProfessionalServices.command = {
+    command: "antigravity.deployAgenticLibProfessionalServices",
+    title: "Deploy Professional Services"
+  };
+
+  const deployTechAdvisory = new NodeItem(
+    { kind: "action", label: "Deploy Tech Advisory" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  deployTechAdvisory.iconPath = new vscode.ThemeIcon("cloud-upload", deployColor);
+  deployTechAdvisory.command = {
+    command: "antigravity.deployAgenticLibTechAdvisory",
+    title: "Deploy Tech Advisory"
+  };
+
+  const cleanDeployedLibs = new NodeItem(
+    { kind: "action", label: "Clean Deployed Libs" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  cleanDeployedLibs.iconPath = new vscode.ThemeIcon("trash", new vscode.ThemeColor("charts.red"));
+  cleanDeployedLibs.command = {
+    command: "antigravity.cleanDeployedLibs",
+    title: "Clean Deployed Libs"
+  };
+
+  return [deploySdlc, deploySdlcExtended, deployProfessionalServices, deployTechAdvisory, cleanDeployedLibs];
 }
 
 function getUpdateProjectConfigItems(): NodeItem[] {

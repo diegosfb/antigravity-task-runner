@@ -1,0 +1,4 @@
+# Copy to storypoints-council.conf to set the default backend.
+MODE=local-cli
+LOCAL_CLI_CONFIG=storypoints-council.local.conf
+OPENROUTER_CONFIG=storypoints-council.openrouter.conf

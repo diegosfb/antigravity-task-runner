@@ -4463,6 +4463,51 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  const runAgenticLibScript = async (scriptName: string): Promise<void> => {
+    const rootPath = getRootPath();
+    if (!rootPath) {
+      void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+      return;
+    }
+    const repoRoot = getRepoRoot(rootPath);
+    const scriptPath = path.join(repoRoot, ".agents", "agentic-libraries", scriptName);
+    await runInSecondaryTerminal([
+      `echo "[antigravity] running: ${scriptName}"`,
+      `cd ${quoteShellArg(repoRoot)}`,
+      quoteShellArg(scriptPath)
+    ]);
+  };
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.deployAgenticLibSdlc", async () => {
+      await runAgenticLibScript("deploy-sdlc-lib.sh");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.deployAgenticLibSdlcExtended", async () => {
+      await runAgenticLibScript("deploy-extended-sdlc-lib.sh");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.deployAgenticLibProfessionalServices", async () => {
+      await runAgenticLibScript("deploy-professional-services-lib.sh");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.deployAgenticLibTechAdvisory", async () => {
+      await runAgenticLibScript("deploy-technical-advisor-lib.sh");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.cleanDeployedLibs", async () => {
+      await runAgenticLibScript("clean-deployed-libs.sh");
+    })
+  );
+
   context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.selectOrCreateJiraProject", async () => {
       const rootPath = getRootPath();

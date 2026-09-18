@@ -1,0 +1,12 @@
+# Copy this file to storypoints-council.local.conf and customize the local CLI commands.
+# Keep machine-specific configuration out of source control.
+STORYPOINT_COUNCIL_PROVIDERS='codex','claude','gemini','ollama'
+#NOTE ON OLLAMA: Unless you have a very powerfull computer to run the model loclly; it might crash your computer if used!
+STORYPOINT_CHAIRMAN_PROVIDER='codex'
+CODEX_COUNCIL_CMD='codex exec - < {prompt_file}'
+CLAUDE_COUNCIL_CMD='claude -p "$(cat {prompt_file})"'
+GEMINI_COUNCIL_CMD='gemini -p "$(cat {prompt_file})"'
+OLLAMA_COUNCIL_CMD='ollama run llama3.2 < {prompt_file}'
+OUTPUT_FOLDER=../../../storypoints-test-data/output
+COUNCIL_DEBATE_OUTPUT=Off
+ASK_CLARIFICATION_QUESTIONS_FOR_ESTIMATION=Off

@@ -1,0 +1,29 @@
+{
+  "skill_name": "harvesting-meeting-context",
+  "evals": [
+    {
+      "id": 1,
+      "name": "happy-path-explicit-batch-id",
+      "prompt": "Transcribe the discovery meetings for the AcmePay onboarding engagement. Source folder: /Users/me/Documents/globai-projects/aipods-acmepay/artifacts/inputs/recordings/discovery-q3/ — four .mp3 files (12-min kickoff, 28-min architecture review, 47-min stakeholder interview, 65-min compliance walkthrough) and one 35-min .mp4. Output to /Users/me/Documents/globai-projects/aipods-acmepay/artifacts/outputs/transcripts/. batch_id=discovery-q3, language=es, whisper_model=small, auto_install=true. Produce per-batch transcripts, metadata, and the aggregate context-pack analysis so I can feed it into researching-prd next.",
+      "expected_output": "Skill resolves batch_id='discovery-q3' (source=param). Creates {output_path}/batches/discovery-q3/ with 00-index.md, manifest.md, transcripts/ (5 markdown files), metadata/ (5 JSON files), meeting-analysis.md (frontmatter includes batch_id and source_meetings, 13 H2 sections), and TRANSCRIPT-AUDIT-discovery-q3-{SESSION_ID}.md. Top-level {output_path}/_batches.md is created with one row for discovery-q3. {output_path}/_progress.json tracks current_batch_id. The 12-min mp3 uses cloud_api in one shot; the 28/35/47/65-min files are chunked into 5-min segments. ffmpeg/whisper installed unattended if missing. meeting-analysis.md cites every bullet with (meeting-NN @ HH:MM:SS).",
+      "mode": "build",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "second-batch-same-output-path-no-collision",
+      "prompt": "Same AcmePay project. The discovery-q3 batch finished last week. Now I have a fresh set of three .m4a files in /Users/me/Documents/globai-projects/aipods-acmepay/artifacts/inputs/recordings/stakeholder-interviews/ (each ~40 min, English). I want their transcripts in the same /Users/me/Documents/globai-projects/aipods-acmepay/artifacts/outputs/transcripts/ folder so researching-prd sees both corpora — but obviously without overwriting the discovery-q3 work. Don't pass batch_id explicitly; let the skill derive it. language=en.",
+      "expected_output": "Skill derives batch_id='stakeholder-interviews' from source_path basename (batch_id_source='source_path_basename'). The existing {output_path}/batches/discovery-q3/ tree is left untouched. Creates {output_path}/batches/stakeholder-interviews/ with its own manifest, transcripts, metadata, meeting-analysis.md, and TRANSCRIPT-AUDIT-stakeholder-interviews-{SESSION_ID}.md. {output_path}/_batches.md is updated in place to add a second row (the discovery-q3 row is preserved verbatim). {output_path}/_progress.json updates current_batch_id to 'stakeholder-interviews'. Memory Bank progress.md gets a milestone row qualified with batch=stakeholder-interviews. STOP-GATE collision check passes because batches/stakeholder-interviews/ did not exist before this run.",
+      "mode": "build",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "repair-targeting-specific-batch",
+      "prompt": "On the AcmePay project's stakeholder-interviews batch, meeting-02 failed mid-run because chunks 4-5 exhausted retries against the cloud API. The discovery-q3 batch is fine and must not be touched. Output folder /Users/me/Documents/globai-projects/aipods-acmepay/artifacts/outputs/transcripts/ already has both batches. Apply REPAIR with batch_id=stakeholder-interviews and failure_feedback='meeting-02 retry transcription with local fallback'.",
+      "expected_output": "Skill detects REPAIR (failure_feedback non-empty). Resolves batch_id='stakeholder-interviews' from param. Verifies batches/stakeholder-interviews/ exists; never mkdir. Loads existing TRANSCRIPT_INDEX from batches/stakeholder-interviews/manifest.md. Parses REPAIR_DIRECTIVES = [{target: 'meeting-02', instruction: 'retry transcription with local fallback'}]. Skips meeting-01, meeting-03 within the batch (preserves their transcript files verbatim). Does NOT touch batches/discovery-q3/ (different batch). Re-extracts audio for meeting-02, re-chunks, re-transcribes — transcription_path may flip to 'hybrid' or 'local_whisper'. Rewrites batches/stakeholder-interviews/transcripts/meeting-02-*.md and matching metadata IN PLACE. Appends 'Repair Run' section to existing TRANSCRIPT-AUDIT-stakeholder-interviews-{SESSION_ID}.md. Updates _batches.md row for stakeholder-interviews with refreshed status and last_run timestamp; discovery-q3 row preserved. _progress.json LAST ACTION marks COMPLETED.",
+      "mode": "repair",
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+# Copy this file to storypoints-council.openrouter.conf and insert your real OpenRouter API key.
+# Do not commit the populated config file to source control.
+OPENROUTER_API_KEY=<HERE GOES MY APIKEY>
+STORYPOINT_COUNCIL_MODELS='anthropic/claude-fable-5','qwen/qwen3.8-27b','google/gemini-3.7-flash','anthropic/claude-opus-5','thinkingmachines/inkling','openai/gpt-5.6-sol-pro','anthropic/claude-sonnet-5','nvidia/nemotron-3-ultra-550b-a55b:free'
+STORYPOINT_CHAIRMAN_MODEL='anthropic/claude-fable-5'
+OUTPUT_FOLDER=../../../storypoints-test-data/output
+REQUEST_OPENROUTER_APPROVAL=true
+COUNCIL_DEBATE_OUTPUT=Off
+ASK_CLARIFICATION_QUESTIONS_FOR_ESTIMATION=Off

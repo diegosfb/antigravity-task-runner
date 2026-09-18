@@ -1,0 +1,7 @@
+interface:
+  display_name: "To Spec"
+  short_description: "Synthesize discussion into a validated spec"
+  default_prompt: "Use $to-spec to turn our current discussion into a validated project specification."
+
+policy:
+  allow_implicit_invocation: false

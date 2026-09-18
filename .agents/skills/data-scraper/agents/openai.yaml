@@ -1,0 +1,4 @@
+interface:
+  display_name: "Data Scraper Agent"
+  short_description: "Build free scheduled public-data agents"
+  default_prompt: "Use $data-scraper-agent to build a free scheduled agent that scrapes public data, enriches it with Gemini, and stores the results automatically."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "System Requirements Estimation"
+  short_description: "Estimate runtime scale with explicit scenarios"
+  default_prompt: "Use $system-requirements-estimation to estimate this workload's request rate, concurrency, storage, bandwidth, and growth scenarios."

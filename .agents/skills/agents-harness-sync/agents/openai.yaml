@@ -1,0 +1,3 @@
+interface:
+  display_name: "Agents Harness Sync"
+  short_description: "Secure, audit, synchronize, and deploy agent definitions"
