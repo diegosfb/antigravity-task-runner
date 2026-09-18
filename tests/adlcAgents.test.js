@@ -182,9 +182,19 @@ test("loadAdlcAgentDefinition adds an editable artifacts_directory input for pro
     assert.equal(artifactsDirectory.defaultValue, "docs/product-definition");
     assert.equal(artifactsDirectory.required, false);
     assert.equal(artifactsDirectory.type, "directory");
+    assert.match(definition.diagramHtml, /Product Definition/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
+});
+
+test("getAdlcAgentDiagramHtml returns the product diagram and undefined for other agents", () => {
+  const { getAdlcAgentDiagramHtml } = setupAdlcAgentsModule();
+  assert.match(getAdlcAgentDiagramHtml("product"), /Meeting Notes Folder/);
+  assert.match(getAdlcAgentDiagramHtml("product"), /Project Description File/);
+  assert.match(getAdlcAgentDiagramHtml("product"), /Product Agent/);
+  assert.match(getAdlcAgentDiagramHtml("product"), /PRD/);
+  assert.equal(getAdlcAgentDiagramHtml("ba"), undefined);
 });
 
 test("catalog maps story labels to agent folders and detects deployed agents", () => {
@@ -693,4 +703,34 @@ test("renderAdlcAgentRunHtml renders the default artifacts directory as an edita
     { defaultHarness: "claude", defaultModel: "" }
   );
   assert.match(withoutArtifactsDir, /This agent declares no input artifacts\. Describe the request below\./);
+});
+
+test("renderAdlcAgentRunHtml renders the diagram after the description, only when the agent declares one", () => {
+  const { getAdlcAgentDiagramHtml, renderAdlcAgentRunHtml } = setupAdlcAgentsModule();
+  const withDiagram = renderAdlcAgentRunHtml(
+    { cspSource: "vscode-resource:" },
+    {
+      id: "product",
+      label: "Product Agent",
+      folder: "product-agent",
+      filePath: "",
+      description: "Owns the WHY of the project.",
+      inputs: [],
+      diagramHtml: getAdlcAgentDiagramHtml("product")
+    },
+    { defaultHarness: "claude", defaultModel: "" }
+  );
+  const descriptionIndex = withDiagram.indexOf('<p class="description">Owns the WHY of the project.</p>');
+  const diagramIndex = withDiagram.indexOf('<div class="diagram">');
+  assert.ok(descriptionIndex >= 0);
+  assert.ok(diagramIndex > descriptionIndex);
+  assert.match(withDiagram, /Meeting Notes Folder/);
+  assert.match(withDiagram, /Project Description File/);
+
+  const withoutDiagram = renderAdlcAgentRunHtml(
+    { cspSource: "vscode-resource:" },
+    { id: "ba", label: "BA Agent", folder: "ba-agent", filePath: "", description: "Owns the WHAT.", inputs: [] },
+    { defaultHarness: "claude", defaultModel: "" }
+  );
+  assert.doesNotMatch(withoutDiagram, /class="diagram"/);
 });

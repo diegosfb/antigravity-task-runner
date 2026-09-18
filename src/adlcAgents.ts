@@ -113,6 +113,34 @@ function buildDefaultArtifactsDirInput(defaultValue: string): AdlcAgentInput {
   };
 }
 
+// A small static diagram shown after an agent's description, illustrating
+// its inputs and output. Plain HTML/CSS boxes and arrows rather than a
+// client-rendered diagram library, since the page's CSP does not load
+// remote scripts and these diagrams never change at runtime. Keyed by
+// catalog entry id.
+const ADLC_AGENT_DIAGRAM_HTML: Record<string, string> = {
+  product: `
+      <div class="diagram">
+        <div class="diagram-row">
+          <div class="diagram-group">
+            <div class="diagram-group-label">Product Definition</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box">Meeting Notes Folder</div>
+              <div class="diagram-box">Project Description File</div>
+            </div>
+          </div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box diagram-box-emphasis">Product Agent</div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box">PRD</div>
+        </div>
+      </div>`
+};
+
+export function getAdlcAgentDiagramHtml(entryId: string): string | undefined {
+  return ADLC_AGENT_DIAGRAM_HTML[entryId];
+}
+
 export type AdlcAgentDefinition = {
   id: string;
   label: string;
@@ -121,6 +149,7 @@ export type AdlcAgentDefinition = {
   description: string;
   inputs: AdlcAgentInput[];
   promptHint?: string;
+  diagramHtml?: string;
 };
 
 export function getAdlcAgentRelativePath(folder: string): string {
@@ -266,7 +295,8 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
     filePath,
     description,
     inputs: defaultArtifactsDir ? [...visibleInputs, buildDefaultArtifactsDirInput(defaultArtifactsDir)] : visibleInputs,
-    promptHint: entry.promptHint
+    promptHint: entry.promptHint,
+    diagramHtml: getAdlcAgentDiagramHtml(entry.id)
   };
 }
 
@@ -448,6 +478,14 @@ export function renderAdlcAgentRunHtml(
       .badge-required { background: var(--vscode-charts-orange, #d18616); color: #fff; }
       code { font-family: var(--vscode-editor-font-family); }
       .command-preview { padding: 8px 10px; border-radius: 6px; background: var(--vscode-textCodeBlock-background); font-family: var(--vscode-editor-font-family); font-size: 12px; word-break: break-all; }
+      .diagram { margin: 4px 0 8px; overflow-x: auto; }
+      .diagram-row { display: flex; align-items: center; gap: 10px; }
+      .diagram-group { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px dashed var(--vscode-panel-border, var(--vscode-input-border, transparent)); border-radius: 8px; }
+      .diagram-group-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--vscode-descriptionForeground); }
+      .diagram-group-boxes { display: flex; flex-direction: column; gap: 6px; }
+      .diagram-box { padding: 8px 12px; border: 1px solid var(--vscode-panel-border, var(--vscode-input-border, transparent)); border-radius: 6px; background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background)); font-size: 12px; white-space: nowrap; text-align: center; }
+      .diagram-box-emphasis { border-color: var(--vscode-focusBorder, var(--vscode-charts-purple)); font-weight: 600; }
+      .diagram-arrow { font-size: 16px; color: var(--vscode-descriptionForeground); flex: none; }
       .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
       .actions { display: flex; justify-content: flex-end; gap: 8px; }
       button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; white-space: nowrap; }
@@ -461,6 +499,7 @@ export function renderAdlcAgentRunHtml(
         <div class="title">${escapeHtml(definition.label)}</div>
         <div class="hint"><code>${escapeHtml(getAdlcAgentRelativePath(definition.folder))}</code></div>
         ${definition.description ? `<p class="description">${escapeHtml(definition.description)}</p>` : ""}
+        ${definition.diagramHtml || ""}
       </div>
       <section class="panel-section">
         <div class="section-title">Harness &amp; Model</div>
