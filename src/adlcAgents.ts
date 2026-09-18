@@ -332,7 +332,7 @@ const ADLC_AGENT_DIAGRAM_HTML: Record<string, string> = {
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box diagram-box-emphasis">Coding Agent</div>
           <div class="diagram-arrow">&#8594;</div>
-          <div class="diagram-box">Implementation</div>
+          <div class="diagram-box">src Code</div>
         </div>
       </div>`
 };
