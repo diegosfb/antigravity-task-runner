@@ -254,6 +254,73 @@ test("quick actions include ADLC after feature flag with runner actions", async 
   assert.equal(adlcChildren[4].iconPath.id, "map");
 });
 
+test("quick actions include ADLC Agents after feature flag, greying out undeployed agents", async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-tree-provider-adlc-"));
+  fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "ba-agent"), { recursive: true });
+  fs.writeFileSync(path.join(repoRoot, ".agents", "agents", "ba-agent", "ba-agent.md"), "---\nname: ba-agent\n---\n");
+  const utils = require("../out/utils.js");
+  const { AntigravityViewProvider } = setupTreeProviderModule(
+    {},
+    { "./utils": { ...utils, getRootPath: () => repoRoot, getRepoRoot: () => repoRoot } }
+  );
+  const provider = new AntigravityViewProvider();
+
+  try {
+    const rootItems = await provider.getChildren();
+    const rootLabels = rootItems.map((item) => item.label);
+    const featureFlagIndex = rootLabels.indexOf("Set Feature Flag for changes");
+    const adlcIndex = rootLabels.indexOf("ADLC Agents");
+
+    assert.notEqual(featureFlagIndex, -1);
+    assert.equal(adlcIndex, featureFlagIndex + 1);
+
+    const adlcAgents = rootItems[adlcIndex];
+    assert.equal(adlcAgents.collapsibleState, 1);
+    assert.equal(adlcAgents.command, undefined);
+    assert.equal(adlcAgents.iconPath.id, "organization");
+
+    const children = await provider.getChildren(adlcAgents);
+    assert.deepEqual(
+      children.map((item) => item.label),
+      [
+        "Product Agent",
+        "BA Agent",
+        "UX Agent",
+        "Architect Agent",
+        "Architecture Review Agent",
+        "Project Planner Agent",
+        "Test Agent",
+        "Coding Agent",
+        "Code Review Agent",
+        "Documentation Agent",
+        "Spec Validation Agent",
+        "Deployment Agent",
+        "SDLC Orchestrator Agent"
+      ]
+    );
+    for (const item of children) {
+      assert.equal(item.command.command, "antigravity.runAdlcAgent");
+      assert.equal(item.iconPath.id, "robot");
+    }
+
+    const baAgent = children.find((item) => item.label === "BA Agent");
+    assert.deepEqual(baAgent.command.arguments, ["ba"]);
+    assert.equal(baAgent.description, undefined);
+    assert.equal(baAgent.iconPath.color.id, "charts.purple");
+
+    const documentationAgent = children.find((item) => item.label === "Documentation Agent");
+    assert.deepEqual(documentationAgent.command.arguments, ["documentation"]);
+    assert.equal(documentationAgent.description, "not deployed");
+    assert.equal(documentationAgent.iconPath.color.id, "disabledForeground");
+    assert.match(documentationAgent.tooltip, /documentation-agent\.md was not found/);
+
+    const codingAgent = children.find((item) => item.label === "Coding Agent");
+    assert.deepEqual(codingAgent.command.arguments, ["coding"]);
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test("top-level Claude actions include terminal launcher entries", async () => {
   const { AntigravityViewProvider } = setupTreeProviderModule();
   const provider = new AntigravityViewProvider();

@@ -19,6 +19,7 @@ import {
   runClaudeInitAndUpdateInPersistentTerminal,
   runCodexInitAndUpdateInPersistentTerminal,
   getAgentTerminalName,
+  openCommandInExternalTerminal,
   CLAUDE_ACTION_COLOR
 } from "./terminal";
 import {
@@ -107,6 +108,22 @@ import {
   copyGrillMeSkill
 } from "./grillMe";
 import { buildAgenticHarnessFileCommandForCommand } from "./agenticHarnessCommand";
+import { getExecutableName } from "./shellUtils";
+import {
+  adlcAgentExists,
+  buildAdlcAgentPrompt,
+  buildAdlcHarnessCommand,
+  findAdlcAgentCatalogEntry,
+  getAdlcAgentRelativePath,
+  getDefaultAdlcInputValues,
+  getMissingRequiredAdlcInputs,
+  isAdlcHarness,
+  loadAdlcAgentDefinition,
+  renderAdlcAgentRunHtml,
+  type AdlcAgentDefinition,
+  type AdlcAgentRunRequest,
+  type AdlcHarness
+} from "./adlcAgents";
 import { createGitHubResourceProvider } from "./resourceProvider";
 import {
   UPDATE_GITHUB_ACTIONS_PROMPT,
@@ -6214,6 +6231,150 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       void vscode.window.showInformationMessage("Opened Feature Flag setup terminal.");
+    })
+  );
+
+  const showAdlcAgentRunDialog = (
+    repoRoot: string,
+    definition: AdlcAgentDefinition
+  ): Promise<AdlcAgentRunRequest | undefined> =>
+    new Promise((resolve) => {
+      const defaultHarnessCommand = getAgenticHarnessExecutionCommand();
+      const defaultExecutable = getExecutableName(defaultHarnessCommand);
+      const defaultHarness: AdlcHarness = isAdlcHarness(defaultExecutable) ? defaultExecutable : "claude";
+      const defaultModelMatch = /(?:--model|-m)\s+(\S+)/.exec(defaultHarnessCommand);
+      const defaultModel = defaultModelMatch ? defaultModelMatch[1] : "";
+
+      const panel = vscode.window.createWebviewPanel(
+        "adlcAgentRun",
+        definition.label,
+        vscode.ViewColumn.Active,
+        { enableScripts: true }
+      );
+      panel.webview.html = renderAdlcAgentRunHtml(panel.webview, definition, {
+        defaultHarness,
+        defaultModel,
+        initialInputs: getDefaultAdlcInputValues(repoRoot, definition.inputs)
+      });
+
+      let settled = false;
+      const resolveOnce = (value: AdlcAgentRunRequest | undefined) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+      const postError = (message: string) =>
+        void panel.webview.postMessage({ type: "adlcAgentError", payload: { message } });
+
+      panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+      panel.webview.onDidReceiveMessage(
+        async (message) => {
+          if (!message) return;
+          if (message.type === "adlcAgentCancel") {
+            panel.dispose();
+            return;
+          }
+          if (message.type === "adlcAgentBrowse") {
+            const inputName = String(message.payload?.inputName || "");
+            const kind = String(message.payload?.kind || "any");
+            const picked = await vscode.window.showOpenDialog({
+              canSelectFiles: kind !== "folder",
+              canSelectFolders: kind !== "file",
+              canSelectMany: false,
+              defaultUri: vscode.Uri.file(repoRoot),
+              openLabel: `Select ${inputName}`
+            });
+            const uri = picked?.[0];
+            if (!uri) return;
+            const relative = path.relative(repoRoot, uri.fsPath);
+            const value = relative && !relative.startsWith("..") && !path.isAbsolute(relative) ? relative : uri.fsPath;
+            void panel.webview.postMessage({ type: "adlcAgentBrowseResult", payload: { inputName, value } });
+            return;
+          }
+          if (message.type !== "adlcAgentExecute") return;
+
+          const payload = message.payload || {};
+          const harness = String(payload.harness || "");
+          if (!isAdlcHarness(harness)) {
+            postError("Select a supported harness.");
+            return;
+          }
+          const inputs: Record<string, string> = {};
+          if (payload.inputs && typeof payload.inputs === "object") {
+            for (const [name, value] of Object.entries(payload.inputs as Record<string, unknown>)) {
+              inputs[name] = String(value ?? "").trim();
+            }
+          }
+          const missing = getMissingRequiredAdlcInputs(definition, inputs);
+          if (missing.length > 0) {
+            postError(`Missing required inputs: ${missing.join(", ")}`);
+            return;
+          }
+          resolveOnce({
+            harness,
+            model: String(payload.model || "").trim(),
+            inputs,
+            additionalInstructions: String(payload.additionalInstructions || "")
+          });
+          panel.dispose();
+        },
+        undefined,
+        context.subscriptions
+      );
+    });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.runAdlcAgent", async (entryId: string) => {
+      const entry = findAdlcAgentCatalogEntry(String(entryId || ""));
+      if (!entry) {
+        void vscode.window.showErrorMessage(`Unknown ADLC agent: ${String(entryId)}`);
+        return;
+      }
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      if (!adlcAgentExists(repoRoot, entry.folder)) {
+        void vscode.window.showWarningMessage(
+          `${entry.label} is not available: ${getAdlcAgentRelativePath(entry.folder)} was not found. Deploy the SDLC library first.`
+        );
+        return;
+      }
+
+      let definition: AdlcAgentDefinition;
+      try {
+        definition = loadAdlcAgentDefinition(repoRoot, entry);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Failed to read ${entry.label} definition: ${message}`);
+        return;
+      }
+
+      const request = await showAdlcAgentRunDialog(repoRoot, definition);
+      if (!request) return;
+
+      const harnessCommand = buildAdlcHarnessCommand(request.harness, request.model);
+      const promptFilePath = writeAgentPromptFile(`adlc-${entry.id}`, buildAdlcAgentPrompt(definition, request));
+      const commandLine = buildAgenticHarnessFileCommandForCommand(harnessCommand, repoRoot, promptFilePath, "prompt");
+      logAlways(`[runAdlcAgent] ${entry.id}: ${commandLine}`);
+
+      try {
+        if (getUseExternalTerminal()) {
+          await openCommandInExternalTerminal(repoRoot, commandLine);
+        } else {
+          runInPersistentTerminal(`ADLC: ${entry.label}`, [`cd ${quoteShellArg(repoRoot)}`, commandLine], {
+            iconPath: new vscode.ThemeIcon("robot", CLAUDE_ACTION_COLOR),
+            color: CLAUDE_ACTION_COLOR
+          });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        void vscode.window.showErrorMessage(`Failed to launch ${entry.label}: ${message}`);
+        return;
+      }
+      void vscode.window.showInformationMessage(`Launched ${entry.label} with ${harnessCommand}.`);
     })
   );
 

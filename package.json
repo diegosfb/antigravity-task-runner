@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.12.14",
+  "version": "4.12.15",
   "publisher": "dsfb",
   "license": "MIT",
   "icon": "Resources/taskrunner.png",
@@ -115,6 +115,10 @@
       {
         "command": "antigravity.takeBacklogItemAssign",
         "title": "Antigravity: Take Backlog Item (Assign)"
+      },
+      {
+        "command": "antigravity.runAdlcAgent",
+        "title": "Antigravity: Run ADLC Agent"
       },
       {
         "command": "antigravity.assignJiraItemToAgent",
@@ -271,9 +275,9 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "Task Runner v4.12.14",
+          "name": "Task Runner v4.12.15",
           "icon": "Resources/taskrunner.svg",
-          "contextualTitle": "Task Runner v4.12.14"
+          "contextualTitle": "Task Runner v4.12.15"
         }
       ]
     },

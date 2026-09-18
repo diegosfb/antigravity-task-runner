@@ -10,6 +10,7 @@ import { CLAUDE_ACTION_COLOR } from "./terminal";
 import {
   detectCloudInfrastructureSignals
 } from "./cloudArchitectReview";
+import { ADLC_AGENT_CATALOG, adlcAgentExists, getAdlcAgentRelativePath } from "./adlcAgents";
 
 const execAsync = promisify(exec);
 
@@ -113,6 +114,10 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
 
     if (element.kind === "category" && element.label === "Deploy Agentic Libraries") {
       return getDeployAgenticLibrariesItems();
+    }
+
+    if (element.kind === "category" && element.label === "ADLC Agents") {
+      return getAdlcAgentItems();
     }
 
     if (element.kind === "category" && element.label === "Repository Actions") {
@@ -697,6 +702,14 @@ function getQuickActionItems(): NodeItem[] {
   };
   items.push(setFeatureFlag);
 
+  const adlcAgents = new NodeItem(
+    { kind: "category", label: "ADLC Agents" },
+    vscode.TreeItemCollapsibleState.Collapsed
+  );
+  adlcAgents.iconPath = new vscode.ThemeIcon("organization", new vscode.ThemeColor("charts.purple"));
+  adlcAgents.tooltip = "Run an ADLC agent from .agents/agents with a chosen harness, model, and input artifacts.";
+  items.push(adlcAgents);
+
   const addBacklogItem = new NodeItem(
     { kind: "action", label: "Add Backlog Item" },
     vscode.TreeItemCollapsibleState.None
@@ -969,6 +982,33 @@ function getRepositoryActionItems(): NodeItem[] {
   items.push(agenticReviewOfMerge);
 
   return items;
+}
+
+function getAdlcAgentItems(): NodeItem[] {
+  const rootPath = getRootPath();
+  const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
+  const agentColor = new vscode.ThemeColor("charts.purple");
+  const unavailableColor = new vscode.ThemeColor("disabledForeground");
+
+  return ADLC_AGENT_CATALOG.map((entry) => {
+    const available = repoRoot ? adlcAgentExists(repoRoot, entry.folder) : false;
+    const relativePath = getAdlcAgentRelativePath(entry.folder);
+    const item = new NodeItem(
+      { kind: "action", label: entry.label },
+      vscode.TreeItemCollapsibleState.None
+    );
+    item.iconPath = new vscode.ThemeIcon("robot", available ? agentColor : unavailableColor);
+    item.tooltip = available
+      ? `Run ${entry.label} (${relativePath}) with a chosen harness, model, and input artifacts.`
+      : `${relativePath} was not found. Deploy the SDLC library to enable this agent.`;
+    if (!available) item.description = "not deployed";
+    item.command = {
+      command: "antigravity.runAdlcAgent",
+      title: entry.label,
+      arguments: [entry.id]
+    };
+    return item;
+  });
 }
 
 function getDeployAgenticLibrariesItems(): NodeItem[] {
