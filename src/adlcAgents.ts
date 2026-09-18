@@ -303,6 +303,36 @@ const ADLC_AGENT_DIAGRAM_HTML: Record<string, string> = {
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box">Task Backlog</div>
         </div>
+      </div>`,
+  test: `
+      <div class="diagram">
+        <div class="diagram-row">
+          <div class="diagram-group">
+            <div class="diagram-group-label">Inputs</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box">Backlog</div>
+            </div>
+          </div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box diagram-box-emphasis">Create Tests Agent</div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box">Test Suite</div>
+        </div>
+      </div>`,
+  coding: `
+      <div class="diagram">
+        <div class="diagram-row">
+          <div class="diagram-group">
+            <div class="diagram-group-label">Inputs</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box">Backlog</div>
+            </div>
+          </div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box diagram-box-emphasis">Coding Agent</div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box">Implementation</div>
+        </div>
       </div>`
 };
 

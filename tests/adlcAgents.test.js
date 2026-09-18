@@ -201,7 +201,7 @@ test("loadAdlcAgentDefinition adds an editable artifacts_directory input for pro
   }
 });
 
-test("getAdlcAgentDiagramHtml returns the Product, BA, UX, Architect, Architecture Review, and Project Planner Agent diagrams, and undefined for other agents", () => {
+test("getAdlcAgentDiagramHtml returns diagrams for every customized agent, and undefined for other agents", () => {
   const { getAdlcAgentDiagramHtml } = setupAdlcAgentsModule();
   assert.match(getAdlcAgentDiagramHtml("product"), /Meeting Notes Folder/);
   assert.match(getAdlcAgentDiagramHtml("product"), /Project Description File/);
@@ -240,6 +240,14 @@ test("getAdlcAgentDiagramHtml returns the Product, BA, UX, Architect, Architectu
   assert.match(getAdlcAgentDiagramHtml("project-planner"), /Existing Backlog/);
   assert.match(getAdlcAgentDiagramHtml("project-planner"), /Project Planner Agent/);
   assert.match(getAdlcAgentDiagramHtml("project-planner"), /Task Backlog/);
+
+  assert.match(getAdlcAgentDiagramHtml("test"), /<div class="diagram-box">Backlog<\/div>/);
+  assert.match(getAdlcAgentDiagramHtml("test"), /Create Tests Agent/);
+  assert.match(getAdlcAgentDiagramHtml("test"), /Test Suite/);
+
+  assert.match(getAdlcAgentDiagramHtml("coding"), /<div class="diagram-box">Backlog<\/div>/);
+  assert.match(getAdlcAgentDiagramHtml("coding"), /Coding Agent/);
+  assert.match(getAdlcAgentDiagramHtml("coding"), /Implementation/);
 
   assert.equal(getAdlcAgentDiagramHtml("code-review"), undefined);
 });
@@ -438,6 +446,9 @@ inputs:
     assert.equal(backlogItem.label, "Backlog");
     assert.equal(backlogItem.defaultValue, "docs/backlog");
     assert.equal(backlogItem.required, true);
+
+    assert.match(definition.diagramHtml, /Coding Agent/);
+    assert.match(definition.diagramHtml, /Implementation/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -1158,6 +1169,9 @@ inputs:
     assert.equal(backlog.label, "Backlog");
     assert.equal(backlog.required, true);
     assert.equal(backlog.defaultValue, "docs/backlog");
+
+    assert.match(definition.diagramHtml, /Create Tests Agent/);
+    assert.match(definition.diagramHtml, /Test Suite/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
