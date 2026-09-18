@@ -524,11 +524,6 @@ function getQuickActionItems() {
     deployAgenticLibraries.iconPath = new vscode.ThemeIcon("cloud-upload", QUICK_ACTION_COLOR);
     deployAgenticLibraries.tooltip = "Deploy agentic libraries to the current workspace.";
     items.push(deployAgenticLibraries);
-    const updateProjectConfig = new NodeItem({ kind: "category", label: "Update Project Config" }, vscode.TreeItemCollapsibleState.Collapsed);
-    updateProjectConfig.iconPath = new vscode.ThemeIcon("settings-gear", UPDATE_PROJECT_CONFIG_ACTION_COLOR);
-    updateProjectConfig.tooltip =
-        "Expand to update project configuration with the selected Agentic Harness.";
-    items.push(updateProjectConfig);
     const assignJiraItemToAgent = new NodeItem({ kind: "action", label: "Assign Jira Item to Agent" }, vscode.TreeItemCollapsibleState.None);
     assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
     if (!savedJiraProjectKey) {
