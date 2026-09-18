@@ -163,24 +163,42 @@ export function applyAdlcAgentInputOrder(entryId: string, inputs: AdlcAgentInput
   });
 }
 
-// Folder an agent draws artifacts from by convention when it declares no
-// explicit input fields (e.g. product-agent's notes, meeting analyses,
-// product descriptions, and briefs). Materialized as an editable
-// artifacts_directory input, same as any other agent's input field.
-const ADLC_AGENT_DEFAULT_ARTIFACTS_DIR: Record<string, string> = {
-  "product-agent": path.posix.join("docs", "product-definition")
+// Fully custom input fields for an agent, appended after whatever real
+// frontmatter inputs remain visible (for product and test, that filtered
+// set is empty, so these are the only fields shown). Used when the agent's
+// declared inputs don't match how the run page should ask for them at all,
+// rather than just needing a default, label, type, or order tweak.
+const ADLC_AGENT_SYNTHETIC_INPUTS: Record<string, AdlcAgentInput[]> = {
+  product: [
+    {
+      name: "artifacts_directory",
+      description: "Notes, meeting analyses, product descriptions, briefs, and other input artifacts for this agent.",
+      type: "directory",
+      required: true,
+      defaultValue: path.posix.join("docs", "product-definition")
+    }
+  ],
+  test: [
+    {
+      name: "backlog",
+      label: "Backlog",
+      description: "The sequenced, dependency-ordered backlog to create tests for.",
+      type: "directory",
+      required: true,
+      defaultValue: path.posix.join("docs", "backlog")
+    },
+    {
+      name: "user_story",
+      label: "User Story",
+      description: "A specific backlog item to scope test creation to, instead of the full backlog.",
+      type: "file",
+      required: false
+    }
+  ]
 };
 
-const ARTIFACTS_DIRECTORY_INPUT_NAME = "artifacts_directory";
-
-function buildDefaultArtifactsDirInput(defaultValue: string): AdlcAgentInput {
-  return {
-    name: ARTIFACTS_DIRECTORY_INPUT_NAME,
-    description: "Notes, meeting analyses, product descriptions, briefs, and other input artifacts for this agent.",
-    type: "directory",
-    required: true,
-    defaultValue
-  };
+export function getAdlcAgentSyntheticInputs(entryId: string): AdlcAgentInput[] {
+  return ADLC_AGENT_SYNTHETIC_INPUTS[entryId] ?? [];
 }
 
 // A small static diagram shown after an agent's description, illustrating
@@ -409,7 +427,14 @@ const ADLC_AGENT_HIDDEN_INPUTS: Record<string, string[]> = {
   ux: ["research_and_evidence", "existing_experience_system"],
   architect: ["existing_architecture_package"],
   "project-planner": ["design_stream", "backlog_destination", "execution_evidence"],
-  test: ["candidate_revision"]
+  test: [
+    "candidate_revision",
+    "acceptance_criteria",
+    "governing_context",
+    "test_environment",
+    "prior_test_evidence",
+    "red_team_target"
+  ]
 };
 
 export function isAdlcAgentHiddenInput(entryId: string, name: string): boolean {
@@ -431,10 +456,6 @@ export function applyAdlcAgentInputDefaults(entryId: string, inputs: AdlcAgentIn
   });
 }
 
-export function getAdlcAgentDefaultArtifactsDir(folder: string): string | undefined {
-  return ADLC_AGENT_DEFAULT_ARTIFACTS_DIR[folder];
-}
-
 export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalogEntry): AdlcAgentDefinition {
   const filePath = getAdlcAgentFilePath(repoRoot, entry.folder);
   const markdown = fs.readFileSync(filePath, "utf8");
@@ -452,14 +473,13 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
       )
     )
   );
-  const defaultArtifactsDir = getAdlcAgentDefaultArtifactsDir(entry.folder);
   return {
     id: entry.id,
     label: entry.label,
     folder: entry.folder,
     filePath,
     description,
-    inputs: defaultArtifactsDir ? [...visibleInputs, buildDefaultArtifactsDirInput(defaultArtifactsDir)] : visibleInputs,
+    inputs: [...visibleInputs, ...getAdlcAgentSyntheticInputs(entry.id)],
     promptHint: entry.promptHint,
     diagramHtml: getAdlcAgentDiagramHtml(entry.id)
   };

@@ -159,10 +159,28 @@ test("buildAdlcAgentPrompt lists the artifacts_directory input like any other in
   assert.match(prompt, /- artifacts_directory \(required\): docs\/product-definition/);
 });
 
-test("getAdlcAgentDefaultArtifactsDir returns the known folder for product-agent and undefined otherwise", () => {
-  const { getAdlcAgentDefaultArtifactsDir } = setupAdlcAgentsModule();
-  assert.equal(getAdlcAgentDefaultArtifactsDir("product-agent"), "docs/product-definition");
-  assert.equal(getAdlcAgentDefaultArtifactsDir("ba-agent"), undefined);
+test("getAdlcAgentSyntheticInputs returns product's and test's custom fields, and an empty array otherwise", () => {
+  const { getAdlcAgentSyntheticInputs } = setupAdlcAgentsModule();
+
+  const productInputs = getAdlcAgentSyntheticInputs("product");
+  assert.deepEqual(productInputs.map((i) => i.name), ["artifacts_directory"]);
+  assert.equal(productInputs[0].defaultValue, "docs/product-definition");
+  assert.equal(productInputs[0].required, true);
+
+  const testInputs = getAdlcAgentSyntheticInputs("test");
+  assert.deepEqual(testInputs.map((i) => i.name), ["backlog", "user_story"]);
+  const backlog = testInputs.find((i) => i.name === "backlog");
+  assert.equal(backlog.label, "Backlog");
+  assert.equal(backlog.type, "directory");
+  assert.equal(backlog.required, true);
+  assert.equal(backlog.defaultValue, "docs/backlog");
+  const userStory = testInputs.find((i) => i.name === "user_story");
+  assert.equal(userStory.label, "User Story");
+  assert.equal(userStory.type, "file");
+  assert.equal(userStory.required, false);
+  assert.equal(userStory.defaultValue, undefined);
+
+  assert.deepEqual(getAdlcAgentSyntheticInputs("ba"), []);
 });
 
 test("loadAdlcAgentDefinition adds an editable artifacts_directory input for product-agent", () => {
@@ -985,28 +1003,30 @@ test("filterUserFacingAdlcInputs hides Project Planner Agent's design_stream, ba
   );
 });
 
-test("filterUserFacingAdlcInputs hides Create Tests Agent's candidate_revision, and only for test", () => {
+test("filterUserFacingAdlcInputs hides all of Create Tests Agent's real inputs, and only for test", () => {
   const { isAdlcAgentHiddenInput, filterUserFacingAdlcInputs } = setupAdlcAgentsModule();
   const inputs = [
     { name: "candidate_revision", description: "", type: "repository_state", required: true },
-    { name: "acceptance_criteria", description: "", type: "files_or_structured_data", required: true }
+    { name: "acceptance_criteria", description: "", type: "files_or_structured_data", required: true },
+    { name: "governing_context", description: "", type: "files_or_structured_data", required: true },
+    { name: "test_environment", description: "", type: "structured_data", required: true },
+    { name: "prior_test_evidence", description: "", type: "files_or_structured_data", required: false },
+    { name: "red_team_target", description: "", type: "structured_data", required: false }
   ];
 
-  assert.equal(isAdlcAgentHiddenInput("test", "candidate_revision"), true);
-  assert.equal(isAdlcAgentHiddenInput("test", "acceptance_criteria"), false);
+  for (const input of inputs) {
+    assert.equal(isAdlcAgentHiddenInput("test", input.name), true, `${input.name} should be hidden for test`);
+  }
   assert.equal(isAdlcAgentHiddenInput("ux", "candidate_revision"), false);
 
-  assert.deepEqual(
-    filterUserFacingAdlcInputs(inputs, "test").map((input) => input.name),
-    ["acceptance_criteria"]
-  );
+  assert.deepEqual(filterUserFacingAdlcInputs(inputs, "test"), []);
   assert.deepEqual(
     filterUserFacingAdlcInputs(inputs, "ux").map((input) => input.name),
     inputs.map((input) => input.name)
   );
 });
 
-test("loadAdlcAgentDefinition excludes candidate_revision for Create Tests Agent", () => {
+test("loadAdlcAgentDefinition replaces Create Tests Agent's real inputs with Backlog and User Story", () => {
   const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
   const testAgentMarkdown = `---
 name: test-agent
@@ -1022,6 +1042,9 @@ inputs:
     - name: governing_context
       description: Backlog item, specifications, ADRs, and UX constraints.
       type: files_or_structured_data
+    - name: test_environment
+      description: Authorized environment, data, prerequisites, and commands.
+      type: structured_data
     - name: workflow_configuration
       description: Test-plan, red-team, and failure-tracking configuration.
       type: file
@@ -1029,6 +1052,9 @@ inputs:
     - name: prior_test_evidence
       description: Approved plans, earlier failures, tracked IDs, and fix evidence.
       type: files_or_structured_data
+    - name: red_team_target
+      description: Ephemeral synthetic-data target for adversarial testing.
+      type: structured_data
 ---
 # Test agent
 `;
@@ -1041,8 +1067,16 @@ inputs:
 
     assert.deepEqual(
       definition.inputs.map((i) => i.name),
-      ["acceptance_criteria", "governing_context", "prior_test_evidence"]
+      ["backlog", "user_story"]
     );
+    const backlog = definition.inputs.find((i) => i.name === "backlog");
+    assert.equal(backlog.label, "Backlog");
+    assert.equal(backlog.required, true);
+    assert.equal(backlog.defaultValue, "docs/backlog");
+
+    const userStory = definition.inputs.find((i) => i.name === "user_story");
+    assert.equal(userStory.label, "User Story");
+    assert.equal(userStory.required, false);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
