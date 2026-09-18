@@ -5434,94 +5434,132 @@ export function activate(context: vscode.ExtensionContext) {
       const repoRoot = getRepoRoot(rootPath);
       const projectKey = getSavedJiraProjectKey(repoRoot);
 
-      const credentials = await getValidatedJiraCredentials(repoRoot);
-      if (!credentials) {
-        return;
+      let completeCredentials: JiraCredentials | undefined;
+      let jiraItems: JiraIssueSummary[] = [];
+      if (projectKey) {
+        try {
+          completeCredentials = await resolveValidatedJiraCredentials(repoRoot);
+        } catch {
+          completeCredentials = undefined;
+        }
+        if (completeCredentials) {
+          try {
+            jiraItems = await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: `Loading your Jira items in ${projectKey.trim().toUpperCase()}`,
+                cancellable: false
+              },
+              async () => searchOpenAssignedJiraIssuesForCurrentUser(completeCredentials!, projectKey)
+            );
+          } catch {
+            jiraItems = [];
+          }
+        }
       }
 
-      if (!projectKey) {
-        void vscode.window.showErrorMessage(
-          "Jira Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository."
-        );
-        provider.refresh();
-        return;
-      }
-
-      let issues: JiraIssueSummary[];
+      const backlogDir = path.join(repoRoot, "docs", "backlog");
+      let localItems: BacklogItemCompletedLocalItem[] = [];
       try {
-        issues = await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: `Loading your Jira items in ${projectKey}`,
-            cancellable: false
-          },
-          async () => searchOpenAssignedJiraIssuesForCurrentUser(credentials, projectKey)
-        );
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(`Failed to load Jira items: ${message}`);
-        return;
+        localItems = loadBacklogItemsForCompletion(backlogDir);
+      } catch {
+        localItems = [];
       }
 
-      if (issues.length === 0) {
-        void vscode.window.showInformationMessage(
-          `No Jira tickets assigned to you in To Do or In Progress were found for project ${projectKey}.`
-        );
-        return;
-      }
+      type CompletePickItem = vscode.QuickPickItem & (
+        | { source: "jira"; issue: JiraIssueSummary }
+        | { source: "local"; item: BacklogItemCompletedLocalItem }
+      );
 
-      const selection = await vscode.window.showQuickPick(
-        issues.map((issue) => ({
-          label: issue.key,
+      const pickItems: CompletePickItem[] = [
+        ...jiraItems.map((issue): CompletePickItem => ({
+          label: `$(globe) ${issue.key}`,
           description: issue.summary,
-          detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName]
+          detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName, "Jira"]
             .filter(Boolean)
             .join(" • "),
+          source: "jira" as const,
           issue
         })),
-        {
-          title: "Jira Item Completed",
-          placeHolder:
-            `Select one of your Jira tickets in ${projectKey} to move into In Review, or Done if review is unavailable`,
-          matchOnDescription: true,
-          matchOnDetail: true
-        }
-      );
+        ...localItems.map((item): CompletePickItem => ({
+          label: `$(file) ${item.displayName}`,
+          description: item.summary,
+          detail: `Local${item.typeName ? " • " + item.typeName : ""}${item.statusName ? " • " + item.statusName : ""}`,
+          source: "local" as const,
+          item
+        }))
+      ];
 
+      if (pickItems.length === 0) {
+        void vscode.window.showInformationMessage(
+          "No backlog items found. Add items to docs/backlog or configure a Jira project."
+        );
+        return;
+      }
+
+      const selection = await vscode.window.showQuickPick(pickItems, {
+        title: "Mark Backlog Item as Completed",
+        placeHolder: "Select a backlog item to mark as completed",
+        matchOnDescription: true,
+        matchOnDetail: true
+      });
       if (!selection) return;
 
-      const confirm = await vscode.window.showInformationMessage(
-        `Move ${selection.issue.key} to In Review, or Done if review is unavailable?`,
-        { modal: true },
-        "Mark Completed"
-      );
-      if (confirm !== "Mark Completed") return;
-
-      try {
-        const transitionResult = await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: `Completing ${selection.issue.key} in Jira`,
-            cancellable: false
-          },
-          async () =>
-            transitionJiraIssueToReviewOrDone(
-              credentials,
-              projectKey,
-              selection.issue.key
-            )
+      if (selection.source === "jira") {
+        const { issue } = selection;
+        if (!completeCredentials) {
+          completeCredentials = await getValidatedJiraCredentials(repoRoot);
+          if (!completeCredentials) return;
+        }
+        const confirm = await vscode.window.showInformationMessage(
+          `Move ${issue.key} to In Review, or Done if review is unavailable?`,
+          { modal: true },
+          "Mark Completed"
         );
+        if (confirm !== "Mark Completed") return;
 
-        const transitionMessage =
-          transitionResult.statusName === "In Review"
-            ? `Moved Jira item ${selection.issue.key} to In Review.`
-            : transitionResult.fallbackReason
-              ? `Moved Jira item ${selection.issue.key} to Done because ${transitionResult.fallbackReason}`
-              : `Moved Jira item ${selection.issue.key} to Done.`;
-        void vscode.window.showInformationMessage(transitionMessage);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(`Failed to update Jira item: ${message}`);
+        try {
+          const transitionResult = await vscode.window.withProgress(
+            {
+              location: vscode.ProgressLocation.Notification,
+              title: `Completing ${issue.key} in Jira`,
+              cancellable: false
+            },
+            async () => transitionJiraIssueToReviewOrDone(completeCredentials!, projectKey!, issue.key)
+          );
+          const transitionMessage =
+            transitionResult.statusName === "In Review"
+              ? `Moved Jira item ${issue.key} to In Review.`
+              : transitionResult.fallbackReason
+                ? `Moved Jira item ${issue.key} to Done because ${transitionResult.fallbackReason}`
+                : `Moved Jira item ${issue.key} to Done.`;
+          void vscode.window.showInformationMessage(transitionMessage);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          void vscode.window.showErrorMessage(`Failed to update Jira item: ${message}`);
+        }
+      } else {
+        const { item } = selection;
+        const confirm = await vscode.window.showInformationMessage(
+          `Mark "${item.displayName}" as Completed?`,
+          { modal: true },
+          "Mark Completed"
+        );
+        if (confirm !== "Mark Completed") return;
+
+        try {
+          let content = fs.readFileSync(item.filePath, "utf8");
+          const date = new Date().toISOString().split("T")[0];
+          const statusNote = `\n\n## Status Change\nStatus: Completed\nDate: ${date}\n`;
+          content = content.replace(/\n{2,}##\s*status(?:\s+change)?\s*\n[\s\S]*$/i, "");
+          fs.writeFileSync(item.filePath, content.trimEnd() + statusNote, "utf8");
+          void vscode.window.showInformationMessage(
+            `Marked "${item.displayName}" as Completed.`
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          void vscode.window.showErrorMessage(`Failed to update backlog item: ${message}`);
+        }
       }
     })
   );

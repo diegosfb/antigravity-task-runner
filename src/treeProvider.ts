@@ -721,6 +721,18 @@ function getQuickActionItems(): NodeItem[] {
   };
   items.push(takeBacklogItemAssign);
 
+  const markBacklogItemCompleted = new NodeItem(
+    { kind: "action", label: "Mark Backlog Item as Completed" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  markBacklogItemCompleted.iconPath = new vscode.ThemeIcon("pass", JIRA_ACTION_COLOR);
+  markBacklogItemCompleted.tooltip = "Mark a backlog item (Jira or local) as completed.";
+  markBacklogItemCompleted.command = {
+    command: "antigravity.completeJiraItem",
+    title: "Mark Backlog Item as Completed"
+  };
+  items.push(markBacklogItemCompleted);
+
   if (!savedJiraProjectKey) {
     const selectOrCreateJiraProject = new NodeItem(
       { kind: "action", label: "Select/Set Jira Project" },
@@ -732,18 +744,6 @@ function getQuickActionItems(): NodeItem[] {
       title: "Select/Set Jira Project"
     };
     items.push(selectOrCreateJiraProject);
-  } else {
-
-    const completeJiraItem = new NodeItem(
-      { kind: "action", label: "Jira Item Completed" },
-      vscode.TreeItemCollapsibleState.None
-    );
-    completeJiraItem.iconPath = new vscode.ThemeIcon("pass", JIRA_ACTION_COLOR);
-    completeJiraItem.command = {
-      command: "antigravity.completeJiraItem",
-      title: "Jira Item Completed"
-    };
-    items.push(completeJiraItem);
   }
 
   const incrementMajor = new NodeItem(
