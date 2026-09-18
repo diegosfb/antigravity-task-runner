@@ -188,7 +188,7 @@ test("loadAdlcAgentDefinition adds an editable artifacts_directory input for pro
   }
 });
 
-test("getAdlcAgentDiagramHtml returns the Product, BA, UX, Architect, and Architecture Review Agent diagrams, and undefined for other agents", () => {
+test("getAdlcAgentDiagramHtml returns the Product, BA, UX, Architect, Architecture Review, and Project Planner Agent diagrams, and undefined for other agents", () => {
   const { getAdlcAgentDiagramHtml } = setupAdlcAgentsModule();
   assert.match(getAdlcAgentDiagramHtml("product"), /Meeting Notes Folder/);
   assert.match(getAdlcAgentDiagramHtml("product"), /Project Description File/);
@@ -221,6 +221,12 @@ test("getAdlcAgentDiagramHtml returns the Product, BA, UX, Architect, and Archit
     getAdlcAgentDiagramHtml("architecture-review").indexOf("Existing Architecture Package") <
       getAdlcAgentDiagramHtml("architecture-review").indexOf("Specifications Directory")
   );
+
+  assert.match(getAdlcAgentDiagramHtml("project-planner"), /Specifications Folder/);
+  assert.match(getAdlcAgentDiagramHtml("project-planner"), /Architecture Documents/);
+  assert.match(getAdlcAgentDiagramHtml("project-planner"), /Existing Backlog/);
+  assert.match(getAdlcAgentDiagramHtml("project-planner"), /Project Planner Agent/);
+  assert.match(getAdlcAgentDiagramHtml("project-planner"), /Task Backlog/);
 
   assert.equal(getAdlcAgentDiagramHtml("code-review"), undefined);
 });
@@ -765,6 +771,11 @@ inputs:
       definition.inputs.map((i) => i.name),
       ["requirements_stream", "technical_stream", "existing_backlog"]
     );
+
+    assert.match(definition.diagramHtml, /Project Planner Agent/);
+    assert.match(definition.diagramHtml, /Specifications Folder/);
+    assert.match(definition.diagramHtml, /Architecture Documents/);
+    assert.match(definition.diagramHtml, /Task Backlog/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
