@@ -115,6 +115,10 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
       return getDeployAgenticLibrariesItems();
     }
 
+    if (element.kind === "category" && element.label === "Repository Actions") {
+      return getRepositoryActionItems();
+    }
+
     if (element.kind === "category" && element.label === "Agentic Harness and AddOns") {
       return getAgenticHarnessAndAddOnsItems();
     }
@@ -604,7 +608,6 @@ function getQuickActionItems(): NodeItem[] {
     : [];
   const hasCloudInfrastructure = cloudInfrastructureSignals.length > 0;
   const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
-  const currentBranch = hasRepo && repoRoot ? getCurrentBranchNameSync(repoRoot) : undefined;
   const autocommitRunning = repoRoot ? isAutocommitRunning(repoRoot) : false;
   const hasAgentFolder = repoRoot ? fs.existsSync(path.join(getWorkspaceProjectPath(repoRoot), ".agent")) : false;
   const hasGitHub = repoRoot ? hasGitHubRemoteSync(repoRoot) : false;
@@ -675,96 +678,12 @@ function getQuickActionItems(): NodeItem[] {
   }
 
   if (hasRepo) {
-    const commitChanges = new NodeItem(
-      { kind: "action", label: "Commit" },
-      vscode.TreeItemCollapsibleState.None
+    const repositoryActions = new NodeItem(
+      { kind: "category", label: "Repository Actions" },
+      vscode.TreeItemCollapsibleState.Collapsed
     );
-    commitChanges.iconPath = new vscode.ThemeIcon("check", ORANGE_ACTION_COLOR);
-    commitChanges.command = {
-      command: "antigravity.commitChanges",
-      title: "Commit"
-    };
-    items.push(commitChanges);
-
-    const createRepoTagVersion = new NodeItem(
-      { kind: "action", label: "Create Repo Release" },
-      vscode.TreeItemCollapsibleState.None
-    );
-    createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", ORANGE_ACTION_COLOR);
-    createRepoTagVersion.command = {
-      command: "antigravity.createRepoTagVersion",
-      title: "Create Repo Release"
-    };
-    items.push(createRepoTagVersion);
-
-    const createFeatureBranch = new NodeItem(
-      { kind: "action", label: "Create Feature Branch" },
-      vscode.TreeItemCollapsibleState.None
-    );
-    createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", ORANGE_ACTION_COLOR);
-    createFeatureBranch.command = {
-      command: "antigravity.createFeatureBranch",
-      title: "Create Feature Branch"
-    };
-    items.push(createFeatureBranch);
-
-    const createPullRequest = new NodeItem(
-      { kind: "action", label: "Create Pull Request" },
-      vscode.TreeItemCollapsibleState.None
-    );
-    createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
-    createPullRequest.command = {
-      command: "antigravity.createPullRequest",
-      title: "Create Pull Request"
-    };
-    items.push(createPullRequest);
-
-    if (currentBranch && currentBranch !== "main") {
-      const mergeBranchToMain = new NodeItem(
-        { kind: "action", label: "Merge branch to main" },
-        vscode.TreeItemCollapsibleState.None
-      );
-      mergeBranchToMain.iconPath = new vscode.ThemeIcon("git-merge", ORANGE_ACTION_COLOR);
-      mergeBranchToMain.command = {
-        command: "antigravity.mergeBranchToMain",
-        title: "Merge branch to main"
-      };
-      items.push(mergeBranchToMain);
-    }
-
-    const checkoutMain = new NodeItem(
-      { kind: "action", label: "Go To Branch" },
-      vscode.TreeItemCollapsibleState.None
-    );
-    checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
-    checkoutMain.command = {
-      command: "antigravity.checkoutMain",
-      title: "Go To Branch"
-    };
-    items.push(checkoutMain);
-
-    const pullRemoteAndMerge = new NodeItem(
-      { kind: "action", label: "Pull Remote and merge" },
-      vscode.TreeItemCollapsibleState.None
-    );
-    pullRemoteAndMerge.iconPath = new vscode.ThemeIcon("cloud-download", PULL_REMOTE_AND_MERGE_ACTION_COLOR);
-    pullRemoteAndMerge.command = {
-      command: "antigravity.pullRemoteAndMerge",
-      title: "Pull Remote and merge"
-    };
-    items.push(pullRemoteAndMerge);
-
-    const agenticReviewOfMerge = new NodeItem(
-      { kind: "action", label: "Agentic review of Merge" },
-      vscode.TreeItemCollapsibleState.None
-    );
-    agenticReviewOfMerge.iconPath = new vscode.ThemeIcon("warning", MERGE_REVIEW_ACTION_COLOR);
-    agenticReviewOfMerge.command = {
-      command: "antigravity.agenticReviewOfMerge",
-      title: "Agentic review of Merge"
-    };
-    items.push(agenticReviewOfMerge);
-
+    repositoryActions.iconPath = new vscode.ThemeIcon("github", ORANGE_ACTION_COLOR);
+    items.push(repositoryActions);
   }
 
   const setFeatureFlag = new NodeItem(
@@ -778,6 +697,30 @@ function getQuickActionItems(): NodeItem[] {
   };
   items.push(setFeatureFlag);
 
+  const addBacklogItem = new NodeItem(
+    { kind: "action", label: "Add Backlog Item" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  addBacklogItem.iconPath = new vscode.ThemeIcon("add", JIRA_ACTION_COLOR);
+  addBacklogItem.tooltip = "Create a backlog item in docs/backlog, and in Jira too when a project is connected.";
+  addBacklogItem.command = {
+    command: "antigravity.addBacklogItem",
+    title: "Add Backlog Item"
+  };
+  items.push(addBacklogItem);
+
+  const takeBacklogItemAssign = new NodeItem(
+    { kind: "action", label: "Take Backlog Item (Assign)" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  takeBacklogItemAssign.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
+  takeBacklogItemAssign.tooltip = "Take a backlog item (Jira or local) and assign it to yourself, moving it to In Progress.";
+  takeBacklogItemAssign.command = {
+    command: "antigravity.takeBacklogItemAssign",
+    title: "Take Backlog Item (Assign)"
+  };
+  items.push(takeBacklogItemAssign);
+
   if (!savedJiraProjectKey) {
     const selectOrCreateJiraProject = new NodeItem(
       { kind: "action", label: "Select/Set Jira Project" },
@@ -790,27 +733,6 @@ function getQuickActionItems(): NodeItem[] {
     };
     items.push(selectOrCreateJiraProject);
   } else {
-    const addJiraItem = new NodeItem(
-      { kind: "action", label: "Add Jira Item" },
-      vscode.TreeItemCollapsibleState.None
-    );
-    addJiraItem.iconPath = new vscode.ThemeIcon("add", JIRA_ACTION_COLOR);
-    addJiraItem.command = {
-      command: "antigravity.addJiraItem",
-      title: "Add Jira Item"
-    };
-    items.push(addJiraItem);
-
-    const takeJiraItemAssign = new NodeItem(
-      { kind: "action", label: "Take Jira Item (Assign)" },
-      vscode.TreeItemCollapsibleState.None
-    );
-    takeJiraItemAssign.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
-    takeJiraItemAssign.command = {
-      command: "antigravity.takeJiraItemAssign",
-      title: "Take Jira Item (Assign)"
-    };
-    items.push(takeJiraItemAssign);
 
     const completeJiraItem = new NodeItem(
       { kind: "action", label: "Jira Item Completed" },
@@ -946,6 +868,105 @@ function getQuickActionItems(): NodeItem[] {
     title: "SOP Manual"
   };
   items.push(sopManual);
+
+  return items;
+}
+
+function getRepositoryActionItems(): NodeItem[] {
+  const items: NodeItem[] = [];
+  const rootPath = getRootPath();
+  const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
+  const currentBranch = repoRoot ? getCurrentBranchNameSync(repoRoot) : undefined;
+
+  const commitChanges = new NodeItem(
+    { kind: "action", label: "Commit" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  commitChanges.iconPath = new vscode.ThemeIcon("check", ORANGE_ACTION_COLOR);
+  commitChanges.command = {
+    command: "antigravity.commitChanges",
+    title: "Commit"
+  };
+  items.push(commitChanges);
+
+  const createRepoTagVersion = new NodeItem(
+    { kind: "action", label: "Create Repo Release" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", ORANGE_ACTION_COLOR);
+  createRepoTagVersion.command = {
+    command: "antigravity.createRepoTagVersion",
+    title: "Create Repo Release"
+  };
+  items.push(createRepoTagVersion);
+
+  const createFeatureBranch = new NodeItem(
+    { kind: "action", label: "Create Feature Branch" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", ORANGE_ACTION_COLOR);
+  createFeatureBranch.command = {
+    command: "antigravity.createFeatureBranch",
+    title: "Create Feature Branch"
+  };
+  items.push(createFeatureBranch);
+
+  const createPullRequest = new NodeItem(
+    { kind: "action", label: "Create Pull Request" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
+  createPullRequest.command = {
+    command: "antigravity.createPullRequest",
+    title: "Create Pull Request"
+  };
+  items.push(createPullRequest);
+
+  if (currentBranch && currentBranch !== "main") {
+    const mergeBranchToMain = new NodeItem(
+      { kind: "action", label: "Merge branch to main" },
+      vscode.TreeItemCollapsibleState.None
+    );
+    mergeBranchToMain.iconPath = new vscode.ThemeIcon("git-merge", ORANGE_ACTION_COLOR);
+    mergeBranchToMain.command = {
+      command: "antigravity.mergeBranchToMain",
+      title: "Merge branch to main"
+    };
+    items.push(mergeBranchToMain);
+  }
+
+  const checkoutMain = new NodeItem(
+    { kind: "action", label: "Go To Branch" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
+  checkoutMain.command = {
+    command: "antigravity.checkoutMain",
+    title: "Go To Branch"
+  };
+  items.push(checkoutMain);
+
+  const pullRemoteAndMerge = new NodeItem(
+    { kind: "action", label: "Pull Remote and merge" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  pullRemoteAndMerge.iconPath = new vscode.ThemeIcon("cloud-download", PULL_REMOTE_AND_MERGE_ACTION_COLOR);
+  pullRemoteAndMerge.command = {
+    command: "antigravity.pullRemoteAndMerge",
+    title: "Pull Remote and merge"
+  };
+  items.push(pullRemoteAndMerge);
+
+  const agenticReviewOfMerge = new NodeItem(
+    { kind: "action", label: "Agentic review of Merge" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  agenticReviewOfMerge.iconPath = new vscode.ThemeIcon("warning", MERGE_REVIEW_ACTION_COLOR);
+  agenticReviewOfMerge.command = {
+    command: "antigravity.agenticReviewOfMerge",
+    title: "Agentic review of Merge"
+  };
+  items.push(agenticReviewOfMerge);
 
   return items;
 }
@@ -1123,16 +1144,6 @@ function getClaudeActionItems(): NodeItem[] {
     command: "antigravity.setClaudeModel",
     title: "Set Claude Model"
   };
-  const runLiteLLMOpenAI = new NodeItem(
-    { kind: "action", label: "Run liteLLM OpenAI" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  runLiteLLMOpenAI.iconPath = new vscode.ThemeIcon("rocket", CLAUDE_MODEL_ACTION_COLOR);
-  runLiteLLMOpenAI.command = {
-    command: "antigravity.runLiteLLMOpenAI",
-    title: "Run liteLLM OpenAI"
-  };
-
   const buildProject = new NodeItem(
     { kind: "action", label: "Build Project" },
     vscode.TreeItemCollapsibleState.None
@@ -1165,7 +1176,7 @@ function getClaudeActionItems(): NodeItem[] {
   );
   agentMonitorTerminals.iconPath = new vscode.ThemeIcon("terminal", CLAUDE_ACTION_COLOR);
 
-  return [item, codexTerminal, opencodeTerminal, ollamaTerminals, agentMonitorTerminals, setClaudeModel, runLiteLLMOpenAI, buildProject, runProjectTests];
+  return [item, codexTerminal, opencodeTerminal, ollamaTerminals, agentMonitorTerminals, setClaudeModel, buildProject, runProjectTests];
 }
 
 function getOllamaTerminalItems(): NodeItem[] {

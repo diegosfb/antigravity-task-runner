@@ -126,6 +126,10 @@ import {
   loadBacklogItemsForCompletion,
   type BacklogItemCompletedLocalItem
 } from "./backlogItemCompleted";
+import {
+  buildBacklogItemTemplate,
+  resolveBacklogItemFilePath
+} from "./backlogItem";
 
 type GitInputBox = {
   value: string;
@@ -2495,7 +2499,6 @@ export function activate(context: vscode.ExtensionContext) {
             });
             return;
           }
-          panel.dispose();
           resolveOnce({
             action,
             agentCommand,
@@ -2503,6 +2506,7 @@ export function activate(context: vscode.ExtensionContext) {
             issueKey: String(payload.issueKey || "").trim(),
             useJira: Boolean(payload.useJira)
           });
+          panel.dispose();
         },
         undefined,
         context.subscriptions
@@ -4733,6 +4737,130 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.addBacklogItem", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      const projectKey = getSavedJiraProjectKey(repoRoot);
+
+      let addBacklogCredentials: JiraCredentials | undefined;
+      let issueTypes: JiraIssueType[] = [];
+      if (projectKey) {
+        try {
+          addBacklogCredentials = await resolveValidatedJiraCredentials(repoRoot);
+        } catch {
+          addBacklogCredentials = undefined;
+        }
+        if (addBacklogCredentials) {
+          try {
+            issueTypes = await vscode.window.withProgress(
+              { location: vscode.ProgressLocation.Notification, title: "Loading item types", cancellable: false },
+              async () => getJiraIssueTypes(addBacklogCredentials!, projectKey)
+            );
+          } catch {
+            issueTypes = [];
+          }
+        }
+      }
+
+      const DEFAULT_ISSUE_TYPES: JiraIssueType[] = [
+        { id: "story", name: "Story" },
+        { id: "bug", name: "Bug" },
+        { id: "task", name: "Task" },
+        { id: "spike", name: "Spike" }
+      ];
+      const effectiveIssueTypes = issueTypes.length > 0 ? issueTypes : DEFAULT_ISSUE_TYPES;
+      const displayProject = projectKey || "Local Backlog";
+
+      const backlogItem = await showCreateJiraItemDialog(displayProject, effectiveIssueTypes);
+      if (!backlogItem) return;
+
+      if (backlogItem.action === "grillMe") {
+        try {
+          const copiedSkillPaths = await copyGrillMeSkill(extensionRoot, repoRoot, resourceProvider);
+          logAlways(
+            `[addBacklogItemGrillMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"}`
+          );
+          provider.refresh();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          void vscode.window.showErrorMessage(`Failed to prepare the grill-me skill: ${message}`);
+          return;
+        }
+        const featureDetails = buildJiraDraftFeatureDetails(
+          displayProject,
+          backlogItem.issueType,
+          backlogItem.summary,
+          backlogItem.description
+        );
+        const prompt = buildFeatureGrillMePrompt(featureDetails);
+        const promptFilePath = writeAgentPromptFile("add-backlog-item-grill-me", prompt);
+        const commandLine = buildAgenticHarnessFileCommand(repoRoot, promptFilePath, "prompt");
+        runInPersistentTerminal(
+          "Add Backlog Item Grill Me",
+          [`cd ${quoteShellArg(repoRoot)}`, commandLine],
+          { iconPath: FEATURE_ESTIMATOR_ICON_PATH, color: FEATURE_ESTIMATOR_ACTION_COLOR }
+        );
+        void vscode.window.showInformationMessage(
+          `Opened Grill Me for the ${backlogItem.issueType} draft.`
+        );
+        return;
+      }
+
+      // Write local backlog file
+      const backlogDir = path.join(repoRoot, "docs", "backlog");
+      const fileContent = buildBacklogItemTemplate({
+        issueType: backlogItem.issueType,
+        summary: backlogItem.summary,
+        description: backlogItem.description
+      });
+      const backlogFilePath = resolveBacklogItemFilePath(backlogDir, backlogItem.issueType, backlogItem.summary);
+      if (backlogFilePath) {
+        try {
+          await fs.promises.mkdir(backlogDir, { recursive: true });
+          await fs.promises.writeFile(backlogFilePath, fileContent, { encoding: "utf8", flag: "wx" });
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to create local backlog file: ${message}`);
+            return;
+          }
+        }
+      }
+
+      // Also create in Jira when connected
+      if (addBacklogCredentials && projectKey) {
+        try {
+          const createdIssue = await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Notification, title: "Creating Jira item", cancellable: false },
+            async () => createJiraIssue(addBacklogCredentials!, {
+              projectKey,
+              issueTypeName: backlogItem.issueType,
+              summary: backlogItem.summary,
+              description: backlogItem.description
+            })
+          );
+          void vscode.window.showInformationMessage(
+            `Created ${backlogItem.issueType} in Jira (${createdIssue.key}) and saved to docs/backlog.`
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          void vscode.window.showWarningMessage(
+            `Saved to docs/backlog but failed to create Jira item: ${message}`
+          );
+        }
+      } else {
+        void vscode.window.showInformationMessage(
+          `Created ${backlogItem.issueType} "${backlogItem.summary}" in docs/backlog.`
+        );
+      }
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.takeJiraItemAssign", async () => {
       const rootPath = getRootPath();
       if (!rootPath) {
@@ -4824,6 +4952,150 @@ export function activate(context: vscode.ExtensionContext) {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(`Failed to assign Jira item: ${message}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.takeBacklogItemAssign", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+      const repoRoot = getRepoRoot(rootPath);
+      const projectKey = getSavedJiraProjectKey(repoRoot);
+
+      let takeCredentials: JiraCredentials | undefined;
+      let jiraItems: JiraIssueSummary[] = [];
+      if (projectKey) {
+        try {
+          takeCredentials = await resolveValidatedJiraCredentials(repoRoot);
+        } catch {
+          takeCredentials = undefined;
+        }
+        if (takeCredentials) {
+          try {
+            jiraItems = await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: `Loading available Jira items from ${projectKey.trim().toUpperCase()}`,
+                cancellable: false
+              },
+              async () => searchOpenUnassignedTodoJiraIssuesForAssignment(takeCredentials!, projectKey)
+            );
+          } catch {
+            jiraItems = [];
+          }
+        }
+      }
+
+      const backlogDir = path.join(repoRoot, "docs", "backlog");
+      let localItems: BacklogItemCompletedLocalItem[] = [];
+      try {
+        localItems = loadBacklogItemsForCompletion(backlogDir);
+      } catch {
+        localItems = [];
+      }
+
+      type TakePickItem = vscode.QuickPickItem & (
+        | { source: "jira"; issue: JiraIssueSummary }
+        | { source: "local"; item: BacklogItemCompletedLocalItem }
+      );
+
+      const pickItems: TakePickItem[] = [
+        ...jiraItems.map((issue): TakePickItem => ({
+          label: `$(globe) ${issue.key}`,
+          description: issue.summary,
+          detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName, "Jira"]
+            .filter(Boolean)
+            .join(" • "),
+          source: "jira" as const,
+          issue
+        })),
+        ...localItems.map((item): TakePickItem => ({
+          label: `$(file) ${item.displayName}`,
+          description: item.summary,
+          detail: `Local${item.typeName ? " • " + item.typeName : ""}${item.statusName ? " • " + item.statusName : ""}`,
+          source: "local" as const,
+          item
+        }))
+      ];
+
+      if (pickItems.length === 0) {
+        void vscode.window.showInformationMessage(
+          "No available backlog items found. Add items to docs/backlog or configure a Jira project."
+        );
+        return;
+      }
+
+      const selection = await vscode.window.showQuickPick(pickItems, {
+        title: "Take Backlog Item (Assign)",
+        placeHolder: "Select a backlog item to take and assign to yourself",
+        matchOnDescription: true,
+        matchOnDetail: true
+      });
+      if (!selection) return;
+
+      if (selection.source === "jira") {
+        const { issue } = selection;
+        if (!takeCredentials) {
+          takeCredentials = await getValidatedJiraCredentials(repoRoot);
+          if (!takeCredentials) return;
+        }
+        const confirm = await vscode.window.showInformationMessage(
+          `Assign ${issue.key} to ${takeCredentials.email} and move to In Progress?`,
+          { modal: true },
+          "Assign To Me"
+        );
+        if (confirm !== "Assign To Me") return;
+
+        try {
+          await vscode.window.withProgress(
+            {
+              location: vscode.ProgressLocation.Notification,
+              title: `Assigning ${issue.key} to you and moving it to In Progress`,
+              cancellable: false
+            },
+            async () => {
+              await assignJiraIssueToCurrentUser(takeCredentials!, issue.key);
+              await transitionJiraIssueToStatus(takeCredentials!, issue.key, "In Progress");
+            }
+          );
+          void vscode.window.showInformationMessage(
+            `Assigned Jira item ${issue.key} to ${takeCredentials!.email} and moved it to In Progress.`
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          void vscode.window.showErrorMessage(`Failed to assign Jira item: ${message}`);
+        }
+      } else {
+        const { item } = selection;
+        const confirm = await vscode.window.showInformationMessage(
+          `Take "${item.displayName}" and mark it as In Progress?`,
+          { modal: true },
+          "Take Item"
+        );
+        if (confirm !== "Take Item") return;
+
+        try {
+          let content = fs.readFileSync(item.filePath, "utf8");
+          let assignedAs = "you";
+          try {
+            const creds = await resolveValidatedJiraCredentials(repoRoot);
+            if (creds?.email) assignedAs = creds.email;
+          } catch { /* use fallback */ }
+          const date = new Date().toISOString().split("T")[0];
+          const statusNote = `\n\n## Status Change\nStatus: In Progress\nAssigned: ${assignedAs}\nDate: ${date}\n`;
+          content = content.replace(/\n{2,}##\s*status(?:\s+change)?\s*\n[\s\S]*$/i, "");
+          fs.writeFileSync(item.filePath, content.trimEnd() + statusNote, "utf8");
+          void vscode.window.showInformationMessage(
+            `Took "${item.displayName}" — marked as In Progress, assigned to ${assignedAs}.`
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          void vscode.window.showErrorMessage(`Failed to update backlog item: ${message}`);
+        }
       }
     })
   );
