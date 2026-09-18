@@ -326,6 +326,7 @@ const ADLC_AGENT_DIAGRAM_HTML: Record<string, string> = {
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
               <div class="diagram-box">Backlog</div>
+              <div class="diagram-box">src Tests</div>
             </div>
           </div>
           <div class="diagram-arrow">&#8594;</div>
