@@ -523,6 +523,7 @@ inputs:
       definition.inputs.find((i) => i.name === "product_context").defaultValue,
       "docs/project_description/PRD.md"
     );
+    assert.equal(definition.inputs.find((i) => i.name === "product_context").type, "file");
     assert.match(definition.diagramHtml, /Architect Agent/);
     assert.match(definition.diagramHtml, /Specifications Directory/);
     assert.match(definition.diagramHtml, /Architecture Document/);
@@ -586,18 +587,22 @@ inputs:
   }
 });
 
-test("applyAdlcAgentInputTypeOverrides narrows Architecture Review Agent's product_context to file, others untouched", () => {
+test("applyAdlcAgentInputTypeOverrides narrows product_context to file for both Architect Agent and Architecture Review Agent", () => {
   const { applyAdlcAgentInputTypeOverrides } = setupAdlcAgentsModule();
   const inputs = [
     { name: "specifications_directory", description: "", type: "directory", required: true },
     { name: "product_context", description: "", type: "file_or_directory", required: false }
   ];
 
-  const overridden = applyAdlcAgentInputTypeOverrides("architecture-review", inputs);
-  assert.equal(overridden.find((i) => i.name === "specifications_directory").type, "directory");
-  assert.equal(overridden.find((i) => i.name === "product_context").type, "file");
+  const overriddenForReview = applyAdlcAgentInputTypeOverrides("architecture-review", inputs);
+  assert.equal(overriddenForReview.find((i) => i.name === "specifications_directory").type, "directory");
+  assert.equal(overriddenForReview.find((i) => i.name === "product_context").type, "file");
 
-  const untouched = applyAdlcAgentInputTypeOverrides("architect", inputs);
+  const overriddenForArchitect = applyAdlcAgentInputTypeOverrides("architect", inputs);
+  assert.equal(overriddenForArchitect.find((i) => i.name === "specifications_directory").type, "directory");
+  assert.equal(overriddenForArchitect.find((i) => i.name === "product_context").type, "file");
+
+  const untouched = applyAdlcAgentInputTypeOverrides("ux", inputs);
   assert.deepEqual(untouched, inputs);
 });
 

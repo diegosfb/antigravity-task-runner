@@ -98,6 +98,7 @@ export function applyAdlcAgentInputRequiredOverrides(entryId: string, inputs: Ad
 // the frontmatter allows (e.g. Architecture Review Agent's product_context
 // is always the single PRD file, never a directory).
 const ADLC_AGENT_INPUT_TYPE_OVERRIDES: Record<string, Record<string, string>> = {
+  architect: { product_context: "file" },
   "architecture-review": { product_context: "file" }
 };
 
