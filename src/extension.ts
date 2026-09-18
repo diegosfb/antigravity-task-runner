@@ -115,7 +115,6 @@ import {
   buildAdlcHarnessCommand,
   findAdlcAgentCatalogEntry,
   getAdlcAgentRelativePath,
-  getDefaultAdlcInputValues,
   getMissingRequiredAdlcInputs,
   isAdlcHarness,
   loadAdlcAgentDefinition,
@@ -6253,8 +6252,7 @@ export function activate(context: vscode.ExtensionContext) {
       );
       panel.webview.html = renderAdlcAgentRunHtml(panel.webview, definition, {
         defaultHarness,
-        defaultModel,
-        initialInputs: getDefaultAdlcInputValues(repoRoot, definition.inputs)
+        defaultModel
       });
 
       let settled = false;

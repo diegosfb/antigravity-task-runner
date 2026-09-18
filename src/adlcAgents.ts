@@ -133,6 +133,22 @@ export function parseAdlcAgentFrontmatter(markdown: string): { description: stri
   return { description, inputs };
 }
 
+// These inputs are fixed-path repo settings/config files (read directly by the
+// agent from its own conventions), never something the user picks on the run
+// page, so they are excluded from every agent's user-facing input list.
+const DEFAULT_INPUT_FILES: Record<string, string> = {
+  workflow_configuration: "ADLC_workflow_settings.json",
+  routing_registry: "routing-registry.yaml"
+};
+
+export function isAdlcAutoConfigInput(name: string): boolean {
+  return Object.prototype.hasOwnProperty.call(DEFAULT_INPUT_FILES, name);
+}
+
+export function filterUserFacingAdlcInputs(inputs: AdlcAgentInput[]): AdlcAgentInput[] {
+  return inputs.filter((input) => !isAdlcAutoConfigInput(input.name));
+}
+
 export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalogEntry): AdlcAgentDefinition {
   const filePath = getAdlcAgentFilePath(repoRoot, entry.folder);
   const markdown = fs.readFileSync(filePath, "utf8");
@@ -143,25 +159,9 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
     folder: entry.folder,
     filePath,
     description,
-    inputs,
+    inputs: filterUserFacingAdlcInputs(inputs),
     promptHint: entry.promptHint
   };
-}
-
-const DEFAULT_INPUT_FILES: Record<string, string> = {
-  workflow_configuration: "ADLC_workflow_settings.json",
-  routing_registry: "routing-registry.yaml"
-};
-
-export function getDefaultAdlcInputValues(repoRoot: string, inputs: AdlcAgentInput[]): Record<string, string> {
-  const values: Record<string, string> = {};
-  for (const input of inputs) {
-    const candidate = DEFAULT_INPUT_FILES[input.name];
-    if (candidate && fs.existsSync(path.join(repoRoot, candidate))) {
-      values[input.name] = candidate;
-    }
-  }
-  return values;
 }
 
 export type AdlcBrowseKind = "file" | "folder" | "any";
@@ -272,7 +272,6 @@ function escapeHtml(value: string): string {
 export type RenderAdlcAgentRunHtmlOptions = {
   defaultHarness: AdlcHarness;
   defaultModel: string;
-  initialInputs: Record<string, string>;
 };
 
 export function renderAdlcAgentRunHtml(
@@ -290,12 +289,11 @@ export function renderAdlcAgentRunHtml(
   const inputFields = definition.inputs
     .map((input) => {
       const browseKind = getAdlcInputBrowseKind(input.type);
-      const value = options.initialInputs[input.name] || "";
       return `
       <label>
         <span><code>${escapeHtml(input.name)}</code> <span class="badge${input.required ? " badge-required" : ""}">${input.required ? "required" : "optional"}</span>${input.type ? ` <span class="hint">${escapeHtml(input.type)}</span>` : ""}</span>
         <div class="input-row">
-          <input type="text" data-input-name="${escapeHtml(input.name)}" data-required="${input.required ? "true" : "false"}" value="${escapeHtml(value)}" autocomplete="off" />
+          <input type="text" data-input-name="${escapeHtml(input.name)}" data-required="${input.required ? "true" : "false"}" value="" autocomplete="off" />
           <button type="button" data-browse="${escapeHtml(input.name)}" data-kind="${browseKind}">Browse…</button>
         </div>
         ${input.description ? `<span class="hint">${escapeHtml(input.description)}</span>` : ""}

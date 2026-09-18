@@ -124,8 +124,7 @@ test("buildAdlcAgentPrompt references the agent file, inputs, hint, and instruct
 });
 
 test("catalog maps story labels to agent folders and detects deployed agents", () => {
-  const { ADLC_AGENT_CATALOG, findAdlcAgentCatalogEntry, adlcAgentExists, getDefaultAdlcInputValues } =
-    setupAdlcAgentsModule();
+  const { ADLC_AGENT_CATALOG, findAdlcAgentCatalogEntry, adlcAgentExists } = setupAdlcAgentsModule();
 
   assert.equal(ADLC_AGENT_CATALOG.length, 13);
   assert.equal(findAdlcAgentCatalogEntry("coding").folder, "developer-agent");
@@ -137,18 +136,69 @@ test("catalog maps story labels to agent folders and detects deployed agents", (
   try {
     fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "ba-agent"), { recursive: true });
     fs.writeFileSync(path.join(repoRoot, ".agents", "agents", "ba-agent", "ba-agent.md"), FIXTURE_AGENT_MARKDOWN);
-    fs.writeFileSync(path.join(repoRoot, "ADLC_workflow_settings.json"), "{}");
 
     assert.equal(adlcAgentExists(repoRoot, "ba-agent"), true);
     assert.equal(adlcAgentExists(repoRoot, "documentation-agent"), false);
-    assert.deepEqual(
-      getDefaultAdlcInputValues(repoRoot, [
-        { name: "workflow_configuration", description: "", type: "file", required: true },
-        { name: "routing_registry", description: "", type: "file", required: true },
-        { name: "approved_prd", description: "", type: "file", required: true }
-      ]),
-      { workflow_configuration: "ADLC_workflow_settings.json" }
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("isAdlcAutoConfigInput and filterUserFacingAdlcInputs hide fixed-path settings/config inputs", () => {
+  const { isAdlcAutoConfigInput, filterUserFacingAdlcInputs } = setupAdlcAgentsModule();
+
+  assert.equal(isAdlcAutoConfigInput("workflow_configuration"), true);
+  assert.equal(isAdlcAutoConfigInput("routing_registry"), true);
+  assert.equal(isAdlcAutoConfigInput("approved_prd"), false);
+
+  const inputs = [
+    { name: "approved_prd", description: "", type: "file", required: true },
+    { name: "workflow_configuration", description: "", type: "file", required: true },
+    { name: "routing_registry", description: "", type: "file", required: true },
+    { name: "existing_specifications", description: "", type: "directory", required: false }
+  ];
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs).map((input) => input.name),
+    ["approved_prd", "existing_specifications"]
+  );
+});
+
+test("loadAdlcAgentDefinition excludes workflow_configuration and routing_registry from user-facing inputs", () => {
+  const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
+  const orchestratorMarkdown = `---
+name: sdlc-orchestrator
+description: Entry-point orchestrator.
+inputs:
+  required:
+    - name: request
+      description: User intent, scope, constraints, and authorization.
+      type: text_or_structured_data
+    - name: routing_registry
+      description: Canonical targets, triggers, paths, and handoffs.
+      type: file
+    - name: workflow_configuration
+      description: Approval, validation, security, and automation settings.
+      type: file
+---
+# SDLC orchestrator
+`;
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
+  try {
+    fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "sdlc-orchestrator"), { recursive: true });
+    fs.writeFileSync(
+      path.join(repoRoot, ".agents", "agents", "sdlc-orchestrator", "sdlc-orchestrator.md"),
+      orchestratorMarkdown
     );
+    fs.writeFileSync(path.join(repoRoot, "ADLC_workflow_settings.json"), "{}");
+    fs.writeFileSync(path.join(repoRoot, "routing-registry.yaml"), "targets: []\n");
+
+    const definition = loadAdlcAgentDefinition(repoRoot, {
+      id: "sdlc-orchestrator",
+      label: "SDLC Orchestrator Agent",
+      folder: "sdlc-orchestrator"
+    });
+
+    assert.deepEqual(definition.inputs.map((input) => input.name), ["request"]);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -159,14 +209,12 @@ test("renderAdlcAgentRunHtml renders harness, model, input fields, and actions",
   const definition = { ...parseAdlcAgentFrontmatter(FIXTURE_AGENT_MARKDOWN), id: "ba", label: "BA Agent", folder: "ba-agent", filePath: "" };
   const html = renderAdlcAgentRunHtml({ cspSource: "vscode-resource:" }, definition, {
     defaultHarness: "codex",
-    defaultModel: "gpt-5-codex",
-    initialInputs: { workflow_configuration: "ADLC_workflow_settings.json" }
+    defaultModel: "gpt-5-codex"
   });
 
   assert.match(html, /<option value="codex" selected>/);
   assert.match(html, /id="model-input"[^>]*value="gpt-5-codex"/);
   assert.match(html, /data-input-name="approved_prd" data-required="true"/);
-  assert.match(html, /data-input-name="workflow_configuration" data-required="true" value="ADLC_workflow_settings\.json"/);
   assert.match(html, /data-browse="existing_specifications" data-kind="folder"/);
   assert.match(html, /id="cancel-button"/);
   assert.match(html, /<button type="submit">Execute<\/button>/);
