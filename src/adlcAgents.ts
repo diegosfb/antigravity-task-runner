@@ -191,7 +191,8 @@ export function isAdlcAutoConfigInput(name: string): boolean {
 // alternative_input_contract are broad catch-alls better handled through the
 // default artifacts directory or the free-form additional instructions).
 const ADLC_AGENT_HIDDEN_INPUTS: Record<string, string[]> = {
-  "ba-agent": ["supporting_evidence", "alternative_input_contract"]
+  "ba-agent": ["supporting_evidence", "alternative_input_contract"],
+  "ux-agent": ["research_and_evidence", "existing_experience_system"]
 };
 
 export function isAdlcAgentHiddenInput(folder: string, name: string): boolean {

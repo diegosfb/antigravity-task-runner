@@ -311,6 +311,9 @@ inputs:
     - name: research_and_evidence
       description: Reviewed user research, meeting analysis, and feedback.
       type: files_or_structured_data
+    - name: existing_experience_system
+      description: Current UI, design system, patterns, and prior design artifacts.
+      type: files_or_repository_state
 ---
 # UX agent
 `;
@@ -323,7 +326,7 @@ inputs:
 
     assert.deepEqual(
       definition.inputs.map((i) => i.name),
-      ["approved_product_context", "architecture_package", "research_and_evidence"]
+      ["approved_product_context", "architecture_package"]
     );
     const approvedProductContext = definition.inputs.find((i) => i.name === "approved_product_context");
     assert.equal(approvedProductContext.defaultValue, "docs/specs");
@@ -430,6 +433,30 @@ test("filterUserFacingAdlcInputs hides BA Agent's supporting_evidence and altern
   assert.deepEqual(
     filterUserFacingAdlcInputs(inputs, "ba-agent").map((input) => input.name),
     ["approved_prd", "existing_specifications"]
+  );
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "architect-agent").map((input) => input.name),
+    inputs.map((input) => input.name)
+  );
+});
+
+test("filterUserFacingAdlcInputs hides UX Agent's research_and_evidence and existing_experience_system, and only for ux-agent", () => {
+  const { isAdlcAgentHiddenInput, filterUserFacingAdlcInputs } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "approved_product_context", description: "", type: "files", required: true },
+    { name: "architecture_package", description: "", type: "files_or_directory", required: true },
+    { name: "research_and_evidence", description: "", type: "files_or_structured_data", required: false },
+    { name: "existing_experience_system", description: "", type: "files_or_repository_state", required: false }
+  ];
+
+  assert.equal(isAdlcAgentHiddenInput("ux-agent", "research_and_evidence"), true);
+  assert.equal(isAdlcAgentHiddenInput("ux-agent", "existing_experience_system"), true);
+  assert.equal(isAdlcAgentHiddenInput("ux-agent", "approved_product_context"), false);
+  assert.equal(isAdlcAgentHiddenInput("architect-agent", "research_and_evidence"), false);
+
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "ux-agent").map((input) => input.name),
+    ["approved_product_context", "architecture_package"]
   );
   assert.deepEqual(
     filterUserFacingAdlcInputs(inputs, "architect-agent").map((input) => input.name),
