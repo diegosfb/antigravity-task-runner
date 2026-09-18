@@ -289,7 +289,7 @@ test("quick actions include ADLC Agents after feature flag, greying out undeploy
         "Architect Agent",
         "Architecture Review Agent",
         "Project Planner Agent",
-        "Test Agent",
+        "Create Tests Agent",
         "Coding Agent",
         "Code Review Agent",
         "Documentation Agent",

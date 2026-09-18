@@ -24,7 +24,7 @@ export const ADLC_AGENT_CATALOG: readonly AdlcAgentCatalogEntry[] = [
       "Operate in review mode: do not produce a new architecture package. Review the existing architecture package against the specifications, report gaps, risks, and inconsistencies, and propose prioritized corrections."
   },
   { id: "project-planner", label: "Project Planner Agent", folder: "project-planner-agent" },
-  { id: "test", label: "Test Agent", folder: "test-agent" },
+  { id: "test", label: "Create Tests Agent", folder: "test-agent" },
   { id: "coding", label: "Coding Agent", folder: "developer-agent" },
   { id: "code-review", label: "Code Review Agent", folder: "code-review-agent" },
   { id: "documentation", label: "Documentation Agent", folder: "documentation-agent" },
