@@ -188,13 +188,19 @@ test("loadAdlcAgentDefinition adds an editable artifacts_directory input for pro
   }
 });
 
-test("getAdlcAgentDiagramHtml returns the product diagram and undefined for other agents", () => {
+test("getAdlcAgentDiagramHtml returns the Product Agent and BA Agent diagrams, and undefined for other agents", () => {
   const { getAdlcAgentDiagramHtml } = setupAdlcAgentsModule();
   assert.match(getAdlcAgentDiagramHtml("product"), /Meeting Notes Folder/);
   assert.match(getAdlcAgentDiagramHtml("product"), /Project Description File/);
   assert.match(getAdlcAgentDiagramHtml("product"), /Product Agent/);
   assert.match(getAdlcAgentDiagramHtml("product"), /PRD/);
-  assert.equal(getAdlcAgentDiagramHtml("ba"), undefined);
+
+  assert.match(getAdlcAgentDiagramHtml("ba"), /Approved PRD/);
+  assert.match(getAdlcAgentDiagramHtml("ba"), /Existing Specifications/);
+  assert.match(getAdlcAgentDiagramHtml("ba"), /BA Agent/);
+  assert.match(getAdlcAgentDiagramHtml("ba"), /Specifications/);
+
+  assert.equal(getAdlcAgentDiagramHtml("ux"), undefined);
 });
 
 test("catalog maps story labels to agent folders and detects deployed agents", () => {
@@ -357,6 +363,9 @@ test("loadAdlcAgentDefinition prefills BA Agent's approved_prd and existing_spec
       definition.inputs.map((i) => i.name),
       ["approved_prd", "existing_specifications"]
     );
+    assert.match(definition.diagramHtml, /BA Agent/);
+    assert.match(definition.diagramHtml, /Approved PRD/);
+    assert.match(definition.diagramHtml, /Existing Specifications/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -729,7 +738,7 @@ test("renderAdlcAgentRunHtml renders the diagram after the description, only whe
 
   const withoutDiagram = renderAdlcAgentRunHtml(
     { cspSource: "vscode-resource:" },
-    { id: "ba", label: "BA Agent", folder: "ba-agent", filePath: "", description: "Owns the WHAT.", inputs: [] },
+    { id: "ux", label: "UX Agent", folder: "ux-agent", filePath: "", description: "Owns the user experience.", inputs: [] },
     { defaultHarness: "claude", defaultModel: "" }
   );
   assert.doesNotMatch(withoutDiagram, /class="diagram"/);
