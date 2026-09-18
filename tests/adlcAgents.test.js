@@ -318,17 +318,19 @@ test("applyAdlcAgentInputDefaults prefills Architect Agent's specifications_dire
   assert.equal(withDefaults.find((i) => i.name === "existing_architecture_package").defaultValue, undefined);
 });
 
-test("applyAdlcAgentInputDefaults prefills Project Planner Agent's requirements_stream and technical_stream", () => {
+test("applyAdlcAgentInputDefaults prefills Project Planner Agent's requirements_stream, technical_stream, and existing_backlog", () => {
   const { applyAdlcAgentInputDefaults } = setupAdlcAgentsModule();
   const inputs = [
     { name: "requirements_stream", description: "", type: "files_or_structured_data", required: true },
     { name: "technical_stream", description: "", type: "files_or_structured_data", required: true },
+    { name: "existing_backlog", description: "", type: "files_or_structured_data", required: false },
     { name: "design_stream", description: "", type: "files_or_structured_data", required: true }
   ];
 
   const withDefaults = applyAdlcAgentInputDefaults("project-planner", inputs);
   assert.equal(withDefaults.find((i) => i.name === "requirements_stream").defaultValue, "docs/specs");
   assert.equal(withDefaults.find((i) => i.name === "technical_stream").defaultValue, "docs/architecture");
+  assert.equal(withDefaults.find((i) => i.name === "existing_backlog").defaultValue, "docs/backlog");
   assert.equal(withDefaults.find((i) => i.name === "design_stream").defaultValue, undefined);
 });
 
@@ -752,6 +754,9 @@ inputs:
     const technicalStream = definition.inputs.find((i) => i.name === "technical_stream");
     assert.equal(technicalStream.defaultValue, "docs/architecture");
     assert.equal(technicalStream.label, "Architecture Documents");
+
+    const existingBacklog = definition.inputs.find((i) => i.name === "existing_backlog");
+    assert.equal(existingBacklog.defaultValue, "docs/backlog");
 
     assert.deepEqual(
       definition.inputs.map((i) => i.name),

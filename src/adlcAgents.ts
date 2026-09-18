@@ -75,7 +75,8 @@ const ADLC_AGENT_INPUT_DEFAULTS: Record<string, Record<string, string>> = {
   },
   "project-planner": {
     requirements_stream: path.posix.join("docs", "specs"),
-    technical_stream: path.posix.join("docs", "architecture")
+    technical_stream: path.posix.join("docs", "architecture"),
+    existing_backlog: path.posix.join("docs", "backlog")
   }
 };
 
