@@ -56,6 +56,14 @@ const ADLC_AGENT_INPUT_DEFAULTS: Record<string, Record<string, string>> = {
   }
 };
 
+// Folder an agent draws artifacts from by convention when it declares no
+// explicit input fields (e.g. product-agent's notes, meeting analyses,
+// product descriptions, and briefs). Surfaced on the run page in place of
+// the "no input artifacts" message and passed to the agent in the prompt.
+const ADLC_AGENT_DEFAULT_ARTIFACTS_DIR: Record<string, string> = {
+  "product-agent": path.posix.join("docs", "product-definition")
+};
+
 export type AdlcAgentDefinition = {
   id: string;
   label: string;
@@ -64,6 +72,7 @@ export type AdlcAgentDefinition = {
   description: string;
   inputs: AdlcAgentInput[];
   promptHint?: string;
+  defaultArtifactsDir?: string;
 };
 
 export function getAdlcAgentRelativePath(folder: string): string {
@@ -170,6 +179,10 @@ export function applyAdlcAgentInputDefaults(folder: string, inputs: AdlcAgentInp
   });
 }
 
+export function getAdlcAgentDefaultArtifactsDir(folder: string): string | undefined {
+  return ADLC_AGENT_DEFAULT_ARTIFACTS_DIR[folder];
+}
+
 export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalogEntry): AdlcAgentDefinition {
   const filePath = getAdlcAgentFilePath(repoRoot, entry.folder);
   const markdown = fs.readFileSync(filePath, "utf8");
@@ -181,7 +194,8 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
     filePath,
     description,
     inputs: applyAdlcAgentInputDefaults(entry.folder, filterUserFacingAdlcInputs(inputs)),
-    promptHint: entry.promptHint
+    promptHint: entry.promptHint,
+    defaultArtifactsDir: getAdlcAgentDefaultArtifactsDir(entry.folder)
   };
 }
 
@@ -263,6 +277,12 @@ export function buildAdlcAgentPrompt(definition: AdlcAgentDefinition, request: A
   ];
   if (definition.promptHint) sections.push(definition.promptHint);
 
+  if (definition.defaultArtifactsDir) {
+    sections.push(
+      `Use \`${definition.defaultArtifactsDir}\` as the default source of input artifacts (notes, meeting analyses, product descriptions, briefs, and similar files). If additional inputs are named below, use those too.`
+    );
+  }
+
   if (definition.inputs.length > 0) {
     const inputLines = definition.inputs.map((input) => {
       const value = (request.inputs[input.name] || "").trim();
@@ -321,6 +341,10 @@ export function renderAdlcAgentRunHtml(
       </label>`;
     })
     .join("");
+
+  const noInputFieldsHint = definition.defaultArtifactsDir
+    ? `This agent uses artifacts from ${escapeHtml(definition.defaultArtifactsDir)} as input. If you want to add other inputs specify them on the request below`
+    : "This agent declares no input artifacts. Describe the request below.";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -394,7 +418,7 @@ export function renderAdlcAgentRunHtml(
       </section>
       <section class="panel-section">
         <div class="section-title">Input Artifacts</div>
-        ${inputFields || '<div class="hint">This agent declares no input artifacts. Describe the request below.</div>'}
+        ${inputFields || `<div class="hint">${noInputFieldsHint}</div>`}
       </section>
       <label>
         Additional instructions

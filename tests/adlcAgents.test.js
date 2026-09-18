@@ -123,6 +123,52 @@ test("buildAdlcAgentPrompt references the agent file, inputs, hint, and instruct
   assert.match(prompt, /approval gate/i);
 });
 
+test("buildAdlcAgentPrompt points to the default artifacts directory when the agent declares one", () => {
+  const { buildAdlcAgentPrompt } = setupAdlcAgentsModule();
+  const definition = {
+    id: "product",
+    label: "Product Agent",
+    folder: "product-agent",
+    filePath: "",
+    description: "",
+    inputs: [],
+    defaultArtifactsDir: "docs/product-definition"
+  };
+  const prompt = buildAdlcAgentPrompt(definition, {
+    harness: "claude",
+    model: "",
+    inputs: {},
+    additionalInstructions: ""
+  });
+
+  assert.match(prompt, /Use `docs\/product-definition` as the default source of input artifacts/);
+});
+
+test("getAdlcAgentDefaultArtifactsDir returns the known folder for product-agent and undefined otherwise", () => {
+  const { getAdlcAgentDefaultArtifactsDir } = setupAdlcAgentsModule();
+  assert.equal(getAdlcAgentDefaultArtifactsDir("product-agent"), "docs/product-definition");
+  assert.equal(getAdlcAgentDefaultArtifactsDir("ba-agent"), undefined);
+});
+
+test("loadAdlcAgentDefinition attaches defaultArtifactsDir for product-agent", () => {
+  const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
+  try {
+    fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "product-agent"), { recursive: true });
+    fs.writeFileSync(
+      path.join(repoRoot, ".agents", "agents", "product-agent", "product-agent.md"),
+      "---\nname: product-agent\ndescription: Owns the WHY.\n---\n# Product\n"
+    );
+
+    const definition = loadAdlcAgentDefinition(repoRoot, { id: "product", label: "Product Agent", folder: "product-agent" });
+
+    assert.deepEqual(definition.inputs, []);
+    assert.equal(definition.defaultArtifactsDir, "docs/product-definition");
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test("catalog maps story labels to agent folders and detects deployed agents", () => {
   const { ADLC_AGENT_CATALOG, findAdlcAgentCatalogEntry, adlcAgentExists } = setupAdlcAgentsModule();
 
@@ -273,4 +319,25 @@ test("renderAdlcAgentRunHtml renders harness, model, input fields, and actions",
   assert.match(html, /id="cancel-button"/);
   assert.match(html, /<button type="submit">Execute<\/button>/);
   assert.match(html, /type: "adlcAgentExecute"/);
+});
+
+test("renderAdlcAgentRunHtml shows the default-artifacts hint instead of the empty-inputs message", () => {
+  const { renderAdlcAgentRunHtml } = setupAdlcAgentsModule();
+  const withArtifactsDir = renderAdlcAgentRunHtml(
+    { cspSource: "vscode-resource:" },
+    { id: "product", label: "Product Agent", folder: "product-agent", filePath: "", description: "", inputs: [], defaultArtifactsDir: "docs/product-definition" },
+    { defaultHarness: "claude", defaultModel: "" }
+  );
+  assert.match(
+    withArtifactsDir,
+    /This agent uses artifacts from docs\/product-definition as input\. If you want to add other inputs specify them on the request below/
+  );
+  assert.doesNotMatch(withArtifactsDir, /This agent declares no input artifacts/);
+
+  const withoutArtifactsDir = renderAdlcAgentRunHtml(
+    { cspSource: "vscode-resource:" },
+    { id: "sdlc-orchestrator", label: "SDLC Orchestrator Agent", folder: "sdlc-orchestrator", filePath: "", description: "", inputs: [] },
+    { defaultHarness: "claude", defaultModel: "" }
+  );
+  assert.match(withoutArtifactsDir, /This agent declares no input artifacts\. Describe the request below\./);
 });
