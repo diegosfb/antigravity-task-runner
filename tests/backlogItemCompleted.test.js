@@ -1,0 +1,475 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+
+function createVscodeMock() {
+  return {};
+}
+
+function setupBacklogItemCompletedModule() {
+  const Module = require("module");
+  const originalRequire = Module.prototype.require;
+  Module.prototype.require = function (id) {
+    if (id === "vscode") return createVscodeMock();
+    return originalRequire.apply(this, arguments);
+  };
+  delete require.cache[require.resolve("../out/backlogItemCompleted.js")];
+  const moduleExports = require("../out/backlogItemCompleted.js");
+  Module.prototype.require = originalRequire;
+  return moduleExports;
+}
+
+test("getDefaultBacklogItemCompletedValues uses the provided project key", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const values = backlogItemCompleted.getDefaultBacklogItemCompletedValues(" TASK ", "/tmp/workspace");
+
+  assert.deepEqual(values, {
+    backlogDir: "/tmp/workspace/docs/backlog",
+    backlogItemPath: "",
+    issueKey: "",
+    projectKey: "TASK",
+    useJira: true
+  });
+});
+
+test("sanitizeBacklogItemCompletedFormValues trims payload values", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const values = backlogItemCompleted.sanitizeBacklogItemCompletedFormValues(
+    {
+      backlogDir: " /tmp/custom-backlog ",
+      backlogItemPath: " /tmp/custom-backlog/task-demo.md ",
+      issueKey: " TASK-123 ",
+      projectKey: " TASK ",
+      useJira: false
+    },
+    "OTHER",
+    "/tmp/workspace"
+  );
+
+  assert.deepEqual(values, {
+    backlogDir: "/tmp/custom-backlog",
+    backlogItemPath: "/tmp/custom-backlog/task-demo.md",
+    issueKey: "TASK-123",
+    projectKey: "TASK",
+    useJira: false
+  });
+});
+
+test("getMissingBacklogItemCompletedFields requires a project and one target when Jira is enabled", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const missing = backlogItemCompleted.getMissingBacklogItemCompletedFields({
+    backlogDir: "",
+    backlogItemPath: "",
+    issueKey: "",
+    projectKey: "",
+    useJira: true
+  });
+
+  assert.deepEqual(missing, ["Jira Project", "Assigned Jira item or local backlog item"]);
+});
+
+test("getMissingBacklogItemCompletedFields only requires a local backlog item when Jira is disabled", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const missing = backlogItemCompleted.getMissingBacklogItemCompletedFields({
+    backlogDir: "",
+    backlogItemPath: "",
+    issueKey: "TASK-123",
+    projectKey: "TASK",
+    useJira: false
+  });
+
+  assert.deepEqual(missing, ["Local backlog item"]);
+});
+
+test("loadBacklogItemsForCompletion keeps To Do, In Progress, and missing-status files", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "backlog-item-completed-"));
+
+  fs.writeFileSync(
+    path.join(tempDir, "feature-alpha.md"),
+    "# Feature: Alpha\n\n## Description\nShip alpha.\n\n## Status\nTo Do\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(tempDir, "feature-beta.md"),
+    "# Feature: Beta\n\n## Description\nShip beta.\n\n## Status\nIn Review\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(tempDir, "feature-gamma.md"),
+    "# Feature: Gamma\n\n## Description\nShip gamma.\n",
+    "utf8"
+  );
+
+  const items = backlogItemCompleted.loadBacklogItemsForCompletion(tempDir);
+
+  assert.deepEqual(
+    items.map((item) => ({ fileName: item.fileName, statusName: item.statusName, typeName: item.typeName })),
+    [
+      { fileName: "feature-alpha.md", statusName: "To Do", typeName: "Feature" },
+      { fileName: "feature-gamma.md", statusName: "", typeName: "Feature" }
+    ]
+  );
+});
+
+test("findMatching helpers compare Jira descriptions with backlog description sections", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const backlogItems = [
+    {
+      description: "- First line\n- Second line",
+      displayName: "Feature: Matching Item",
+      fileName: "feature-matching-item.md",
+      filePath: "/tmp/feature-matching-item.md",
+      statusName: "To Do",
+      summary: "",
+      typeName: "Feature"
+    }
+  ];
+  const issues = [
+    {
+      description: "First line\nSecond line",
+      id: "1",
+      issueTypeName: "Story",
+      key: "TASK-1",
+      projectKey: "TASK",
+      projectName: "Task Runner",
+      statusName: "To Do",
+      summary: "Matching Jira issue"
+    }
+  ];
+
+  assert.equal(
+    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems)?.filePath,
+    "/tmp/feature-matching-item.md"
+  );
+  assert.equal(
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues)?.key,
+    "TASK-1"
+  );
+});
+
+test("findMatching helpers treat a unique contained description as a cross-match", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const backlogItems = [
+    {
+      description: "Provision the test workspace and validate the generated environments.",
+      displayName: "Epic: Test Item",
+      fileName: "epic-test-item.md",
+      filePath: "/tmp/epic-test-item.md",
+      statusName: "To Do",
+      summary: "",
+      typeName: "Epic"
+    }
+  ];
+  const issues = [
+    {
+      description:
+        "Provision the test workspace and validate the generated environments. Confirm the default GitHub environments are created as part of setup.",
+      id: "17",
+      issueTypeName: "Epic",
+      key: "ANTIGRAVIT-17",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "In Progress",
+      summary: "Different summary text"
+    }
+  ];
+
+  assert.equal(
+    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems)?.filePath,
+    "/tmp/epic-test-item.md"
+  );
+  assert.equal(
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues)?.key,
+    "ANTIGRAVIT-17"
+  );
+});
+
+test("findMatching helpers do not fall back to Jira summary and backlog title when descriptions are empty", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const backlogItems = [
+    {
+      description: "",
+      displayName: "Epic: Test Item",
+      fileName: "epic-test-item.md",
+      filePath: "/tmp/epic-test-item.md",
+      statusName: "To Do",
+      summary: "",
+      typeName: "Epic"
+    }
+  ];
+  const issues = [
+    {
+      description: "",
+      id: "17",
+      issueTypeName: "Epic",
+      key: "ANTIGRAVIT-17",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "In Progress",
+      summary: "Test Item"
+    }
+  ];
+
+  assert.equal(
+    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems),
+    undefined
+  );
+  assert.equal(
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues),
+    undefined
+  );
+});
+
+test("findMatching helpers return undefined when no cross-match exists", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const backlogItems = [
+    {
+      description: "Local-only description",
+      displayName: "Feature: Local Only",
+      fileName: "feature-local-only.md",
+      filePath: "/tmp/feature-local-only.md",
+      statusName: "To Do",
+      summary: "",
+      typeName: "Feature"
+    }
+  ];
+  const issues = [
+    {
+      description: "Jira-only description",
+      id: "23",
+      issueTypeName: "Task",
+      key: "ANTIGRAVIT-23",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "To Do",
+      summary: "Different Jira Item"
+    }
+  ];
+
+  assert.equal(
+    backlogItemCompleted.findMatchingBacklogItemForJiraIssue(issues[0], backlogItems),
+    undefined
+  );
+  assert.equal(
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues),
+    undefined
+  );
+});
+
+test("findMatching helpers leave ambiguous description matches unresolved", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const backlogItems = [
+    {
+      description: "Duplicate description",
+      displayName: "Feature: Duplicate Item",
+      fileName: "feature-duplicate-item.md",
+      filePath: "/tmp/feature-duplicate-item.md",
+      statusName: "To Do",
+      summary: "",
+      typeName: "Feature"
+    }
+  ];
+  const issues = [
+    {
+      description: "Duplicate description",
+      id: "31",
+      issueTypeName: "Epic",
+      key: "ANTIGRAVIT-31",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "To Do",
+      summary: "Duplicate Item A"
+    },
+    {
+      description: "Duplicate description",
+      id: "32",
+      issueTypeName: "Story",
+      key: "ANTIGRAVIT-32",
+      projectKey: "ANTIGRAVIT",
+      projectName: "Antigravity",
+      statusName: "In Progress",
+      summary: "Duplicate Item B"
+    }
+  ];
+
+  assert.equal(
+    backlogItemCompleted.findMatchingJiraIssueForBacklogItem(backlogItems[0], issues),
+    undefined
+  );
+});
+
+test("upsertBacklogItemCompletedStatus updates an existing status section", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const updated = backlogItemCompleted.upsertBacklogItemCompletedStatus(
+    "# Feature: Alpha\n\n## Description\nShip alpha.\n\n## Status\nTo Do\n\n## Notes\nKeep note.\n"
+  );
+
+  assert.match(updated, /## Status\nIn Review\n\n## Notes/);
+});
+
+test("upsertBacklogItemCompletedStatus creates a status section when missing", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const updated = backlogItemCompleted.upsertBacklogItemCompletedStatus(
+    "# Feature: Alpha\n\n## Description\nShip alpha.\n"
+  );
+
+  assert.match(updated, /## Status\nIn Review\n$/);
+});
+
+test("renderBacklogItemCompletedHtml renders the page structure and issue details", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const html = backlogItemCompleted.renderBacklogItemCompletedHtml(
+    { cspSource: "vscode-resource:" },
+    {
+      backlogDir: "/tmp/workspace/docs/backlog",
+      backlogItemPath: "/tmp/workspace/docs/backlog/feature-second-item.md",
+      issueKey: "TASK-2",
+      projectKey: "TASK",
+      useJira: true
+    },
+    [
+      {
+        description: "First item description",
+        id: "1",
+        key: "TASK-1",
+        summary: "First item",
+        projectKey: "TASK",
+        projectName: "Task Project",
+        issueTypeName: "Story",
+        statusName: "In Progress"
+      },
+      {
+        description: "Second item description",
+        id: "2",
+        key: "TASK-2",
+        summary: "Second item",
+        projectKey: "TASK",
+        projectName: "Task Project",
+        issueTypeName: "Bug",
+        statusName: "To Do"
+      }
+    ],
+    [
+      {
+        description: "Second item description",
+        displayName: "Feature: Second Item",
+        fileName: "feature-second-item.md",
+        filePath: "/tmp/workspace/docs/backlog/feature-second-item.md",
+        statusName: "In Progress",
+        summary: "Second item description",
+        typeName: "Feature"
+      }
+    ]
+  );
+
+  assert.match(html, /Backlog Item Completed/);
+  assert.match(html, /Backlog Folder/);
+  assert.match(html, /JIRA Backlog Item/);
+  assert.match(html, /JIRA Item to Mark Completed/);
+  assert.match(html, /Eligible Jira backlog items: 2\./);
+  assert.match(html, /Local Backlog Item/);
+  assert.match(html, /Local Item to Mark Completed/);
+  assert.match(html, /Use Jira/);
+  assert.match(html, /loadBacklogItemCompletedBacklogItems/);
+  assert.match(html, /saveBacklogItemCompletedDraft/);
+  assert.match(html, /Mark Completed/);
+  assert.match(html, /current-branch-title/);
+  assert.match(html, /current-branch-value/);
+  assert.match(html, /inline-checkbox/);
+  assert.match(html, /Jira Project: <span class="current-branch-value">TASK<\/span>/);
+  assert.match(html, /id="useJira"/);
+  assert.match(html, /<option value="TASK-2" selected>TASK-2 - Second item<\/option>/);
+  assert.match(html, /detail-grid-split/);
+  assert.match(html, /detail-stack/);
+  assert.match(html, /<span class="detail-label">Description<\/span>/);
+  assert.match(html, /<span class="detail-label">Local Type<\/span>/);
+  assert.doesNotMatch(html, /Local Description/);
+  assert.doesNotMatch(html, /Select any Jira item in To Do or In Progress/);
+  assert.doesNotMatch(html, /Available Jira Items/);
+  assert.match(html, /feature-second-item\.md/);
+  assert.doesNotMatch(html, /Transition Rule/);
+  assert.doesNotMatch(html, /Comp\. Result/);
+});
+
+test("renderBacklogItemCompletedHtml emits a syntactically valid webview script", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const html = backlogItemCompleted.renderBacklogItemCompletedHtml(
+    { cspSource: "vscode-resource:" },
+    {
+      backlogDir: "/tmp/workspace/docs/backlog",
+      backlogItemPath: "",
+      issueKey: "TASK-2",
+      projectKey: "TASK",
+      useJira: true
+    },
+    [
+      {
+        description: "Second item description",
+        id: "2",
+        key: "TASK-2",
+        summary: "Second item",
+        projectKey: "TASK",
+        projectName: "Task Project",
+        issueTypeName: "Bug",
+        statusName: "To Do"
+      }
+    ],
+    [
+      {
+        description: "Second item description",
+        displayName: "Feature: Second Item",
+        fileName: "feature-second-item.md",
+        filePath: "/tmp/workspace/docs/backlog/feature-second-item.md",
+        statusName: "In Progress",
+        summary: "Second item description",
+        typeName: "Feature"
+      }
+    ]
+  );
+
+  const scriptMatch = html.match(/<script nonce="[^"]+">([\s\S]*)<\/script>/);
+  assert.ok(scriptMatch?.[1], "Expected the rendered HTML to include an inline script.");
+  assert.doesNotThrow(() => new Function("acquireVsCodeApi", scriptMatch[1]));
+});
+
+test("renderBacklogItemCompletedHtml hides Jira backlog section when Jira is disabled", () => {
+  const backlogItemCompleted = setupBacklogItemCompletedModule();
+  const html = backlogItemCompleted.renderBacklogItemCompletedHtml(
+    { cspSource: "vscode-resource:" },
+    {
+      backlogDir: "/tmp/workspace/docs/backlog",
+      backlogItemPath: "/tmp/workspace/docs/backlog/feature-second-item.md",
+      issueKey: "",
+      projectKey: "TASK",
+      useJira: false
+    },
+    [
+      {
+        description: "Second item description",
+        id: "2",
+        key: "TASK-2",
+        summary: "Second item",
+        projectKey: "TASK",
+        projectName: "Task Project",
+        issueTypeName: "Bug",
+        statusName: "To Do"
+      }
+    ],
+    [
+      {
+        description: "Second item description",
+        displayName: "Feature: Second Item",
+        fileName: "feature-second-item.md",
+        filePath: "/tmp/workspace/docs/backlog/feature-second-item.md",
+        statusName: "In Progress",
+        summary: "Second item description",
+        typeName: "Feature"
+      }
+    ]
+  );
+
+  assert.match(html, /id="jiraBacklogSection" class="section" hidden/);
+});

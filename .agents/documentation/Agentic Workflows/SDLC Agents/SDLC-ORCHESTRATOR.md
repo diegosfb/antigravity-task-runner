@@ -12,28 +12,21 @@ flowchart LR
     U[User intent] --> O[sdlc-orchestrator]
     O --> P[product-agent]
     P --> BA[ba-agent]
-    BA -->|specs| UX[ux-agent]
-    UX -->|design requirements feedback| BA
-    UX -->|design docs, mocks, diagrams| UXDOCS[docs/UX Designs]
     BA --> A[architect-agent]
-    A --> AR[architecture-review-agent]
-    AR --> PP[project-planner-agent]
-    PP -->|next task in dependency order| T[test-agent]
-    T -->|test plan and failing scripts| D[developer-agent]
-    D -->|source code| T
+    A --> UX[ux-agent]
+    UX --> PP[project-planner-agent]
+    PP --> D[developer-agent]
+    D --> T[test-agent]
     T -->|configured attacks| RT[red-team-agent]
     RT -->|PASS or tracked findings| T
-    T -->|FAIL context| D
-    T -->|FAIL tracking| PP
-    T -->|PASS| SV[spec-validation-agent]
-    SV -->|CONFORMANT| DOC[documentation-agent]
-    SV -. DRIFT .-> D
-    DOC --> SC[security-check-agent]
-    SC -->|PASS| CR[code-review-agent]
-    CR -->|changes requested| D
-    CR -->|PR approved| PP
-    PP -->|task Done; next dispatched| PP
-    CR -->|all tasks accepted| DEP[deployment-agent]
+    T -->|PASS and resolved IDs| PP
+    PP -->|all items Done acknowledgement| D
+    T -->|FAIL context and tracking| D
+    T -->|FAIL and resolution evidence| PP
+    D -->|staged/branch diff| SC[security-check-agent]
+    SC -->|PASS| D
+    D -->|validated branch or PR| CR[code-review-agent]
+    CR --> DEP[deployment-agent]
 ```
 
 ## Inputs
@@ -42,8 +35,8 @@ flowchart LR
 - `routing-registry.yaml`, the source of truth for targets, triggers, paths,
   workflow order, and artifact handoffs.
 - `ADLC_workflow_settings.json` for optional judge and spec-validation behavior,
-  developer Git workflow behavior, planner PR-approval wait, test-failure
-  tracking, blocking security checks, and red-team frequency.
+  developer Git and repository-finalization behavior, and
+  test-failure tracking, blocking security checks, and red-team frequency.
 - Current workflow artifacts when a request spans phases.
 
 ## Routing method
@@ -52,17 +45,16 @@ flowchart LR
 2. Match intent to the most specific trigger and apply tie-breakers.
 3. Load the resolved canonical agent definition.
 4. Dispatch the request with context and state the chosen agent and reason.
-5. Sequence UX through BA reconciliation (UX feeds design requirements back to
-   BA, not directly to planning), architecture review, per-task test-first
-   serial delivery (one task at a time in dependency order), spec validation,
-   documentation, security gate, code review, and planner completion
-   acknowledgement before deployment without skipping an owner.
-6. Preserve loops: test PASS goes to spec-validation then documentation then
-   security then code-review; code-review approval notifies project-planner,
-   which marks the task Done and dispatches the next item; test/security FAIL
-   or BLOCKED returns complete context to development and, when configured,
-   planning; review failures return to development; production feedback returns
-   to product. Test-agent runs red-team at the configured frequency before PASS.
+5. Sequence multi-phase artifact handoffs without skipping the planner.
+6. Preserve loops: test PASS and resolved IDs go to planning; planner marks the
+   originating and blocking items Done and acknowledges completion; only then
+   does development require configured staged-diff security PASS, run
+   pre-commit hooks, and commit; configured PR work repeats security assurance
+   on the branch before pre-PR hooks and creation. Test-agent runs red-team at
+   the configured frequency before PASS. Test/security FAIL or BLOCKED returns
+   complete context to
+   development and, when configured, planning; review failures return to
+   development; production feedback returns to product.
 
 If the user names an agent, it routes directly. General questions need not be
 forced into the workflow; ambiguity across phases prompts one clarification.
@@ -88,11 +80,10 @@ requires one. Hook failures block their commit or PR step. After PR creation,
 the developer stays on the task branch or switches to updated `main` according
 to `developer_git_workflow.post_pr_branch`. Test failures retain their
 revised-plan approval loop and linked, deduplicated backlog history through
-verified resolution. Planner completion acknowledgement and next-task dispatch
-happen after code-review approval per `project_planner.wait_for_pr_approval`.
-Security-check and red-team failures follow that same revised-plan loop and
-never bypass normal tests or code review. Red-team targets must be confirmed
-non-production, local or ephemeral, and synthetic-data only.
+verified resolution and planner completion acknowledgement.
+Security-check and red-team failures follow that same loop and never bypass
+normal tests or code review. Red-team targets must be confirmed non-production,
+local or ephemeral, and synthetic-data only.
 
 ## Vault behavior
 

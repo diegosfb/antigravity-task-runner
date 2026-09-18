@@ -55,8 +55,8 @@ or development invoke it automatically.
 ## Vault behavior
 
 Judge reports are mirrored into `Reviews/` when enabled and linked to judged
-artifacts. Material findings and trade-offs are recorded in semantic notes
-without altering the artifact being judged.
+artifacts. Material findings and trade-offs are recorded in the action log and
+semantic notes without altering the artifact being judged.
 
 ## Completion
 

@@ -10,9 +10,8 @@ a dependency-aware technical decomposition.
 flowchart LR
     BA[ba-agent] -->|specifications| A[architect-agent]
     G[development guidelines] --> A
-    A -->|architecture package| R[architecture-review-agent]
-    R -->|APPROVED| PP[project-planner-agent]
-    R -->|REWORK| A
+    A -->|ADRs and constraints| UX[ux-agent]
+    A -->|technical tasks and dependencies| PP[project-planner-agent]
     A -->|editable diagram set| DOC[docs/architecture/documents]
     A -.->|binding ADRs| D[developer-agent]
     A -.->|binding ADRs| CR[code-review-agent]
@@ -40,7 +39,7 @@ surfaces the conflict rather than silently choosing one.
   `docs/architecture/adrs/NNNN-<title>.md`, plus the ADR index.
 - Explicit non-functional decisions covering scale, latency, cost, security,
   and observability as applicable.
-- Technical tasks and dependency edges for `architecture-review-agent`, then `project-planner-agent` after approval.
+- Technical tasks and dependency edges for `project-planner-agent`.
 - Binding constraints for `developer-agent` and `code-review-agent`.
 
 Architecture artifacts include `generated_by: <provider>/<model>` provenance.
@@ -65,8 +64,9 @@ alters a boundary, dependency, flow, or deployment topology.
 ## Agent interactions
 
 - Consumes requirements from `ba-agent`.
-- Sends the complete package to `architecture-review-agent`; resolves `REWORK`
-  findings before an `APPROVED` handoff reaches planning.
+- Supplies ADRs to `ux-agent`, which designs within those constraints.
+- Supplies technical decomposition and dependency edges to
+  `project-planner-agent`; the planner owns sequencing and estimates.
 - Provides binding constraints to development and review.
 - Receives UX escalation when a required experience is impossible under an
   ADR, then resolves or documents the conflict.
@@ -76,15 +76,15 @@ alters a boundary, dependency, flow, or deployment topology.
 When enabled, architecture and ADRs are mirrored into `Architecture/` and
 `ADRs/` and linked to specifications, backlog items, reviews, and implementation
 notes. Architectural decisions, alternatives, trade-offs, and judge outcomes
-are recorded as semantic notes.
+are recorded as semantic notes and action-log entries.
 
 ## Completion and handoff
 
 Architecture is ready when the living document and ADRs describe the selected
 design and consequences, every applicable diagram is linked and current,
 relevant NFRs are addressed, technical tasks have explicit dependencies,
-provenance is present, configured judge findings are resolved, and
-`architecture-review-agent` has approved the exact package for planning.
+provenance is present, and configured judge findings have been resolved before
+UX and planning consume the results.
 
 <!-- agent-auditor:inventory:start -->
 

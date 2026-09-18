@@ -607,13 +607,13 @@ function getQuickActionItems(): NodeItem[] {
   const savedJiraProjectKey =
     repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
       ? (
-          fs
-            .readFileSync(path.join(repoRoot, ".env"), "utf8")
-            .match(/^\s*JIRA_PROJECT_KEY\s*=\s*([^\r\n#]+)/m)?.[1] ?? ""
-        )
-          .trim()
-          .replace(/^['"]|['"]$/g, "")
-          .toUpperCase()
+        fs
+          .readFileSync(path.join(repoRoot, ".env"), "utf8")
+          .match(/^\s*JIRA_PROJECT_KEY\s*=\s*([^\r\n#]+)/m)?.[1] ?? ""
+      )
+        .trim()
+        .replace(/^['"]|['"]$/g, "")
+        .toUpperCase()
       : "";
 
   const setupWorkspace = new NodeItem(

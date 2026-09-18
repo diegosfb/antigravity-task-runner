@@ -1,6 +1,6 @@
 import * as path from "path";
 import { exec, execSync } from "child_process";
-import { parseEnvFile } from "./utils";
+import { parseEnvFile, quoteShellArg } from "./utils";
 import { log } from "./logger";
 
 const autocommitTimers = new Map<string, NodeJS.Timeout>();
@@ -42,7 +42,7 @@ function commitCheckpoint(repoRoot: string): void {
   const timestamp = new Date().toISOString();
   const msg = `[AGENTIC DEV CHECKPOINT] ${timestamp}`;
   const cmd = [
-    `cd "${repoRoot}"`,
+    `cd ${quoteShellArg(repoRoot)}`,
     `git add -A`,
     `git diff --cached --quiet || git commit -m "${msg.replace(/"/g, '\\"')}"`,
     `git push`

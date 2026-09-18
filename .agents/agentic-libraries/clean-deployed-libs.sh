@@ -130,7 +130,6 @@ remove_agent_component() {
       while IFS= read -r -d '' child; do
         [[ "$(basename "$child")" == "subagents" ]] || remove_if_present "$child"
       done < <(find "$component_dir" -mindepth 1 -maxdepth 1 -print0)
-      remove_if_present "$component_dir/subagents/references"
     else
       remove_if_present "$agent_file"
     fi
@@ -188,15 +187,6 @@ for (( agent_dir_index=${#AGENT_DIRS[@]}-1; agent_dir_index>=0; agent_dir_index-
   component_dir="${AGENT_DIRS[$agent_dir_index]}"
   if [[ -d "$component_dir/subagents" ]]; then
     rmdir "$component_dir/subagents" 2>/dev/null || true
-  fi
-  rmdir "$component_dir" 2>/dev/null || true
-done
-
-# Retry bottom-up after all listed agents are gone so matrix ordering cannot
-# leave empty ancestor directories behind. Nonempty, unlisted content remains.
-for component_dir in "${AGENT_DIRS[@]}"; do
-  if [[ -d "$component_dir/subagents" ]]; then
-    find "$component_dir/subagents" -depth -type d -empty -delete 2>/dev/null || true
   fi
   rmdir "$component_dir" 2>/dev/null || true
 done

@@ -1,0 +1,32 @@
+Add input page for Product Designer item of the ADLC folder.
+When clicked it should bring up the page where the user can input the Fields
+
+Agent Harness (this one is mandatory) use Codex by default
+Agent Model (this one is optional)
+Agent Intelligence (this one is optional)
+
+Project Description folder (this one is mandatory)
+Project Meeting notes folder (this one is optional)
+Project Workspace folder (this one is mandatory) by default it should be the project root folder 
+Project Confluence (this one is optional)
+
+Then it shows a field called Agent Script Path (this one is mandatory)
+
+Then it has a run button (that only gets enabled when the mandatory fields are filled). When the button is clicked; then the script at Agent Script Path should be run with parameters
+
+--project-description-dir <Project Description folder>
+--meetings-recordings-folder <Project Meeting notes folder> (only if not empty)   
+--workspace <Project Workspace folder>
+--project-confluence <Project Confluence> (only if not empty)    
+--harness <Agent Harness>
+--model <Agent Model> (only if not empty) 
+--intelligence <Agent Intelligence> (only if not empty) 
+
+Always save the last used settings so next time the page is launched it takes those values for the project in use.
+
+
+
+
+
+
+remove the Defaults to Codex label to the Product Designer page. Move Agent Model to be side by side with Agent Intelligence Agent model on the left. Add a square or something like a section to these 3 fields and then Project Description folder, Project Meeting notes folder, Project Workspace folder, Project Confluence should go on another section and then Agent Script Path on a different section

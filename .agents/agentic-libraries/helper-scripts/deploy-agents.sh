@@ -40,7 +40,7 @@ validate_repository_path() {
   [[ "$path" != *'<'* && "$path" != *'>'* && "$path" != *'*'* ]] || return 1
 
   case "$path" in
-    .agents/*|scripts/*|ADLC_workflow_settings.json) return 0 ;;
+    .agents/*|scripts/*|routing-registry.yaml|ADLC_workflow_settings.json) return 0 ;;
     *) return 1 ;;
   esac
 }

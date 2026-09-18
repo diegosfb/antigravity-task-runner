@@ -27,6 +27,16 @@ const agenticHarnessCommand_1 = require("./agenticHarnessCommand");
 const resourceProvider_1 = require("./resourceProvider");
 const updateProjectConfig_1 = require("./updateProjectConfig");
 const explainMe_1 = require("./explainMe");
+const deployAgenticLib_1 = require("./deployAgenticLib");
+const businessAnalyst_1 = require("./businessAnalyst");
+const productDesigner_1 = require("./productDesigner");
+const developer_1 = require("./developer");
+const estimator_1 = require("./estimator");
+const planExecution_1 = require("./planExecution");
+const solutionArchitect_1 = require("./solutionArchitect");
+const backlogItem_1 = require("./backlogItem");
+const backlogItemCompleted_1 = require("./backlogItemCompleted");
+const assignBacklogItemToAgent_1 = require("./assignBacklogItemToAgent");
 function getRepoPackageVersion(repoRoot) {
     try {
         const packageJsonPath = path.join(repoRoot, "package.json");
@@ -47,6 +57,7 @@ function activate(context) {
     const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBrightBlue");
     const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
     const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
+    const ADLC_ACTION_COLOR = new vscode.ThemeColor("charts.red");
     context.subscriptions.push(outputChannel);
     (0, logger_1.initLogger)(outputChannel);
     const provider = new treeProvider_1.AntigravityViewProvider();
@@ -96,6 +107,72 @@ function activate(context) {
             color: UPDATE_PROJECT_CONFIG_ACTION_COLOR
         });
         void vscode.window.showInformationMessage(successMessage);
+    };
+    const launchProductDesignerInNewTerminal = (values) => {
+        const terminal = vscode.window.createTerminal({
+            name: "Product Designer",
+            cwd: values.workspace,
+            iconPath: new vscode.ThemeIcon("edit", ADLC_ACTION_COLOR),
+            color: ADLC_ACTION_COLOR
+        });
+        terminal.show();
+        terminal.sendText((0, productDesigner_1.buildProductDesignerCommand)(values), true);
+    };
+    const launchBusinessAnalystInNewTerminal = (values) => {
+        const terminal = vscode.window.createTerminal({
+            name: "Business Analyst",
+            cwd: values.workspace,
+            iconPath: new vscode.ThemeIcon("note", ADLC_ACTION_COLOR),
+            color: ADLC_ACTION_COLOR
+        });
+        terminal.show();
+        terminal.sendText((0, businessAnalyst_1.buildBusinessAnalystCommand)(values), true);
+    };
+    const launchSolutionArchitectInNewTerminal = (values) => {
+        const terminal = vscode.window.createTerminal({
+            name: "Solution Architect",
+            cwd: values.workspace,
+            iconPath: new vscode.ThemeIcon("symbol-structure", ADLC_ACTION_COLOR),
+            color: ADLC_ACTION_COLOR
+        });
+        terminal.show();
+        terminal.sendText((0, solutionArchitect_1.buildSolutionArchitectCommand)(values), true);
+    };
+    const launchEstimatorInNewTerminal = (values) => {
+        const terminal = vscode.window.createTerminal({
+            name: "Estimate Project",
+            cwd: values.workspace,
+            iconPath: new vscode.ThemeIcon("graph", ADLC_ACTION_COLOR),
+            color: ADLC_ACTION_COLOR
+        });
+        terminal.show();
+        terminal.sendText((0, estimator_1.buildEstimatorCommand)(values), true);
+    };
+    const launchPlanExecutionInNewTerminal = (values) => {
+        const terminal = vscode.window.createTerminal({
+            name: "Create Execution Plan",
+            cwd: values.workspace,
+            iconPath: new vscode.ThemeIcon("map", ADLC_ACTION_COLOR),
+            color: ADLC_ACTION_COLOR
+        });
+        terminal.show();
+        terminal.sendText((0, planExecution_1.buildPlanExecutionCommand)(values), true);
+    };
+    const launchDeveloperInNewTerminal = (values) => {
+        const terminal = vscode.window.createTerminal({
+            name: "Develop Execution Plan",
+            cwd: values.workspace,
+            iconPath: new vscode.ThemeIcon("play-circle", ADLC_ACTION_COLOR),
+            color: ADLC_ACTION_COLOR
+        });
+        terminal.show();
+        terminal.sendText((0, developer_1.buildDeveloperCommand)(values), true);
+    };
+    const getProjectScopedStateKey = (prefix) => {
+        const workspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const projectRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : workspaceRoot;
+        return `${prefix}:${projectRoot ?? "global"}`;
     };
     const refreshAutocommitUiWhenStateChanges = (repoRoot, expectedRunningState, attemptsRemaining = 20) => {
         provider.refresh();
@@ -148,14 +225,6 @@ function activate(context) {
             prefix: "hotfix"
         }
     ];
-    const getNonce = () => {
-        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        let nonce = "";
-        for (let i = 0; i < 32; i += 1) {
-            nonce += chars[Math.floor(Math.random() * chars.length)];
-        }
-        return nonce;
-    };
     const normalizeBranchSegment = (value) => value
         .trim()
         .toLowerCase()
@@ -203,7 +272,7 @@ function activate(context) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
     const renderSetupWorkspaceHtml = (webview, workspaceDir, projectTemplates) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         const templateCards = projectTemplates
             .map((template, index) => {
@@ -434,7 +503,7 @@ function activate(context) {
         }, undefined, context.subscriptions);
     });
     const renderCreateFeatureBranchHtml = (webview, hasJiraProject) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         const branchTypeData = branchTypes.map((option) => ({
             label: option.label,
@@ -797,6 +866,12 @@ function activate(context) {
         const env = (0, utils_1.parseEnvFile)(getRepoEnvPath(repoRoot));
         return (env.jira_project_key || "").trim().toUpperCase();
     };
+    const applySavedJiraProjectKey = (values, jiraProjectKey) => jiraProjectKey
+        ? {
+            ...values,
+            jiraProjectName: jiraProjectKey
+        }
+        : values;
     const buildFeatureEstimatorDetailsFromIssue = (issue) => {
         const metadata = [issue.issueTypeName, issue.statusName].filter(Boolean).join(", ");
         return metadata
@@ -804,7 +879,7 @@ function activate(context) {
             : `Jira item ${issue.key}: ${issue.summary}`;
     };
     const renderFeatureEstimatorHtml = (webview, savedProjectKey) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const hasSavedProjectKey = savedProjectKey.length > 0;
         const useJiraByDefault = hasSavedProjectKey;
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -1259,7 +1334,7 @@ function activate(context) {
         return undefined;
     };
     const renderJiraProjectSetupHtml = (webview, projects) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         const projectOptions = projects.map((project) => ({
             key: project.key,
@@ -1619,8 +1694,8 @@ function activate(context) {
         provider.refresh();
         return projectKey;
     };
-    const renderCreateJiraItemHtml = (webview, projectKey, issueTypes) => {
-        const nonce = getNonce();
+    const renderCreateJiraItemHtml = (webview, projectKey, issueTypes, defaultBacklogDir) => {
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         return `<!DOCTYPE html>
 <html lang="en">
@@ -1628,7 +1703,7 @@ function activate(context) {
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Add Jira Item</title>
+    <title>Create Backlog item</title>
     <style>
       :root { color-scheme: light dark; font-family: var(--vscode-font-family); }
       body { margin: 0; padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
@@ -1645,8 +1720,11 @@ function activate(context) {
         border-radius: 6px;
       }
       textarea { min-height: 140px; resize: vertical; }
-      .current-branch-title { font-size: 18px; font-weight: 600; }
+      .current-branch-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 18px; font-weight: 600; }
       .current-branch-value { color: #7cc7ff; }
+      .current-branch-title.is-disabled { opacity: 0.45; }
+      .inline-checkbox { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; }
+      .inline-checkbox input { width: auto; margin: 0; }
       .hint { font-size: 12px; color: var(--vscode-descriptionForeground); }
       .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
       .actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -1659,7 +1737,13 @@ function activate(context) {
   </head>
   <body>
     <form id="jira-item-form">
-      <div class="current-branch-title">Jira Project: <span class="current-branch-value">${projectKey}</span></div>
+      <div class="current-branch-title" id="jira-project-title">
+        <span>Jira Project: <span class="current-branch-value">${projectKey}</span></span>
+        <label class="inline-checkbox">
+          <input id="create-on-jira" type="checkbox" checked />
+          <span>Create on JIRA</span>
+        </label>
+      </div>
       <label>
         Item Type
         <select id="issue-type"></select>
@@ -1672,6 +1756,11 @@ function activate(context) {
         Description
         <textarea id="issue-description"></textarea>
         <span class="hint">The description will be sent to Jira as rich text.</span>
+      </label>
+      <label>
+        Local Backlog Folder
+        <input id="backlog-dir" type="text" autocomplete="off" value="${escapeHtml(defaultBacklogDir)}" />
+        <span class="hint">Creates a matching local markdown file in this folder.</span>
       </label>
       <div class="error" id="error-message"></div>
       <div class="actions">
@@ -1686,6 +1775,9 @@ function activate(context) {
       const issueTypeSelect = document.getElementById("issue-type");
       const issueNameInput = document.getElementById("issue-name");
       const issueDescriptionInput = document.getElementById("issue-description");
+      const backlogDirInput = document.getElementById("backlog-dir");
+      const createOnJiraInput = document.getElementById("create-on-jira");
+      const jiraProjectTitle = document.getElementById("jira-project-title");
       const errorMessage = document.getElementById("error-message");
       const form = document.getElementById("jira-item-form");
       const cancelButton = document.getElementById("cancel-button");
@@ -1701,18 +1793,31 @@ function activate(context) {
         vscode.postMessage({ type: "cancelCreateJiraItem" });
       });
 
+      const syncJiraProjectState = () => {
+        jiraProjectTitle.classList.toggle("is-disabled", !createOnJiraInput.checked);
+      };
+
+      createOnJiraInput.addEventListener("change", syncJiraProjectState);
+
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "create";
         const payload = {
           action,
+          createOnJira: createOnJiraInput.checked,
           issueType: issueTypeSelect.value,
           summary: issueNameInput.value.trim(),
-          description: issueDescriptionInput.value.trim()
+          description: issueDescriptionInput.value.trim(),
+          backlogDir: backlogDirInput.value.trim()
         };
         if (!payload.summary) {
           errorMessage.textContent = "Enter a Jira item name.";
           issueNameInput.focus();
+          return;
+        }
+        if (!payload.backlogDir) {
+          errorMessage.textContent = "Enter a local backlog folder.";
+          backlogDirInput.focus();
           return;
         }
         vscode.postMessage({ type: "submitCreateJiraItem", payload });
@@ -1726,14 +1831,15 @@ function activate(context) {
       });
 
       issueTypeSelect.value = issueTypes[0];
+      syncJiraProjectState();
       issueNameInput.focus();
     </script>
   </body>
 </html>`;
     };
-    const showCreateJiraItemDialog = async (projectKey, issueTypes) => new Promise((resolve) => {
-        const panel = vscode.window.createWebviewPanel("createJiraItem", "Add Jira Item", vscode.ViewColumn.Active, { enableScripts: true });
-        panel.webview.html = renderCreateJiraItemHtml(panel.webview, projectKey, issueTypes);
+    const showCreateJiraItemDialog = async (projectKey, issueTypes, defaultBacklogDir) => new Promise((resolve) => {
+        const panel = vscode.window.createWebviewPanel("createJiraItem", "Create Backlog item", vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = renderCreateJiraItemHtml(panel.webview, projectKey, issueTypes, defaultBacklogDir);
         let settled = false;
         const resolveOnce = (value) => {
             if (settled)
@@ -1753,9 +1859,11 @@ function activate(context) {
                 return;
             const payload = message.payload || {};
             const action = payload.action === "grillMe" ? "grillMe" : "create";
+            const createOnJira = payload.createOnJira !== false;
             const issueType = typeof payload.issueType === "string" ? payload.issueType.trim() : "";
             const summary = typeof payload.summary === "string" ? payload.summary.trim() : "";
             const description = typeof payload.description === "string" ? payload.description.trim() : "";
+            const backlogDir = typeof payload.backlogDir === "string" ? payload.backlogDir.trim() : "";
             if (!issueType) {
                 void panel.webview.postMessage({
                     type: "createJiraItemError",
@@ -1770,175 +1878,17 @@ function activate(context) {
                 });
                 return;
             }
-            resolveOnce({ action, issueType, summary, description });
+            if (!backlogDir) {
+                void panel.webview.postMessage({
+                    type: "createJiraItemError",
+                    payload: { message: "Enter a local backlog folder." }
+                });
+                return;
+            }
+            resolveOnce({ action, createOnJira, issueType, summary, description, backlogDir });
             panel.dispose();
         }, undefined, context.subscriptions);
     });
-    const renderAssignJiraItemToAgentHtml = (webview, projectKey, issues, initialAgentCommand, agentCommandOptions) => {
-        const nonce = getNonce();
-        const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-        const issueOptions = issues.map((issue) => ({
-            key: issue.key,
-            summary: issue.summary,
-            detail: [issue.issueTypeName, issue.statusName].filter(Boolean).join(" • ")
-        }));
-        return `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="${csp}" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Assign Jira Item to Agent</title>
-    <style>
-      :root { color-scheme: light dark; font-family: var(--vscode-font-family); }
-      body { margin: 0; padding: 20px; color: var(--vscode-foreground); background: var(--vscode-editor-background); }
-      form { display: grid; gap: 16px; }
-      label { display: grid; gap: 6px; font-size: 13px; }
-      select, input, button { font: inherit; }
-      select, input {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 8px 10px;
-        color: var(--vscode-input-foreground);
-        background: var(--vscode-input-background);
-        border: 1px solid var(--vscode-input-border, transparent);
-        border-radius: 6px;
-      }
-      .command-list-controls { display: grid; gap: 8px; }
-      .current-branch-title { font-size: 18px; font-weight: 600; }
-      .current-branch-value { color: #7cc7ff; }
-      .hint { font-size: 12px; color: var(--vscode-descriptionForeground); }
-      .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
-      .actions { display: flex; justify-content: flex-end; gap: 8px; }
-      button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
-      button[type="submit"] { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
-      button[type="submit"][data-action="grillMe"] { background: var(--vscode-charts-green, #2ea043); }
-      button[type="submit"][data-action="grillMe"]:hover { background: color-mix(in srgb, var(--vscode-charts-green, #2ea043) 88%, black 12%); }
-      button[type="button"] { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
-    </style>
-  </head>
-  <body>
-    <form id="assign-jira-item-to-agent-form">
-      <div class="current-branch-title">Jira Project: <span class="current-branch-value">${projectKey}</span></div>
-      <label>
-        Agent Harness Command
-        <div class="command-list-controls">
-          <select id="agent-command-preset"></select>
-          <input id="agent-command-input" type="text" autocomplete="off" />
-        </div>
-        <span class="hint">Starts with the selected Agentic Harness execution command from settings. Pick a saved command or type your own for this Jira assignment.</span>
-      </label>
-      <label>
-        Jira Item
-        <select id="issue-select"></select>
-        <span class="hint" id="issue-hint"></span>
-      </label>
-      <div class="hint">Assign updates the Jira item and launches the selected agent. Grill Me reviews the selected Jira item with the same harness command without changing Jira first.</div>
-      <div class="error" id="error-message"></div>
-      <div class="actions">
-        <button type="button" id="cancel-button">Cancel</button>
-        <button type="submit" data-action="assign">Assign</button>
-        <button type="submit" data-action="grillMe">Grill Me</button>
-      </div>
-    </form>
-    <script nonce="${nonce}">
-      const vscode = acquireVsCodeApi();
-      const issues = ${JSON.stringify(issueOptions)};
-      const initialAgentCommand = ${JSON.stringify(initialAgentCommand)};
-      const agentCommandOptions = ${JSON.stringify(agentCommandOptions)};
-      const form = document.getElementById("assign-jira-item-to-agent-form");
-      const agentCommandPresetSelect = document.getElementById("agent-command-preset");
-      const agentCommandInput = document.getElementById("agent-command-input");
-      const issueSelect = document.getElementById("issue-select");
-      const issueHint = document.getElementById("issue-hint");
-      const cancelButton = document.getElementById("cancel-button");
-      const errorMessage = document.getElementById("error-message");
-
-      const updateIssueHint = () => {
-        const selected = issues.find((issue) => issue.key === issueSelect.value);
-        issueHint.textContent = selected
-          ? [selected.summary, selected.detail].filter(Boolean).join(" • ")
-          : "Choose an unassigned Jira item that is currently in To Do and not blocked by unfinished Jira items.";
-      };
-
-      const customCommandOption = document.createElement("option");
-      customCommandOption.value = "__custom__";
-      customCommandOption.textContent = "Custom value";
-      agentCommandPresetSelect.appendChild(customCommandOption);
-
-      for (const command of agentCommandOptions) {
-        const option = document.createElement("option");
-        option.value = command;
-        option.textContent = command;
-        agentCommandPresetSelect.appendChild(option);
-      }
-
-      for (const issue of issues) {
-        const option = document.createElement("option");
-        option.value = issue.key;
-        option.textContent = issue.key + "  " + issue.summary;
-        issueSelect.appendChild(option);
-      }
-
-      const syncCommandPresetFromInput = () => {
-        const selectedPreset = agentCommandOptions.find((optionValue) => optionValue === agentCommandInput.value);
-        agentCommandPresetSelect.value = selectedPreset || "__custom__";
-      };
-
-      agentCommandPresetSelect.addEventListener("change", () => {
-        if (agentCommandPresetSelect.value !== "__custom__") {
-          agentCommandInput.value = agentCommandPresetSelect.value;
-        }
-        syncCommandPresetFromInput();
-      });
-
-      agentCommandInput.addEventListener("input", syncCommandPresetFromInput);
-
-      cancelButton.addEventListener("click", () => {
-        vscode.postMessage({ type: "cancelAssignJiraItemToAgent" });
-      });
-
-      issueSelect.addEventListener("change", updateIssueHint);
-
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-        const action = event.submitter?.dataset?.action === "grillMe" ? "grillMe" : "assign";
-        if (!agentCommandInput.value.trim()) {
-          errorMessage.textContent = "Enter an agent harness command.";
-          agentCommandInput.focus();
-          return;
-        }
-        if (!issueSelect.value) {
-          errorMessage.textContent = "Select a Jira item.";
-          issueSelect.focus();
-          return;
-        }
-        vscode.postMessage({
-          type: "submitAssignJiraItemToAgent",
-          payload: {
-            action,
-            issueKey: issueSelect.value,
-            agentCommand: agentCommandInput.value.trim()
-          }
-        });
-      });
-
-      window.addEventListener("message", (event) => {
-        const message = event.data;
-        if (message?.type === "assignJiraItemToAgentError") {
-          errorMessage.textContent = message.payload?.message || "Unable to assign the Jira item.";
-        }
-      });
-
-      agentCommandInput.value = initialAgentCommand || "";
-      syncCommandPresetFromInput();
-      issueSelect.value = issues[0]?.key || "";
-      updateIssueHint();
-      issueSelect.focus();
-    </script>
-  </body>
-</html>`;
-    };
     const getAssignableAgentCommandOptions = () => {
         const config = vscode.workspace.getConfiguration("antigravity");
         return Array.from(new Set([
@@ -1948,11 +1898,20 @@ function activate(context) {
             .map((item) => item.trim())
             .filter(Boolean)));
     };
-    const showAssignJiraItemToAgentDialog = async (projectKey, issues) => new Promise((resolve) => {
+    const showAssignJiraItemToAgentDialog = async (projectKey, issues, backlogItems, selectedIssueKey, selectedBacklogItemPath, backlogStatusMessage = "", useJira = true) => new Promise((resolve) => {
         const initialAgentCommand = (0, settings_1.getAgenticHarnessExecutionCommand)();
         const agentCommandOptions = getAssignableAgentCommandOptions();
-        const panel = vscode.window.createWebviewPanel("assignJiraItemToAgent", "Assign Jira Item to Agent", vscode.ViewColumn.Active, { enableScripts: true });
-        panel.webview.html = renderAssignJiraItemToAgentHtml(panel.webview, projectKey, issues, initialAgentCommand, agentCommandOptions);
+        const panel = vscode.window.createWebviewPanel("assignJiraItemToAgent", "Assign Backlog Item to Agent", vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = (0, assignBacklogItemToAgent_1.renderAssignBacklogItemToAgentHtml)(panel.webview, issues, {
+            agentCommandOptions,
+            backlogItems,
+            backlogStatusMessage,
+            initialAgentCommand,
+            projectKey,
+            selectedBacklogItemPath,
+            selectedIssueKey,
+            useJira
+        });
         let settled = false;
         const resolveOnce = (value) => {
             if (settled)
@@ -1973,11 +1932,20 @@ function activate(context) {
             const payload = message.payload || {};
             const action = payload.action === "grillMe" ? "grillMe" : "assign";
             const issueKey = typeof payload.issueKey === "string" ? payload.issueKey.trim() : "";
+            const backlogItemPath = typeof payload.backlogItemPath === "string" ? payload.backlogItemPath.trim() : "";
             const agentCommand = typeof payload.agentCommand === "string" ? payload.agentCommand.trim() : "";
-            if (!issueKey || !issues.some((issue) => issue.key === issueKey)) {
+            const useJira = payload.useJira !== false;
+            if (useJira && (!issueKey || !issues.some((issue) => issue.key === issueKey))) {
                 void panel.webview.postMessage({
                     type: "assignJiraItemToAgentError",
                     payload: { message: "Select a Jira item." }
+                });
+                return;
+            }
+            if (!useJira && !backlogItemPath) {
+                void panel.webview.postMessage({
+                    type: "assignJiraItemToAgentError",
+                    payload: { message: "Select a local backlog item." }
                 });
                 return;
             }
@@ -1990,8 +1958,10 @@ function activate(context) {
             }
             resolveOnce({
                 action,
+                backlogItemPath,
                 issueKey,
-                agentCommand
+                agentCommand,
+                useJira
             });
             panel.dispose();
         }, undefined, context.subscriptions);
@@ -2001,11 +1971,11 @@ function activate(context) {
         return `${baseSummary} - By Agent ${agentLabel}`;
     };
     const buildAgentJiraLabel = (agentLabel) => `developed-by-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
-    const buildJiraAgentPrompt = (issueKey, summary, agentLabel) => {
-        const jiraAccessInstructions = agentLabel === "Codex"
-            ? ` Jira access for this environment is available through the configured Jira MCP server. Use Jira MCP tools for all Jira actions in this task instead of shelling out to the Atlassian CLI. All Jira comments and transitions for this Codex flow must be performed while authenticated to Jira MCP as diegosfb@gmail.com, because Jira will attribute the actions to the currently authenticated Atlassian account. Before making Jira changes, verify the Jira MCP session is using diegosfb@gmail.com. If Jira MCP is not authenticated yet or is authenticated as a different Atlassian user, run \`codex mcp login jira\` and sign in as diegosfb@gmail.com, then continue with the MCP-backed Jira actions. Inspect Jira item ${issueKey}, add each assumption as a Jira comment line beginning with "AGENT ASSUMTION:", add a final Jira comment beginning with "AGENT SOLUTION:", and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead by using Jira MCP actions.`
-            : "";
-        return `work on Jira Item ${issueKey} - ${summary}. Do not ask follow-up questions unless you are truly blocked by missing critical information or permissions. Make reasonable assumptions, proceed, and add each assumption you make to the Jira ticket using comment lines that start with AGENT ASSUMTION: . If you finish the work successfully, commit your changes using the commit message format Jira Item ${issueKey} by Agent ${agentLabel}, add a Jira comment starting with AGENT SOLUTION: describing briefly how you solved it, and transition Jira item ${issueKey} to In Review; if In Review is not visible on the Jira board or that transition fails, move it to Done instead.${jiraAccessInstructions} Do not merge the work away from the active branch. The completed work should remain on the branch that was active when you were called. If you created a separate temporary branch to do the work, merge it back into the original active branch so the final work lives there.`;
+    const buildJiraAgentPrompt = (issue, agentLabel, backlogItem) => {
+        const jiraEmail = (vscode.workspace
+            .getConfiguration("antigravity")
+            .get("jiraEmail") || "").trim();
+        return (0, assignBacklogItemToAgent_1.buildAssignBacklogItemToAgentPrompt)(issue, agentLabel, jiraEmail, backlogItem);
     };
     const writeAgentLaunchScript = (scriptPrefix, command) => {
         const sanitizedPrefix = scriptPrefix.replace(/[^a-z0-9-]+/gi, "-").replace(/^-+|-+$/g, "") || "agent-launch";
@@ -2024,8 +1994,8 @@ function activate(context) {
         fs.writeFileSync(promptFilePath, prompt, "utf8");
         return promptFilePath;
     };
-    const launchAgentForJiraItem = async (repoRoot, agentLabel, issueKey, issueSummary, agentCommand) => {
-        const prompt = buildJiraAgentPrompt(issueKey, issueSummary, agentLabel);
+    const launchAgentForJiraItem = async (repoRoot, agentLabel, issue, agentCommand, backlogItem) => {
+        const prompt = buildJiraAgentPrompt(issue, agentLabel, backlogItem);
         const promptFilePath = writeAgentPromptFile(`assign-jira-item-to-agent-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, prompt);
         const command = (0, agenticHarnessCommand_1.buildAgenticHarnessFileCommandForCommand)(agentCommand, repoRoot, promptFilePath, "unattended");
         const lines = command.includes("\n")
@@ -2033,7 +2003,7 @@ function activate(context) {
                 `zsh ${(0, utils_1.quoteShellArg)(writeAgentLaunchScript(`antigravity-${agentLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-jira`, `cd ${(0, utils_1.quoteShellArg)(repoRoot)}\n${command}`))}`
             ]
             : [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, command];
-        (0, terminal_1.runInPersistentTerminal)(`${agentLabel}: ${issueKey}`, lines, {
+        (0, terminal_1.runInPersistentTerminal)(issue ? `${agentLabel}: ${issue.key}` : `${agentLabel}: ${backlogItem?.fileName ?? "backlog-item"}`, lines, {
             iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR
         });
@@ -2374,7 +2344,7 @@ function activate(context) {
         });
     };
     const renderReviewPullRequestHtml = (webview, branches) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         return `<!DOCTYPE html>
 <html lang="en">
@@ -2523,7 +2493,7 @@ function activate(context) {
         }, undefined, context.subscriptions);
     });
     const renderCheckoutBranchHtml = (webview, currentBranch, branches) => {
-        const nonce = getNonce();
+        const nonce = (0, settings_1.getNonce)();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
         return `<!DOCTYPE html>
 <html lang="en">
@@ -2829,27 +2799,16 @@ function activate(context) {
             return;
         }
         const projectRoot = (0, utils_1.getRepoRoot)(rootPath);
-        const linkName = path.basename(filePath);
-        const linkPath = path.join(projectRoot, linkName);
-        let linkExists = false;
         try {
-            fs.lstatSync(linkPath); // succeeds for regular files and symlinks (including broken)
-            linkExists = true;
-        }
-        catch {
-            // path doesn't exist at all
-        }
-        if (linkExists) {
-            void vscode.window.showErrorMessage(`"${linkName}" already exists in the project root.`);
-            return;
-        }
-        try {
-            fs.symlinkSync(filePath, linkPath);
-            void vscode.window.showInformationMessage(`Symlink created: ${linkName} → ${filePath}`);
+            const sourceFolder = (0, deployAgenticLib_1.resolveDeployAgenticLibSourceFolder)(filePath);
+            await (0, scripts_1.runRepoScript)(deployAgenticLib_1.DEPLOY_AGENTIC_LIB_TO_PROJECT_SCRIPT_NAME, [sourceFolder], {
+                cwd: projectRoot,
+                scriptDir: path.join(extensionRoot, "scripts")
+            });
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to create symlink: ${message}`);
+            void vscode.window.showErrorMessage(`Failed to add folder to project: ${message}`);
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.addToAgent", async (item) => {
@@ -3021,115 +2980,71 @@ function activate(context) {
                     return;
                 }
             }
-            launchToolTerminal(repoRoot, [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "claude"]);
+            await (0, terminal_1.openCommandInExternalTerminal)(repoRoot, "claude");
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             void vscode.window.showErrorMessage(`Claude Terminal failed: ${message}`);
         }
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openCodexTerminal", async () => {
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            await (0, terminal_1.openCommandInExternalTerminal)(repoRoot, "codex");
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Codex Terminal failed: ${message}`);
+        }
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOllamaClaudeTerminal", async () => {
-        const rootPath = (0, utils_1.getRootPath)();
-        if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-            return;
-        }
-        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-        launchToolTerminal(repoRoot, [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "ollama launch claude"]);
-    }));
-    function launchToolTerminal(repoRoot, commands) {
-        if ((0, settings_1.getUseExternalTerminal)()) {
-            const scriptContent = ["#!/bin/bash", ...commands].join("\n") + "\n";
-            const scriptPath = path.join(os.tmpdir(), `antigravity-tool-${Date.now()}.sh`);
-            fs.writeFileSync(scriptPath, scriptContent, { mode: 0o755 });
-            const safePath = scriptPath.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-            (0, child_process_1.exec)(`osascript -e 'tell application "Terminal" to do script "bash ${safePath}"'`);
-        }
-        else {
-            (0, terminal_1.runInPersistentTerminal)((0, terminal_1.getAgentTerminalName)(), commands, {
-                iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
-                color: terminal_1.CLAUDE_ACTION_COLOR
-            });
-        }
-    }
-    function launchAgentMonitor(repoRoot, agent) {
-        const installCheck = `which agent-usage-monitor > /dev/null 2>&1 || (cd plugins/agent-usage-monitor && python3 scripts/agent-usage-monitor.py install)`;
-        launchToolTerminal(repoRoot, [
-            `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-            installCheck,
-            `agent-usage-monitor launch ${agent}`
-        ]);
-    }
-    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openAgentMonitorClaudeTerminal", async () => {
-        (0, logger_1.log)(`[openAgentMonitorClaudeTerminal] triggered`);
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                (0, logger_1.log)(`[openAgentMonitorClaudeTerminal] ERROR: rootPath not set`);
                 void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-            (0, logger_1.log)(`[openAgentMonitorClaudeTerminal] repoRoot: ${repoRoot}`);
-            launchAgentMonitor(repoRoot, "claude");
+            await (0, terminal_1.openCommandInExternalTerminal)(repoRoot, "ollama launch claude --model glm-5:cloud --yes");
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Agent Monitor Claude Terminal failed: ${message}`);
-        }
-    }));
-    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openAgentMonitorCodexTerminal", async () => {
-        (0, logger_1.log)(`[openAgentMonitorCodexTerminal] triggered`);
-        try {
-            const rootPath = (0, utils_1.getRootPath)();
-            if (!rootPath) {
-                (0, logger_1.log)(`[openAgentMonitorCodexTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-                return;
-            }
-            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-            (0, logger_1.log)(`[openAgentMonitorCodexTerminal] repoRoot: ${repoRoot}`);
-            launchAgentMonitor(repoRoot, "codex");
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Agent Monitor Codex Terminal failed: ${message}`);
-        }
-    }));
-    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openAgentMonitorOpenCodeTerminal", async () => {
-        (0, logger_1.log)(`[openAgentMonitorOpenCodeTerminal] triggered`);
-        try {
-            const rootPath = (0, utils_1.getRootPath)();
-            if (!rootPath) {
-                (0, logger_1.log)(`[openAgentMonitorOpenCodeTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-                return;
-            }
-            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-            (0, logger_1.log)(`[openAgentMonitorOpenCodeTerminal] repoRoot: ${repoRoot}`);
-            launchAgentMonitor(repoRoot, "opencode");
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Agent Monitor OpenCode Terminal failed: ${message}`);
+            void vscode.window.showErrorMessage(`Ollama Claude failed: ${message}`);
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOllamaCodexTerminal", async () => {
-        (0, logger_1.log)(`[openOllamaCodexTerminal] triggered`);
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                (0, logger_1.log)(`[openOllamaCodexTerminal] ERROR: rootPath not set`);
                 void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-            (0, logger_1.log)(`[openOllamaCodexTerminal] repoRoot: ${repoRoot}`);
-            launchToolTerminal(repoRoot, [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "ollama launch codex"]);
+            await (0, terminal_1.openCommandInExternalTerminal)(repoRoot, "ollama launch codex --model glm-5:cloud --yes");
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Ollama Codex Terminal failed: ${message}`);
+            void vscode.window.showErrorMessage(`Ollama Codex failed: ${message}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOpencodeTerminal", async () => {
+        try {
+            const rootPath = (0, utils_1.getRootPath)();
+            if (!rootPath) {
+                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                return;
+            }
+            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+            await (0, terminal_1.openCommandInExternalTerminal)(repoRoot, "opencode");
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Opencode failed: ${message}`);
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOpenClaudeTerminal", async () => {
@@ -3143,46 +3058,6 @@ function activate(context) {
             iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
             color: terminal_1.CLAUDE_ACTION_COLOR
         });
-    }));
-    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openCodexTerminal", async () => {
-        (0, logger_1.log)(`[openCodexTerminal] triggered`);
-        try {
-            const rootPath = (0, utils_1.getRootPath)();
-            if (!rootPath) {
-                (0, logger_1.log)(`[openCodexTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-                return;
-            }
-            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-            (0, logger_1.log)(`[openCodexTerminal] repoRoot: ${repoRoot}`);
-            const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
-            launchToolTerminal(repoRoot, [
-                `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
-                `codex -C ${(0, utils_1.quoteShellArg)(repoRoot)} -c "trust_level=\\"trusted\\"" -c ${(0, utils_1.quoteShellArg)(trustOverride)}`
-            ]);
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Codex Terminal failed: ${message}`);
-        }
-    }));
-    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOpencodeTerminal", async () => {
-        (0, logger_1.log)(`[openOpencodeTerminal] triggered`);
-        try {
-            const rootPath = (0, utils_1.getRootPath)();
-            if (!rootPath) {
-                (0, logger_1.log)(`[openOpencodeTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-                return;
-            }
-            const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
-            (0, logger_1.log)(`[openOpencodeTerminal] repoRoot: ${repoRoot}`);
-            launchToolTerminal(repoRoot, [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, "opencode"]);
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Opencode Terminal failed: ${message}`);
-        }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.setClaudeModel", async () => {
         const routerConfigPath = path.join(os.homedir(), ".claude", "routerconfig.json");
@@ -3683,7 +3558,8 @@ function activate(context) {
             void vscode.window.showErrorMessage(`No Jira item types are available for project ${projectKey}.`);
             return;
         }
-        const jiraItem = await showCreateJiraItemDialog(projectKey, issueTypes);
+        const defaultBacklogDir = path.join(repoRoot, "docs", "backlog");
+        const jiraItem = await showCreateJiraItemDialog(projectKey, issueTypes, defaultBacklogDir);
         if (!jiraItem)
             return;
         if (jiraItem.action === "grillMe") {
@@ -3713,23 +3589,65 @@ function activate(context) {
             void vscode.window.showInformationMessage(`Opened Grill Me for the ${jiraItem.issueType} draft in project ${projectKey}.`);
             return;
         }
+        const resolvedBacklogDir = path.resolve(repoRoot, jiraItem.backlogDir);
+        const backlogFileName = (0, backlogItem_1.buildBacklogItemFileName)(jiraItem.issueType, jiraItem.summary);
+        if (!backlogFileName) {
+            void vscode.window.showErrorMessage("Failed to create a local backlog file because the item type or name cannot be converted into a filename.");
+            return;
+        }
+        const backlogFilePath = (0, backlogItem_1.resolveBacklogItemFilePath)(resolvedBacklogDir, jiraItem.issueType, jiraItem.summary);
+        if (!backlogFilePath) {
+            void vscode.window.showErrorMessage("Failed to resolve the local backlog file path.");
+            return;
+        }
+        if (fs.existsSync(resolvedBacklogDir) && !fs.statSync(resolvedBacklogDir).isDirectory()) {
+            void vscode.window.showErrorMessage(`Local backlog folder is not a directory: ${resolvedBacklogDir}`);
+            return;
+        }
+        if (fs.existsSync(backlogFilePath)) {
+            void vscode.window.showErrorMessage(`A backlog file named ${backlogFileName} already exists in ${resolvedBacklogDir}.`);
+            return;
+        }
+        let createdIssue;
+        if (jiraItem.createOnJira) {
+            try {
+                createdIssue = await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: "Creating Jira item",
+                    cancellable: false
+                }, async () => (0, jira_1.createJiraIssue)(credentials, {
+                    projectKey,
+                    issueTypeName: jiraItem.issueType,
+                    summary: jiraItem.summary,
+                    description: jiraItem.description
+                }));
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Failed to create Jira item: ${message}`);
+                return;
+            }
+        }
         try {
-            const createdIssue = await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: "Creating Jira item",
-                cancellable: false
-            }, async () => (0, jira_1.createJiraIssue)(credentials, {
-                projectKey,
-                issueTypeName: jiraItem.issueType,
+            await fs.promises.mkdir(resolvedBacklogDir, { recursive: true });
+            await fs.promises.writeFile(backlogFilePath, (0, backlogItem_1.buildBacklogItemTemplate)({
+                issueType: jiraItem.issueType,
                 summary: jiraItem.summary,
                 description: jiraItem.description
-            }));
-            void vscode.window.showInformationMessage(`Created Jira ${jiraItem.issueType} ${createdIssue.key} in project ${projectKey}.`);
+            }), "utf8");
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to create Jira item: ${message}`);
+            const prefix = createdIssue
+                ? `Created Jira ${jiraItem.issueType} ${createdIssue.key}, but failed to create ${backlogFileName}:`
+                : `Failed to create ${backlogFileName}:`;
+            void vscode.window.showErrorMessage(`${prefix} ${message}`);
+            return;
         }
+        const successMessage = createdIssue
+            ? `Created Jira ${jiraItem.issueType} ${createdIssue.key} in project ${projectKey} and added ${backlogFileName}.`
+            : `Added ${backlogFileName} without creating a Jira item.`;
+        void vscode.window.showInformationMessage(successMessage);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.takeJiraItemAssign", async () => {
         const rootPath = (0, utils_1.getRootPath)();
@@ -3812,7 +3730,7 @@ function activate(context) {
             return;
         }
         if (!projectKey) {
-            void vscode.window.showErrorMessage("Assign Jira Item to Agent is disabled because JIRA_PROJECT_KEY is not set for this repository.");
+            void vscode.window.showErrorMessage("Assign Backlog Item to Agent is disabled because JIRA_PROJECT_KEY is not set for this repository.");
             provider.refresh();
             return;
         }
@@ -3833,13 +3751,44 @@ function activate(context) {
             void vscode.window.showInformationMessage(`No unassigned Jira tickets in To Do that are not blocked by unfinished Jira items were found for project ${projectKey}.`);
             return;
         }
-        const selection = await showAssignJiraItemToAgentDialog(projectKey, issues);
+        const backlogDir = path.join(repoRoot, "docs", "backlog");
+        let backlogItems = [];
+        let backlogStatusMessage = "";
+        try {
+            backlogItems = (0, backlogItemCompleted_1.loadBacklogItemsForCompletion)(backlogDir);
+        }
+        catch (error) {
+            backlogStatusMessage = error instanceof Error ? error.message : String(error);
+        }
+        const selectedIssueKey = issues[0]?.key ?? "";
+        const initialIssue = issues.find((candidate) => candidate.key === selectedIssueKey);
+        const selectedBacklogItemPath = (0, backlogItemCompleted_1.findMatchingBacklogItemForJiraIssue)(initialIssue, backlogItems)?.filePath ?? "";
+        const selection = await showAssignJiraItemToAgentDialog(projectKey, issues, backlogItems, selectedIssueKey, selectedBacklogItemPath, backlogStatusMessage, true);
         if (!selection)
             return;
-        const issue = issues.find((candidate) => candidate.key === selection.issueKey);
-        if (!issue) {
+        const issue = selection.useJira
+            ? issues.find((candidate) => candidate.key === selection.issueKey)
+            : undefined;
+        if (selection.useJira && !issue) {
             void vscode.window.showErrorMessage("The selected Jira item is no longer available.");
             return;
+        }
+        let selectedBacklogItem;
+        if (selection.backlogItemPath) {
+            let latestBacklogItems;
+            try {
+                latestBacklogItems = (0, backlogItemCompleted_1.loadBacklogItemsForCompletion)(backlogDir);
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Failed to load local backlog items: ${message}`);
+                return;
+            }
+            selectedBacklogItem = latestBacklogItems.find((candidate) => candidate.filePath === selection.backlogItemPath);
+            if (!selectedBacklogItem) {
+                void vscode.window.showErrorMessage("The selected local backlog item is no longer available. Reopen the page and try again.");
+                return;
+            }
         }
         if (selection.action === "grillMe") {
             try {
@@ -3853,44 +3802,54 @@ function activate(context) {
                 void vscode.window.showErrorMessage(`Failed to prepare the grill-me skill: ${message}`);
                 return;
             }
-            const featureDetails = buildFeatureEstimatorDetailsFromIssue(issue);
+            const featureDetails = (0, assignBacklogItemToAgent_1.buildAssignBacklogItemToAgentFeatureDetails)(issue, selectedBacklogItem);
             const prompt = (0, grillMe_1.buildFeatureGrillMePrompt)(featureDetails);
             const promptFilePath = writeAgentPromptFile("assign-jira-item-grill-me", prompt);
             const commandLine = (0, agenticHarnessCommand_1.buildAgenticHarnessFileCommandForCommand)(selection.agentCommand, repoRoot, promptFilePath, "prompt");
             (0, logger_1.logAlways)(`[assignJiraItemToAgentGrillMe] runString (file): ${commandLine}`);
-            (0, logger_1.logAlways)(`[assignJiraItemToAgentGrillMe] launching Agentic Harness for ${issue.key} with selected command`);
-            (0, terminal_1.runInPersistentTerminal)("Assign Jira Item Grill Me", [
+            (0, logger_1.logAlways)(`[assignJiraItemToAgentGrillMe] launching Agentic Harness for ${issue?.key ?? selectedBacklogItem?.fileName ?? "local backlog item"} with selected command`);
+            (0, terminal_1.runInPersistentTerminal)("Assign Backlog Item Grill Me", [
                 `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
                 commandLine
             ], {
                 iconPath: FEATURE_ESTIMATOR_ICON_PATH,
                 color: FEATURE_ESTIMATOR_ACTION_COLOR
             });
-            void vscode.window.showInformationMessage(`Opened Grill Me for Jira item ${issue.key} with the selected agent harness command.`);
+            void vscode.window.showInformationMessage(issue && selectedBacklogItem
+                ? `Opened Grill Me for Jira item ${issue.key} and local backlog item ${path.basename(selectedBacklogItem.filePath)} with the selected agent harness command.`
+                : issue
+                    ? `Opened Grill Me for Jira item ${issue.key} with the selected agent harness command.`
+                    : `Opened Grill Me for local backlog item ${path.basename(selectedBacklogItem?.filePath ?? "backlog item")} with the selected agent harness command.`);
             return;
         }
         const agentLabel = (0, agentRunCommand_1.inferAssignableAgentLabelFromCommand)(selection.agentCommand);
-        const updatedSummary = buildIssueSummaryForAgent(issue.summary, agentLabel);
-        try {
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Assigning ${issue.key}`,
-                cancellable: false
-            }, async () => {
-                await (0, jira_1.updateJiraIssueSummaryAndLabels)(credentials, issue.key, updatedSummary, [buildAgentJiraLabel(agentLabel)]);
-                await (0, jira_1.assignJiraIssueToCurrentUser)(credentials, issue.key);
-                await (0, jira_1.transitionJiraIssueToStatus)(credentials, issue.key, "In Progress");
-            });
+        if (issue) {
+            const updatedSummary = buildIssueSummaryForAgent(issue.summary, agentLabel);
+            try {
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Assigning ${issue.key}`,
+                    cancellable: false
+                }, async () => {
+                    await (0, jira_1.updateJiraIssueSummaryAndLabels)(credentials, issue.key, updatedSummary, [buildAgentJiraLabel(agentLabel)]);
+                    await (0, jira_1.assignJiraIssueToCurrentUser)(credentials, issue.key);
+                    await (0, jira_1.transitionJiraIssueToStatus)(credentials, issue.key, "In Progress");
+                });
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Failed to assign Jira item to agent: ${message}`);
+                return;
+            }
         }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to assign Jira item to agent: ${message}`);
-            return;
-        }
-        await launchAgentForJiraItem(repoRoot, agentLabel, issue.key, issue.summary, selection.agentCommand);
-        void vscode.window.showInformationMessage(`${issue.key} was assigned to ${credentials.email}, moved to In Progress, and launched with the selected agent harness command.`);
+        await launchAgentForJiraItem(repoRoot, agentLabel, issue, selection.agentCommand, selectedBacklogItem);
+        void vscode.window.showInformationMessage(issue && selectedBacklogItem
+            ? `${issue.key} was assigned to ${credentials.email}, moved to In Progress, and launched with local backlog item ${path.basename(selectedBacklogItem.filePath)} in the agent context.`
+            : issue
+                ? `${issue.key} was assigned to ${credentials.email}, moved to In Progress, and launched with the selected agent harness command.`
+                : `Local backlog item ${path.basename(selectedBacklogItem?.filePath ?? "backlog item")} was launched with the selected agent harness command.`);
     }));
-    context.subscriptions.push(vscode.commands.registerCommand("antigravity.completeJiraItem", async () => {
+    context.subscriptions.push(vscode.commands.registerCommand(backlogItemCompleted_1.BACKLOG_ITEM_COMPLETED_COMMAND, async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
             void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
@@ -3903,7 +3862,7 @@ function activate(context) {
             return;
         }
         if (!projectKey) {
-            void vscode.window.showErrorMessage("Jira Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository.");
+            void vscode.window.showErrorMessage("Backlog Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository.");
             provider.refresh();
             return;
         }
@@ -3911,54 +3870,165 @@ function activate(context) {
         try {
             issues = await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `Loading your Jira items in ${projectKey}`,
+                title: `Loading Jira items in ${projectKey}`,
                 cancellable: false
-            }, async () => (0, jira_1.searchOpenAssignedJiraIssuesForCurrentUser)(credentials, projectKey));
+            }, async () => (0, jira_1.searchOpenTodoOrInProgressJiraIssuesForProject)(credentials, projectKey));
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             void vscode.window.showErrorMessage(`Failed to load Jira items: ${message}`);
             return;
         }
-        if (issues.length === 0) {
-            void vscode.window.showInformationMessage(`No Jira tickets assigned to you in To Do or In Progress were found for project ${projectKey}.`);
-            return;
-        }
-        const selection = await vscode.window.showQuickPick(issues.map((issue) => ({
-            label: issue.key,
-            description: issue.summary,
-            detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName]
-                .filter(Boolean)
-                .join(" • "),
-            issue
-        })), {
-            title: "Jira Item Completed",
-            placeHolder: `Select one of your Jira tickets in ${projectKey} to move into In Review, or Done if review is unavailable`,
-            matchOnDescription: true,
-            matchOnDetail: true
-        });
-        if (!selection)
-            return;
-        const confirm = await vscode.window.showInformationMessage(`Move ${selection.issue.key} to In Review, or Done if review is unavailable?`, { modal: true }, "Mark Completed");
-        if (confirm !== "Mark Completed")
-            return;
+        const defaultValues = (0, backlogItemCompleted_1.getDefaultBacklogItemCompletedValues)(projectKey, repoRoot);
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("backlogItemCompletedForm"));
+        const initialValues = (0, backlogItemCompleted_1.sanitizeBacklogItemCompletedFormValues)(savedValues, projectKey, repoRoot);
+        let initialBacklogItems = [];
+        let backlogLoadError = "";
         try {
-            const transitionResult = await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Completing ${selection.issue.key} in Jira`,
-                cancellable: false
-            }, async () => (0, jira_1.transitionJiraIssueToReviewOrDone)(credentials, projectKey, selection.issue.key));
-            const transitionMessage = transitionResult.statusName === "In Review"
-                ? `Moved Jira item ${selection.issue.key} to In Review.`
-                : transitionResult.fallbackReason
-                    ? `Moved Jira item ${selection.issue.key} to Done because ${transitionResult.fallbackReason}`
-                    : `Moved Jira item ${selection.issue.key} to Done.`;
-            void vscode.window.showInformationMessage(transitionMessage);
+            initialBacklogItems = (0, backlogItemCompleted_1.loadBacklogItemsForCompletion)(initialValues.backlogDir);
         }
         catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to update Jira item: ${message}`);
+            backlogLoadError = error instanceof Error ? error.message : String(error);
         }
+        if (issues.length === 0 && initialBacklogItems.length === 0) {
+            void vscode.window.showInformationMessage(backlogLoadError
+                ? `No Jira or local backlog items are ready to complete. ${backlogLoadError}`
+                : `No Jira items in To Do or In Progress or eligible local backlog items were found for project ${projectKey}.`);
+            return;
+        }
+        const savedBacklogItem = initialBacklogItems.find((item) => item.filePath === initialValues.backlogItemPath);
+        const matchedIssueForSavedBacklogItem = (0, backlogItemCompleted_1.findMatchingJiraIssueForBacklogItem)(savedBacklogItem, issues);
+        const selectedIssueKey = issues.some((issue) => issue.key === initialValues.issueKey)
+            ? initialValues.issueKey
+            : matchedIssueForSavedBacklogItem?.key ?? issues[0]?.key ?? "";
+        const initialIssue = issues.find((issue) => issue.key === selectedIssueKey);
+        const matchedBacklogItem = (0, backlogItemCompleted_1.findMatchingBacklogItemForJiraIssue)(initialIssue, initialBacklogItems);
+        const selectedBacklogItemPath = matchedBacklogItem?.filePath ??
+            savedBacklogItem?.filePath ??
+            "";
+        const panel = vscode.window.createWebviewPanel("antigravityBacklogItemCompleted", "Backlog Item Completed", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, backlogItemCompleted_1.renderBacklogItemCompletedHtml)(panel.webview, {
+            ...defaultValues,
+            ...initialValues,
+            backlogItemPath: selectedBacklogItemPath,
+            issueKey: selectedIssueKey
+        }, issues, initialBacklogItems, backlogLoadError);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelBacklogItemCompleted") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "saveBacklogItemCompletedDraft") {
+                const draftValues = (0, backlogItemCompleted_1.sanitizeBacklogItemCompletedFormValues)(message.payload, projectKey, repoRoot);
+                await context.workspaceState.update(getProjectScopedStateKey("backlogItemCompletedForm"), draftValues);
+                return;
+            }
+            if (message.type === "loadBacklogItemCompletedBacklogItems") {
+                const draftValues = (0, backlogItemCompleted_1.sanitizeBacklogItemCompletedFormValues)(message.payload, projectKey, repoRoot);
+                try {
+                    const backlogItems = (0, backlogItemCompleted_1.loadBacklogItemsForCompletion)(draftValues.backlogDir);
+                    void panel.webview.postMessage({
+                        type: "backlogItemCompletedBacklogItemsLoaded",
+                        payload: {
+                            items: backlogItems
+                        }
+                    });
+                }
+                catch (error) {
+                    const messageText = error instanceof Error ? error.message : String(error);
+                    void panel.webview.postMessage({
+                        type: "backlogItemCompletedBacklogItemsError",
+                        payload: {
+                            message: messageText
+                        }
+                    });
+                }
+                return;
+            }
+            if (message.type !== "runBacklogItemCompleted") {
+                return;
+            }
+            const values = (0, backlogItemCompleted_1.sanitizeBacklogItemCompletedFormValues)(message.payload, projectKey, repoRoot);
+            const missingFields = (0, backlogItemCompleted_1.getMissingBacklogItemCompletedFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "backlogItemCompletedError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            const selectedIssue = values.issueKey
+                ? issues.find((issue) => issue.key === values.issueKey)
+                : undefined;
+            if (values.issueKey && !selectedIssue) {
+                void panel.webview.postMessage({
+                    type: "backlogItemCompletedError",
+                    payload: {
+                        message: "The selected Jira item is no longer available. Reopen the page and try again."
+                    }
+                });
+                return;
+            }
+            try {
+                const backlogItems = values.backlogItemPath
+                    ? (0, backlogItemCompleted_1.loadBacklogItemsForCompletion)(values.backlogDir)
+                    : [];
+                const selectedBacklogItem = values.backlogItemPath
+                    ? backlogItems.find((item) => item.filePath === values.backlogItemPath)
+                    : undefined;
+                if (values.backlogItemPath && !selectedBacklogItem) {
+                    void panel.webview.postMessage({
+                        type: "backlogItemCompletedError",
+                        payload: {
+                            message: "The selected local backlog item is no longer available. Reopen the page and try again."
+                        }
+                    });
+                    return;
+                }
+                await context.workspaceState.update(getProjectScopedStateKey("backlogItemCompletedForm"), values);
+                const completionMessage = await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: selectedIssue && selectedBacklogItem
+                        ? `Completing ${selectedIssue.key} and ${path.basename(selectedBacklogItem.filePath)}`
+                        : selectedIssue
+                            ? `Completing ${selectedIssue.key} in Jira`
+                            : `Updating ${path.basename(selectedBacklogItem?.filePath ?? "backlog item")}`,
+                    cancellable: false
+                }, async () => {
+                    const messages = [];
+                    if (selectedIssue) {
+                        const transitionResult = await (0, jira_1.transitionJiraIssueToReviewOrDone)(credentials, projectKey, selectedIssue.key);
+                        messages.push(transitionResult.statusName === "In Review"
+                            ? `Moved Jira item ${selectedIssue.key} to In Review.`
+                            : transitionResult.fallbackReason
+                                ? `Moved Jira item ${selectedIssue.key} to Done because ${transitionResult.fallbackReason}`
+                                : `Moved Jira item ${selectedIssue.key} to Done.`);
+                    }
+                    if (selectedBacklogItem) {
+                        const existingMarkdown = fs.readFileSync(selectedBacklogItem.filePath, "utf8");
+                        fs.writeFileSync(selectedBacklogItem.filePath, (0, backlogItemCompleted_1.upsertBacklogItemCompletedStatus)(existingMarkdown, "In Review"), "utf8");
+                        messages.push(`Updated local backlog item ${path.basename(selectedBacklogItem.filePath)} to In Review.`);
+                    }
+                    return messages.join(" ");
+                });
+                void vscode.window.showInformationMessage(completionMessage);
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "backlogItemCompletedError",
+                    payload: { message: `Failed to update backlog item: ${messageText}` }
+                });
+            }
+        }, undefined, context.subscriptions);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.incrementMajorVersion", async () => {
         await (0, scripts_1.runRepoScript)("bump-version", ["major"]);
@@ -4661,6 +4731,333 @@ function activate(context) {
             }
             catch (err) {
                 await (0, terminal_1.runInSecondaryTerminal)([`echo "[antigravity] ERROR: ${String(err)}"`]);
+            }
+        }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand(productDesigner_1.PRODUCT_DESIGNER_COMMAND, async () => {
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const workspaceRoot = rootPath
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("productDesignerForm"));
+        const initialValues = (0, productDesigner_1.sanitizeProductDesignerFormValues)(savedValues, workspaceRoot);
+        const panel = vscode.window.createWebviewPanel("antigravityProductDesigner", "Product Designer", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, productDesigner_1.renderProductDesignerHtml)(panel.webview, initialValues);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelProductDesigner") {
+                panel.dispose();
+                return;
+            }
+            if (message.type !== "runProductDesigner") {
+                return;
+            }
+            const values = (0, productDesigner_1.sanitizeProductDesignerFormValues)(message.payload, workspaceRoot);
+            const missingFields = (0, productDesigner_1.getMissingProductDesignerFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "productDesignerError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            try {
+                await context.workspaceState.update(getProjectScopedStateKey("productDesignerForm"), values);
+                launchProductDesignerInNewTerminal(values);
+                void vscode.window.showInformationMessage("Opened Product Designer terminal.");
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "productDesignerError",
+                    payload: { message: `Failed to open Product Designer terminal: ${messageText}` }
+                });
+            }
+        }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand(businessAnalyst_1.BUSINESS_ANALYST_COMMAND, async () => {
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : openWorkspaceRoot;
+        const workspaceRoot = rootPath
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("businessAnalystForm"));
+        const initialValues = applySavedJiraProjectKey((0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(savedValues, workspaceRoot), savedJiraProjectKey);
+        const panel = vscode.window.createWebviewPanel("antigravityBusinessAnalyst", "Business Analyst", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, businessAnalyst_1.renderBusinessAnalystHtml)(panel.webview, initialValues, savedJiraProjectKey);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelBusinessAnalyst") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "saveBusinessAnalystDraft") {
+                const draftValues = applySavedJiraProjectKey((0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
+                await context.workspaceState.update(getProjectScopedStateKey("businessAnalystForm"), draftValues);
+                return;
+            }
+            if (message.type !== "runBusinessAnalyst") {
+                return;
+            }
+            const values = applySavedJiraProjectKey((0, businessAnalyst_1.sanitizeBusinessAnalystFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
+            const missingFields = (0, businessAnalyst_1.getMissingBusinessAnalystFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "businessAnalystError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            try {
+                await context.workspaceState.update(getProjectScopedStateKey("businessAnalystForm"), values);
+                launchBusinessAnalystInNewTerminal(values);
+                void vscode.window.showInformationMessage("Opened Business Analyst terminal.");
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "businessAnalystError",
+                    payload: { message: `Failed to open Business Analyst terminal: ${messageText}` }
+                });
+            }
+        }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand(solutionArchitect_1.SOLUTION_ARCHITECT_COMMAND, async () => {
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const workspaceRoot = rootPath
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("solutionArchitectForm"));
+        const initialValues = (0, solutionArchitect_1.sanitizeSolutionArchitectFormValues)(savedValues, workspaceRoot);
+        const panel = vscode.window.createWebviewPanel("antigravitySolutionArchitect", "Solution Architect", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, solutionArchitect_1.renderSolutionArchitectHtml)(panel.webview, initialValues);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelSolutionArchitect") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "saveSolutionArchitectDraft") {
+                const draftValues = (0, solutionArchitect_1.sanitizeSolutionArchitectFormValues)(message.payload, workspaceRoot);
+                await context.workspaceState.update(getProjectScopedStateKey("solutionArchitectForm"), draftValues);
+                return;
+            }
+            if (message.type !== "runSolutionArchitect") {
+                return;
+            }
+            const values = (0, solutionArchitect_1.sanitizeSolutionArchitectFormValues)(message.payload, workspaceRoot);
+            const missingFields = (0, solutionArchitect_1.getMissingSolutionArchitectFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "solutionArchitectError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            try {
+                await context.workspaceState.update(getProjectScopedStateKey("solutionArchitectForm"), values);
+                launchSolutionArchitectInNewTerminal(values);
+                void vscode.window.showInformationMessage("Opened Solution Architect terminal.");
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "solutionArchitectError",
+                    payload: { message: `Failed to open Solution Architect terminal: ${messageText}` }
+                });
+            }
+        }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand(estimator_1.ESTIMATOR_COMMAND, async () => {
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : openWorkspaceRoot;
+        const workspaceRoot = rootPath
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("estimatorForm"));
+        const initialValues = applySavedJiraProjectKey((0, estimator_1.sanitizeEstimatorFormValues)(savedValues, workspaceRoot), savedJiraProjectKey);
+        const panel = vscode.window.createWebviewPanel("antigravityEstimator", "Estimate Project", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, estimator_1.renderEstimatorHtml)(panel.webview, initialValues, savedJiraProjectKey);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelEstimator") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "saveEstimatorDraft") {
+                const draftValues = applySavedJiraProjectKey((0, estimator_1.sanitizeEstimatorFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
+                await context.workspaceState.update(getProjectScopedStateKey("estimatorForm"), draftValues);
+                return;
+            }
+            if (message.type !== "runEstimator") {
+                return;
+            }
+            const values = applySavedJiraProjectKey((0, estimator_1.sanitizeEstimatorFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
+            const missingFields = (0, estimator_1.getMissingEstimatorFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "estimatorError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            try {
+                await context.workspaceState.update(getProjectScopedStateKey("estimatorForm"), values);
+                launchEstimatorInNewTerminal(values);
+                void vscode.window.showInformationMessage("Opened Estimate Project terminal.");
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "estimatorError",
+                    payload: { message: `Failed to open Estimate Project terminal: ${messageText}` }
+                });
+            }
+        }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand(planExecution_1.PLAN_EXECUTION_COMMAND, async () => {
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : openWorkspaceRoot;
+        const workspaceRoot = rootPath
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("planExecutionForm"));
+        const initialValues = applySavedJiraProjectKey((0, planExecution_1.sanitizePlanExecutionFormValues)(savedValues, workspaceRoot), savedJiraProjectKey);
+        const panel = vscode.window.createWebviewPanel("antigravityPlanExecution", "Create Execution Plan", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, planExecution_1.renderPlanExecutionHtml)(panel.webview, initialValues, savedJiraProjectKey);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelPlanExecution") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "savePlanExecutionDraft") {
+                const draftValues = applySavedJiraProjectKey((0, planExecution_1.sanitizePlanExecutionFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
+                await context.workspaceState.update(getProjectScopedStateKey("planExecutionForm"), draftValues);
+                return;
+            }
+            if (message.type !== "runPlanExecution") {
+                return;
+            }
+            const values = applySavedJiraProjectKey((0, planExecution_1.sanitizePlanExecutionFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
+            const missingFields = (0, planExecution_1.getMissingPlanExecutionFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "planExecutionError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            try {
+                await context.workspaceState.update(getProjectScopedStateKey("planExecutionForm"), values);
+                launchPlanExecutionInNewTerminal(values);
+                void vscode.window.showInformationMessage("Opened Create Execution Plan terminal.");
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "planExecutionError",
+                    payload: { message: `Failed to open Create Execution Plan terminal: ${messageText}` }
+                });
+            }
+        }, undefined, context.subscriptions);
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand(developer_1.DEVELOPER_COMMAND, async () => {
+        const openWorkspaceRoot = (0, utils_1.getWorkspaceRoot)();
+        const rootPath = (0, utils_1.getRootPath)();
+        const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : openWorkspaceRoot;
+        const workspaceRoot = rootPath
+            ? (0, utils_1.resolveProjectWorkspaceRoot)((0, utils_1.getRepoRoot)(rootPath))
+            : (0, utils_1.resolveProjectWorkspaceRoot)(openWorkspaceRoot);
+        const savedJiraProjectKey = repoRoot ? getSavedJiraProjectKey(repoRoot) : "";
+        const savedValues = context.workspaceState.get(getProjectScopedStateKey("developerForm"));
+        const initialValues = applySavedJiraProjectKey((0, developer_1.sanitizeDeveloperFormValues)(savedValues, workspaceRoot), savedJiraProjectKey);
+        const panel = vscode.window.createWebviewPanel("antigravityDeveloper", "Develop Execution Plan", vscode.ViewColumn.Active, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        panel.webview.html = (0, developer_1.renderDeveloperHtml)(panel.webview, initialValues, savedJiraProjectKey);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "cancelDeveloper") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "saveDeveloperDraft") {
+                const draftValues = applySavedJiraProjectKey((0, developer_1.sanitizeDeveloperFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
+                await context.workspaceState.update(getProjectScopedStateKey("developerForm"), draftValues);
+                return;
+            }
+            if (message.type !== "runDeveloper") {
+                return;
+            }
+            const values = applySavedJiraProjectKey((0, developer_1.sanitizeDeveloperFormValues)(message.payload, workspaceRoot), savedJiraProjectKey);
+            const missingFields = (0, developer_1.getMissingDeveloperFields)(values);
+            if (missingFields.length > 0) {
+                void panel.webview.postMessage({
+                    type: "developerError",
+                    payload: {
+                        message: `Fill in the required fields: ${missingFields.join(", ")}.`
+                    }
+                });
+                return;
+            }
+            try {
+                await context.workspaceState.update(getProjectScopedStateKey("developerForm"), values);
+                launchDeveloperInNewTerminal(values);
+                void vscode.window.showInformationMessage("Opened Develop Execution Plan terminal.");
+                panel.dispose();
+            }
+            catch (error) {
+                const messageText = error instanceof Error ? error.message : String(error);
+                void panel.webview.postMessage({
+                    type: "developerError",
+                    payload: { message: `Failed to open Develop Execution Plan terminal: ${messageText}` }
+                });
             }
         }, undefined, context.subscriptions);
     }));

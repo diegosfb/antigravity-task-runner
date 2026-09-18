@@ -9,13 +9,10 @@ design, plan, implement, and verify without guessing.
 ```mermaid
 flowchart LR
     P[product-agent] -->|PRD| BA[ba-agent]
-    BA -->|specs| UX[ux-agent]
-    UX -->|design requirements feedback| BA
-    UX -->|design docs, mocks, diagrams| UXDOCS[docs/UX Designs]
-    UXDOCS -. referenced by specs when relevant .-> BA
-    BA -->|reconciled specs| A[architect-agent]
-    BA -->|specs| PP[project-planner-agent]
-    T[test-agent] -->|criterion is wrong or ambiguous| BA
+    BA -->|specifications| A[architect-agent]
+    BA -->|acceptance criteria| PP[project-planner-agent]
+    BA -.->|original acceptance criteria| T[test-agent]
+    T -->|criterion is wrong or ambiguous| BA
 ```
 
 ## Inputs
@@ -32,12 +29,12 @@ questions; they are never filled with assumptions.
 
 | Output | Consumer | Purpose |
 |---|---|---|
-| Feature specification in `docs/specs/<feature-name>.md` | `architect-agent` and `project-planner-agent` | Defines actors, triggers, flows, validation, state/data changes, permissions, edge cases, and embedded acceptance criteria. References files in `docs/UX Designs/` when relevant. |
+| Feature specification in `docs/specs/<feature-name>.md` | `architect-agent` | Defines actors, triggers, flows, validation, state/data changes, permissions, and edge cases. |
+| Measurable acceptance criteria | `project-planner-agent` and later `test-agent` | Establishes the behavioral contract for planning and independent verification. |
 | Open Questions section | Product owners and stakeholders | Makes unresolved requirements visible and blocks invention. |
 
-Acceptance criteria are embedded in the feature specification or user story, not
-produced as a separate artifact. They use Given/When/Then when appropriate and
-must be specific enough to map to tests.
+Acceptance criteria use Given/When/Then when appropriate and must be specific
+enough to map to tests.
 
 ## Ownership boundaries
 
@@ -50,13 +47,11 @@ technical decisions go to `architect-agent`; sequencing and estimates belong to
 ## Agent interactions
 
 - Receives the product vision from `product-agent`.
-- Sends specs to `ux-agent` for user-facing scope; receives design requirements
-  feedback from `ux-agent` and reconciles it into the specs before architecture.
-  Specs reference files in `docs/UX Designs/` when relevant.
-- Sends reconciled specs to `architect-agent` for structural design.
-- Sends specs to `project-planner-agent` for traceable backlog construction.
-- Provides the original acceptance criteria (embedded in specs) against which
-  `test-agent` verifies the built behavior.
+- Sends specifications to `architect-agent` for structural design.
+- Sends acceptance criteria to `project-planner-agent` for traceable backlog
+  construction.
+- Provides the original criteria against which `test-agent` verifies the built
+  behavior.
 - Resolves or escalates criteria that testing identifies as incorrect or
   ambiguous; tests are not weakened to conceal a requirements problem.
 
@@ -65,7 +60,7 @@ technical decisions go to `architect-agent`; sequencing and estimates belong to
 When enabled, the vault mirrors canonical specifications into `Specs/` and
 links them to the PRD, ADRs, backlog items, reviews, and tests. Material
 requirements decisions, open issues, and specification conclusions are
-recorded as semantic vault events.
+recorded as semantic vault events and dated action-log entries.
 
 ## Completion and handoff
 

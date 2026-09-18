@@ -10,6 +10,7 @@ exports.searchOpenTodoJiraIssuesForProject = searchOpenTodoJiraIssuesForProject;
 exports.searchOpenUnassignedTodoJiraIssuesForProject = searchOpenUnassignedTodoJiraIssuesForProject;
 exports.searchOpenUnassignedTodoJiraIssuesForAssignment = searchOpenUnassignedTodoJiraIssuesForAssignment;
 exports.searchOpenAssignedJiraIssuesForCurrentUser = searchOpenAssignedJiraIssuesForCurrentUser;
+exports.searchOpenTodoOrInProgressJiraIssuesForProject = searchOpenTodoOrInProgressJiraIssuesForProject;
 exports.assignJiraIssueToCurrentUser = assignJiraIssueToCurrentUser;
 exports.updateJiraIssueSummary = updateJiraIssueSummary;
 exports.updateJiraIssueSummaryAndLabels = updateJiraIssueSummaryAndLabels;
@@ -27,9 +28,9 @@ const JIRA_STATUS_TO_DO = "To Do";
 const JIRA_STATUS_IN_PROGRESS = "In Progress";
 const JIRA_STATUS_IN_REVIEW = "In Review";
 const JIRA_STATUS_DONE = "Done";
-const TEAM_MANAGED_MEMBER_GROUPS = ["jira-users-diegosfb"];
+const TEAM_MANAGED_MEMBER_GROUPS = [];
 const TEAM_MANAGED_ADMIN_GROUPS = ["site-admins"];
-const TEAM_MANAGED_ACCESS_WARNING = "Jira still requires a manual access-level check so the project is limited to jira-users-diegosfb, Diego Fernandez, and site-admins.";
+const TEAM_MANAGED_ACCESS_WARNING = "Jira still requires a manual access-level check. Verify project member and admin roles in your Jira settings.";
 const TEAM_MANAGED_BOARD_WARNING_PREFIX = 'The Jira project was created, but the extension could not automatically configure the board columns so "In Review" appears between "In Progress" and "Done"';
 function normalizeFieldName(fieldKey, field) {
     return (field?.name || fieldKey).trim().toLowerCase();
@@ -164,6 +165,41 @@ function toAdfDocument(text) {
             : []
     };
 }
+function extractPlainTextFromJiraDocument(value) {
+    const fragments = [];
+    const visit = (node) => {
+        if (!node) {
+            return;
+        }
+        if (typeof node === "string") {
+            fragments.push(node);
+            return;
+        }
+        if (Array.isArray(node)) {
+            node.forEach(visit);
+            return;
+        }
+        if (typeof node !== "object") {
+            return;
+        }
+        const valueNode = node;
+        if (valueNode.type === "hardBreak") {
+            fragments.push("\n");
+        }
+        if (typeof valueNode.text === "string") {
+            fragments.push(valueNode.text);
+        }
+        if (typeof valueNode.attrs?.text === "string") {
+            fragments.push(valueNode.attrs.text);
+        }
+        visit(valueNode.content);
+    };
+    visit(value);
+    return fragments
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
 async function getJiraCurrentUserAccountId(credentials) {
     const response = await jiraRequest(credentials, {
         method: "GET",
@@ -240,7 +276,7 @@ async function searchOpenUnassignedTodoJiraIssueSearchResultsForProject(credenti
         method: "POST",
         apiPath: "/rest/api/3/search/jql",
         body: {
-            fields: ["summary", "issuetype", "project", "status", "issuelinks"],
+            fields: ["summary", "description", "issuetype", "project", "status", "issuelinks"],
             jql: `project = "${normalizedProjectKey}" AND assignee IS EMPTY AND statusCategory = "To Do" ORDER BY updated DESC`,
             maxResults: 100
         }
@@ -267,6 +303,7 @@ async function searchOpenTodoJiraIssuesForProject(credentials, projectKey) {
 }
 function mapJiraIssueSearchResultToSummary(issue) {
     return {
+        description: extractPlainTextFromJiraDocument(issue.fields?.description) || undefined,
         id: (issue.id ?? "").trim(),
         key: (issue.key ?? "").trim(),
         summary: (issue.fields?.summary ?? "").trim(),
@@ -355,13 +392,29 @@ async function searchOpenAssignedJiraIssuesForCurrentUser(credentials, projectKe
         method: "POST",
         apiPath: "/rest/api/3/search/jql",
         body: {
-            fields: ["summary", "issuetype", "project", "status", "assignee"],
+            fields: ["summary", "description", "issuetype", "project", "status", "assignee"],
             jql: `project = "${normalizedProjectKey}" AND assignee = currentUser() AND assignee IS NOT EMPTY AND status in ("To Do", "In Progress") ORDER BY updated DESC`,
             maxResults: 100
         }
     });
     return (response.issues ?? [])
         .filter((issue) => (issue.fields?.assignee?.accountId ?? "").trim() === currentUserAccountId)
+        .map(mapJiraIssueSearchResultToSummary)
+        .filter((issue) => isProjectIssueSummaryValid(issue, normalizedProjectKey) &&
+        ["To Do", "In Progress"].includes(issue.statusName));
+}
+async function searchOpenTodoOrInProgressJiraIssuesForProject(credentials, projectKey) {
+    const normalizedProjectKey = projectKey.trim().toUpperCase();
+    const response = await jiraRequest(credentials, {
+        method: "POST",
+        apiPath: "/rest/api/3/search/jql",
+        body: {
+            fields: ["summary", "description", "issuetype", "project", "status", "assignee"],
+            jql: `project = "${normalizedProjectKey}" AND status in ("To Do", "In Progress") ORDER BY updated DESC`,
+            maxResults: 100
+        }
+    });
+    return (response.issues ?? [])
         .map(mapJiraIssueSearchResultToSummary)
         .filter((issue) => isProjectIssueSummaryValid(issue, normalizedProjectKey) &&
         ["To Do", "In Progress"].includes(issue.statusName));
@@ -492,10 +545,10 @@ async function syncTeamManagedProjectActors(credentials, projectKey, currentUser
             memberRoleCandidates[0];
         const warnings = [];
         if (!adminRole) {
-            warnings.push("Jira did not expose an administrator role for the new project, so Diego Fernandez and site-admins could not be pinned to the expected admin role automatically.");
+            warnings.push("Jira did not expose an administrator role for the new project, so site-admins could not be pinned to the expected admin role automatically.");
         }
         if (!memberRole) {
-            warnings.push("Jira did not expose a member role for the new project, so jira-users-diegosfb could not be pinned to the expected member role automatically.");
+            warnings.push("Jira did not expose a member role for the new project, so the member group could not be pinned to the expected member role automatically.");
         }
         const shouldClearUnmatchedRoles = Boolean(adminRole && memberRole);
         for (const role of configurableRoles) {

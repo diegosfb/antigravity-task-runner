@@ -35,6 +35,14 @@ export function getWorkspaceRoot(): string | undefined {
   return folders[0].uri.fsPath;
 }
 
+export function resolveProjectWorkspaceRoot(rootPath: string | undefined): string | undefined {
+  if (!rootPath) return undefined;
+  const normalizedRoot = path.resolve(rootPath);
+  return path.basename(normalizedRoot) === "workspace"
+    ? normalizedRoot
+    : path.join(normalizedRoot, "workspace");
+}
+
 export function getWorkspaceProjectPath(repoRoot: string): string {
   const configured = vscode.workspace.getConfiguration("antigravity").get<string>("workspaceProjectPath") || "./";
   return path.isAbsolute(configured)
@@ -56,9 +64,7 @@ export async function safeReadDir(dirPath: string): Promise<fs.Dirent[]> {
   }
 }
 
-export function quoteShellArg(value: string): string {
-  return `"${value.replace(/"/g, '\\"')}"`;
-}
+export { quoteShellArg, getExecutableName } from "./shellUtils";
 
 const SKIP_DIRS = new Set(["node_modules", ".git"]);
 

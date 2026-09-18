@@ -20,3 +20,56 @@ coverage/
 **/.terraform.lock.hcl
 **/terraform.tfstate
 **/terraform.tfstate.*
+
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+build/
+out/
+*.vsix
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+*.tmp
+*.swp
+
+# Local-only technical reference material
+docs/Tech Info/
+docs/Backup/
+
+# Local-only scratch / staging
+Test & Add/
+*[[]Backup[]]*
+/tmp/
+
+# Story-points council selector and credentials
+.agents/skills/storypoints-council/storypoints-council.conf
+.agents/skills/storypoints-council/storypoints-council.local.conf
+.agents/skills/storypoints-council/storypoints-council.openrouter.conf

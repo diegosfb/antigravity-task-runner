@@ -1817,8 +1817,7 @@ export function activate(context: vscode.ExtensionContext) {
                 resourceProvider
               );
               logAlways(
-                `[jiraProjectCreate] skill locations ready: ${
-                  copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+                `[jiraProjectCreate] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
                 }`
               );
               provider.refresh();
@@ -4041,8 +4040,7 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       logAlways(
-        `[Setup Workspace] support folders ready in ${workspaceDir}: ${
-          createdSupportPaths.length > 0 ? createdSupportPaths.join(", ") : "already present"
+        `[Setup Workspace] support folders ready in ${workspaceDir}: ${createdSupportPaths.length > 0 ? createdSupportPaths.join(", ") : "already present"
         }`
       );
 
@@ -4264,7 +4262,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
       const repoRoot = getRepoRoot(rootPath);
       logAlways(`[initRepositoryConfigUpdate] repoRoot: ${repoRoot}`);
-      
+
       logAlways(`[initRepositoryConfigUpdate] invoking init-repo script from ${path.join(extensionRoot, "src")}`);
       // Passing empty string for repo name to trigger detection in the script
       await runRepoScript("init-repo", [""], { scriptDir: path.join(extensionRoot, "src") });
@@ -4544,8 +4542,7 @@ export function activate(context: vscode.ExtensionContext) {
             resourceProvider
           );
           logAlways(
-            `[createJiraItemGrillMe] skill locations ready: ${
-              copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+            `[createJiraItemGrillMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
             }`
           );
           provider.refresh();
@@ -4773,8 +4770,7 @@ export function activate(context: vscode.ExtensionContext) {
             resourceProvider
           );
           logAlways(
-            `[assignJiraItemToAgentGrillMe] skill locations ready: ${
-              copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+            `[assignJiraItemToAgentGrillMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
             }`
           );
           provider.refresh();
@@ -5001,8 +4997,7 @@ export function activate(context: vscode.ExtensionContext) {
           resourceProvider
         );
         logAlways(
-          `[cloudArchitectReview] skill locations ready: ${
-            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          `[cloudArchitectReview] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
           }`
         );
         provider.refresh();
@@ -5069,8 +5064,7 @@ export function activate(context: vscode.ExtensionContext) {
           ? await copyGrillMeSkill(extensionRoot, repoRoot, resourceProvider)
           : await copyFeatureEstimatorSkill(extensionRoot, repoRoot, resourceProvider);
         logAlways(
-          `[${actionKey}] skill locations ready: ${
-            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          `[${actionKey}] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
           }`
         );
         provider.refresh();
@@ -5084,8 +5078,7 @@ export function activate(context: vscode.ExtensionContext) {
       const commandLine = buildAgenticHarnessFileCommand(repoRoot, promptFilePath, "prompt");
 
       logAlways(
-        `[${actionKey}] launching Agentic Harness for ${
-          selection.source === "jira" ? selection.issue.key : "free-text request"
+        `[${actionKey}] launching Agentic Harness for ${selection.source === "jira" ? selection.issue.key : "free-text request"
         }`
       );
       runInPersistentTerminal(
@@ -5119,8 +5112,7 @@ export function activate(context: vscode.ExtensionContext) {
           resourceProvider
         );
         logAlways(
-          `[explainMe] skill locations ready: ${
-            copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
+          `[explainMe] skill locations ready: ${copiedSkillPaths.length > 0 ? copiedSkillPaths.join(", ") : "already present"
           }`
         );
         provider.refresh();
@@ -5501,10 +5493,10 @@ export function activate(context: vscode.ExtensionContext) {
             color: PULL_REMOTE_AND_MERGE_ACTION_COLOR,
             ...(projectTestingCommand
               ? {
-                  env: {
-                    ANTIGRAVITY_PROJECT_TESTING_COMMAND: projectTestingCommand
-                  }
+                env: {
+                  ANTIGRAVITY_PROJECT_TESTING_COMMAND: projectTestingCommand
                 }
+              }
               : {})
           }
         );

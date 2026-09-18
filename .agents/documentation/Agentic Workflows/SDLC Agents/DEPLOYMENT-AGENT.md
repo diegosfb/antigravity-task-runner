@@ -1,7 +1,7 @@
 # Deployment Agent
 
 The `deployment-agent` ships reviewed work safely. Its only workflow intake is
-accepted and merged task PRs from `code-review-agent`; its output is a verified live release
+an approved PR from `code-review-agent`; its output is a verified live release
 with a deployment and rollback record.
 
 ## Workflow position
@@ -18,7 +18,7 @@ flowchart LR
 
 ## Inputs
 
-- All in-scope accepted and merged task PRs from `code-review-agent`.
+- Approved PR from `code-review-agent`.
 - Versioned source and release configuration.
 - Environment promotion and infrastructure definitions.
 - Secret-manager references, never repository credentials.
@@ -54,8 +54,8 @@ user feedback return to `product-agent` for the next cycle.
 ## Vault behavior
 
 When enabled, material release approaches, incidents, rollback decisions,
-problems, and implementation notes are recorded as linked semantic notes. No
-secrets, tokens, or credentials may enter the vault.
+problems, and implementation notes are recorded as linked semantic notes and
+action-log entries. No secrets, tokens, or credentials may enter the vault.
 
 ## Completion and handoff
 

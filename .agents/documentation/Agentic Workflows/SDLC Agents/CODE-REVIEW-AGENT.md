@@ -8,21 +8,17 @@ binding baselines.
 
 ```mermaid
 flowchart LR
-    T[test-agent PASS] --> SV[spec-validation-agent]
-    SV -->|CONFORMANT| DOC[documentation-agent]
-    DOC --> CR[code-review-agent]
+    T[test-agent PASS] --> CR[code-review-agent]
     ADR[Architecture and ADRs] --> CR
     B[Backlog scope] --> CR
-    CR -->|changes requested| D[developer-agent]
+    CR -->|approved PR| DEP[deployment-agent]
+    CR -->|actionable change requests| D[developer-agent]
     D -->|approved fix through testing| CR
-    CR -->|PR approved| PP[project-planner-agent]
-    PP -->|task Done; next item dispatched| TASKS[task backlog]
-    PP -->|all tasks accepted| DEP[deployment-agent]
 ```
 
 ## Inputs
 
-- A documented task branch or PR with current `test-agent` PASS evidence and a `documentation-agent` handoff.
+- A feature branch or PR that has passed the test-agent.
 - The backlog item defining approved scope.
 - ADRs and architecture defining binding structural decisions.
 - Repository coding, security, and maintainability standards.
@@ -59,17 +55,14 @@ but does not implement fixes, weaken tests, rewrite scope, or deploy releases.
 ## Vault behavior
 
 When enabled, material findings, security issues, decisions, and review
-conclusions are recorded as semantic notes.
+conclusions are recorded as semantic notes and dated action-log entries.
 Review artifacts under `docs/reviews/` are mirrored into `Reviews/` and linked
 to their governing specs, ADRs, backlog items, and implementation.
 
 ## Completion and handoff
 
 Review completes with either precise change requests or an approval that states
-the examined baseline. When the PR is approved, `code-review-agent` notifies
-`project-planner-agent`, which marks the task Done and dispatches the next item
-in dependency order (or triggers deployment if all tasks are accepted), per the
-`project_planner.wait_for_pr_approval` setting in `ADLC_workflow_settings.json`.
+the examined baseline. Only an approved PR advances to deployment.
 
 <!-- agent-auditor:inventory:start -->
 

@@ -1,7 +1,6 @@
 # Test Agent
 
-The `test-agent` is the test-first verifier. It plans and scripts tests before
-implementation, then tests code against
+The `test-agent` is the independent verifier. It tests implemented code against
 the BA's original acceptance criteria, not merely the developer's
 interpretation, and gates work into code review.
 
@@ -9,16 +8,16 @@ interpretation, and gates work into code review.
 
 ```mermaid
 flowchart LR
-    PP[project-planner-agent] -->|approved task| T[test-agent]
-    T -->|test plan and failing scripts| D[developer-agent]
-    D -->|source code| T
+    D[developer-agent] -->|feature branch| T[test-agent]
     BA[ba-agent] -->|original acceptance criteria| T
     T -->|configured adversarial run| RT[red-team-agent]
     RT -->|PASS or blocking findings| T
+    T -->|PASS and resolved item IDs| PP
+    PP -->|all items Done acknowledgement| T
+    T -->|PASS, evidence, acknowledgement| D
     T -->|FAIL: complete sanitized context| D
-    T -->|FAIL: create or match tracked item| PP
+    T -->|FAIL: create or match tracked item| PP[project-planner-agent]
     PP -->|Bug or investigation Task ID| T
-    T -->|PASS| SV[spec-validation-agent]
     T -->|wrong or ambiguous criterion| BA
     D -->|approved and recorded fix| T
 ```
@@ -36,10 +35,9 @@ flowchart LR
 
 - Committed unit, integration, acceptance, E2E, accessibility, or data-quality
   tests as appropriate to the change.
-- An approved task test plan and relevant failing test evidence before development.
 - Acceptance tests mapped one-to-one to acceptance criteria.
-- A `PASS` result — the pipeline continues to `spec-validation-agent` for
-  conformance check; or
+- A `PASS` result with evidence and planner completion acknowledgement returned
+  to `developer-agent` for configured repository finalization; or
 - A `FAIL` result containing reproduction steps, expected and actual behavior,
   violated criteria, sanitized diagnostics, impact, confidence, suspected
   component, and linked backlog identifiers.
@@ -52,8 +50,6 @@ flowchart LR
 
 1. Detect and extend the existing test framework rather than creating a
    parallel harness.
-2. Before implementation, create and approve the test plan, write the scripts,
-   and demonstrate the expected failing behavior for `developer-agent`.
 2. Select test layers appropriate to the behavior and integration seams.
 3. Map acceptance coverage directly to BA criteria.
 4. Run the affected suites and report failures with complete, sanitized
@@ -62,7 +58,8 @@ flowchart LR
    formerly failing case.
 6. Report the verified resolution to the planner so the tracked failure can be
    closed with evidence.
-7. On PASS, hand off to `spec-validation-agent` for conformance check.
+7. Wait for confirmation that every blocking failure and the originating
+   backlog item are Done before returning the PASS handoff to development.
 8. Run `red-team-agent` at `every-commit` or `every-pr` according to
    `test_red_team.trigger_mode`; `never` disables automatic runs. Missing or
    invalid values fail safe to `every-pr`.
@@ -86,8 +83,9 @@ evidenced not-applicable PASS without a target.
 ## Agent interactions and feedback loops
 
 - Receives code from `developer-agent` and criteria from `ba-agent`.
-- On PASS, hands off to `spec-validation-agent` for conformance check; the
-  developer-agent re-enters only on test FAIL or code-review CHANGES_REQUESTED.
+- Sends passing work, resolved IDs, and evidence to `project-planner-agent`,
+  then returns the planner's Done acknowledgement to `developer-agent`, which
+  performs configured repository finalization before code review.
 - Sends failed work to `developer-agent` with evidence precise enough to plan a
   targeted fix and to `project-planner-agent` for deduplicated tracking when
   `test_failure_tracking.track_in_backlog` is enabled.
@@ -106,14 +104,16 @@ evidenced not-applicable PASS without a target.
 When enabled, test cases and relevant test artifacts are represented in
 `Test-Cases/` and linked to specifications, backlog tasks, implementations, and
 reviews. Material test conclusions, failures, problems, and lessons are
-recorded through semantic vault events.
+recorded through semantic vault events and dated action-log entries.
 
 ## Completion and handoff
 
 Testing is complete when the necessary layers run, every acceptance criterion
-has coverage or a reported finding, regression scope is satisfied, and any
-configured red-team gate passes. A PASS hands off to `spec-validation-agent`;
-a FAIL returns to `developer-agent` with traceable, actionable evidence.
+has coverage or a reported finding, regression scope is satisfied, and the
+result is an evidence-backed PASS or actionable, tracked FAIL. Only a PASS with
+planner acknowledgement that the originating and blocking items are Done
+and any configured red-team gate passes returns the branch to the developer for
+configured repository finalization.
 
 <!-- agent-auditor:inventory:start -->
 

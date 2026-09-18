@@ -1,54 +1,43 @@
-flowchart TB
+ flowchart TB
     classDef plan fill:#1E2761,stroke:#1E2761,color:#FFFFFF
     classDef build fill:#028090,stroke:#028090,color:#FFFFFF
     classDef release fill:#B85042,stroke:#B85042,color:#FFFFFF
     classDef live fill:#2C5F2D,stroke:#2C5F2D,color:#FFFFFF
     classDef artifact fill:#F3F4F6,stroke:#6B7280,stroke-dasharray:4 4,color:#374151
 
-    PRODUCT["Product agent<br/><i>Approved PRD, market evidence, production feedback</i>"]:::plan
-    BA["BA agent<br/><i>Reconciled specs (with acceptance criteria), referencing UX designs when relevant</i>"]:::plan
-    UX["UX agent<br/><i>Design requirements feedback to BA + UX docs, mocks, diagrams</i>"]:::plan
-    UX_DOCS["docs/UX Designs<br/><i>Design docs, mocks, diagrams, accessibility specs</i>"]:::artifact
-    ARCH["Architect agent<br/><i>Validated architecture, diagrams, ADRs, technical decomposition</i>"]:::plan
-    PLANNER["Project planner agent<br/><i>Dependencies, sequencing, estimates, lifecycle status</i>"]:::plan
-    TASKS["Authoritative task backlog<br/><i>Approved, traceable, dependency-ordered</i>"]:::artifact
-    TESTPLAN["Test agent<br/><i>Test plan + failing test scripts</i>"]:::build
-    DEV["Developer agent<br/><i>Source code</i>"]:::build
-    TEST["Test agent<br/><i>Test run – PASS / FAIL / BLOCKED</i>"]:::build
-    SPEC["Spec-validation agent<br/><i>Conformance review and security-assurance orchestration</i>"]:::build
+    PRODUCT["Product agent<br/><i>Vision, market research, benchmarking, user feedback</i>"]:::plan
+    BA["BA agent<br/><i>Specs, features, acceptance criteria</i>"]:::plan
+    ARCH["Architect agent<br/><i>architecture.md, ADRs, technical decomposition<br/>Data +dormant domain design subagents</i>"]:::plan
+    UX["UX agent<br/><i>Design specs from ADR</i>"]:::plan
+    PLANNER["Project planner agent<br/><i>Dependencies, sequencing, estimates</i>"]:::plan
+    TASKS["Task backlog<br/><i>Sequenced, estimated, prioritized</i>"]:::artifact
+    DEV["Developer agent<br/><i>FE / BE / Data subagents</i>"]:::build
+    TEST["Test agent<br/><i>Writes and runs tests</i>"]:::build
     REDTEAM["Red-team agent<br/><i>Configured safe adversarial tests</i>"]:::build
-    DOC["Documentation agent<br/><i>Code documentation</i>"]:::build
-    SECURITY["Security-check agent<br/><i>Blocking pre-PR gate for branch diffs</i>"]:::release
-    REVIEW["Code-review agent<br/><i>APPROVED or CHANGES_REQUESTED</i>"]:::release
-    DEPLOY["Deployment agent<br/><i>Production promotion, verification, rollback</i>"]:::release
-    LIVE(["Verified live release"]):::live
+    SECURITY["Security-check agent<br/><i>Blocking staged / branch assurance</i>"]:::release
+    REVIEW["Code review agent<br/><i>Approves changes</i>"]:::release
+    DEPLOY["Deployment agent<br/><i>CI/CD to production</i>"]:::release
+    LIVE(["Live in production"]):::live
 
-    PRODUCT -- "approved PRD" --> BA
-    BA -- "specs" --> UX
-    UX -- "design requirements + accessibility feedback" --> BA
-    UX -- "design docs, mocks, diagrams" --> UX_DOCS
-    UX_DOCS -. "referenced by specs + user stories when relevant" .-> BA
-    BA -- "reconciled specs" --> ARCH
-    BA -- "specs" --> PLANNER
-    ARCH -- "technical tasks + dependency edges" --> PLANNER
-    PLANNER -- "approved dependency-ordered backlog" --> TASKS
-
-    TASKS -- "next item in dependency order, one at a time" --> TESTPLAN
-    TESTPLAN -- "test plan + failing scripts" --> DEV
-    DEV -- "source code" --> TEST
-    TEST -- "configured adversarial run" --> REDTEAM
+    PRODUCT -- "PRD (vision, goals)" --> BA
+    BA -- specs --> ARCH
+    ARCH -- ADR --> UX
+    BA -- acceptance criteria --> PLANNER
+    ARCH -- technical tasks --> PLANNER
+    UX -- design tasks --> PLANNER
+    PLANNER -- "ordered tasks + complexity / time estimates" --> TASKS
+    TASKS -- sprint-ready tasks --> DEV
+    DEV -- code --> TEST
+    TEST -- "configured every-commit / every-PR run" --> REDTEAM
     REDTEAM -- "PASS or tracked findings" --> TEST
-    TEST -. "FAIL / BLOCKED with diagnostics" .-> DEV
-    TEST -- "PASS" --> SPEC
-    SPEC -- "CONFORMANT / evidenced N/A" --> DOC
-    SPEC -. "DRIFT or security findings" .-> DEV
-    SPEC -. "SPEC_GAP" .-> BA
-    DOC -- "documented revision" --> SECURITY
-    SECURITY -. "FAIL" .-> DEV
-    SECURITY -- "PASS" --> REVIEW
-    REVIEW -. "CHANGES_REQUESTED" .-> DEV
-    REVIEW -- "PR approved" --> PLANNER
-    PLANNER -- "task marked Done; next item dispatched" --> TASKS
-    REVIEW -- "all tasks accepted" --> DEPLOY
-    DEPLOY -- "verified release + deployment record" --> LIVE
-    LIVE -. "telemetry + reviewed user feedback" .-> PRODUCT
+    TEST -- "full pass + resolved bugs" --> PLANNER
+    PLANNER -- "items Done + acknowledgement" --> TEST
+    TEST -- "PASS evidence + acknowledgement" --> DEV
+    DEV -- "staged / branch security gate" --> SECURITY
+    SECURITY -- PASS --> DEV
+    DEV -- "hooks, commit, hooks, branch / PR" --> REVIEW
+    TEST -. tests fail .-> DEV
+    REVIEW -- PR --> DEPLOY
+    REVIEW -. changes requested .-> DEV
+    DEPLOY --> LIVE
+    LIVE -. user feedback .-> PRODUCT

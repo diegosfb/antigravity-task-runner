@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getExecutableName = exports.quoteShellArg = void 0;
 exports.getRootPath = getRootPath;
 exports.getRepoRoot = getRepoRoot;
 exports.getWorkspaceRoot = getWorkspaceRoot;
+exports.resolveProjectWorkspaceRoot = resolveProjectWorkspaceRoot;
 exports.getWorkspaceProjectPath = getWorkspaceProjectPath;
 exports.getAntigravityHomePath = getAntigravityHomePath;
 exports.safeReadDir = safeReadDir;
-exports.quoteShellArg = quoteShellArg;
 exports.findNestedGitFolders = findNestedGitFolders;
 exports.listInfrastructureYamlFiles = listInfrastructureYamlFiles;
 exports.parseEnvFile = parseEnvFile;
@@ -50,6 +51,14 @@ function getWorkspaceRoot() {
         return undefined;
     return folders[0].uri.fsPath;
 }
+function resolveProjectWorkspaceRoot(rootPath) {
+    if (!rootPath)
+        return undefined;
+    const normalizedRoot = path.resolve(rootPath);
+    return path.basename(normalizedRoot) === "workspace"
+        ? normalizedRoot
+        : path.join(normalizedRoot, "workspace");
+}
 function getWorkspaceProjectPath(repoRoot) {
     const configured = vscode.workspace.getConfiguration("antigravity").get("workspaceProjectPath") || "./";
     return path.isAbsolute(configured)
@@ -70,9 +79,9 @@ async function safeReadDir(dirPath) {
         return [];
     }
 }
-function quoteShellArg(value) {
-    return `"${value.replace(/"/g, '\\"')}"`;
-}
+var shellUtils_1 = require("./shellUtils");
+Object.defineProperty(exports, "quoteShellArg", { enumerable: true, get: function () { return shellUtils_1.quoteShellArg; } });
+Object.defineProperty(exports, "getExecutableName", { enumerable: true, get: function () { return shellUtils_1.getExecutableName; } });
 const SKIP_DIRS = new Set(["node_modules", ".git"]);
 function findNestedGitFolders(rootDir) {
     const results = [];

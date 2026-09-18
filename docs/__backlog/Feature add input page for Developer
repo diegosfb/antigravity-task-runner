@@ -1,0 +1,33 @@
+Add input page for Develop Execution Plan item of the ADLC folder.
+When clicked it should bring up the page where the user can input the Fields
+
+Agent Harness (this one is mandatory) use Codex by default
+Agent Model (this one is optional)
+Agent Intelligence (this one is optional)
+
+Project Workspace folder (this one is mandatory).
+by default it should be folder project root folder
+
+Project Description folder (this one is mandatory). By default it should be <Project Workspace folder>/docs/project_description
+Project Execution Plan file (this one is mandatory). By default it should be <Project Workspace folder>/docs/project-execution-plan.md
+Project Backlog folder (this one is mandatory). By default it should be <Project Workspace folder>/docs/backlog
+Project Architecture folder file (this one is mandatory). By default it should be <Project Workspace folder>/docs/architecture
+
+Then it shows a field called Agent Script Path (this one is mandatory)
+
+Then it has a run button (that only gets enabled when the mandatory fields are filled). When the button is clicked; then the script at Agent Script Path should be run with parameters
+
+--execution-plan <Project Execution Plan file>
+--project-description-dir <Project Description folder> (only if not empty)  
+--architecture-dir <Project Architecture folder> (only if not empty) 
+--backlog-dir <Project Backlog folder> (only if not empty)   
+--workspace <Project Workspace folder>
+--harness <Agent Harness>
+--model <Agent Model> (only if not empty) 
+--intelligence <Agent Intelligence> (only if not empty) 
+
+
+
+Always save the last used settings so next time the page is launched it takes those values for the project in use.
+
+Follow the same pattern used for other ADLC items

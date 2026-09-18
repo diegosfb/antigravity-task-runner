@@ -1,6 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AntigravityViewProvider = exports.NodeItem = void 0;
+exports.shouldHideAntigravityEntry = shouldHideAntigravityEntry;
+exports.getCustomAgenticPlatformAddonsPath = getCustomAgenticPlatformAddonsPath;
+exports.shouldHideAddonsEntry = shouldHideAddonsEntry;
+exports.missingRootItem = missingRootItem;
+exports.emptyItem = emptyItem;
+exports.readSkillsDir = readSkillsDir;
+exports.parseAgentsOutput = parseAgentsOutput;
+exports.parsePluginListOutput = parsePluginListOutput;
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
@@ -11,6 +19,12 @@ const utils_1 = require("./utils");
 const git_1 = require("./git");
 const terminal_1 = require("./terminal");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
+const businessAnalyst_1 = require("./businessAnalyst");
+const developer_1 = require("./developer");
+const estimator_1 = require("./estimator");
+const planExecution_1 = require("./planExecution");
+const productDesigner_1 = require("./productDesigner");
+const solutionArchitect_1 = require("./solutionArchitect");
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
 class NodeItem extends vscode.TreeItem {
     constructor(payload, collapsibleState) {
@@ -34,6 +48,18 @@ class AntigravityViewProvider {
     }
     async getChildren(element) {
         if (!element) {
+            const antigravityRoot = (0, utils_1.getAntigravityHomePath)();
+            const antigravityLabel = antigravityRoot ? path.basename(antigravityRoot) : ".antigravity";
+            const antigravityItem = new NodeItem({ kind: "folder", label: antigravityLabel, filePath: antigravityRoot }, antigravityRoot
+                ? vscode.TreeItemCollapsibleState.Collapsed
+                : vscode.TreeItemCollapsibleState.None);
+            antigravityItem.iconPath = new vscode.ThemeIcon("folder");
+            antigravityItem.contextValue = "antigravityFolderItem";
+            if (!antigravityRoot) {
+                antigravityItem.label = "Missing ~/.gemini/antigravity";
+                antigravityItem.iconPath = new vscode.ThemeIcon("warning");
+                antigravityItem.tooltip = `Expected ${path.join(os.homedir(), ".gemini", "antigravity")} to exist.`;
+            }
             const separatorItem = new NodeItem({ kind: "separator", label: "────────" }, vscode.TreeItemCollapsibleState.None);
             separatorItem.tooltip = "";
             separatorItem.contextValue = "antigravitySeparator";
@@ -42,14 +68,16 @@ class AntigravityViewProvider {
             const actionSeparator = new NodeItem({ kind: "separator", label: "────────" }, vscode.TreeItemCollapsibleState.None);
             actionSeparator.tooltip = "";
             actionSeparator.contextValue = "antigravitySeparator";
+            const claudeSeparator = new NodeItem({ kind: "separator", label: "────────" }, vscode.TreeItemCollapsibleState.None);
+            claudeSeparator.tooltip = "";
+            claudeSeparator.contextValue = "antigravitySeparator";
             const agents = new NodeItem({ kind: "category", label: "Agents" }, vscode.TreeItemCollapsibleState.Collapsed);
             agents.iconPath = new vscode.ThemeIcon("organization", new vscode.ThemeColor("charts.purple"));
             const skills = new NodeItem({ kind: "category", label: "Skills" }, vscode.TreeItemCollapsibleState.Collapsed);
             skills.iconPath = new vscode.ThemeIcon("symbol-method", new vscode.ThemeColor("charts.purple"));
             const workflows = new NodeItem({ kind: "category", label: "Workflows" }, vscode.TreeItemCollapsibleState.Collapsed);
             workflows.iconPath = new vscode.ThemeIcon("run-all", new vscode.ThemeColor("charts.purple"));
-            const agenticHarnessAndAddOns = new NodeItem({ kind: "category", label: "Agentic Harness and AddOns" }, vscode.TreeItemCollapsibleState.Collapsed);
-            agenticHarnessAndAddOns.iconPath = new vscode.ThemeIcon("package", new vscode.ThemeColor("charts.purple"));
+            const linkedFolderItems = getLinkedFolderItems();
             const claudePluginsPath = path.join(os.homedir(), ".claude", "plugins");
             const claudePlugins = new NodeItem({ kind: "folder", label: "Claude Plugins", filePath: claudePluginsPath }, vscode.TreeItemCollapsibleState.Collapsed);
             claudePlugins.iconPath = new vscode.ThemeIcon("extensions", new vscode.ThemeColor("charts.purple"));
@@ -57,18 +85,17 @@ class AntigravityViewProvider {
             claudePlugins.contextValue = "antigravityFolderItem";
             return [
                 ...claudeItems,
+                claudeSeparator,
+                antigravityItem,
+                ...linkedFolderItems,
                 actionSeparator,
                 ...actionItems,
                 separatorItem,
-                agenticHarnessAndAddOns,
                 claudePlugins,
                 agents,
                 skills,
                 workflows
             ];
-        }
-        if (element.kind === "category" && element.label === "Agentic Harness and AddOns") {
-            return getAgenticHarnessAndAddOnsItems();
         }
         if (element.kind === "category" && element.label === "Agents") {
             return this.getAgentItems();
@@ -79,17 +106,17 @@ class AntigravityViewProvider {
         if (element.kind === "category" && element.label === "Workflows") {
             return this.getWorkflowItems();
         }
-        if (element.kind === "category" && element.label === "Ollama Terminals") {
-            return getOllamaTerminalItems();
-        }
-        if (element.kind === "category" && element.label === "Agent Monitor Terminals") {
-            return getAgentMonitorTerminalItems();
-        }
         if (element.kind === "category" && element.label === "PR Reviewer") {
             return getPrReviewerItems();
         }
         if (element.kind === "category" && element.label === "Update Project Config") {
             return getUpdateProjectConfigItems();
+        }
+        if (element.kind === "category" && element.label === "Repository Actions") {
+            return getRepositoryActionItems();
+        }
+        if (element.kind === "category" && element.label === "ADLC") {
+            return getAdlcItems();
         }
         if (element.kind === "folder" && element.label === "Claude Plugins") {
             return this.getClaudePluginItems();
@@ -226,7 +253,7 @@ class AntigravityViewProvider {
         return items.length > 0 ? items : [emptyItem("No workflows found")];
     }
     async getFolderItems(dirPath) {
-        const entries = (await (0, utils_1.safeReadDir)(dirPath)).filter((entry) => !shouldHideAntigravityEntry(dirPath, entry));
+        const entries = (await (0, utils_1.safeReadDir)(dirPath)).filter((entry) => !shouldHideAntigravityEntry(dirPath, entry) && !shouldHideAddonsEntry(dirPath, entry));
         const itemsWithKind = entries.map((entry) => {
             const entryPath = path.join(dirPath, entry.name);
             const isDirectory = entry.isDirectory();
@@ -280,10 +307,11 @@ const JIRA_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBlue");
 const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
+const ADLC_ACTION_COLOR = new vscode.ThemeColor("charts.red");
 const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
-const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
-const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
 const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
+const CLOUD_ARCHITECT_ICON_PATH = vscode.Uri.file(path.resolve(__dirname, "..", "Resources", "cloud-architect.svg"));
+const EXPLAIN_ME_ICON_PATH = vscode.Uri.file(path.resolve(__dirname, "..", "Resources", "explain-me.svg"));
 const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(path.resolve(__dirname, "..", "Resources", "feature-estimator-red.svg"));
 const TOP_LEVEL_LINKED_FOLDERS = [
     { label: "claude", path: path.join(os.homedir(), ".claude") },
@@ -303,6 +331,22 @@ function shouldHideAntigravityEntry(dirPath, entry) {
     if (path.resolve(dirPath) !== path.resolve(antigravityRoot))
         return false;
     return ANTIGRAVITY_ROOT_HIDDEN.has(entry.name);
+}
+function getCustomAgenticPlatformAddonsPath() {
+    const rawAddons = vscode.workspace.getConfiguration("antigravity").get("customAgenticPlatformAddons") || "";
+    const addonsPath = rawAddons.trim().replace(/^~/, os.homedir());
+    return addonsPath || undefined;
+}
+function shouldHideAddonsEntry(dirPath, entry) {
+    if (!entry.name.startsWith("."))
+        return false;
+    const addonsPath = getCustomAgenticPlatformAddonsPath();
+    if (!addonsPath)
+        return false;
+    const relativePath = path.relative(path.resolve(addonsPath), path.resolve(dirPath));
+    if (relativePath.startsWith("..") || path.isAbsolute(relativePath))
+        return false;
+    return true;
 }
 function missingRootItem() {
     const item = new NodeItem({ kind: "category", label: "Missing ~/.antigravity" }, vscode.TreeItemCollapsibleState.None);
@@ -451,28 +495,9 @@ function parsePluginListOutput(output) {
 const ANSI_CSI_PATTERN = /\x1b\[[0-9;]*[A-Za-z]/g;
 // eslint-disable-next-line no-control-regex
 const ANSI_OSC_PATTERN = /\x1b\][^\x07]*\x07/g;
-function buildAntigravityItem() {
-    const antigravityRoot = (0, utils_1.getAntigravityHomePath)();
-    const antigravityLabel = antigravityRoot ? path.basename(antigravityRoot) : ".antigravity";
-    const antigravityItem = new NodeItem({ kind: "folder", label: antigravityLabel, filePath: antigravityRoot }, antigravityRoot
-        ? vscode.TreeItemCollapsibleState.Collapsed
-        : vscode.TreeItemCollapsibleState.None);
-    antigravityItem.iconPath = new vscode.ThemeIcon("folder");
-    antigravityItem.contextValue = "antigravityFolderItem";
-    if (!antigravityRoot) {
-        antigravityItem.label = "Missing ~/.gemini/antigravity";
-        antigravityItem.iconPath = new vscode.ThemeIcon("warning");
-        antigravityItem.tooltip = `Expected ${path.join(os.homedir(), ".gemini", "antigravity")} to exist.`;
-    }
-    return antigravityItem;
-}
-function getAgenticHarnessAndAddOnsItems() {
-    return [buildAntigravityItem(), ...getLinkedFolderItems()];
-}
 function getLinkedFolderItems() {
     const folders = [...TOP_LEVEL_LINKED_FOLDERS];
-    const rawAddons = vscode.workspace.getConfiguration("antigravity").get("customAgenticPlatformAddons") || "";
-    const addonsPath = rawAddons.trim().replace(/^~/, os.homedir());
+    const addonsPath = getCustomAgenticPlatformAddonsPath();
     if (addonsPath) {
         folders.push({ label: path.basename(addonsPath) || "addons", path: addonsPath, isAddons: true });
     }
@@ -493,36 +518,16 @@ function getQuickActionItems() {
         : [];
     const hasCloudInfrastructure = cloudInfrastructureSignals.length > 0;
     const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
-    const currentBranch = hasRepo && repoRoot ? (0, git_1.getCurrentBranchNameSync)(repoRoot) : undefined;
     const autocommitRunning = repoRoot ? (0, git_1.isAutocommitRunning)(repoRoot) : false;
-    const hasAgentFolder = repoRoot ? fs.existsSync(path.join((0, utils_1.getWorkspaceProjectPath)(repoRoot), ".agent")) : false;
-    const hasGitHub = repoRoot ? (0, git_1.hasGitHubRemoteSync)(repoRoot) : false;
     const savedJiraProjectKey = repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
-        ? (fs
-            .readFileSync(path.join(repoRoot, ".env"), "utf8")
-            .match(/^\s*JIRA_PROJECT_KEY\s*=\s*([^\r\n#]+)/m)?.[1] ?? "")
-            .trim()
-            .replace(/^['"]|['"]$/g, "")
-            .toUpperCase()
+        ? ((0, utils_1.parseEnvFile)(path.join(repoRoot, ".env")).jira_project_key ?? "").toUpperCase()
         : "";
-    const setupWorkspace = new NodeItem({ kind: "action", label: "Setup Workspace" }, vscode.TreeItemCollapsibleState.None);
-    setupWorkspace.iconPath = new vscode.ThemeIcon("debug-continue", QUICK_ACTION_COLOR);
-    if (hasAgentFolder) {
-        setupWorkspace.iconPath = new vscode.ThemeIcon("debug-continue", new vscode.ThemeColor("disabledForeground"));
-        setupWorkspace.tooltip = "A .agent folder already exists in this project.";
-    }
-    setupWorkspace.contextValue = hasRepo ? "antigravitySetupWorkspaceActionWithRepo" : "antigravitySetupWorkspaceAction";
-    setupWorkspace.command = {
-        command: "antigravity.setupWorkspace",
-        title: "Setup Workspace"
-    };
-    items.push(setupWorkspace);
     const updateProjectConfig = new NodeItem({ kind: "category", label: "Update Project Config" }, vscode.TreeItemCollapsibleState.Collapsed);
     updateProjectConfig.iconPath = new vscode.ThemeIcon("settings-gear", UPDATE_PROJECT_CONFIG_ACTION_COLOR);
     updateProjectConfig.tooltip =
         "Expand to update project configuration with the selected Agentic Harness.";
     items.push(updateProjectConfig);
-    const assignJiraItemToAgent = new NodeItem({ kind: "action", label: "Assign Jira Item to Agent" }, vscode.TreeItemCollapsibleState.None);
+    const assignJiraItemToAgent = new NodeItem({ kind: "action", label: "Assign Backlog Item to Agent" }, vscode.TreeItemCollapsibleState.None);
     assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
     if (!savedJiraProjectKey) {
         assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", new vscode.ThemeColor("disabledForeground"));
@@ -531,7 +536,7 @@ function getQuickActionItems() {
     }
     assignJiraItemToAgent.command = {
         command: "antigravity.assignJiraItemToAgent",
-        title: "Assign Jira Item to Agent"
+        title: "Assign Backlog Item to Agent"
     };
     items.push(assignJiraItemToAgent);
     if (!hasRepo) {
@@ -544,64 +549,10 @@ function getQuickActionItems() {
         items.push(initRepo);
     }
     if (hasRepo) {
-        const commitChanges = new NodeItem({ kind: "action", label: "Commit" }, vscode.TreeItemCollapsibleState.None);
-        commitChanges.iconPath = new vscode.ThemeIcon("check", ORANGE_ACTION_COLOR);
-        commitChanges.command = {
-            command: "antigravity.commitChanges",
-            title: "Commit"
-        };
-        items.push(commitChanges);
-        const createRepoTagVersion = new NodeItem({ kind: "action", label: "Create Repo Release" }, vscode.TreeItemCollapsibleState.None);
-        createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", ORANGE_ACTION_COLOR);
-        createRepoTagVersion.command = {
-            command: "antigravity.createRepoTagVersion",
-            title: "Create Repo Release"
-        };
-        items.push(createRepoTagVersion);
-        const createFeatureBranch = new NodeItem({ kind: "action", label: "Create Feature Branch" }, vscode.TreeItemCollapsibleState.None);
-        createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", ORANGE_ACTION_COLOR);
-        createFeatureBranch.command = {
-            command: "antigravity.createFeatureBranch",
-            title: "Create Feature Branch"
-        };
-        items.push(createFeatureBranch);
-        const createPullRequest = new NodeItem({ kind: "action", label: "Create Pull Request" }, vscode.TreeItemCollapsibleState.None);
-        createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
-        createPullRequest.command = {
-            command: "antigravity.createPullRequest",
-            title: "Create Pull Request"
-        };
-        items.push(createPullRequest);
-        if (currentBranch && currentBranch !== "main") {
-            const mergeBranchToMain = new NodeItem({ kind: "action", label: "Merge branch to main" }, vscode.TreeItemCollapsibleState.None);
-            mergeBranchToMain.iconPath = new vscode.ThemeIcon("git-merge", ORANGE_ACTION_COLOR);
-            mergeBranchToMain.command = {
-                command: "antigravity.mergeBranchToMain",
-                title: "Merge branch to main"
-            };
-            items.push(mergeBranchToMain);
-        }
-        const checkoutMain = new NodeItem({ kind: "action", label: "Go To Branch" }, vscode.TreeItemCollapsibleState.None);
-        checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
-        checkoutMain.command = {
-            command: "antigravity.checkoutMain",
-            title: "Go To Branch"
-        };
-        items.push(checkoutMain);
-        const pullRemoteAndMerge = new NodeItem({ kind: "action", label: "Pull Remote and merge" }, vscode.TreeItemCollapsibleState.None);
-        pullRemoteAndMerge.iconPath = new vscode.ThemeIcon("cloud-download", PULL_REMOTE_AND_MERGE_ACTION_COLOR);
-        pullRemoteAndMerge.command = {
-            command: "antigravity.pullRemoteAndMerge",
-            title: "Pull Remote and merge"
-        };
-        items.push(pullRemoteAndMerge);
-        const agenticReviewOfMerge = new NodeItem({ kind: "action", label: "Agentic review of Merge" }, vscode.TreeItemCollapsibleState.None);
-        agenticReviewOfMerge.iconPath = new vscode.ThemeIcon("warning", MERGE_REVIEW_ACTION_COLOR);
-        agenticReviewOfMerge.command = {
-            command: "antigravity.agenticReviewOfMerge",
-            title: "Agentic review of Merge"
-        };
-        items.push(agenticReviewOfMerge);
+        const repositoryActions = new NodeItem({ kind: "category", label: "Repository Actions" }, vscode.TreeItemCollapsibleState.Collapsed);
+        repositoryActions.iconPath = new vscode.ThemeIcon("github", ORANGE_ACTION_COLOR);
+        repositoryActions.tooltip = "Expand to access repository and GitHub actions for this workspace.";
+        items.push(repositoryActions);
     }
     const setFeatureFlag = new NodeItem({ kind: "action", label: "Set Feature Flag for changes" }, vscode.TreeItemCollapsibleState.None);
     setFeatureFlag.iconPath = new vscode.ThemeIcon("symbol-boolean", FEATURE_FLAG_ACTION_COLOR);
@@ -610,6 +561,10 @@ function getQuickActionItems() {
         title: "Set Feature Flag for changes"
     };
     items.push(setFeatureFlag);
+    const adlc = new NodeItem({ kind: "category", label: "ADLC" }, vscode.TreeItemCollapsibleState.Collapsed);
+    adlc.iconPath = new vscode.ThemeIcon("hubot", ADLC_ACTION_COLOR);
+    adlc.tooltip = "ADLC roles coming soon.";
+    items.push(adlc);
     if (!savedJiraProjectKey) {
         const selectOrCreateJiraProject = new NodeItem({ kind: "action", label: "Select/Set Jira Project" }, vscode.TreeItemCollapsibleState.None);
         selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", JIRA_ACTION_COLOR);
@@ -620,11 +575,11 @@ function getQuickActionItems() {
         items.push(selectOrCreateJiraProject);
     }
     else {
-        const addJiraItem = new NodeItem({ kind: "action", label: "Add Jira Item" }, vscode.TreeItemCollapsibleState.None);
+        const addJiraItem = new NodeItem({ kind: "action", label: "Create Backlog item" }, vscode.TreeItemCollapsibleState.None);
         addJiraItem.iconPath = new vscode.ThemeIcon("add", JIRA_ACTION_COLOR);
         addJiraItem.command = {
             command: "antigravity.addJiraItem",
-            title: "Add Jira Item"
+            title: "Create Backlog item"
         };
         items.push(addJiraItem);
         const takeJiraItemAssign = new NodeItem({ kind: "action", label: "Take Jira Item (Assign)" }, vscode.TreeItemCollapsibleState.None);
@@ -634,11 +589,11 @@ function getQuickActionItems() {
             title: "Take Jira Item (Assign)"
         };
         items.push(takeJiraItemAssign);
-        const completeJiraItem = new NodeItem({ kind: "action", label: "Jira Item Completed" }, vscode.TreeItemCollapsibleState.None);
+        const completeJiraItem = new NodeItem({ kind: "action", label: "Backlog Item Completed" }, vscode.TreeItemCollapsibleState.None);
         completeJiraItem.iconPath = new vscode.ThemeIcon("pass", JIRA_ACTION_COLOR);
         completeJiraItem.command = {
             command: "antigravity.completeJiraItem",
-            title: "Jira Item Completed"
+            title: "Backlog Item Completed"
         };
         items.push(completeJiraItem);
     }
@@ -665,7 +620,7 @@ function getQuickActionItems() {
     items.push(incrementPatch);
     const cloudArchitectReview = new NodeItem({ kind: "action", label: "Cloud Architect Review" }, vscode.TreeItemCollapsibleState.None);
     if (hasCloudInfrastructure) {
-        cloudArchitectReview.iconPath = new vscode.ThemeIcon("cloud", CLOUD_ARCHITECT_ACTION_COLOR);
+        cloudArchitectReview.iconPath = CLOUD_ARCHITECT_ICON_PATH;
         cloudArchitectReview.command = {
             command: "antigravity.cloudArchitectReview",
             title: "Cloud Architect Review"
@@ -690,7 +645,7 @@ function getQuickActionItems() {
         "Estimate a feature from a To Do Jira item or a free-form description using the selected Agentic Harness.";
     items.push(featureEstimator);
     const explainMe = new NodeItem({ kind: "action", label: "Explain Me" }, vscode.TreeItemCollapsibleState.None);
-    explainMe.iconPath = new vscode.ThemeIcon("comment-discussion", EXPLAIN_ME_ACTION_COLOR);
+    explainMe.iconPath = EXPLAIN_ME_ICON_PATH;
     explainMe.command = {
         command: "antigravity.explainMe",
         title: "Explain Me"
@@ -698,19 +653,6 @@ function getQuickActionItems() {
     explainMe.tooltip =
         "Download the latest explain-me skill into the project and ask the selected Agentic Harness to explain the whole solution and the latest uncommitted changes.";
     items.push(explainMe);
-    const autocommitCheckpoint = new NodeItem({ kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" }, vscode.TreeItemCollapsibleState.None);
-    if (!autocommitRunning && !hasGitHub) {
-        autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", new vscode.ThemeColor("disabledForeground"));
-        autocommitCheckpoint.tooltip = "No GitHub repository found. Please Init a repository first.";
-    }
-    else {
-        autocommitCheckpoint.iconPath = new vscode.ThemeIcon("save-all", QUICK_ACTION_COLOR);
-        autocommitCheckpoint.command = {
-            command: "antigravity.autocommitCheckpoint",
-            title: "Autocommit Checkpoint"
-        };
-    }
-    items.push(autocommitCheckpoint);
     if (autocommitRunning) {
         const revertChanges = new NodeItem({ kind: "action", label: "Revert Changes" }, vscode.TreeItemCollapsibleState.None);
         revertChanges.iconPath = new vscode.ThemeIcon("discard", QUICK_ACTION_COLOR);
@@ -728,6 +670,75 @@ function getQuickActionItems() {
         title: "SOP Manual"
     };
     items.push(sopManual);
+    return items;
+}
+function getRepositoryActionItems() {
+    const items = [];
+    const rootPath = (0, utils_1.getRootPath)();
+    const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : undefined;
+    const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
+    const currentBranch = hasRepo && repoRoot ? (0, git_1.getCurrentBranchNameSync)(repoRoot) : undefined;
+    if (!hasRepo) {
+        return items;
+    }
+    const commitChanges = new NodeItem({ kind: "action", label: "Commit" }, vscode.TreeItemCollapsibleState.None);
+    commitChanges.iconPath = new vscode.ThemeIcon("check", ORANGE_ACTION_COLOR);
+    commitChanges.command = {
+        command: "antigravity.commitChanges",
+        title: "Commit"
+    };
+    items.push(commitChanges);
+    const createRepoTagVersion = new NodeItem({ kind: "action", label: "Create Repo Release" }, vscode.TreeItemCollapsibleState.None);
+    createRepoTagVersion.iconPath = new vscode.ThemeIcon("tag", ORANGE_ACTION_COLOR);
+    createRepoTagVersion.command = {
+        command: "antigravity.createRepoTagVersion",
+        title: "Create Repo Release"
+    };
+    items.push(createRepoTagVersion);
+    const createFeatureBranch = new NodeItem({ kind: "action", label: "Create Feature Branch" }, vscode.TreeItemCollapsibleState.None);
+    createFeatureBranch.iconPath = new vscode.ThemeIcon("source-control", ORANGE_ACTION_COLOR);
+    createFeatureBranch.command = {
+        command: "antigravity.createFeatureBranch",
+        title: "Create Feature Branch"
+    };
+    items.push(createFeatureBranch);
+    const createPullRequest = new NodeItem({ kind: "action", label: "Create Pull Request" }, vscode.TreeItemCollapsibleState.None);
+    createPullRequest.iconPath = new vscode.ThemeIcon("git-pull-request", ORANGE_ACTION_COLOR);
+    createPullRequest.command = {
+        command: "antigravity.createPullRequest",
+        title: "Create Pull Request"
+    };
+    items.push(createPullRequest);
+    if (currentBranch && currentBranch !== "main") {
+        const mergeBranchToMain = new NodeItem({ kind: "action", label: "Merge branch to main" }, vscode.TreeItemCollapsibleState.None);
+        mergeBranchToMain.iconPath = new vscode.ThemeIcon("git-merge", ORANGE_ACTION_COLOR);
+        mergeBranchToMain.command = {
+            command: "antigravity.mergeBranchToMain",
+            title: "Merge branch to main"
+        };
+        items.push(mergeBranchToMain);
+    }
+    const checkoutMain = new NodeItem({ kind: "action", label: "Go To Branch" }, vscode.TreeItemCollapsibleState.None);
+    checkoutMain.iconPath = new vscode.ThemeIcon("git-compare", ORANGE_ACTION_COLOR);
+    checkoutMain.command = {
+        command: "antigravity.checkoutMain",
+        title: "Go To Branch"
+    };
+    items.push(checkoutMain);
+    const pullRemoteAndMerge = new NodeItem({ kind: "action", label: "Pull Remote and merge" }, vscode.TreeItemCollapsibleState.None);
+    pullRemoteAndMerge.iconPath = new vscode.ThemeIcon("cloud-download", PULL_REMOTE_AND_MERGE_ACTION_COLOR);
+    pullRemoteAndMerge.command = {
+        command: "antigravity.pullRemoteAndMerge",
+        title: "Pull Remote and merge"
+    };
+    items.push(pullRemoteAndMerge);
+    const agenticReviewOfMerge = new NodeItem({ kind: "action", label: "Agentic review of Merge" }, vscode.TreeItemCollapsibleState.None);
+    agenticReviewOfMerge.iconPath = new vscode.ThemeIcon("warning", MERGE_REVIEW_ACTION_COLOR);
+    agenticReviewOfMerge.command = {
+        command: "antigravity.agenticReviewOfMerge",
+        title: "Agentic review of Merge"
+    };
+    items.push(agenticReviewOfMerge);
     return items;
 }
 function getUpdateProjectConfigItems() {
@@ -756,6 +767,51 @@ function getUpdateProjectConfigItems() {
     updateAgentsMd.tooltip =
         "Open the selected Agentic Harness with the progressive-disclosure AGENTS.md update prompt.";
     return [updateGithubActions, updateTests, updateAgentsMd];
+}
+function getAdlcItems() {
+    const productDesigner = new NodeItem({ kind: "action", label: "Product Designer" }, vscode.TreeItemCollapsibleState.None);
+    productDesigner.iconPath = new vscode.ThemeIcon("edit", ADLC_ACTION_COLOR);
+    productDesigner.tooltip = "Open the Product Designer runner form.";
+    productDesigner.command = {
+        command: productDesigner_1.PRODUCT_DESIGNER_COMMAND,
+        title: "Open Product Designer"
+    };
+    const businessAnalyst = new NodeItem({ kind: "action", label: "Business Analyst" }, vscode.TreeItemCollapsibleState.None);
+    businessAnalyst.iconPath = new vscode.ThemeIcon("note", ADLC_ACTION_COLOR);
+    businessAnalyst.tooltip = "Open the Business Analyst runner form.";
+    businessAnalyst.command = {
+        command: businessAnalyst_1.BUSINESS_ANALYST_COMMAND,
+        title: "Open Business Analyst"
+    };
+    const solutionArchitect = new NodeItem({ kind: "action", label: "Solution Architect" }, vscode.TreeItemCollapsibleState.None);
+    solutionArchitect.iconPath = new vscode.ThemeIcon("symbol-structure", ADLC_ACTION_COLOR);
+    solutionArchitect.tooltip = "Open the Solution Architect runner form.";
+    solutionArchitect.command = {
+        command: solutionArchitect_1.SOLUTION_ARCHITECT_COMMAND,
+        title: "Open Solution Architect"
+    };
+    const estimator = new NodeItem({ kind: "action", label: "Estimate Project" }, vscode.TreeItemCollapsibleState.None);
+    estimator.iconPath = new vscode.ThemeIcon("graph", ADLC_ACTION_COLOR);
+    estimator.tooltip = "Open the Estimate Project runner form.";
+    estimator.command = {
+        command: estimator_1.ESTIMATOR_COMMAND,
+        title: "Open Estimate Project"
+    };
+    const planExecution = new NodeItem({ kind: "action", label: "Create Execution Plan" }, vscode.TreeItemCollapsibleState.None);
+    planExecution.iconPath = new vscode.ThemeIcon("map", ADLC_ACTION_COLOR);
+    planExecution.tooltip = "Open the Create Execution Plan runner form.";
+    planExecution.command = {
+        command: planExecution_1.PLAN_EXECUTION_COMMAND,
+        title: "Open Create Execution Plan"
+    };
+    const developer = new NodeItem({ kind: "action", label: "Develop Execution Plan" }, vscode.TreeItemCollapsibleState.None);
+    developer.iconPath = new vscode.ThemeIcon("play-circle", ADLC_ACTION_COLOR);
+    developer.tooltip = "Open the Develop Execution Plan runner form.";
+    developer.command = {
+        command: developer_1.DEVELOPER_COMMAND,
+        title: "Open Develop Execution Plan"
+    };
+    return [productDesigner, businessAnalyst, solutionArchitect, estimator, planExecution, developer];
 }
 function getPrReviewerItems() {
     const reviewPullRequest = new NodeItem({ kind: "action", label: "Review a Pull Request" }, vscode.TreeItemCollapsibleState.None);
@@ -791,23 +847,29 @@ function getClaudeActionItems() {
         command: "antigravity.openCodexTerminal",
         title: "Open Codex Terminal"
     };
-    const opencodeTerminal = new NodeItem({ kind: "action", label: "Opencode Terminal" }, vscode.TreeItemCollapsibleState.None);
-    opencodeTerminal.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
-    opencodeTerminal.command = {
+    const ollamaClaude = new NodeItem({ kind: "action", label: "Ollama Claude" }, vscode.TreeItemCollapsibleState.None);
+    ollamaClaude.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    ollamaClaude.command = {
+        command: "antigravity.openOllamaClaudeTerminal",
+        title: "Open Ollama Claude"
+    };
+    const ollamaCodex = new NodeItem({ kind: "action", label: "Ollama Codex" }, vscode.TreeItemCollapsibleState.None);
+    ollamaCodex.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    ollamaCodex.command = {
+        command: "antigravity.openOllamaCodexTerminal",
+        title: "Open Ollama Codex"
+    };
+    const opencode = new NodeItem({ kind: "action", label: "Opencode" }, vscode.TreeItemCollapsibleState.None);
+    opencode.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
+    opencode.command = {
         command: "antigravity.openOpencodeTerminal",
-        title: "Open Opencode Terminal"
+        title: "Open Opencode"
     };
     const setClaudeModel = new NodeItem({ kind: "action", label: "Set Claude Model" }, vscode.TreeItemCollapsibleState.None);
     setClaudeModel.iconPath = new vscode.ThemeIcon("repo", CLAUDE_MODEL_ACTION_COLOR);
     setClaudeModel.command = {
         command: "antigravity.setClaudeModel",
         title: "Set Claude Model"
-    };
-    const runLiteLLMOpenAI = new NodeItem({ kind: "action", label: "Run liteLLM OpenAI" }, vscode.TreeItemCollapsibleState.None);
-    runLiteLLMOpenAI.iconPath = new vscode.ThemeIcon("rocket", CLAUDE_MODEL_ACTION_COLOR);
-    runLiteLLMOpenAI.command = {
-        command: "antigravity.runLiteLLMOpenAI",
-        title: "Run liteLLM OpenAI"
     };
     const buildProject = new NodeItem({ kind: "action", label: "Build Project" }, vscode.TreeItemCollapsibleState.None);
     buildProject.iconPath = new vscode.ThemeIcon("tools", QUICK_ACTION_COLOR);
@@ -821,46 +883,6 @@ function getClaudeActionItems() {
         command: "antigravity.runProjectTests",
         title: "Run Project Tests"
     };
-    const ollamaTerminals = new NodeItem({ kind: "category", label: "Ollama Terminals" }, vscode.TreeItemCollapsibleState.Collapsed);
-    ollamaTerminals.iconPath = new vscode.ThemeIcon("terminal", terminal_1.CLAUDE_ACTION_COLOR);
-    const agentMonitorTerminals = new NodeItem({ kind: "category", label: "Agent Monitor Terminals" }, vscode.TreeItemCollapsibleState.Collapsed);
-    agentMonitorTerminals.iconPath = new vscode.ThemeIcon("terminal", terminal_1.CLAUDE_ACTION_COLOR);
-    return [item, codexTerminal, opencodeTerminal, ollamaTerminals, agentMonitorTerminals, setClaudeModel, runLiteLLMOpenAI, buildProject, runProjectTests];
-}
-function getOllamaTerminalItems() {
-    const ollamaClaude = new NodeItem({ kind: "action", label: "Ollama Claude" }, vscode.TreeItemCollapsibleState.None);
-    ollamaClaude.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
-    ollamaClaude.command = {
-        command: "antigravity.openOllamaClaudeTerminal",
-        title: "Open Ollama Claude Terminal"
-    };
-    const ollamaCodex = new NodeItem({ kind: "action", label: "Ollama Codex" }, vscode.TreeItemCollapsibleState.None);
-    ollamaCodex.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
-    ollamaCodex.command = {
-        command: "antigravity.openOllamaCodexTerminal",
-        title: "Open Ollama Codex Terminal"
-    };
-    return [ollamaClaude, ollamaCodex];
-}
-function getAgentMonitorTerminalItems() {
-    const monitorClaude = new NodeItem({ kind: "action", label: "Agent Monitor Claude" }, vscode.TreeItemCollapsibleState.None);
-    monitorClaude.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
-    monitorClaude.command = {
-        command: "antigravity.openAgentMonitorClaudeTerminal",
-        title: "Open Agent Monitor Claude Terminal"
-    };
-    const monitorCodex = new NodeItem({ kind: "action", label: "Agent Monitor Codex" }, vscode.TreeItemCollapsibleState.None);
-    monitorCodex.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
-    monitorCodex.command = {
-        command: "antigravity.openAgentMonitorCodexTerminal",
-        title: "Open Agent Monitor Codex Terminal"
-    };
-    const monitorOpenCode = new NodeItem({ kind: "action", label: "Agent Monitor OpenCode" }, vscode.TreeItemCollapsibleState.None);
-    monitorOpenCode.iconPath = new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR);
-    monitorOpenCode.command = {
-        command: "antigravity.openAgentMonitorOpenCodeTerminal",
-        title: "Open Agent Monitor OpenCode Terminal"
-    };
-    return [monitorClaude, monitorCodex, monitorOpenCode];
+    return [item, codexTerminal, ollamaClaude, ollamaCodex, opencode, setClaudeModel, buildProject, runProjectTests];
 }
 //# sourceMappingURL=treeProvider.js.map

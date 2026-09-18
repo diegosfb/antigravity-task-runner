@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "_about": "Per-project workflow settings for the dsfb-sdlc v2 library. Agents read this file at the project root; if it is missing, every setting falls back to its documented default.",
+  "spoken_plan": {
+    "enabled": false,
+    "interrupted_by_next_command": false,
+    "_defaults": {
+      "enabled": false,
+      "interrupted_by_next_command": false
+    },
+    "_options": {
+      "true": "Codex automatically plays a safe conversational audio explanation of each implementation plan before requesting approval.",
+      "false": "Codex presents the written implementation plan and requests approval without creating narration or playing audio.",
+      "interrupted_by_next_command_true": "Start narration in the background, present the plan immediately, and stop active narration before processing the next user message, including approval.",
+      "interrupted_by_next_command_false": "Wait for narration to finish before presenting the plan and approval prompt."
+    },
+    "_notes": "These settings control audio only; the plan and explicit-approval gates always remain mandatory. Missing, unreadable, or non-boolean values fail safe to their false defaults and must be reported. Stopping narration never implies approval."
+  },
+  "user_approval_gates": {
+    "configurable": {
+      "prd": "required",
+      "specifications": "required",
+      "ux_ui_design": "required",
+      "architecture": "required",
+      "backlog_plan": "required",
+      "test_plan": "required",
+      "pull_request_creation": "required"
+    },
+    "mandatory": {
+      "implementation_plan": "required",
+      "pull_request_merge": "required",
+      "production_release": "required"
+    },
+    "_default": "required",
+    "_options": {
+      "required": "Validate the artifact, present it to the user, and wait for explicit approval before the owning agent moves forward.",
+      "skip": "Validate the artifact and record that review was skipped by configuration, then continue without requesting user approval."
+    },
+    "_notes": "Artifact validation is always mandatory; skip controls only the user review prompt. Missing or invalid values fail safe to required and must be reported. Entries under mandatory are policy-locked: any other value is ignored and reported. If an approved artifact materially changes, validate it again and obtain fresh approval when its gate is required."
+  },
+  "product_pre_mortem": {
+    "enabled": false,
+    "_default": false,
+    "_options": {
+      "true": "Product-agent invokes pre-mortem-agent before PRD handoff and integrates its risk analysis into the PRD.",
+      "false": "Product-agent does not run the automatic pre-mortem gate; the consultant remains directly invokable on demand."
+    },
+    "_notes": "Missing, unreadable, or non-boolean enabled values fail safe to false and must be reported in the PRD Risk Analysis section. Enabling the gate never transfers PRD ownership away from product-agent."
+  },
+  "llm_judge": {
+    "trigger_mode": "architecture",
+    "judge_provider": "",
+    "judge_command": "",
+    "_default": "on-demand",
+    "_options": {
+      "on-demand": "No automation. Invoke llm-judge-agent explicitly when you want a second opinion.",
+      "architecture": "architect-agent invokes llm-judge-agent on architecture.md + ADRs before handing off. Developer tasks stay on-demand.",
+      "architecture-and-risky-dev": "As 'architecture', plus developer-agent self-triggers the judge before the test-agent handoff for high-risk tasks: unattended runs, security-sensitive scope, or items the planner marked high-complexity.",
+      "architecture-and-all-dev": "As 'architecture', plus developer-agent invokes the judge before submitting EVERY task to test-agent. Maximum coverage; one extra cross-model call per task."
+    },
+    "_cross_model": "The judge MUST run on a different model than the one that produced the artifact - ideally a different provider. judge_provider (e.g. 'google', 'openai', 'anthropic') and judge_command (e.g. 'gemini', 'codex', 'ollama run llama3.3') tell the judge how to reach that different model deterministically. Leave both empty to let the judge auto-detect an available cross-provider CLI or API key. The author model is read from artifact provenance (generated_by: line / Generated-by: commit trailer); if judge_provider equals the author's provider, or no different model is reachable, the judge banners the report as SAME-MODEL and reduces confidence.",
+    "_notes": "The judge is always advisory: REWORK verdicts return to the producing agent; a judgment never substitutes for the test-agent or code-review-agent gates."
+  },
+  "spec_validation": {
+    "drift_check_mode": "on-demand",
+    "red_team_mode": "on-demand",
+    "_default": "on-demand",
+    "_drift_check_options": {
+      "on-demand": "No automation. Invoke spec-validation-agent's spec-drift-checker explicitly.",
+      "on-implementation": "developer-agent runs spec-drift-checker on each completed task (spec-covered behavior) before the test-agent handoff."
+    },
+    "_red_team_options": {
+      "on-demand": "No automation. Invoke the /red-team-workflow or spec-red-team explicitly.",
+      "pre-release": "deployment-agent runs the red-team pass against a confirmed ephemeral environment before a release."
+    },
+    "_notes": "Both are advisory REVIEW INPUT, never build blockers. spec-red-team requires a confirmed non-production, synthetic-data target. Confirmed findings ship as regression tests that gate only after a human merges them."
+  },
+  "security_check": {
+    "pre_commit": true,
+    "pre_pr": true,
+    "_default": {
+      "pre_commit": true,
+      "pre_pr": true
+    },
+    "_options": {
+      "pre_commit": "true requires security-check-agent PASS on the exact staged diff before every developer-agent-managed commit; false disables only this agent gate, not deterministic hooks or later security review.",
+      "pre_pr": "true requires a fresh security-check-agent PASS on the complete branch diff before every developer-agent-managed pull request; false disables only this repeated agent gate."
+    },
+    "_notes": "Missing or invalid values fail safe to true and must be reported. FAIL or BLOCKED stops the commit/PR and enters the approved revised-plan and tracked-defect loop. Native Git operations outside the agent workflow require separately installed deterministic hooks and repository protections."
+  },
+  "test_red_team": {
+    "trigger_mode": "every-pr",
+    "_default": "every-pr",
+    "_options": {
+      "never": "Do not run test-agent's red-team-agent automatically. Explicit invocation remains available.",
+      "every-commit": "Run red-team-agent against every candidate change before test PASS and developer pre-commit finalization, including approved review fixes.",
+      "every-pr": "Run red-team-agent once against the complete candidate branch after normal tests pass and before planner completion and the final PASS handoff."
+    },
+    "_notes": "Missing or invalid values fail safe to every-pr and must be reported. Every configured run first assesses whether an executable attack surface changed. A documentation-only or otherwise non-attackable change may return an evidenced not-applicable PASS. Relevant dynamic attacks require a confirmed local or ephemeral non-production target with synthetic data; inability to confirm one returns BLOCKED rather than attacking production or silently skipping."
+  },
+  "developer_git_workflow": {
+    "mode": "always-branch-and-pr",
+    "run_pre_commit_hooks": true,
+    "run_pre_pr_hooks": true,
+    "post_pr_branch": "stay-on-task-branch",
+    "_default": "always-branch-and-pr",
+    "_options": {
+      "always-branch-and-pr": "For every new backlog item or feature, developer-agent creates a short-lived task branch after plan approval and before implementation. After test-agent returns PASS, it commits and pushes the validated work and creates a pull request for code-review-agent.",
+      "ask-branch-and-pr": "After plan approval and before implementation, developer-agent asks whether to create a short-lived task branch and later create a pull request. Yes follows always-branch-and-pr; no uses the current non-main branch without automatic pull-request creation.",
+      "current-branch": "Developer-agent implements on the current non-main branch and does not automatically create a branch or pull request. If the current branch is main, it stops and asks for a safe branch decision."
+    },
+    "_hook_options": {
+      "run_pre_commit_hooks": "true runs the repository's configured pre-commit hook suite after planner completion acknowledgement and before commit; false skips that explicit run.",
+      "run_pre_pr_hooks": "true runs the repository's configured pre-PR hook suite after commit and before push/PR creation when the resolved mode creates a PR; false skips that explicit run."
+    },
+    "_post_pr_branch_options": {
+      "stay-on-task-branch": "Remain on the task branch after creating the PR.",
+      "switch-to-main": "After creating the PR, switch to main and update it from origin. Review feedback must switch back to the existing task branch."
+    },
+    "_notes": "Resolve mode once per new backlog item or feature. Missing or invalid mode fails safe to always-branch-and-pr. Missing or invalid hook booleans fail safe to true. Missing or invalid post_pr_branch fails safe to stay-on-task-branch. Report every fallback. Test and review feedback reuse the task's existing branch and pull request. No setting permits direct implementation or commits on main. Hook failures block the commit or PR step. Branch naming, Jira traceability, commit rules, and pull-request content follow .agents/guidelines/github-flow.md and .agents/guidelines/jira-flow.md."
+  },
+  "test_failure_tracking": {
+    "track_in_backlog": true,
+    "_default": true,
+    "_options": {
+      "true": "test-agent sends every actionable failure report to both developer-agent and project-planner-agent. The planner deduplicates it, creates or updates a linked Bug or investigation Task, and closes it only after test-agent verifies the fix.",
+      "false": "test-agent still sends the complete failure report to developer-agent, but does not request a linked backlog item from project-planner-agent."
+    },
+    "_notes": "Failure context sent to either agent must be actionable and secret-safe. The setting never removes the mandatory revised-plan approval gate for developer fixes. Missing or invalid values fail safe to true and must be reported."
+  },
+  "obsidian_vault": {
+    "enabled": true,
+    "vault_path": "./docs/vault",
+    "link_mode": "symlink",
+    "_options": {
+      "enabled": "true = obsidian-vault-agent mirrors artifacts into the vault as the design progresses and agents record their actions there; false (default) = the agent does nothing and no vault recording happens.",
+      "vault_path": "Path to the Obsidian vault folder the agent writes into - absolute, or relative to the project root (e.g. ./docs/vault). Required when enabled; the agent stops and reports if empty or unwritable. It writes ONLY inside this folder.",
+      "link_mode": "symlink (default) = symlink canonical docs/ files into the vault so content is never duplicated; copy = for portable vaults (mobile/Windows/Obsidian Sync) where symlinks don't travel, link via relative paths instead."
+    },
+    "_notes": "obsidian-vault-agent is read-only toward the project (writes only inside vault_path), off-workflow, and never gates anything. When enabled, AGENTS.md's recording convention routes agent action summaries into the vault's Action-Log."
+  }
+}

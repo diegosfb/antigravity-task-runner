@@ -1,3 +1,5 @@
+import { quoteShellArg, getExecutableName } from "./shellUtils";
+
 export type AgenticHarnessPromptMode = "unattended" | "prompt";
 
 type HarnessBaseCommandBuilder = (
@@ -5,10 +7,6 @@ type HarnessBaseCommandBuilder = (
   repoRoot: string,
   mode: AgenticHarnessPromptMode
 ) => string;
-
-function quoteShellArg(value: string): string {
-  return `"${value.replace(/["\\$`]/g, "\\$&")}"`;
-}
 
 function buildCodexTrustArgs(repoRoot: string): string {
   const trustOverride = `projects.${JSON.stringify(repoRoot)}.trust_level="trusted"`;
@@ -39,13 +37,6 @@ function buildGeminiUnattendedBaseCommand(command: string): string {
   return /(?:^|\s)--yolo(?:\s|$)/.test(command)
     ? command
     : command.replace(/\bgemini\b/, "gemini --yolo");
-}
-
-function getExecutableName(command: string): string {
-  const firstToken = command.trim().split(/\s+/)[0] || "";
-  const normalized = firstToken.replace(/\\/g, "/");
-  const basename = normalized.split("/").pop() || normalized;
-  return basename.toLowerCase();
 }
 
 const HARNESS_BASE_COMMAND_BUILDERS: Record<string, HarnessBaseCommandBuilder> = {

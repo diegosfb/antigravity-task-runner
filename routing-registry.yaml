@@ -1,0 +1,97 @@
+version: 2
+
+source_of_truth:
+  owner: sdlc-orchestrator
+  purpose: >
+    Routing registry for dsfb-sdlc v2. The workflow diagram (Product -> BA -> Architect -> UX ->
+    Project planner -> Task backlog -> Developer [FE/BE/Data] -> Test -> Code review -> Deployment)
+    is the source of truth. Route by workflow phase first, specialty second.
+
+workflow:
+  order: [product-agent, ba-agent, architect-agent, ux-agent, project-planner-agent, developer-agent, test-agent, code-review-agent, deployment-agent]
+  artifacts:
+    product-agent: {produces: prd, to: ba-agent}
+    ba-agent: {produces: [specs, acceptance-criteria], to: [architect-agent, project-planner-agent]}
+    architect-agent: {produces: [architecture-doc, adrs, technical-tasks], to: [ux-agent, project-planner-agent], subagents: [data-architect]}
+    ux-agent: {produces: design-tasks, to: project-planner-agent}
+    project-planner-agent: {produces: task-backlog, to: developer-agent}
+    developer-agent: {produces: code, to: test-agent, subagents: [fe-developer, be-developer, data-developer]}
+    test-agent: {produces: pass-fail, pass_to: code-review-agent, fail_to: developer-agent}
+    code-review-agent: {produces: [approved-pr, change-requests], pr_to: deployment-agent, changes_to: developer-agent}
+    deployment-agent: {produces: live-release, feedback_to: product-agent}
+
+targets:
+  agents:
+    sdlc-orchestrator:    {phase: Entry,       path: .agents/agents/sdlc-orchestrator/sdlc-orchestrator.md, note: entry point - reads this registry and dispatches}
+    product-agent:        {phase: Discovery,   path: .agents/agents/product-agent/product-agent.md}
+    ba-agent:             {phase: Requirements, path: .agents/agents/ba-agent/ba-agent.md}
+    architect-agent:      {phase: Architecture, path: .agents/agents/architect-agent/architect-agent.md}
+    data-architect:       {phase: Architecture, path: .agents/agents/architect-agent/subagents/data-architect/data-architect.md, parent: architect-agent, status: active}
+    mobile-architect:     {phase: Architecture, path: .agents/agents/architect-agent/subagents/mobile-architect/mobile-architect.md, parent: architect-agent, status: dormant, activates_when: specs name a mobile client}
+    iot-architect:        {phase: Architecture, path: .agents/agents/architect-agent/subagents/iot-architect/iot-architect.md, parent: architect-agent, status: dormant, activates_when: IoT/edge scope in specs}
+    embedded-architect:   {phase: Architecture, path: .agents/agents/architect-agent/subagents/embedded-architect/embedded-architect.md, parent: architect-agent, status: dormant, activates_when: firmware/RTOS scope in specs}
+    blockchain-architect: {phase: Architecture, path: .agents/agents/architect-agent/subagents/blockchain-architect/blockchain-architect.md, parent: architect-agent, status: dormant, activates_when: smart-contract/Web3 scope in specs}
+    databricks-architect: {phase: Architecture, path: .agents/agents/architect-agent/subagents/databricks-architect/databricks-architect.md, parent: architect-agent, status: dormant, activates_when: Databricks/Delta Lake named in specs or guidelines}
+    ux-agent:             {phase: Design,       path: .agents/agents/ux-agent/ux-agent.md}
+    project-planner-agent: {phase: Planning,    path: .agents/agents/project-planner-agent/project-planner-agent.md}
+    developer-agent:      {phase: Build,        path: .agents/agents/developer-agent/developer-agent.md}
+    fe-developer:         {phase: Build,        path: .agents/agents/developer-agent/subagents/fe-developer/fe-developer.md, parent: developer-agent, status: active}
+    be-developer:         {phase: Build,        path: .agents/agents/developer-agent/subagents/be-developer/be-developer.md, parent: developer-agent, status: active}
+    data-developer:       {phase: Build,        path: .agents/agents/developer-agent/subagents/data-developer/data-developer.md, parent: developer-agent, status: active}
+    mobile-developer:     {phase: Build,        path: .agents/agents/developer-agent/subagents/mobile-developer/mobile-developer.md, parent: developer-agent, status: dormant, activates_when: mobile tasks in backlog}
+    iot-developer:        {phase: Build,        path: .agents/agents/developer-agent/subagents/iot-developer/iot-developer.md, parent: developer-agent, status: dormant, activates_when: IoT/edge tasks in backlog}
+    embedded-developer:   {phase: Build,        path: .agents/agents/developer-agent/subagents/embedded-developer/embedded-developer.md, parent: developer-agent, status: dormant, activates_when: firmware/RTOS tasks in backlog}
+    blockchain-developer: {phase: Build,        path: .agents/agents/developer-agent/subagents/blockchain-developer/blockchain-developer.md, parent: developer-agent, status: dormant, activates_when: smart-contract/Web3 tasks in backlog}
+    databricks-developer: {phase: Build,        path: .agents/agents/developer-agent/subagents/databricks-developer/databricks-developer.md, parent: developer-agent, status: dormant, activates_when: Databricks/Delta Lake tasks or named in ADRs}
+    test-agent:           {phase: Verify,       path: .agents/agents/test-agent/test-agent.md}
+    code-review-agent:    {phase: Review,       path: .agents/agents/code-review-agent/code-review-agent.md}
+    deployment-agent:     {phase: Release,      path: .agents/agents/deployment-agent/deployment-agent.md}
+    llm-judge-agent:      {phase: Quality-Gate, path: .agents/agents/llm-judge-agent/llm-judge-agent.md, note: optional cross-model judge - advisory, never replaces test/review gates}
+    spec-validation-agent:  {phase: Quality-Gate, path: .agents/agents/spec-validation-agent/spec-validation-agent.md, note: optional spec-conformance + adversarial gate - advisory, never replaces test/review gates}
+    spec-drift-checker:   {phase: Quality-Gate, path: .agents/agents/spec-validation-agent/subagents/spec-drift-checker/spec-drift-checker.md, parent: spec-validation-agent, status: active}
+    spec-red-team:        {phase: Quality-Gate, path: .agents/agents/spec-validation-agent/subagents/spec-red-team/spec-red-team.md, parent: spec-validation-agent, status: dormant, activates_when: security-sensitive scope or pre-release pass on a confirmed ephemeral target}
+    security-check-agent: {phase: Quality-Gate, path: .agents/agents/spec-validation-agent/subagents/security-check-agent/security-check-agent.md, parent: spec-validation-agent, status: active, note: blocking staged/branch security assurance before agent-managed commits and PRs}
+    red-team-agent:       {phase: Verify,       path: .agents/agents/test-agent/subagents/red-team-agent/red-team-agent.md, parent: test-agent, status: conditional, activates_when: test_red_team.trigger_mode requires a run and a safe local or ephemeral target is confirmed}
+    gcp-sme:              {phase: Advisory,     path: .agents/agents/consultant-agent/subagents/gcp-sme/gcp-sme.md, parent: consultant-agent, status: active, note: core-stack SME consulted by architect-agent and data-developer}
+    doc-generator:        {phase: Advisory,     path: .agents/agents/consultant-agent/subagents/doc-generator/doc-generator.md, parent: consultant-agent, status: active}
+    aws-sme:              {phase: Advisory,     path: .agents/agents/consultant-agent/subagents/aws-sme/aws-sme.md, parent: consultant-agent, status: dormant, activates_when: AWS engagement in scope}
+    azure-sme:            {phase: Advisory,     path: .agents/agents/consultant-agent/subagents/azure-sme/azure-sme.md, parent: consultant-agent, status: dormant, activates_when: Azure engagement in scope}
+    snowflake-sme:        {phase: Advisory,     path: .agents/agents/consultant-agent/subagents/snowflake-sme/snowflake-sme.md, parent: consultant-agent, status: dormant, activates_when: Snowflake engagement in scope}
+    obsidian-vault-agent: {phase: Knowledge,    path: .agents/agents/obsidian-vault-agent/obsidian-vault-agent.md, note: optional off-workflow recorder - mirrors artifacts into an Obsidian vault; config-gated, read-only toward the project}
+    consultant-agent:     {phase: Advisory,     path: .agents/agents/consultant-agent/consultant-agent.md, note: off-workflow dispatcher for ad-hoc consultations - not a workflow stage}
+    humanizer:            {phase: Advisory,     path: .agents/agents/consultant-agent/subagents/humanizer/humanizer.md, parent: consultant-agent, status: active, note: wraps the humanizer skill - de-AI text, minimal-change}
+    cloud-consumption-estimation: {phase: Advisory, path: .agents/agents/consultant-agent/subagents/cloud-consumption-estimation/cloud-consumption-estimation.md, parent: consultant-agent, status: active, note: estimates cloud consumption/cost from volumetric data; asks + suggests defaults when data is missing}
+    explain-new-contributions: {phase: Advisory, path: .agents/agents/consultant-agent/subagents/explain-new-contributions/explain-new-contributions.md, parent: consultant-agent, status: active, note: read-only shift catch-up across current branch and main}
+    sounding-board-agent: {phase: Advisory, path: .agents/agents/consultant-agent/subagents/sounding-board-agent/sounding-board-agent.md, parent: consultant-agent, status: active, note: critical constructive challenge of ideas, plans, and approaches using evidence and alternatives}
+
+routes:
+  - triggers: [vision, market research, competitor, benchmarking, user feedback, product direction, kickoff]
+    target: product-agent
+  - triggers: [spec, requirements, feature definition, user story, acceptance criteria]
+    target: ba-agent
+  - triggers: [architecture, system design, ADR, technology choice, NFR, decomposition]
+    target: architect-agent
+  - triggers: [ux, ui design, user flow, wireframe, design system, accessibility]
+    target: ux-agent
+  - triggers: [backlog, estimate, sequencing, dependencies, sprint, jira, planning]
+    target: project-planner-agent
+  - triggers: [implement, build, code, fix, refactor, feature branch]
+    target: developer-agent
+  - triggers: [test, e2e, coverage, regression, data quality checks]
+    target: test-agent
+  - triggers: [review, PR review, security review, code quality, audit]
+    target: code-review-agent
+  - triggers: [deploy, ci/cd, release, rollback, terraform, observability, monitoring]
+    target: deployment-agent
+  - triggers: [judge, second opinion, llm judge, evaluate architecture, evaluate design, evaluate implementation, cross-model review, how good is]
+    target: llm-judge-agent
+  - triggers: [spec drift, spec conformance, does it match the spec, red team, adversarial test, spec-aware security, business-logic attack, spec gap]
+    target: spec-validation-agent
+  - triggers: [start my shift, shift catch-up, team catch-up, explain new contributions, what changed on main, what changed on this branch, teammate changes, recent codebase changes, catch me up]
+    target: explain-new-contributions
+  - triggers: [sounding board, challenge my idea, stress test this approach, critique my plan, what am I missing, play devil's advocate, propose different approaches, is this idea solid]
+    target: sounding-board-agent
+  - triggers: [consult, advisor, ad-hoc, humanize, de-ai text, pitch deck, board deck, resume, CEO/CFO/CTO advice, business value, second opinion on strategy, cloud cost estimate, consumption estimate, volumetric, how much will it cost to run]
+    target: consultant-agent
+  - triggers: [obsidian, vault, knowledge base, sync notes, mirror artifacts, link adrs and specs, design vault, record decisions]
+    target: obsidian-vault-agent

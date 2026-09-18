@@ -13,21 +13,21 @@ The same planning and approval gate applies to those fixes.
 
 ```mermaid
 flowchart LR
-    PP[project-planner-agent] -->|one task| TA[test-agent]
-    TA -->|test plan and failing scripts| DA[developer-agent]
+    BA[ba-agent<br/>acceptance criteria] --> PP[project-planner-agent]
+    AR[architect-agent<br/>technical tasks and ADRs] --> PP
+    UX[ux-agent<br/>design tasks and specs] --> PP
+    PP -->|ordered sprint-ready backlog task| DA[developer-agent]
     DA -->|implementation plan| HU[User approval]
     HU -->|explicit approval| VA[Save exact plan to vault]
     VA -->|record succeeds or vault is disabled| GIT[Resolve Git workflow mode]
-    GIT -->|source code| TA2[test-agent]
-    TA2 -->|FAIL with context and tracked IDs| DA
-    TA2 -->|PASS| SV[spec-validation-agent]
-    SV -->|CONFORMANT| DOC[documentation-agent]
-    SV -. DRIFT .-> DA
-    DOC --> SEC[security-check-agent]
-    SEC -->|PASS| CR[code-review-agent]
+    GIT --> BUILD[Build and verify]
+    BUILD --> TA[test-agent]
+    TA -->|PASS and evidence| DA
+    TA -->|FAIL with context and tracked IDs| DA
+    TA -->|tracked failure and resolution| PP
+    DA -->|configured branch/PR finalization| CR[code-review-agent]
     CR -->|changes requested| DA
-    CR -->|PR approved| PP2[project-planner-agent]
-    PP2 -->|task Done; next dispatched| TASKS[task backlog]
+    CR -->|approved| DEP[deployment-agent]
     DA -->|mis-scoped task or bad dependency| PP
 ```
 
@@ -84,7 +84,8 @@ python3 scripts/helper-scripts/vault-event.py record \
 
 Related canonical artifacts are supplied with repeated `--artifact` arguments
 when available. The recorder creates a Markdown note under the vault's
-`Implementation-Plans/` folder and adds it to the vault index.
+`Implementation-Plans/` folder, adds it to the vault index, and records the
+action in the dated action log.
 
 - If the vault is enabled, failure to record the approved plan blocks
   implementation and must be reported to the user.
@@ -96,15 +97,15 @@ when available. The recorder creates a Markdown note under the vault's
 
 After the approval and vault gate, the developer-agent:
 
-- `always-branch-and-pr` creates one short-lived branch for the task and, after
-  test PASS and documentation, opens one task PR.
+- `always-branch-and-pr` creates a short-lived branch and, after test PASS,
+  pushes it and opens a PR.
 - `ask-branch-and-pr` asks the user whether to use that branch-and-PR flow.
 - `current-branch` implements on the current non-`main` branch and does not
   create a PR automatically.
 
 1. Resolves `developer_git_workflow.mode` from
    `ADLC_workflow_settings.json` once for the task.
-2. Works on one traceable backlog task, one branch, and one pull request at a time.
+2. Works on one traceable backlog task and branch at a time.
 3. Creates a short-lived branch, asks the user, or uses the current non-`main`
    branch according to the selected mode. No mode permits work directly on
    `main`.
@@ -117,9 +118,11 @@ After the approval and vault gate, the developer-agent:
 7. Enforces acceptance criteria, ADRs, repository conventions, and the minimal
    change principle.
 8. Starts with codebase archaeology for brownfield work.
-9. Begins only after `test-agent` supplies the approved plan and failing tests,
-   then integrates the result and hands it back for independent verification.
-10. When `security_check.pre_commit` is enabled, requires
+9. Integrates the result and hands it to `test-agent` for independent
+   verification.
+10. After PASS, waits for planner acknowledgement that the originating item and
+    all blocking tracked failures are Done.
+11. When `security_check.pre_commit` is enabled, requires
     `security-check-agent` PASS on the exact staged diff, then runs configured
     pre-commit hooks and commits with its backlog identifier and a
     `Generated-by: <provider>/<model>` provenance trailer. A hook failure stops
@@ -174,10 +177,9 @@ The developer-agent sends implemented code to the `test-agent`. The test-agent
 independently verifies it against the BA's original acceptance criteria, not
 only against the developer's interpretation.
 
-- On `PASS`, the pipeline continues to `spec-validation-agent` for conformance
-  check, then to `documentation-agent`, `security-check-agent`, and
-  `code-review-agent`. The developer-agent re-enters the loop only on test FAIL
-  or code-review CHANGES_REQUESTED.
+- On `PASS`, the branch returns to developer-agent with evidence for configured
+  commit/push/PR finalization only after the planner confirms the originating
+  item and resolved blocking failures are Done.
 - On `FAIL`, the test-agent returns complete, sanitized context and, when
   `test_failure_tracking.track_in_backlog` is enabled, planner-created or
   matched Bug/investigation Task IDs.
@@ -191,9 +193,9 @@ only against the developer's interpretation.
   duplicate branch or replacement PR. If post-PR behavior switched to `main`,
   the developer switches back to the existing task branch for review fixes.
 
-Commit, push, and PR creation reads `run_pre_commit_hooks`, `run_pre_pr_hooks`,
-and `post_pr_branch` from `developer_git_workflow`. Missing or invalid hook
-flags fail safe to enabled; missing or invalid branch behavior fails safe to
+Repository finalization reads `run_pre_commit_hooks`, `run_pre_pr_hooks`, and
+`post_pr_branch` from `developer_git_workflow`. Missing or invalid hook flags
+fail safe to enabled; missing or invalid branch behavior fails safe to
 `stay-on-task-branch`. Pre-PR hooks run only when a PR will be created.
 It also reads `security_check.pre_commit` and `security_check.pre_pr`; missing
 or invalid flags fail safe to enabled. Security-check and test red-team

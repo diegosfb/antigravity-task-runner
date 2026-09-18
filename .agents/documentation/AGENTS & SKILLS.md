@@ -50,39 +50,30 @@ The paths below are relative to the repository root. Status meanings:
 ## Core SDLC agents
 
 Use these in workflow order. Each agent validates its output and applies the
-configured user-approval checkpoint before handing off. Tasks execute in series
-according to dependency order: one task at a time, each beginning only after
-the previous task's PR is accepted.
+configured user-approval checkpoint before handing off.
 
 | Agent | When to use | How to use |
 |---|---|---|
 | **sdlc-orchestrator** | Any multi-phase delivery request, or when the correct specialist is unclear. | Say `Use sdlc-orchestrator to ...`. It reads `routing-registry.yaml` and sequences the workflow. [Definition](../../.agents/agents/sdlc-orchestrator/sdlc-orchestrator.md) |
 | **product-agent** | Product discovery, market evidence, goals, success metrics, product direction, or a PRD. | Give it the opportunity and evidence; it writes `docs/project_description/PRD.md`. [Definition](../../.agents/agents/product-agent/product-agent.md) |
-| **ba-agent** | Turn an approved PRD into functional requirements, user stories, edge cases, and acceptance criteria embedded in specs. | Provide the PRD and say `Use ba-agent to create the specifications`. [Definition](../../.agents/agents/ba-agent/ba-agent.md) |
-| **ux-agent** | User flows, wireframes, interaction states, component guidance, and accessibility. Invoked from ba-agent; feeds design requirements back to ba-agent and produces docs, mocks, and diagrams to `docs/UX Designs/`. | Provide the specs from ba-agent. It returns design requirements and accessibility feedback to ba-agent for spec reconciliation and writes deliverables to `docs/UX Designs/`. Specs and user stories reference those files when relevant. [Definition](../../.agents/agents/ux-agent/ux-agent.md) |
-| **architect-agent** | System design, NFRs, technology choices, ADRs, diagrams, and technical decomposition. | Provide approved reconciled specs and applicable development guidelines. It selects architecture subagents when needed. [Definition](../../.agents/agents/architect-agent/architect-agent.md) |
-| **project-planner-agent** | Convert specs and architecture tasks into a dependency-ordered serial task backlog. Dispatches one task at a time; marks a task Done and dispatches the next only after the PR is approved (see `project_planner.wait_for_pr_approval` in `ADLC_workflow_settings.json`). | Provide the approved planning inputs; it is the sole writer to Jira or the Markdown backlog. [Definition](../../.agents/agents/project-planner-agent/project-planner-agent.md) |
-| **test-agent** | Test-first: creates the task test plan and failing test scripts before developer implementation. Then runs the suite against developer output and reports PASS, FAIL, or BLOCKED. | Invoke at the start of each task with the backlog item for TDD scaffolding; invoke again after developer output for verification. It may invoke `red-team-agent`. [Definition](../../.agents/agents/test-agent/test-agent.md) |
-| **developer-agent** | Implement an approved backlog item using the test plan and failing scripts from test-agent, or apply an approved test/review fix. | Invoke with the backlog item, test plan, failing scripts, and ADRs. It obtains implementation-plan approval and selects build subagents. [Definition](../../.agents/agents/developer-agent/developer-agent.md) |
-| **spec-validation-agent** | Blocking pipeline stage: confirm implementation conforms to specs after tests pass and before documentation. CONFORMANT unblocks documentation-agent; DRIFT or SPEC_GAP returns to developer-agent or ba-agent. | Invoke after test-agent PASS with the spec and diff. [Definition](../../.agents/agents/spec-validation-agent/spec-validation-agent.md) |
-| **documentation-agent** | Create implementation-grounded code documentation after spec-validation-agent CONFORMANT and before code review. | Invoke after spec-validation-agent CONFORMANT with the verified revision. [Definition](../../.agents/agents/documentation-agent/documentation-agent.md) |
-| **code-review-agent** | Review a documented, tested branch/PR for correctness, security, maintainability, standards, and ADR conformance. | Provide the documented PR, backlog scope, and ADRs. On approval it notifies project-planner-agent to mark the task Done and dispatch the next. [Definition](../../.agents/agents/code-review-agent/code-review-agent.md) |
+| **ba-agent** | Turn an approved PRD into functional requirements, user stories, edge cases, and acceptance criteria. | Provide the PRD and say `Use ba-agent to create the specifications`. [Definition](../../.agents/agents/ba-agent/ba-agent.md) |
+| **architect-agent** | System design, NFRs, technology choices, ADRs, diagrams, and technical decomposition. | Provide approved specs and applicable development guidelines. It selects architecture subagents when needed. [Definition](../../.agents/agents/architect-agent/architect-agent.md) |
+| **ux-agent** | User flows, wireframes, interaction states, component guidance, accessibility, and PRD UX/UI improvements. | Provide the product context, specs, and ADRs; ask for validated design specs and design tasks. [Definition](../../.agents/agents/ux-agent/ux-agent.md) |
+| **project-planner-agent** | Convert acceptance criteria, architecture tasks, and design tasks into a sequenced, estimated backlog. | Provide the approved planning inputs; it is the sole writer to Jira or the Markdown backlog. [Definition](../../.agents/agents/project-planner-agent/project-planner-agent.md) |
+| **developer-agent** | Implement an approved backlog item or apply an approved test/review fix. | Invoke it with the backlog item, design specs, and ADRs. It obtains implementation-plan approval and selects build subagents. [Definition](../../.agents/agents/developer-agent/developer-agent.md) |
+| **test-agent** | Create and approve a test plan, add/run tests, verify acceptance criteria, and report PASS or actionable FAIL. | Give it the feature branch and original acceptance criteria. It may invoke `red-team-agent`. [Definition](../../.agents/agents/test-agent/test-agent.md) |
+| **code-review-agent** | Review a tested branch/PR for correctness, security, maintainability, standards, and ADR conformance. | Provide the tested PR, backlog scope, and ADRs. It returns change requests or a merge candidate. [Definition](../../.agents/agents/code-review-agent/code-review-agent.md) |
 | **deployment-agent** | Package, promote, release, verify, and roll back an approved change. | Provide the approved merge and target environment; production promotion always requires explicit approval. [Definition](../../.agents/agents/deployment-agent/deployment-agent.md) |
 
 Do not route specifications directly to `developer-agent`. The
 `project-planner-agent` backlog is the required implementation intake.
-
-Per-task pipeline order: `test-agent` (test plan + failing scripts) →
-`developer-agent` (source code) → `test-agent` (test run) →
-`spec-validation-agent` → `documentation-agent` → `security-check-agent` →
-`code-review-agent` → `project-planner-agent` (marks Done, dispatches next).
 
 ## Quality, validation, and knowledge agents
 
 | Agent | Status | When to use | How to use |
 |---|---|---|---|
 | **llm-judge-agent** | Active/advisory | An independent, cross-model second opinion on architecture, design, or implementation quality. | Say `Use llm-judge-agent to evaluate ...`; it writes an advisory report and never replaces tests or code review. [Definition](../../.agents/agents/llm-judge-agent/llm-judge-agent.md) |
-| **spec-validation-agent** | Core pipeline | Blocking conformance gate after test PASS — see Core SDLC agents above. Also coordinates advisory spec-drift and spec-red-team checks. | See Core SDLC agents for the primary use; invoke directly for an on-demand spec-to-diff conformance check. [Definition](../../.agents/agents/spec-validation-agent/spec-validation-agent.md) |
+| **spec-validation-agent** | Active/advisory | Check implementation/spec conformance or coordinate spec-aware adversarial analysis. | Invoke it directly with the spec and diff, or enable its configured workflow modes. [Definition](../../.agents/agents/spec-validation-agent/spec-validation-agent.md) |
 | **spec-drift-checker** | Active subagent | Determine whether changed behavior matches `docs/specs/` and distinguish implementation drift from a spec gap. | Normally selected by `spec-validation-agent`; direct use is appropriate for a focused spec-to-diff check. [Definition](../../.agents/agents/spec-validation-agent/subagents/spec-drift-checker/spec-drift-checker.md) |
 | **spec-red-team** | Dormant subagent | Challenge business logic and spec assumptions for security-sensitive work before release. | Run through `spec-validation-agent` or the red-team workflow, only against a confirmed non-production target with synthetic data. [Definition](../../.agents/agents/spec-validation-agent/subagents/spec-red-team/spec-red-team.md) |
 | **security-check-agent** | Active/blocking subagent | Scan the exact staged or branch diff before agent-managed commits and PRs. | Usually triggered by `security_check` settings; invoke directly only with the exact diff boundary. [Definition](../../.agents/agents/spec-validation-agent/subagents/security-check-agent/security-check-agent.md) |

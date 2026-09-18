@@ -1,5 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.buildScriptUrl = buildScriptUrl;
+exports.readYamlStringField = readYamlStringField;
 exports.downloadInfrastructureFileIfMissing = downloadInfrastructureFileIfMissing;
 exports.downloadConfigFileIfMissing = downloadConfigFileIfMissing;
 exports.downloadFile = downloadFile;
@@ -8,6 +10,7 @@ exports.runRepoScript = runRepoScript;
 exports.openFile = openFile;
 exports.runWorkflow = runWorkflow;
 exports.downloadMarkdownToTempFile = downloadMarkdownToTempFile;
+exports.interpolateAgentArgs = interpolateAgentArgs;
 exports.runAgent = runAgent;
 const vscode = require("vscode");
 const fs = require("fs");
@@ -245,8 +248,8 @@ async function runWorkflow(workflowFile) {
     const scriptPath = path.join(repoRoot, "scripts", `${workflowName}.sh`);
     if (fs.existsSync(scriptPath)) {
         await (0, terminal_1.runInSecondaryTerminal)([
-            `cd "${workspaceRoot}"`,
-            `./scripts/${path.basename(scriptPath)}`
+            `cd ${(0, utils_1.quoteShellArg)(workspaceRoot)}`,
+            (0, utils_1.quoteShellArg)(path.join(".", "scripts", path.basename(scriptPath)))
         ]);
         return;
     }
@@ -300,7 +303,7 @@ async function runAgent(agentName, agentFile) {
     const runString = args ? `${command} ${args}` : command;
     (0, logger_1.logAlways)(`[runAgent] runString: ${runString}`);
     await (0, terminal_1.runInSecondaryTerminal)([
-        `cd "${repoRoot}"`,
+        `cd ${(0, utils_1.quoteShellArg)(repoRoot)}`,
         runString
     ]);
 }

@@ -2,7 +2,7 @@
 
 ## Portfolio assessment
 
-The portfolio contains 14 top-level agents and 33 subagents. All definitions are cataloged, every top-level agent has a workflow page, and no relative Markdown links are broken. No exact duplicates were detected. The 23 similarity candidates are explained by shared parent templates or adjacent specialist domains; none currently warrants a merge or retirement.
+The portfolio contains 14 top-level agents and 34 subagents. All definitions are cataloged, every top-level agent has a workflow page, and no relative Markdown links are broken. No exact duplicates were detected. The 23 similarity candidates are explained by shared parent templates or adjacent specialist domains; none currently warrants a merge or retirement.
 
 Most definitions do not use the auditor's canonical `Inputs`, `Outputs`, `Ownership boundaries`, and `Completion` headings. Many convey equivalent contracts through `Responsibilities`, `Position in workflow`, `Response Format`, `Guardrails`, or compact consumes/produces blocks. Treat these warnings as a documentation-standardization backlog, not evidence that the agents are unusable.
 
@@ -35,6 +35,7 @@ Most definitions do not use the auditor's canonical `Inputs`, `Outputs`, `Owners
 | `aws-sme` | subagent | WARN | 4 | 0 | 2 |
 | `azure-sme` | subagent | WARN | 4 | 0 | 2 |
 | `cloud-consumption-estimation` | subagent | WARN | 4 | 0 | 0 |
+| `doc-generator` | subagent | WARN | 4 | 0 | 0 |
 | `explain-me` | subagent | WARN | 3 | 0 | 0 |
 | `explain-new-contributions` | subagent | WARN | 2 | 0 | 0 |
 | `gcp-sme` | subagent | WARN | 4 | 0 | 2 |

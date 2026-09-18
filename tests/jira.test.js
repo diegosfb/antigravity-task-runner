@@ -5,6 +5,7 @@ const http = require("node:http");
 const {
   createJiraProject,
   INVALID_JIRA_TOKEN_MESSAGE,
+  searchOpenTodoOrInProgressJiraIssuesForProject,
   searchOpenTodoJiraIssuesForProject,
   searchOpenUnassignedTodoJiraIssuesForAssignment,
   transitionJiraIssueToReviewOrDone,
@@ -474,7 +475,7 @@ test("createJiraProject creates and configures a team-managed kanban Jira softwa
   assert.equal(createdProject.warnings.length, 1);
   assert.ok(
     createdProject.warnings.includes(
-      "Jira still requires a manual access-level check so the project is limited to jira-users-diegosfb, Diego Fernandez, and site-admins."
+      "Jira still requires a manual access-level check. Verify project member and admin roles in your Jira settings."
     )
   );
 
@@ -507,10 +508,6 @@ test("createJiraProject creates and configures a team-managed kanban Jira softwa
     {
       path: "/rest/api/3/project/TASK/role/1001",
       body: { user: ["lead-account-id"] }
-    },
-    {
-      path: "/rest/api/3/project/TASK/role/1002",
-      body: { group: ["jira-users-diegosfb"] }
     }
   ]);
 
@@ -639,6 +636,7 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out blocked and of
               id: "10002",
               key: "TASK-2",
               fields: {
+                description: "Reviewed work can unblock this",
                 summary: "Blocked by reviewed work",
                 issuetype: { name: "Task" },
                 project: { key: "TASK", name: "Task Runner" },
@@ -665,6 +663,7 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out blocked and of
               id: "10003",
               key: "TASK-3",
               fields: {
+                description: "No blockers remain",
                 summary: "Unblocked issue",
                 issuetype: { name: "Task" },
                 project: { key: "TASK", name: "Task Runner" },
@@ -788,9 +787,17 @@ test("searchOpenUnassignedTodoJiraIssuesForAssignment filters out blocked and of
     issues.map((issue) => issue.key),
     ["TASK-2", "TASK-3", "TASK-4", "TASK-5", "TASK-6"]
   );
+  assert.deepEqual(
+    issues.slice(0, 2).map((issue) => ({ key: issue.key, description: issue.description })),
+    [
+      { key: "TASK-2", description: "Reviewed work can unblock this" },
+      { key: "TASK-3", description: "No blockers remain" }
+    ]
+  );
   assert.ok(issues.every((issue) => issue.projectKey === "TASK"));
   assert.deepEqual(capturedSearchRequest.fields, [
     "summary",
+    "description",
     "issuetype",
     "project",
     "status",
@@ -873,6 +880,107 @@ test("searchOpenTodoJiraIssuesForProject returns all To Do issues for the select
     "status"
   ]);
   assert.match(capturedSearchRequest.jql, /^project = "TASK" AND statusCategory = "To Do"/);
+});
+
+test("searchOpenTodoOrInProgressJiraIssuesForProject includes To Do and In Progress descriptions", async (t) => {
+  let capturedSearchRequest = null;
+
+  const server = http.createServer(async (request, response) => {
+    if (request.url === "/rest/api/3/search/jql" && request.method === "POST") {
+      capturedSearchRequest = await readJsonBody(request);
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(
+        JSON.stringify({
+          issues: [
+            {
+              id: "31001",
+              key: "TASK-310",
+              fields: {
+                description: {
+                  type: "doc",
+                  version: 1,
+                  content: [
+                    {
+                      type: "bulletList",
+                      content: [
+                        {
+                          type: "listItem",
+                          content: [
+                            {
+                              type: "paragraph",
+                              content: [{ type: "text", text: "First line" }]
+                            }
+                          ]
+                        },
+                        {
+                          type: "listItem",
+                          content: [
+                            {
+                              type: "paragraph",
+                              content: [{ type: "text", text: "Second line" }]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                issuetype: { name: "Task" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "In Progress" },
+                summary: "In progress issue"
+              }
+            },
+            {
+              id: "31002",
+              key: "TASK-311",
+              fields: {
+                description: "Simple todo description",
+                issuetype: { name: "Story" },
+                project: { key: "TASK", name: "Task Runner" },
+                status: { name: "To Do" },
+                summary: "Todo issue"
+              }
+            }
+          ]
+        })
+      );
+      return;
+    }
+
+    response.writeHead(404, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ errorMessages: ["Unexpected endpoint"] }));
+  });
+
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const { port } = server.address();
+  const issues = await searchOpenTodoOrInProgressJiraIssuesForProject(
+    {
+      baseUrl: `http://127.0.0.1:${port}`,
+      email: "person@example.com",
+      apiToken: "secret-token"
+    },
+    "TASK"
+  );
+
+  assert.deepEqual(capturedSearchRequest.fields, [
+    "summary",
+    "description",
+    "issuetype",
+    "project",
+    "status",
+    "assignee"
+  ]);
+  assert.match(capturedSearchRequest.jql, /^project = "TASK" AND status in \("To Do", "In Progress"\)/);
+  assert.deepEqual(
+    issues.map((issue) => ({ key: issue.key, description: issue.description })),
+    [
+      { key: "TASK-310", description: "First line Second line" },
+      { key: "TASK-311", description: "Simple todo description" }
+    ]
+  );
 });
 
 test("searchOpenUnassignedTodoJiraIssuesForAssignment reloads missing blocker statuses before filtering", async (t) => {
@@ -1312,7 +1420,7 @@ test("createJiraProject warns when Jira rejects the board column update", async 
   assert.equal(createdProject.key, "TASK");
   assert.ok(
     createdProject.warnings.includes(
-      "Jira still requires a manual access-level check so the project is limited to jira-users-diegosfb, Diego Fernandez, and site-admins."
+      "Jira still requires a manual access-level check. Verify project member and admin roles in your Jira settings."
     )
   );
   assert.ok(

@@ -240,8 +240,8 @@ evidence without inserting this agent as a workflow stage.
 
 Because it is off-workflow, consultant output is not automatically promoted to
 canonical SDLC knowledge. When the vault is enabled, a material outcome may be
-recorded only when it is relevant and supported, using semantic notes without
-inventing a workflow handoff.
+recorded only when it is relevant and supported, using semantic notes and the
+action log without inventing a workflow handoff.
 
 ## Completion
 

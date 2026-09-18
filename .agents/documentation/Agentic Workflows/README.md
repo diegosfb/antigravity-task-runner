@@ -5,14 +5,12 @@ Generated inventory of agent workflow documentation. Existing authored pages are
 | Agent | Category | Documentation |
 |---|---|---|
 | `architect-agent` | SDLC Agents | [ARCHITECT-AGENT](SDLC%20Agents/ARCHITECT-AGENT.md) |
-| `architecture-review-agent` | SDLC Agents | [ARCHITECTURE-REVIEW-AGENT](SDLC%20Agents/ARCHITECTURE-REVIEW-AGENT.md) |
 | `autoresearch-runner` | Axiliary Agents | [AUTORESEARCH-RUNNER](Axiliary%20Agents/AUTORESEARCH-RUNNER.md) |
 | `ba-agent` | SDLC Agents | [BA-AGENT](SDLC%20Agents/BA-AGENT.md) |
 | `code-review-agent` | SDLC Agents | [CODE-REVIEW-AGENT](SDLC%20Agents/CODE-REVIEW-AGENT.md) |
 | `consultant-agent` | Axiliary Agents | [CONSULTANT-AGENT](Axiliary%20Agents/CONSULTANT-AGENT.md) |
 | `deployment-agent` | SDLC Agents | [DEPLOYMENT-AGENT](SDLC%20Agents/DEPLOYMENT-AGENT.md) |
 | `developer-agent` | SDLC Agents | [DEVELOPER-AGENT](SDLC%20Agents/DEVELOPER-AGENT.md) |
-| `documentation-agent` | SDLC Agents | [DOCUMENTATION-AGENT](SDLC%20Agents/DOCUMENTATION-AGENT.md) |
 | `llm-judge-agent` | Axiliary Agents | [LLM-JUDGE-AGENT](Axiliary%20Agents/LLM-JUDGE-AGENT.md) |
 | `obsidian-vault-agent` | Axiliary Agents | [OBSIDIAN-VAULT-AGENT](Axiliary%20Agents/OBSIDIAN-VAULT-AGENT.md) |
 | `product-agent` | SDLC Agents | [PRODUCT-AGENT](SDLC%20Agents/PRODUCT-AGENT.md) |

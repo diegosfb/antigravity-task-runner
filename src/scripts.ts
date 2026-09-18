@@ -11,7 +11,7 @@ import { runInSecondaryTerminal } from "./terminal";
 const SCRIPT_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/scripts";
 const CONFIG_FALLBACK_BASE_URL = "https://raw.githubusercontent.com/diegosfb/antigravity-workspace/main/config";
 
-function buildScriptUrl(baseUrl: string, scriptFileName: string): string {
+export function buildScriptUrl(baseUrl: string, scriptFileName: string): string {
   // Convert github.com blob URLs to raw URLs.
   let url = baseUrl;
   if (url.includes("github.com/") && !url.includes("raw.githubusercontent.com")) {
@@ -42,7 +42,7 @@ function getConfigFallbackUrl(fileName: string): string {
   return `${baseUrl}/${fileName}`;
 }
 
-function readYamlStringField(filePath: string, fieldName: string): string | undefined {
+export function readYamlStringField(filePath: string, fieldName: string): string | undefined {
   try {
     const content = fs.readFileSync(filePath, "utf8");
     for (const line of content.split("\n")) {
@@ -275,8 +275,8 @@ export async function runWorkflow(workflowFile: string): Promise<void> {
   const scriptPath = path.join(repoRoot, "scripts", `${workflowName}.sh`);
   if (fs.existsSync(scriptPath)) {
     await runInSecondaryTerminal([
-      `cd "${workspaceRoot}"`,
-      `./scripts/${path.basename(scriptPath)}`
+      `cd ${quoteShellArg(workspaceRoot)}`,
+      quoteShellArg(path.join(".", "scripts", path.basename(scriptPath)))
     ]);
     return;
   }
@@ -316,7 +316,7 @@ function getAntigravityArgsTemplate(): string {
   return trimmed;
 }
 
-function interpolateAgentArgs(template: string, agentName: string, agentFile: string): string {
+export function interpolateAgentArgs(template: string, agentName: string, agentFile: string): string {
   return template.replace(/\{agent\}/g, agentName).replace(/\{agentFile\}/g, agentFile);
 }
 
@@ -338,7 +338,7 @@ export async function runAgent(agentName: string, agentFile: string): Promise<vo
   const runString = args ? `${command} ${args}` : command;
   logAlways(`[runAgent] runString: ${runString}`);
   await runInSecondaryTerminal([
-    `cd "${repoRoot}"`,
+    `cd ${quoteShellArg(repoRoot)}`,
     runString
   ]);
 }

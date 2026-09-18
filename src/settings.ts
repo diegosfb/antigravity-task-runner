@@ -4,7 +4,7 @@ import * as path from "path";
 import * as os from "os";
 
 export const LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
-export const DEFAULT_GITHUB_CODE_REVIEWER = "@diegosfb";
+export const DEFAULT_GITHUB_CODE_REVIEWER = "";
 
 export function isLocalLiteLLMBaseUrl(baseUrl: string | undefined): boolean {
   if (!baseUrl) return false;
@@ -155,7 +155,7 @@ export async function loadClaudeSettings(): Promise<ClaudeSettings | null> {
   }
 }
 
-function getNonce(): string {
+export function getNonce(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let nonce = "";
   for (let i = 0; i < 32; i += 1) {
@@ -277,7 +277,7 @@ function getExtensionSettingsFields(): SettingsField[] {
       label: "Antigravity Workflows Folder",
       description:
         "Base folder used to look up Claude workflows. The extension checks both <folder>/workflows/<name>/WORKFLOW.md and <folder>/<name>/WORKFLOW.md before falling back to bundled workflows.",
-      placeholder: "/Users/diego.brihuega/.gemini",
+      placeholder: "~/.gemini",
       value: config.get<string>("workflowsFolder") || ""
     },
     {

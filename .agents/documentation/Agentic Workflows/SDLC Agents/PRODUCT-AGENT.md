@@ -73,7 +73,7 @@ code. Those belong respectively to `ba-agent`, `architect-agent`,
 
 When the Obsidian vault is enabled, the PRD is mirrored into `PRD/`. Material
 product decisions, trade-offs, lessons, and updates are recorded through
-`scripts/helper-scripts/vault-event.py`, producing linked notes.
+`scripts/helper-scripts/vault-event.py`, producing linked notes and dated action-log entries.
 The PRD remains canonical; the vault is its navigation and audit layer.
 
 ## Completion and handoff

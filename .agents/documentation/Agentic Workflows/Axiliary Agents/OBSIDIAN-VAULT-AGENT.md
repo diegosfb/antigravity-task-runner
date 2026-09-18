@@ -13,6 +13,7 @@ flowchart LR
     E[Agent semantic outcomes] --> V
     V --> M[Mirrored artifact areas]
     V --> N[Notes and MOCs]
+    V --> L[Append-only Action Log]
 ```
 
 ## Activation and inputs
@@ -32,6 +33,7 @@ reviews, test cases, and explicit semantic outcome records from agents.
 - Authored decision, plan, implementation, issue, and lesson notes in `Notes/`.
 - `00-index.md` and feature Maps of Content.
 - Bidirectional wikilinks connecting the delivery graph.
+- Append-only `Action-Log/YYYY-MM-DD.md` entries.
 
 Canonical files remain the source of truth. In symlink mode they are linked,
 not duplicated or hand-edited through the vault.
@@ -58,8 +60,8 @@ plan blocks development until reported and resolved.
 ## Completion
 
 A recording pass completes when applicable artifacts are mirrored, links and
-indexes are current, and semantic notes capture material outcomes without
-secrets.
+indexes are current, semantic notes are written without secrets, and action-log
+entries capture the material outcomes.
 
 <!-- agent-auditor:inventory:start -->
 

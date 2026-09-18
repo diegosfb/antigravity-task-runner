@@ -74,7 +74,7 @@ explicit approval, vault-recording, implementation, and test cycle.
 
 Validation reports are mirrored into `Reviews/` when enabled and linked to the
 change and governing specs. Findings, spec gaps, security problems, and triage
-decisions are recorded as semantic notes.
+decisions are recorded as semantic notes and action-log entries.
 
 ## Completion
 
