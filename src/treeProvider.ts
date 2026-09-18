@@ -649,24 +649,17 @@ function getQuickActionItems(): NodeItem[] {
 
 
 
-  const assignJiraItemToAgent = new NodeItem(
-    { kind: "action", label: "Assign Jira Item to Agent" },
+  const assignBacklogItemToAgent = new NodeItem(
+    { kind: "action", label: "Assign Backlog Item to Agent" },
     vscode.TreeItemCollapsibleState.None
   );
-  assignJiraItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
-  if (!savedJiraProjectKey) {
-    assignJiraItemToAgent.iconPath = new vscode.ThemeIcon(
-      "person-add",
-      new vscode.ThemeColor("disabledForeground")
-    );
-    assignJiraItemToAgent.tooltip =
-      "Set JIRA_PROJECT_KEY in this repository before assigning a Jira item to an agent.";
-  }
-  assignJiraItemToAgent.command = {
-    command: "antigravity.assignJiraItemToAgent",
-    title: "Assign Jira Item to Agent"
+  assignBacklogItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
+  assignBacklogItemToAgent.tooltip = "Assign a Jira item or a local backlog item from docs/backlog to the selected agent.";
+  assignBacklogItemToAgent.command = {
+    command: "antigravity.assignBacklogItemToAgent",
+    title: "Assign Backlog Item to Agent"
   };
-  items.push(assignJiraItemToAgent);
+  items.push(assignBacklogItemToAgent);
 
   if (!hasRepo) {
     const initRepo = new NodeItem(

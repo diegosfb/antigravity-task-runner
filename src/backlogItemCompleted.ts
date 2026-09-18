@@ -160,7 +160,7 @@ export function loadBacklogItemsForCompletion(backlogDir: string): BacklogItemCo
 
   return fs
     .readdirSync(trimmedBacklogDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"))
+    .filter((entry) => entry.isFile() && /\.(md|txt)$/i.test(entry.name))
     .map((entry) => {
       const filePath = path.join(trimmedBacklogDir, entry.name);
       return parseBacklogItemCompletedLocalItem(filePath, fs.readFileSync(filePath, "utf8"));
