@@ -188,7 +188,7 @@ test("loadAdlcAgentDefinition adds an editable artifacts_directory input for pro
   }
 });
 
-test("getAdlcAgentDiagramHtml returns the Product Agent and BA Agent diagrams, and undefined for other agents", () => {
+test("getAdlcAgentDiagramHtml returns the Product, BA, and UX Agent diagrams, and undefined for other agents", () => {
   const { getAdlcAgentDiagramHtml } = setupAdlcAgentsModule();
   assert.match(getAdlcAgentDiagramHtml("product"), /Meeting Notes Folder/);
   assert.match(getAdlcAgentDiagramHtml("product"), /Project Description File/);
@@ -200,7 +200,12 @@ test("getAdlcAgentDiagramHtml returns the Product Agent and BA Agent diagrams, a
   assert.match(getAdlcAgentDiagramHtml("ba"), /BA Agent/);
   assert.match(getAdlcAgentDiagramHtml("ba"), /Specifications/);
 
-  assert.equal(getAdlcAgentDiagramHtml("ux"), undefined);
+  assert.match(getAdlcAgentDiagramHtml("ux"), /Approved Product Context/);
+  assert.match(getAdlcAgentDiagramHtml("ux"), /Architecture Package/);
+  assert.match(getAdlcAgentDiagramHtml("ux"), /UX Agent/);
+  assert.match(getAdlcAgentDiagramHtml("ux"), /Design Package/);
+
+  assert.equal(getAdlcAgentDiagramHtml("architect"), undefined);
 });
 
 test("catalog maps story labels to agent folders and detects deployed agents", () => {
@@ -415,6 +420,11 @@ inputs:
     const architecturePackage = definition.inputs.find((i) => i.name === "architecture_package");
     assert.equal(architecturePackage.defaultValue, "docs/architecture");
     assert.equal(architecturePackage.required, false);
+
+    assert.match(definition.diagramHtml, /UX Agent/);
+    assert.match(definition.diagramHtml, /Approved Product Context/);
+    assert.match(definition.diagramHtml, /Architecture Package/);
+    assert.match(definition.diagramHtml, /Design Package/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -738,7 +748,7 @@ test("renderAdlcAgentRunHtml renders the diagram after the description, only whe
 
   const withoutDiagram = renderAdlcAgentRunHtml(
     { cspSource: "vscode-resource:" },
-    { id: "ux", label: "UX Agent", folder: "ux-agent", filePath: "", description: "Owns the user experience.", inputs: [] },
+    { id: "architect", label: "Architect Agent", folder: "architect-agent", filePath: "", description: "Designs solution architecture.", inputs: [] },
     { defaultHarness: "claude", defaultModel: "" }
   );
   assert.doesNotMatch(withoutDiagram, /class="diagram"/);
