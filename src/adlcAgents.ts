@@ -72,6 +72,9 @@ const ADLC_AGENT_INPUT_DEFAULTS: Record<string, Record<string, string>> = {
     product_context: path.posix.join("docs", "project_description", "PRD.md"),
     development_guidelines: path.posix.join("docs", "architecture", "development_guidelines.md"),
     existing_architecture_package: path.posix.join("docs", "architecture")
+  },
+  "project-planner": {
+    requirements_stream: path.posix.join("docs", "specs")
   }
 };
 
@@ -120,7 +123,8 @@ export function applyAdlcAgentInputTypeOverrides(entryId: string, inputs: AdlcAg
 const ADLC_AGENT_INPUT_LABEL_OVERRIDES: Record<string, Record<string, string>> = {
   architect: { product_context: "PRD" },
   "architecture-review": { product_context: "PRD" },
-  ux: { approved_product_context: "Specifications Directory" }
+  ux: { approved_product_context: "Specifications Directory" },
+  "project-planner": { requirements_stream: "Specifications Folder" }
 };
 
 export function applyAdlcAgentInputLabelOverrides(entryId: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {

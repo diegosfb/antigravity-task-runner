@@ -318,6 +318,30 @@ test("applyAdlcAgentInputDefaults prefills Architect Agent's specifications_dire
   assert.equal(withDefaults.find((i) => i.name === "existing_architecture_package").defaultValue, undefined);
 });
 
+test("applyAdlcAgentInputDefaults prefills Project Planner Agent's requirements_stream", () => {
+  const { applyAdlcAgentInputDefaults } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "requirements_stream", description: "", type: "files_or_structured_data", required: true },
+    { name: "technical_stream", description: "", type: "files_or_structured_data", required: true }
+  ];
+
+  const withDefaults = applyAdlcAgentInputDefaults("project-planner", inputs);
+  assert.equal(withDefaults.find((i) => i.name === "requirements_stream").defaultValue, "docs/specs");
+  assert.equal(withDefaults.find((i) => i.name === "technical_stream").defaultValue, undefined);
+});
+
+test("applyAdlcAgentInputLabelOverrides labels Project Planner Agent's requirements_stream as Specifications Folder", () => {
+  const { applyAdlcAgentInputLabelOverrides } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "requirements_stream", description: "", type: "files_or_structured_data", required: true },
+    { name: "technical_stream", description: "", type: "files_or_structured_data", required: true }
+  ];
+
+  const overridden = applyAdlcAgentInputLabelOverrides("project-planner", inputs);
+  assert.equal(overridden.find((i) => i.name === "requirements_stream").label, "Specifications Folder");
+  assert.equal(overridden.find((i) => i.name === "technical_stream").label, undefined);
+});
+
 test("applyAdlcAgentInputDefaults also prefills Architecture Review Agent's existing_architecture_package", () => {
   const { applyAdlcAgentInputDefaults } = setupAdlcAgentsModule();
   const inputs = [
@@ -672,6 +696,55 @@ test("applyAdlcAgentInputLabelOverrides labels UX Agent's approved_product_conte
 
   const untouched = applyAdlcAgentInputLabelOverrides("architect", inputs);
   assert.deepEqual(untouched, inputs);
+});
+
+test("loadAdlcAgentDefinition labels and defaults Project Planner Agent's requirements_stream as Specifications Folder", () => {
+  const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
+  const projectPlannerMarkdown = `---
+name: project-planner-agent
+description: The arbiter and sequencer.
+inputs:
+  required:
+    - name: requirements_stream
+      description: Approved stories and acceptance criteria.
+      type: files_or_structured_data
+    - name: technical_stream
+      description: Technical tasks and dependency edges.
+      type: files_or_structured_data
+    - name: workflow_configuration
+      description: Backlog approval and failure-tracking configuration.
+      type: file
+  optional:
+    - name: existing_backlog
+      description: Current items, dependencies, estimates, and statuses.
+      type: files_or_structured_data
+---
+# Project planner agent
+`;
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
+  try {
+    fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "project-planner-agent"), { recursive: true });
+    fs.writeFileSync(
+      path.join(repoRoot, ".agents", "agents", "project-planner-agent", "project-planner-agent.md"),
+      projectPlannerMarkdown
+    );
+
+    const definition = loadAdlcAgentDefinition(repoRoot, {
+      id: "project-planner",
+      label: "Project Planner Agent",
+      folder: "project-planner-agent"
+    });
+
+    const requirementsStream = definition.inputs.find((i) => i.name === "requirements_stream");
+    assert.equal(requirementsStream.defaultValue, "docs/specs");
+    assert.equal(requirementsStream.label, "Specifications Folder");
+
+    const technicalStream = definition.inputs.find((i) => i.name === "technical_stream");
+    assert.equal(technicalStream.defaultValue, undefined);
+    assert.equal(technicalStream.label, undefined);
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
 });
 
 test("loadAdlcAgentDefinition excludes workflow_configuration and routing_registry from user-facing inputs", () => {
