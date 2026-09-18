@@ -49,31 +49,43 @@ export type AdlcAgentInput = {
 // its own agent definition (e.g. ba-agent consumes the PRD that product-agent
 // writes, and reconciles against the existing specs directory). Prefilled as
 // a starting point on the run page; the user can still edit or clear them.
+// Keyed by catalog entry id, not folder: Architect Agent and Architecture
+// Review Agent share architect-agent.md but need different defaults (the
+// review agent's whole job is reviewing the existing architecture package).
 const ADLC_AGENT_INPUT_DEFAULTS: Record<string, Record<string, string>> = {
-  "ba-agent": {
+  ba: {
     approved_prd: path.posix.join("docs", "project_description", "PRD.md"),
     existing_specifications: path.posix.join("docs", "specs")
   },
-  "ux-agent": {
+  ux: {
     approved_product_context: path.posix.join("docs", "specs"),
     architecture_package: path.posix.join("docs", "architecture")
   },
-  "architect-agent": {
+  architect: {
     specifications_directory: path.posix.join("docs", "specs"),
     product_context: path.posix.join("docs", "project_description", "PRD.md"),
     development_guidelines: path.posix.join("docs", "architecture", "development_guidelines.md")
+  },
+  "architecture-review": {
+    specifications_directory: path.posix.join("docs", "specs"),
+    product_context: path.posix.join("docs", "project_description", "PRD.md"),
+    development_guidelines: path.posix.join("docs", "architecture", "development_guidelines.md"),
+    existing_architecture_package: path.posix.join("docs", "architecture")
   }
 };
 
-// Relaxes what an agent's own frontmatter declares as required, for inputs
-// where the run page should not force a value (e.g. UX Agent's architecture
-// package may not exist yet for early or non-technical design work).
+// Relaxes or tightens what an agent's own frontmatter declares as required,
+// for inputs where the run page's enforcement should differ from the
+// frontmatter (e.g. UX Agent's architecture package may not exist yet for
+// early design work, while Architecture Review Agent cannot run without the
+// existing architecture package it is reviewing). Keyed by catalog entry id.
 const ADLC_AGENT_INPUT_REQUIRED_OVERRIDES: Record<string, Record<string, boolean>> = {
-  "ux-agent": { architecture_package: false }
+  ux: { architecture_package: false },
+  "architecture-review": { existing_architecture_package: true }
 };
 
-export function applyAdlcAgentInputRequiredOverrides(folder: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
-  const overrides = ADLC_AGENT_INPUT_REQUIRED_OVERRIDES[folder];
+export function applyAdlcAgentInputRequiredOverrides(entryId: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
+  const overrides = ADLC_AGENT_INPUT_REQUIRED_OVERRIDES[entryId];
   if (!overrides) return inputs;
   return inputs.map((input) => {
     const override = overrides[input.name];
@@ -206,24 +218,27 @@ export function isAdlcAutoConfigInput(name: string): boolean {
 // the run page for that agent (e.g. BA Agent's supporting_evidence and
 // alternative_input_contract are broad catch-alls better handled through the
 // default artifacts directory or the free-form additional instructions).
+// Keyed by catalog entry id: Architect Agent hides existing_architecture_package
+// (it is authoring a new package), but Architecture Review Agent needs that
+// same input as its primary, mandatory subject, so it is not hidden there.
 const ADLC_AGENT_HIDDEN_INPUTS: Record<string, string[]> = {
-  "ba-agent": ["supporting_evidence", "alternative_input_contract"],
-  "ux-agent": ["research_and_evidence", "existing_experience_system"],
-  "architect-agent": ["existing_architecture_package"]
+  ba: ["supporting_evidence", "alternative_input_contract"],
+  ux: ["research_and_evidence", "existing_experience_system"],
+  architect: ["existing_architecture_package"]
 };
 
-export function isAdlcAgentHiddenInput(folder: string, name: string): boolean {
-  return (ADLC_AGENT_HIDDEN_INPUTS[folder] ?? []).includes(name);
+export function isAdlcAgentHiddenInput(entryId: string, name: string): boolean {
+  return (ADLC_AGENT_HIDDEN_INPUTS[entryId] ?? []).includes(name);
 }
 
-export function filterUserFacingAdlcInputs(inputs: AdlcAgentInput[], folder?: string): AdlcAgentInput[] {
+export function filterUserFacingAdlcInputs(inputs: AdlcAgentInput[], entryId?: string): AdlcAgentInput[] {
   return inputs.filter(
-    (input) => !isAdlcAutoConfigInput(input.name) && !(folder && isAdlcAgentHiddenInput(folder, input.name))
+    (input) => !isAdlcAutoConfigInput(input.name) && !(entryId && isAdlcAgentHiddenInput(entryId, input.name))
   );
 }
 
-export function applyAdlcAgentInputDefaults(folder: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
-  const defaults = ADLC_AGENT_INPUT_DEFAULTS[folder];
+export function applyAdlcAgentInputDefaults(entryId: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
+  const defaults = ADLC_AGENT_INPUT_DEFAULTS[entryId];
   if (!defaults) return inputs;
   return inputs.map((input) => {
     const defaultValue = defaults[input.name];
@@ -240,8 +255,8 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
   const markdown = fs.readFileSync(filePath, "utf8");
   const { description, inputs } = parseAdlcAgentFrontmatter(markdown);
   const visibleInputs = applyAdlcAgentInputRequiredOverrides(
-    entry.folder,
-    applyAdlcAgentInputDefaults(entry.folder, filterUserFacingAdlcInputs(inputs, entry.folder))
+    entry.id,
+    applyAdlcAgentInputDefaults(entry.id, filterUserFacingAdlcInputs(inputs, entry.id))
   );
   const defaultArtifactsDir = getAdlcAgentDefaultArtifactsDir(entry.folder);
   return {
