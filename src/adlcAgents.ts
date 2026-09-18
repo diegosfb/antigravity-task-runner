@@ -93,6 +93,23 @@ export function applyAdlcAgentInputRequiredOverrides(entryId: string, inputs: Ad
   });
 }
 
+// Narrows what an agent's own frontmatter declares as an input's type, when
+// the run page's type hint and Browse picker should be more specific than
+// the frontmatter allows (e.g. Architecture Review Agent's product_context
+// is always the single PRD file, never a directory).
+const ADLC_AGENT_INPUT_TYPE_OVERRIDES: Record<string, Record<string, string>> = {
+  "architecture-review": { product_context: "file" }
+};
+
+export function applyAdlcAgentInputTypeOverrides(entryId: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
+  const overrides = ADLC_AGENT_INPUT_TYPE_OVERRIDES[entryId];
+  if (!overrides) return inputs;
+  return inputs.map((input) => {
+    const override = overrides[input.name];
+    return override === undefined ? input : { ...input, type: override };
+  });
+}
+
 // Overrides the run-page display order of an agent's inputs away from their
 // order in the frontmatter (e.g. Architecture Review Agent should see
 // existing_architecture_package -- the package it is reviewing -- before
@@ -359,9 +376,12 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
   const { description, inputs } = parseAdlcAgentFrontmatter(markdown);
   const visibleInputs = applyAdlcAgentInputOrder(
     entry.id,
-    applyAdlcAgentInputRequiredOverrides(
+    applyAdlcAgentInputTypeOverrides(
       entry.id,
-      applyAdlcAgentInputDefaults(entry.id, filterUserFacingAdlcInputs(inputs, entry.id))
+      applyAdlcAgentInputRequiredOverrides(
+        entry.id,
+        applyAdlcAgentInputDefaults(entry.id, filterUserFacingAdlcInputs(inputs, entry.id))
+      )
     )
   );
   const defaultArtifactsDir = getAdlcAgentDefaultArtifactsDir(entry.folder);

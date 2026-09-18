@@ -578,9 +578,27 @@ inputs:
     const existingArchitecturePackage = definition.inputs.find((i) => i.name === "existing_architecture_package");
     assert.equal(existingArchitecturePackage.required, true);
     assert.equal(existingArchitecturePackage.defaultValue, "docs/architecture");
+
+    const productContext = definition.inputs.find((i) => i.name === "product_context");
+    assert.equal(productContext.type, "file");
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
+});
+
+test("applyAdlcAgentInputTypeOverrides narrows Architecture Review Agent's product_context to file, others untouched", () => {
+  const { applyAdlcAgentInputTypeOverrides } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "specifications_directory", description: "", type: "directory", required: true },
+    { name: "product_context", description: "", type: "file_or_directory", required: false }
+  ];
+
+  const overridden = applyAdlcAgentInputTypeOverrides("architecture-review", inputs);
+  assert.equal(overridden.find((i) => i.name === "specifications_directory").type, "directory");
+  assert.equal(overridden.find((i) => i.name === "product_context").type, "file");
+
+  const untouched = applyAdlcAgentInputTypeOverrides("architect", inputs);
+  assert.deepEqual(untouched, inputs);
 });
 
 test("loadAdlcAgentDefinition excludes workflow_configuration and routing_registry from user-facing inputs", () => {
