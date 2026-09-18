@@ -188,7 +188,7 @@ test("loadAdlcAgentDefinition adds an editable artifacts_directory input for pro
   }
 });
 
-test("getAdlcAgentDiagramHtml returns the Product, BA, UX, and Architect Agent diagrams, and undefined for other agents", () => {
+test("getAdlcAgentDiagramHtml returns the Product, BA, UX, Architect, and Architecture Review Agent diagrams, and undefined for other agents", () => {
   const { getAdlcAgentDiagramHtml } = setupAdlcAgentsModule();
   assert.match(getAdlcAgentDiagramHtml("product"), /Meeting Notes Folder/);
   assert.match(getAdlcAgentDiagramHtml("product"), /Project Description File/);
@@ -211,7 +211,14 @@ test("getAdlcAgentDiagramHtml returns the Product, BA, UX, and Architect Agent d
   assert.match(getAdlcAgentDiagramHtml("architect"), /Architect Agent/);
   assert.match(getAdlcAgentDiagramHtml("architect"), /Architecture Document/);
 
-  assert.equal(getAdlcAgentDiagramHtml("architecture-review"), undefined);
+  assert.match(getAdlcAgentDiagramHtml("architecture-review"), /Specifications Directory/);
+  assert.match(getAdlcAgentDiagramHtml("architecture-review"), /Existing Architecture Package/);
+  assert.match(getAdlcAgentDiagramHtml("architecture-review"), /Development Guidelines/);
+  assert.match(getAdlcAgentDiagramHtml("architecture-review"), /<div class="diagram-box">PRD<\/div>/);
+  assert.match(getAdlcAgentDiagramHtml("architecture-review"), /Architecture Review Agent/);
+  assert.match(getAdlcAgentDiagramHtml("architecture-review"), /Review Findings/);
+
+  assert.equal(getAdlcAgentDiagramHtml("code-review"), undefined);
 });
 
 test("catalog maps story labels to agent folders and detects deployed agents", () => {
@@ -585,6 +592,10 @@ inputs:
     const productContext = definition.inputs.find((i) => i.name === "product_context");
     assert.equal(productContext.type, "file");
     assert.equal(productContext.label, "PRD");
+
+    assert.match(definition.diagramHtml, /Architecture Review Agent/);
+    assert.match(definition.diagramHtml, /Existing Architecture Package/);
+    assert.match(definition.diagramHtml, /Review Findings/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -867,11 +878,11 @@ test("renderAdlcAgentRunHtml renders the diagram after the description, only whe
   const withoutDiagram = renderAdlcAgentRunHtml(
     { cspSource: "vscode-resource:" },
     {
-      id: "architecture-review",
-      label: "Architecture Review Agent",
-      folder: "architect-agent",
+      id: "code-review",
+      label: "Code Review Agent",
+      folder: "code-review-agent",
       filePath: "",
-      description: "Designs solution architecture.",
+      description: "Reviews code for correctness, security, and maintainability.",
       inputs: []
     },
     { defaultHarness: "claude", defaultModel: "" }
