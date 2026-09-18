@@ -715,6 +715,9 @@ inputs:
     - name: technical_stream
       description: Technical tasks and dependency edges.
       type: files_or_structured_data
+    - name: design_stream
+      description: UX and accessibility tasks or validated not-applicable decision.
+      type: files_or_structured_data
     - name: workflow_configuration
       description: Backlog approval and failure-tracking configuration.
       type: file
@@ -746,6 +749,11 @@ inputs:
     const technicalStream = definition.inputs.find((i) => i.name === "technical_stream");
     assert.equal(technicalStream.defaultValue, "docs/architecture");
     assert.equal(technicalStream.label, "Architecture Documents");
+
+    assert.deepEqual(
+      definition.inputs.map((i) => i.name),
+      ["requirements_stream", "technical_stream", "existing_backlog"]
+    );
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -925,6 +933,28 @@ test("filterUserFacingAdlcInputs hides Architect Agent's existing_architecture_p
   );
   assert.deepEqual(
     filterUserFacingAdlcInputs(inputs, "architecture-review").map((input) => input.name),
+    inputs.map((input) => input.name)
+  );
+});
+
+test("filterUserFacingAdlcInputs hides Project Planner Agent's design_stream, and only for project-planner", () => {
+  const { isAdlcAgentHiddenInput, filterUserFacingAdlcInputs } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "requirements_stream", description: "", type: "files_or_structured_data", required: true },
+    { name: "technical_stream", description: "", type: "files_or_structured_data", required: true },
+    { name: "design_stream", description: "", type: "files_or_structured_data", required: true }
+  ];
+
+  assert.equal(isAdlcAgentHiddenInput("project-planner", "design_stream"), true);
+  assert.equal(isAdlcAgentHiddenInput("project-planner", "requirements_stream"), false);
+  assert.equal(isAdlcAgentHiddenInput("ux", "design_stream"), false);
+
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "project-planner").map((input) => input.name),
+    ["requirements_stream", "technical_stream"]
+  );
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "ux").map((input) => input.name),
     inputs.map((input) => input.name)
   );
 });
