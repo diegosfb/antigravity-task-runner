@@ -186,13 +186,6 @@ const ADLC_AGENT_SYNTHETIC_INPUTS: Record<string, AdlcAgentInput[]> = {
       type: "directory",
       required: true,
       defaultValue: path.posix.join("docs", "backlog")
-    },
-    {
-      name: "user_story",
-      label: "User Story",
-      description: "A specific backlog item to scope test creation to, instead of the full backlog.",
-      type: "file",
-      required: false
     }
   ]
 };

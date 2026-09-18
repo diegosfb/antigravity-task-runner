@@ -168,17 +168,12 @@ test("getAdlcAgentSyntheticInputs returns product's and test's custom fields, an
   assert.equal(productInputs[0].required, true);
 
   const testInputs = getAdlcAgentSyntheticInputs("test");
-  assert.deepEqual(testInputs.map((i) => i.name), ["backlog", "user_story"]);
+  assert.deepEqual(testInputs.map((i) => i.name), ["backlog"]);
   const backlog = testInputs.find((i) => i.name === "backlog");
   assert.equal(backlog.label, "Backlog");
   assert.equal(backlog.type, "directory");
   assert.equal(backlog.required, true);
   assert.equal(backlog.defaultValue, "docs/backlog");
-  const userStory = testInputs.find((i) => i.name === "user_story");
-  assert.equal(userStory.label, "User Story");
-  assert.equal(userStory.type, "file");
-  assert.equal(userStory.required, false);
-  assert.equal(userStory.defaultValue, undefined);
 
   assert.deepEqual(getAdlcAgentSyntheticInputs("ba"), []);
 });
@@ -1026,7 +1021,7 @@ test("filterUserFacingAdlcInputs hides all of Create Tests Agent's real inputs, 
   );
 });
 
-test("loadAdlcAgentDefinition replaces Create Tests Agent's real inputs with Backlog and User Story", () => {
+test("loadAdlcAgentDefinition replaces Create Tests Agent's real inputs with Backlog", () => {
   const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
   const testAgentMarkdown = `---
 name: test-agent
@@ -1067,16 +1062,12 @@ inputs:
 
     assert.deepEqual(
       definition.inputs.map((i) => i.name),
-      ["backlog", "user_story"]
+      ["backlog"]
     );
     const backlog = definition.inputs.find((i) => i.name === "backlog");
     assert.equal(backlog.label, "Backlog");
     assert.equal(backlog.required, true);
     assert.equal(backlog.defaultValue, "docs/backlog");
-
-    const userStory = definition.inputs.find((i) => i.name === "user_story");
-    assert.equal(userStory.label, "User Story");
-    assert.equal(userStory.required, false);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
