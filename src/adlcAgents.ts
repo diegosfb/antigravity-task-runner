@@ -77,6 +77,9 @@ const ADLC_AGENT_INPUT_DEFAULTS: Record<string, Record<string, string>> = {
     requirements_stream: path.posix.join("docs", "specs"),
     technical_stream: path.posix.join("docs", "architecture"),
     existing_backlog: path.posix.join("docs", "backlog")
+  },
+  coding: {
+    backlog_item: path.posix.join("docs", "backlog")
   }
 };
 
@@ -126,7 +129,8 @@ const ADLC_AGENT_INPUT_LABEL_OVERRIDES: Record<string, Record<string, string>> =
   architect: { product_context: "PRD" },
   "architecture-review": { product_context: "PRD" },
   ux: { approved_product_context: "Specifications Directory" },
-  "project-planner": { requirements_stream: "Specifications Folder", technical_stream: "Architecture Documents" }
+  "project-planner": { requirements_stream: "Specifications Folder", technical_stream: "Architecture Documents" },
+  coding: { backlog_item: "Backlog" }
 };
 
 export function applyAdlcAgentInputLabelOverrides(entryId: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
@@ -427,7 +431,8 @@ const ADLC_AGENT_HIDDEN_INPUTS: Record<string, string[]> = {
     "test_environment",
     "prior_test_evidence",
     "red_team_target"
-  ]
+  ],
+  coding: ["repository_state", "feedback_context"]
 };
 
 export function isAdlcAgentHiddenInput(entryId: string, name: string): boolean {

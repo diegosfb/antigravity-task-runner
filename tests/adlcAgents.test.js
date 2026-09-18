@@ -353,6 +353,96 @@ test("applyAdlcAgentInputDefaults prefills Project Planner Agent's requirements_
   assert.equal(withDefaults.find((i) => i.name === "design_stream").defaultValue, undefined);
 });
 
+test("applyAdlcAgentInputDefaults prefills Coding Agent's backlog_item", () => {
+  const { applyAdlcAgentInputDefaults } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "backlog_item", description: "", type: "file_or_structured_data", required: true },
+    { name: "repository_state", description: "", type: "repository_state", required: true }
+  ];
+
+  const withDefaults = applyAdlcAgentInputDefaults("coding", inputs);
+  assert.equal(withDefaults.find((i) => i.name === "backlog_item").defaultValue, "docs/backlog");
+  assert.equal(withDefaults.find((i) => i.name === "repository_state").defaultValue, undefined);
+});
+
+test("applyAdlcAgentInputLabelOverrides labels Coding Agent's backlog_item as Backlog", () => {
+  const { applyAdlcAgentInputLabelOverrides } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "backlog_item", description: "", type: "file_or_structured_data", required: true },
+    { name: "repository_state", description: "", type: "repository_state", required: true }
+  ];
+
+  const overridden = applyAdlcAgentInputLabelOverrides("coding", inputs);
+  assert.equal(overridden.find((i) => i.name === "backlog_item").label, "Backlog");
+  assert.equal(overridden.find((i) => i.name === "repository_state").label, undefined);
+});
+
+test("filterUserFacingAdlcInputs hides Coding Agent's repository_state and feedback_context, and only for coding", () => {
+  const { isAdlcAgentHiddenInput, filterUserFacingAdlcInputs } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "backlog_item", description: "", type: "file_or_structured_data", required: true },
+    { name: "repository_state", description: "", type: "repository_state", required: true },
+    { name: "feedback_context", description: "", type: "structured_data", required: false }
+  ];
+
+  assert.equal(isAdlcAgentHiddenInput("coding", "repository_state"), true);
+  assert.equal(isAdlcAgentHiddenInput("coding", "feedback_context"), true);
+  assert.equal(isAdlcAgentHiddenInput("coding", "backlog_item"), false);
+  assert.equal(isAdlcAgentHiddenInput("ux", "repository_state"), false);
+
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "coding").map((input) => input.name),
+    ["backlog_item"]
+  );
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "ux").map((input) => input.name),
+    inputs.map((input) => input.name)
+  );
+});
+
+test("loadAdlcAgentDefinition labels and defaults Coding Agent's backlog_item, hides repository_state and feedback_context", () => {
+  const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
+  const developerAgentMarkdown = `---
+name: developer-agent
+description: The orchestrator of implementation.
+inputs:
+  required:
+    - name: backlog_item
+      description: Approved item and complete requirements traceability.
+      type: file_or_structured_data
+    - name: repository_state
+      description: Current codebase, task branch, and existing delivery state.
+      type: repository_state
+    - name: workflow_configuration
+      description: Plan, Git, security, judge, and PR gate configuration.
+      type: file
+  optional:
+    - name: feedback_context
+      description: Test, security, specification, or review findings for a revision.
+      type: structured_data
+---
+# Developer agent
+`;
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
+  try {
+    fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "developer-agent"), { recursive: true });
+    fs.writeFileSync(
+      path.join(repoRoot, ".agents", "agents", "developer-agent", "developer-agent.md"),
+      developerAgentMarkdown
+    );
+
+    const definition = loadAdlcAgentDefinition(repoRoot, { id: "coding", label: "Coding Agent", folder: "developer-agent" });
+
+    assert.deepEqual(definition.inputs.map((i) => i.name), ["backlog_item"]);
+    const backlogItem = definition.inputs[0];
+    assert.equal(backlogItem.label, "Backlog");
+    assert.equal(backlogItem.defaultValue, "docs/backlog");
+    assert.equal(backlogItem.required, true);
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test("applyAdlcAgentInputLabelOverrides labels Project Planner Agent's requirements_stream and technical_stream", () => {
   const { applyAdlcAgentInputLabelOverrides } = setupAdlcAgentsModule();
   const inputs = [
