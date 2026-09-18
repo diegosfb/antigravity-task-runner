@@ -53,8 +53,28 @@ const ADLC_AGENT_INPUT_DEFAULTS: Record<string, Record<string, string>> = {
   "ba-agent": {
     approved_prd: path.posix.join("docs", "project_description", "PRD.md"),
     existing_specifications: path.posix.join("docs", "specs")
+  },
+  "ux-agent": {
+    approved_product_context: path.posix.join("docs", "specs"),
+    architecture_package: path.posix.join("docs", "architecture")
   }
 };
+
+// Relaxes what an agent's own frontmatter declares as required, for inputs
+// where the run page should not force a value (e.g. UX Agent's architecture
+// package may not exist yet for early or non-technical design work).
+const ADLC_AGENT_INPUT_REQUIRED_OVERRIDES: Record<string, Record<string, boolean>> = {
+  "ux-agent": { architecture_package: false }
+};
+
+export function applyAdlcAgentInputRequiredOverrides(folder: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
+  const overrides = ADLC_AGENT_INPUT_REQUIRED_OVERRIDES[folder];
+  if (!overrides) return inputs;
+  return inputs.map((input) => {
+    const override = overrides[input.name];
+    return override === undefined ? input : { ...input, required: override };
+  });
+}
 
 // Folder an agent draws artifacts from by convention when it declares no
 // explicit input fields (e.g. product-agent's notes, meeting analyses,
@@ -207,7 +227,10 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
     folder: entry.folder,
     filePath,
     description,
-    inputs: applyAdlcAgentInputDefaults(entry.folder, filterUserFacingAdlcInputs(inputs, entry.folder)),
+    inputs: applyAdlcAgentInputRequiredOverrides(
+      entry.folder,
+      applyAdlcAgentInputDefaults(entry.folder, filterUserFacingAdlcInputs(inputs, entry.folder))
+    ),
     promptHint: entry.promptHint,
     defaultArtifactsDir: getAdlcAgentDefaultArtifactsDir(entry.folder)
   };

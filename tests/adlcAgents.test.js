@@ -234,6 +234,37 @@ test("applyAdlcAgentInputDefaults prefills known BA Agent conventions and leaves
   assert.deepEqual(withoutDefaults, inputs);
 });
 
+test("applyAdlcAgentInputDefaults prefills UX Agent's approved_product_context and architecture_package", () => {
+  const { applyAdlcAgentInputDefaults } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "approved_product_context", description: "", type: "files", required: true },
+    { name: "architecture_package", description: "", type: "files_or_directory", required: true },
+    { name: "research_and_evidence", description: "", type: "files_or_structured_data", required: false }
+  ];
+
+  const withDefaults = applyAdlcAgentInputDefaults("ux-agent", inputs);
+  assert.equal(withDefaults.find((i) => i.name === "approved_product_context").defaultValue, "docs/specs");
+  assert.equal(withDefaults.find((i) => i.name === "architecture_package").defaultValue, "docs/architecture");
+  assert.equal(withDefaults.find((i) => i.name === "research_and_evidence").defaultValue, undefined);
+});
+
+test("applyAdlcAgentInputRequiredOverrides relaxes UX Agent's architecture_package to optional, others untouched", () => {
+  const { applyAdlcAgentInputRequiredOverrides } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "approved_product_context", description: "", type: "files", required: true },
+    { name: "architecture_package", description: "", type: "files_or_directory", required: true },
+    { name: "research_and_evidence", description: "", type: "files_or_structured_data", required: false }
+  ];
+
+  const overridden = applyAdlcAgentInputRequiredOverrides("ux-agent", inputs);
+  assert.equal(overridden.find((i) => i.name === "approved_product_context").required, true);
+  assert.equal(overridden.find((i) => i.name === "architecture_package").required, false);
+  assert.equal(overridden.find((i) => i.name === "research_and_evidence").required, false);
+
+  const untouched = applyAdlcAgentInputRequiredOverrides("architect-agent", inputs);
+  assert.deepEqual(untouched, inputs);
+});
+
 test("loadAdlcAgentDefinition prefills BA Agent's approved_prd and existing_specifications defaults", () => {
   const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
@@ -255,6 +286,52 @@ test("loadAdlcAgentDefinition prefills BA Agent's approved_prd and existing_spec
       definition.inputs.map((i) => i.name),
       ["approved_prd", "existing_specifications"]
     );
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("loadAdlcAgentDefinition defaults UX Agent's inputs and relaxes architecture_package to optional", () => {
+  const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
+  const uxAgentMarkdown = `---
+name: ux-agent
+description: Owns the user experience.
+inputs:
+  required:
+    - name: approved_product_context
+      description: Approved PRD and relevant feature specifications.
+      type: files
+    - name: architecture_package
+      description: Approved architecture, diagrams, and applicable ADRs.
+      type: files_or_directory
+    - name: workflow_configuration
+      description: UX/UI design approval-gate configuration.
+      type: file
+  optional:
+    - name: research_and_evidence
+      description: Reviewed user research, meeting analysis, and feedback.
+      type: files_or_structured_data
+---
+# UX agent
+`;
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
+  try {
+    fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "ux-agent"), { recursive: true });
+    fs.writeFileSync(path.join(repoRoot, ".agents", "agents", "ux-agent", "ux-agent.md"), uxAgentMarkdown);
+
+    const definition = loadAdlcAgentDefinition(repoRoot, { id: "ux", label: "UX Agent", folder: "ux-agent" });
+
+    assert.deepEqual(
+      definition.inputs.map((i) => i.name),
+      ["approved_product_context", "architecture_package", "research_and_evidence"]
+    );
+    const approvedProductContext = definition.inputs.find((i) => i.name === "approved_product_context");
+    assert.equal(approvedProductContext.defaultValue, "docs/specs");
+    assert.equal(approvedProductContext.required, true);
+
+    const architecturePackage = definition.inputs.find((i) => i.name === "architecture_package");
+    assert.equal(architecturePackage.defaultValue, "docs/architecture");
+    assert.equal(architecturePackage.required, false);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
