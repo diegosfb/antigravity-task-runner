@@ -42,6 +42,18 @@ export type AdlcAgentInput = {
   description: string;
   type: string;
   required: boolean;
+  defaultValue?: string;
+};
+
+// Conventional repo paths for an agent's inputs, per the workflow described in
+// its own agent definition (e.g. ba-agent consumes the PRD that product-agent
+// writes, and reconciles against the existing specs directory). Prefilled as
+// a starting point on the run page; the user can still edit or clear them.
+const ADLC_AGENT_INPUT_DEFAULTS: Record<string, Record<string, string>> = {
+  "ba-agent": {
+    approved_prd: path.posix.join("docs", "project_description", "PRD.md"),
+    existing_specifications: path.posix.join("docs", "specs")
+  }
 };
 
 export type AdlcAgentDefinition = {
@@ -149,6 +161,15 @@ export function filterUserFacingAdlcInputs(inputs: AdlcAgentInput[]): AdlcAgentI
   return inputs.filter((input) => !isAdlcAutoConfigInput(input.name));
 }
 
+export function applyAdlcAgentInputDefaults(folder: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
+  const defaults = ADLC_AGENT_INPUT_DEFAULTS[folder];
+  if (!defaults) return inputs;
+  return inputs.map((input) => {
+    const defaultValue = defaults[input.name];
+    return defaultValue ? { ...input, defaultValue } : input;
+  });
+}
+
 export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalogEntry): AdlcAgentDefinition {
   const filePath = getAdlcAgentFilePath(repoRoot, entry.folder);
   const markdown = fs.readFileSync(filePath, "utf8");
@@ -159,7 +180,7 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
     folder: entry.folder,
     filePath,
     description,
-    inputs: filterUserFacingAdlcInputs(inputs),
+    inputs: applyAdlcAgentInputDefaults(entry.folder, filterUserFacingAdlcInputs(inputs)),
     promptHint: entry.promptHint
   };
 }
@@ -293,7 +314,7 @@ export function renderAdlcAgentRunHtml(
       <label>
         <span><code>${escapeHtml(input.name)}</code> <span class="badge${input.required ? " badge-required" : ""}">${input.required ? "required" : "optional"}</span>${input.type ? ` <span class="hint">${escapeHtml(input.type)}</span>` : ""}</span>
         <div class="input-row">
-          <input type="text" data-input-name="${escapeHtml(input.name)}" data-required="${input.required ? "true" : "false"}" value="" autocomplete="off" />
+          <input type="text" data-input-name="${escapeHtml(input.name)}" data-required="${input.required ? "true" : "false"}" value="${escapeHtml(input.defaultValue || "")}" autocomplete="off" />
           <button type="button" data-browse="${escapeHtml(input.name)}" data-kind="${browseKind}">Browse…</button>
         </div>
         ${input.description ? `<span class="hint">${escapeHtml(input.description)}</span>` : ""}
