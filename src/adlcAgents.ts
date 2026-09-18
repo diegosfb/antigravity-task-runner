@@ -334,6 +334,21 @@ const ADLC_AGENT_DIAGRAM_HTML: Record<string, string> = {
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box">src Code</div>
         </div>
+      </div>`,
+  "code-review": `
+      <div class="diagram">
+        <div class="diagram-row">
+          <div class="diagram-group">
+            <div class="diagram-group-label">Inputs</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box">src Code</div>
+            </div>
+          </div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box diagram-box-emphasis">Code Review Agent</div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box">Review Decision</div>
+        </div>
       </div>`
 };
 

@@ -253,7 +253,11 @@ test("getAdlcAgentDiagramHtml returns diagrams for every customized agent, and u
     getAdlcAgentDiagramHtml("coding").indexOf("Backlog") < getAdlcAgentDiagramHtml("coding").indexOf("src Tests")
   );
 
-  assert.equal(getAdlcAgentDiagramHtml("code-review"), undefined);
+  assert.match(getAdlcAgentDiagramHtml("code-review"), /<div class="diagram-box">src Code<\/div>/);
+  assert.match(getAdlcAgentDiagramHtml("code-review"), /Code Review Agent/);
+  assert.match(getAdlcAgentDiagramHtml("code-review"), /Review Decision/);
+
+  assert.equal(getAdlcAgentDiagramHtml("documentation"), undefined);
 });
 
 test("catalog maps story labels to agent folders and detects deployed agents", () => {
@@ -474,6 +478,9 @@ inputs:
     });
 
     assert.deepEqual(definition.inputs, []);
+    assert.match(definition.diagramHtml, /<div class="diagram-box">src Code<\/div>/);
+    assert.match(definition.diagramHtml, /Code Review Agent/);
+    assert.match(definition.diagramHtml, /Review Decision/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -1311,11 +1318,11 @@ test("renderAdlcAgentRunHtml renders the diagram after the description, only whe
   const withoutDiagram = renderAdlcAgentRunHtml(
     { cspSource: "vscode-resource:" },
     {
-      id: "code-review",
-      label: "Code Review Agent",
-      folder: "code-review-agent",
+      id: "documentation",
+      label: "Documentation Agent",
+      folder: "documentation-agent",
       filePath: "",
-      description: "Reviews code for correctness, security, and maintainability.",
+      description: "Writes and maintains project documentation.",
       inputs: []
     },
     { defaultHarness: "claude", defaultModel: "" }
