@@ -248,12 +248,12 @@ test("getAdlcAgentDiagramHtml returns diagrams for every customized agent, and u
   assert.match(getAdlcAgentDiagramHtml("coding"), /<div class="diagram-box">Backlog<\/div>/);
   assert.match(getAdlcAgentDiagramHtml("coding"), /<div class="diagram-box">src Tests<\/div>/);
   assert.match(getAdlcAgentDiagramHtml("coding"), /Coding Agent/);
-  assert.match(getAdlcAgentDiagramHtml("coding"), /<div class="diagram-box">src Code<\/div>/);
+  assert.match(getAdlcAgentDiagramHtml("coding"), /<div class="diagram-box">Pull Request<\/div>/);
   assert.ok(
     getAdlcAgentDiagramHtml("coding").indexOf("Backlog") < getAdlcAgentDiagramHtml("coding").indexOf("src Tests")
   );
 
-  assert.match(getAdlcAgentDiagramHtml("code-review"), /<div class="diagram-box">src Code<\/div>/);
+  assert.match(getAdlcAgentDiagramHtml("code-review"), /<div class="diagram-box">Pull Request<\/div>/);
   assert.match(getAdlcAgentDiagramHtml("code-review"), /Code Review Agent/);
   assert.match(getAdlcAgentDiagramHtml("code-review"), /Review Decision/);
 
@@ -478,7 +478,7 @@ inputs:
     });
 
     assert.deepEqual(definition.inputs, []);
-    assert.match(definition.diagramHtml, /<div class="diagram-box">src Code<\/div>/);
+    assert.match(definition.diagramHtml, /<div class="diagram-box">Pull Request<\/div>/);
     assert.match(definition.diagramHtml, /Code Review Agent/);
     assert.match(definition.diagramHtml, /Review Decision/);
   } finally {
@@ -526,7 +526,7 @@ inputs:
     assert.equal(backlogItem.required, true);
 
     assert.match(definition.diagramHtml, /Coding Agent/);
-    assert.match(definition.diagramHtml, /<div class="diagram-box">src Code<\/div>/);
+    assert.match(definition.diagramHtml, /<div class="diagram-box">Pull Request<\/div>/);
     assert.match(definition.diagramHtml, /<div class="diagram-box">src Tests<\/div>/);
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
