@@ -166,8 +166,22 @@ export function isAdlcAutoConfigInput(name: string): boolean {
   return Object.prototype.hasOwnProperty.call(DEFAULT_INPUT_FILES, name);
 }
 
-export function filterUserFacingAdlcInputs(inputs: AdlcAgentInput[]): AdlcAgentInput[] {
-  return inputs.filter((input) => !isAdlcAutoConfigInput(input.name));
+// Inputs hidden for a specific agent because they add no practical value on
+// the run page for that agent (e.g. BA Agent's supporting_evidence and
+// alternative_input_contract are broad catch-alls better handled through the
+// default artifacts directory or the free-form additional instructions).
+const ADLC_AGENT_HIDDEN_INPUTS: Record<string, string[]> = {
+  "ba-agent": ["supporting_evidence", "alternative_input_contract"]
+};
+
+export function isAdlcAgentHiddenInput(folder: string, name: string): boolean {
+  return (ADLC_AGENT_HIDDEN_INPUTS[folder] ?? []).includes(name);
+}
+
+export function filterUserFacingAdlcInputs(inputs: AdlcAgentInput[], folder?: string): AdlcAgentInput[] {
+  return inputs.filter(
+    (input) => !isAdlcAutoConfigInput(input.name) && !(folder && isAdlcAgentHiddenInput(folder, input.name))
+  );
 }
 
 export function applyAdlcAgentInputDefaults(folder: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
@@ -193,7 +207,7 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
     folder: entry.folder,
     filePath,
     description,
-    inputs: applyAdlcAgentInputDefaults(entry.folder, filterUserFacingAdlcInputs(inputs)),
+    inputs: applyAdlcAgentInputDefaults(entry.folder, filterUserFacingAdlcInputs(inputs, entry.folder)),
     promptHint: entry.promptHint,
     defaultArtifactsDir: getAdlcAgentDefaultArtifactsDir(entry.folder)
   };

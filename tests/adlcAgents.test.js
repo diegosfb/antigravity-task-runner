@@ -37,9 +37,15 @@ inputs:
       description: Specifications approval-gate configuration.
       type: file
   optional:
+    - name: supporting_evidence
+      description: Reviewed research, meeting analysis, and project context.
+      type: file_or_directory
     - name: existing_specifications
       description: Existing specifications to reconcile or update.
       type: directory
+    - name: alternative_input_contract
+      description: Developed conversation and verified repository evidence for explicit to-spec runs.
+      type: text_or_files
 outputs:
   - name: feature_specifications
     description: Validated specifications for every in-scope feature.
@@ -57,7 +63,9 @@ test("parseAdlcAgentFrontmatter extracts description and required/optional input
   assert.deepEqual(parsed.inputs, [
     { name: "approved_prd", description: "Approved product requirements and decisions.", type: "file", required: true },
     { name: "workflow_configuration", description: "Specifications approval-gate configuration.", type: "file", required: true },
-    { name: "existing_specifications", description: "Existing specifications to reconcile or update.", type: "directory", required: false }
+    { name: "supporting_evidence", description: "Reviewed research, meeting analysis, and project context.", type: "file_or_directory", required: false },
+    { name: "existing_specifications", description: "Existing specifications to reconcile or update.", type: "directory", required: false },
+    { name: "alternative_input_contract", description: "Developed conversation and verified repository evidence for explicit to-spec runs.", type: "text_or_files", required: false }
   ]);
 });
 
@@ -243,6 +251,10 @@ test("loadAdlcAgentDefinition prefills BA Agent's approved_prd and existing_spec
       definition.inputs.find((i) => i.name === "existing_specifications").defaultValue,
       "docs/specs"
     );
+    assert.deepEqual(
+      definition.inputs.map((i) => i.name),
+      ["approved_prd", "existing_specifications"]
+    );
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -290,11 +302,12 @@ inputs:
 });
 
 test("renderAdlcAgentRunHtml renders harness, model, input fields, and actions", () => {
-  const { parseAdlcAgentFrontmatter, applyAdlcAgentInputDefaults, renderAdlcAgentRunHtml } = setupAdlcAgentsModule();
+  const { parseAdlcAgentFrontmatter, filterUserFacingAdlcInputs, applyAdlcAgentInputDefaults, renderAdlcAgentRunHtml } =
+    setupAdlcAgentsModule();
   const parsed = parseAdlcAgentFrontmatter(FIXTURE_AGENT_MARKDOWN);
   const definition = {
     ...parsed,
-    inputs: applyAdlcAgentInputDefaults("ba-agent", parsed.inputs),
+    inputs: applyAdlcAgentInputDefaults("ba-agent", filterUserFacingAdlcInputs(parsed.inputs, "ba-agent")),
     id: "ba",
     label: "BA Agent",
     folder: "ba-agent",
@@ -316,9 +329,35 @@ test("renderAdlcAgentRunHtml renders harness, model, input fields, and actions",
     /data-input-name="existing_specifications" data-required="false" value="docs\/specs"/
   );
   assert.match(html, /data-browse="existing_specifications" data-kind="folder"/);
+  assert.doesNotMatch(html, /data-input-name="supporting_evidence"/);
+  assert.doesNotMatch(html, /data-input-name="alternative_input_contract"/);
   assert.match(html, /id="cancel-button"/);
   assert.match(html, /<button type="submit">Execute<\/button>/);
   assert.match(html, /type: "adlcAgentExecute"/);
+});
+
+test("filterUserFacingAdlcInputs hides BA Agent's supporting_evidence and alternative_input_contract, and only for ba-agent", () => {
+  const { isAdlcAgentHiddenInput, filterUserFacingAdlcInputs } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "approved_prd", description: "", type: "file", required: true },
+    { name: "supporting_evidence", description: "", type: "file_or_directory", required: false },
+    { name: "existing_specifications", description: "", type: "directory", required: false },
+    { name: "alternative_input_contract", description: "", type: "text_or_files", required: false }
+  ];
+
+  assert.equal(isAdlcAgentHiddenInput("ba-agent", "supporting_evidence"), true);
+  assert.equal(isAdlcAgentHiddenInput("ba-agent", "alternative_input_contract"), true);
+  assert.equal(isAdlcAgentHiddenInput("ba-agent", "existing_specifications"), false);
+  assert.equal(isAdlcAgentHiddenInput("architect-agent", "supporting_evidence"), false);
+
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "ba-agent").map((input) => input.name),
+    ["approved_prd", "existing_specifications"]
+  );
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "architect-agent").map((input) => input.name),
+    inputs.map((input) => input.name)
+  );
 });
 
 test("renderAdlcAgentRunHtml shows the default-artifacts hint instead of the empty-inputs message", () => {
