@@ -985,6 +985,69 @@ test("filterUserFacingAdlcInputs hides Project Planner Agent's design_stream, ba
   );
 });
 
+test("filterUserFacingAdlcInputs hides Create Tests Agent's candidate_revision, and only for test", () => {
+  const { isAdlcAgentHiddenInput, filterUserFacingAdlcInputs } = setupAdlcAgentsModule();
+  const inputs = [
+    { name: "candidate_revision", description: "", type: "repository_state", required: true },
+    { name: "acceptance_criteria", description: "", type: "files_or_structured_data", required: true }
+  ];
+
+  assert.equal(isAdlcAgentHiddenInput("test", "candidate_revision"), true);
+  assert.equal(isAdlcAgentHiddenInput("test", "acceptance_criteria"), false);
+  assert.equal(isAdlcAgentHiddenInput("ux", "candidate_revision"), false);
+
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "test").map((input) => input.name),
+    ["acceptance_criteria"]
+  );
+  assert.deepEqual(
+    filterUserFacingAdlcInputs(inputs, "ux").map((input) => input.name),
+    inputs.map((input) => input.name)
+  );
+});
+
+test("loadAdlcAgentDefinition excludes candidate_revision for Create Tests Agent", () => {
+  const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
+  const testAgentMarkdown = `---
+name: test-agent
+description: The verifier.
+inputs:
+  required:
+    - name: candidate_revision
+      description: Exact implementation revision and affected scope.
+      type: repository_state
+    - name: acceptance_criteria
+      description: Original approved BA verification contract.
+      type: files_or_structured_data
+    - name: governing_context
+      description: Backlog item, specifications, ADRs, and UX constraints.
+      type: files_or_structured_data
+    - name: workflow_configuration
+      description: Test-plan, red-team, and failure-tracking configuration.
+      type: file
+  optional:
+    - name: prior_test_evidence
+      description: Approved plans, earlier failures, tracked IDs, and fix evidence.
+      type: files_or_structured_data
+---
+# Test agent
+`;
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
+  try {
+    fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "test-agent"), { recursive: true });
+    fs.writeFileSync(path.join(repoRoot, ".agents", "agents", "test-agent", "test-agent.md"), testAgentMarkdown);
+
+    const definition = loadAdlcAgentDefinition(repoRoot, { id: "test", label: "Create Tests Agent", folder: "test-agent" });
+
+    assert.deepEqual(
+      definition.inputs.map((i) => i.name),
+      ["acceptance_criteria", "governing_context", "prior_test_evidence"]
+    );
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
 test("renderAdlcAgentRunHtml renders the default artifacts directory as an editable field with Browse", () => {
   const { renderAdlcAgentRunHtml } = setupAdlcAgentsModule();
   const withArtifactsDir = renderAdlcAgentRunHtml(
