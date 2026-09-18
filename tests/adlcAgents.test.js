@@ -131,7 +131,7 @@ test("buildAdlcAgentPrompt references the agent file, inputs, hint, and instruct
   assert.match(prompt, /approval gate/i);
 });
 
-test("buildAdlcAgentPrompt points to the default artifacts directory when the agent declares one", () => {
+test("buildAdlcAgentPrompt lists the artifacts_directory input like any other input", () => {
   const { buildAdlcAgentPrompt } = setupAdlcAgentsModule();
   const definition = {
     id: "product",
@@ -139,17 +139,24 @@ test("buildAdlcAgentPrompt points to the default artifacts directory when the ag
     folder: "product-agent",
     filePath: "",
     description: "",
-    inputs: [],
-    defaultArtifactsDir: "docs/product-definition"
+    inputs: [
+      {
+        name: "artifacts_directory",
+        description: "Notes, meeting analyses, product descriptions, briefs, and other input artifacts for this agent.",
+        type: "directory",
+        required: false,
+        defaultValue: "docs/product-definition"
+      }
+    ]
   };
   const prompt = buildAdlcAgentPrompt(definition, {
     harness: "claude",
     model: "",
-    inputs: {},
+    inputs: { artifacts_directory: "docs/product-definition" },
     additionalInstructions: ""
   });
 
-  assert.match(prompt, /Use `docs\/product-definition` as the default source of input artifacts/);
+  assert.match(prompt, /- artifacts_directory \(optional\): docs\/product-definition/);
 });
 
 test("getAdlcAgentDefaultArtifactsDir returns the known folder for product-agent and undefined otherwise", () => {
@@ -158,7 +165,7 @@ test("getAdlcAgentDefaultArtifactsDir returns the known folder for product-agent
   assert.equal(getAdlcAgentDefaultArtifactsDir("ba-agent"), undefined);
 });
 
-test("loadAdlcAgentDefinition attaches defaultArtifactsDir for product-agent", () => {
+test("loadAdlcAgentDefinition adds an editable artifacts_directory input for product-agent", () => {
   const { loadAdlcAgentDefinition } = setupAdlcAgentsModule();
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "adlc-agents-test-"));
   try {
@@ -170,8 +177,11 @@ test("loadAdlcAgentDefinition attaches defaultArtifactsDir for product-agent", (
 
     const definition = loadAdlcAgentDefinition(repoRoot, { id: "product", label: "Product Agent", folder: "product-agent" });
 
-    assert.deepEqual(definition.inputs, []);
-    assert.equal(definition.defaultArtifactsDir, "docs/product-definition");
+    assert.deepEqual(definition.inputs.map((i) => i.name), ["artifacts_directory"]);
+    const artifactsDirectory = definition.inputs[0];
+    assert.equal(artifactsDirectory.defaultValue, "docs/product-definition");
+    assert.equal(artifactsDirectory.required, false);
+    assert.equal(artifactsDirectory.type, "directory");
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -566,17 +576,33 @@ test("filterUserFacingAdlcInputs hides Architect Agent's existing_architecture_p
   );
 });
 
-test("renderAdlcAgentRunHtml shows the default-artifacts hint instead of the empty-inputs message", () => {
+test("renderAdlcAgentRunHtml renders the default artifacts directory as an editable field with Browse", () => {
   const { renderAdlcAgentRunHtml } = setupAdlcAgentsModule();
   const withArtifactsDir = renderAdlcAgentRunHtml(
     { cspSource: "vscode-resource:" },
-    { id: "product", label: "Product Agent", folder: "product-agent", filePath: "", description: "", inputs: [], defaultArtifactsDir: "docs/product-definition" },
+    {
+      id: "product",
+      label: "Product Agent",
+      folder: "product-agent",
+      filePath: "",
+      description: "",
+      inputs: [
+        {
+          name: "artifacts_directory",
+          description: "Notes, meeting analyses, product descriptions, briefs, and other input artifacts for this agent.",
+          type: "directory",
+          required: false,
+          defaultValue: "docs/product-definition"
+        }
+      ]
+    },
     { defaultHarness: "claude", defaultModel: "" }
   );
   assert.match(
     withArtifactsDir,
-    /This agent uses artifacts from docs\/product-definition as input\. If you want to add other inputs specify them on the request below/
+    /data-input-name="artifacts_directory" data-required="false" value="docs\/product-definition"/
   );
+  assert.match(withArtifactsDir, /data-browse="artifacts_directory" data-kind="folder"/);
   assert.doesNotMatch(withArtifactsDir, /This agent declares no input artifacts/);
 
   const withoutArtifactsDir = renderAdlcAgentRunHtml(

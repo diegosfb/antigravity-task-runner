@@ -83,11 +83,23 @@ export function applyAdlcAgentInputRequiredOverrides(folder: string, inputs: Adl
 
 // Folder an agent draws artifacts from by convention when it declares no
 // explicit input fields (e.g. product-agent's notes, meeting analyses,
-// product descriptions, and briefs). Surfaced on the run page in place of
-// the "no input artifacts" message and passed to the agent in the prompt.
+// product descriptions, and briefs). Materialized as an editable
+// artifacts_directory input, same as any other agent's input field.
 const ADLC_AGENT_DEFAULT_ARTIFACTS_DIR: Record<string, string> = {
   "product-agent": path.posix.join("docs", "product-definition")
 };
+
+const ARTIFACTS_DIRECTORY_INPUT_NAME = "artifacts_directory";
+
+function buildDefaultArtifactsDirInput(defaultValue: string): AdlcAgentInput {
+  return {
+    name: ARTIFACTS_DIRECTORY_INPUT_NAME,
+    description: "Notes, meeting analyses, product descriptions, briefs, and other input artifacts for this agent.",
+    type: "directory",
+    required: false,
+    defaultValue
+  };
+}
 
 export type AdlcAgentDefinition = {
   id: string;
@@ -97,7 +109,6 @@ export type AdlcAgentDefinition = {
   description: string;
   inputs: AdlcAgentInput[];
   promptHint?: string;
-  defaultArtifactsDir?: string;
 };
 
 export function getAdlcAgentRelativePath(folder: string): string {
@@ -228,18 +239,19 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
   const filePath = getAdlcAgentFilePath(repoRoot, entry.folder);
   const markdown = fs.readFileSync(filePath, "utf8");
   const { description, inputs } = parseAdlcAgentFrontmatter(markdown);
+  const visibleInputs = applyAdlcAgentInputRequiredOverrides(
+    entry.folder,
+    applyAdlcAgentInputDefaults(entry.folder, filterUserFacingAdlcInputs(inputs, entry.folder))
+  );
+  const defaultArtifactsDir = getAdlcAgentDefaultArtifactsDir(entry.folder);
   return {
     id: entry.id,
     label: entry.label,
     folder: entry.folder,
     filePath,
     description,
-    inputs: applyAdlcAgentInputRequiredOverrides(
-      entry.folder,
-      applyAdlcAgentInputDefaults(entry.folder, filterUserFacingAdlcInputs(inputs, entry.folder))
-    ),
-    promptHint: entry.promptHint,
-    defaultArtifactsDir: getAdlcAgentDefaultArtifactsDir(entry.folder)
+    inputs: defaultArtifactsDir ? [...visibleInputs, buildDefaultArtifactsDirInput(defaultArtifactsDir)] : visibleInputs,
+    promptHint: entry.promptHint
   };
 }
 
@@ -321,12 +333,6 @@ export function buildAdlcAgentPrompt(definition: AdlcAgentDefinition, request: A
   ];
   if (definition.promptHint) sections.push(definition.promptHint);
 
-  if (definition.defaultArtifactsDir) {
-    sections.push(
-      `Use \`${definition.defaultArtifactsDir}\` as the default source of input artifacts (notes, meeting analyses, product descriptions, briefs, and similar files). If additional inputs are named below, use those too.`
-    );
-  }
-
   if (definition.inputs.length > 0) {
     const inputLines = definition.inputs.map((input) => {
       const value = (request.inputs[input.name] || "").trim();
@@ -385,10 +391,6 @@ export function renderAdlcAgentRunHtml(
       </label>`;
     })
     .join("");
-
-  const noInputFieldsHint = definition.defaultArtifactsDir
-    ? `This agent uses artifacts from ${escapeHtml(definition.defaultArtifactsDir)} as input. If you want to add other inputs specify them on the request below`
-    : "This agent declares no input artifacts. Describe the request below.";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -462,7 +464,7 @@ export function renderAdlcAgentRunHtml(
       </section>
       <section class="panel-section">
         <div class="section-title">Input Artifacts</div>
-        ${inputFields || `<div class="hint">${noInputFieldsHint}</div>`}
+        ${inputFields || '<div class="hint">This agent declares no input artifacts. Describe the request below.</div>'}
       </section>
       <label>
         Additional instructions
