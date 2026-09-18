@@ -108,7 +108,7 @@ function buildDefaultArtifactsDirInput(defaultValue: string): AdlcAgentInput {
     name: ARTIFACTS_DIRECTORY_INPUT_NAME,
     description: "Notes, meeting analyses, product descriptions, briefs, and other input artifacts for this agent.",
     type: "directory",
-    required: false,
+    required: true,
     defaultValue
   };
 }

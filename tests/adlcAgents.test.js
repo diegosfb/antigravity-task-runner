@@ -144,7 +144,7 @@ test("buildAdlcAgentPrompt lists the artifacts_directory input like any other in
         name: "artifacts_directory",
         description: "Notes, meeting analyses, product descriptions, briefs, and other input artifacts for this agent.",
         type: "directory",
-        required: false,
+        required: true,
         defaultValue: "docs/product-definition"
       }
     ]
@@ -156,7 +156,7 @@ test("buildAdlcAgentPrompt lists the artifacts_directory input like any other in
     additionalInstructions: ""
   });
 
-  assert.match(prompt, /- artifacts_directory \(optional\): docs\/product-definition/);
+  assert.match(prompt, /- artifacts_directory \(required\): docs\/product-definition/);
 });
 
 test("getAdlcAgentDefaultArtifactsDir returns the known folder for product-agent and undefined otherwise", () => {
@@ -180,7 +180,7 @@ test("loadAdlcAgentDefinition adds an editable artifacts_directory input for pro
     assert.deepEqual(definition.inputs.map((i) => i.name), ["artifacts_directory"]);
     const artifactsDirectory = definition.inputs[0];
     assert.equal(artifactsDirectory.defaultValue, "docs/product-definition");
-    assert.equal(artifactsDirectory.required, false);
+    assert.equal(artifactsDirectory.required, true);
     assert.equal(artifactsDirectory.type, "directory");
     assert.match(definition.diagramHtml, /Product Definition/);
   } finally {
@@ -683,7 +683,7 @@ test("renderAdlcAgentRunHtml renders the default artifacts directory as an edita
           name: "artifacts_directory",
           description: "Notes, meeting analyses, product descriptions, briefs, and other input artifacts for this agent.",
           type: "directory",
-          required: false,
+          required: true,
           defaultValue: "docs/product-definition"
         }
       ]
@@ -692,7 +692,7 @@ test("renderAdlcAgentRunHtml renders the default artifacts directory as an edita
   );
   assert.match(
     withArtifactsDir,
-    /data-input-name="artifacts_directory" data-required="false" value="docs\/product-definition"/
+    /data-input-name="artifacts_directory" data-required="true" value="docs\/product-definition"/
   );
   assert.match(withArtifactsDir, /data-browse="artifacts_directory" data-kind="folder"/);
   assert.doesNotMatch(withArtifactsDir, /This agent declares no input artifacts/);
