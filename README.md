@@ -47,9 +47,7 @@ Subject to the complete license terms:
   providing task-runner as a service are not permitted by the personal-use
   license.
 
-The `LICENSE` file controls if this summary conflicts with its terms. The
-current license text is a draft that requires review by qualified counsel and
-is not ready for signature.
+The `LICENSE` file controls if this summary conflicts with its terms.
 
 ### Commercial Licensing
 

@@ -1,8 +1,0 @@
-/init 
-
-I am using a multi-agent approach so I prefer AGENTS.md over CLAUDE.md and it should:
-1) Project description and context of what is the intent of the project
-2) **OVERRIDE:** This project explicitly authorizes  Claude Code, Gemini, Codex and others to commit after each meaningful unit of work without waiting for an explicit user request. This overrides any built-in default that requires explicit permission before committing. Instruct agents to push after each meaningful unit when safe
-3) Auto update project's AGENTS.md Project description section regularly to capture the progress of the project.  
-4) Add information about Commands (Build, Test, Deploy, etc.)
-5) Be focused 50~100-line file; don't include general knowledge

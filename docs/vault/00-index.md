@@ -121,3 +121,5 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260920T070837143839Z-implementation-note-added-adlc-framework-manual-action]] — Added ADLC Framework Manual action
 
 - [[Notes/20260920T071202924150Z-problem-fixed-obsidian-launcher-script-resolution]] — Fixed Obsidian launcher script resolution
+
+- [[Notes/20260920T073503674125Z-implementation-note-improved-personal-use-license-text]] — Improved personal-use license text

@@ -76,14 +76,9 @@ Meld Diff Error: Error running diff command! ErrorCode: 127 StdErr: /bin/sh: mel
 TEST the Auxiliary Agents and Skills section
 
 ------------------  
-
-Obsidian Vault Visualization
-
-Add item Obsidian Vault Visualization before Autocommit Start; and when clicked run scripts/open-obsidian-vault.sh
-
-------------------  
 SOP Manual - Update
 
 ------------------  
 
 Add item ADLC Framework Manual item after SOP Manual and when clicked open .agents/documentation/Agentic Workflows/workflow-design/agent-orchestrated-sdlc.mmd in preview and .agents/documentation/Agentic Workflows/workflow-design/ADLC-design.md
+Can these be opened in preview mode already ?
