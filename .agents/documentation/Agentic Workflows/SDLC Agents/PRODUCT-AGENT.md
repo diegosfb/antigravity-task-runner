@@ -13,6 +13,20 @@ Owns the WHY of the project - product envisioning, market research, competitive 
 - **Hands over to:** `ba-agent` (the PRD is its primary input).
 - **Receives back:** user feedback from production (outer loop) - synthesize it into the next vision revision.
 
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs"]
+        productDefinition["Required: Product Definition"]
+        supportingEvidence["Optional: Supporting Evidence"]
+    end
+    productAgent["Product Agent"]
+    prd["Output: PRD"]
+
+    inputs --> productAgent --> prd
+```
+
 ## Input artifacts
 
 | Artifact | Requirement | Type | Purpose |

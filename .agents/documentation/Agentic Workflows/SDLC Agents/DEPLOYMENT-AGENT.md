@@ -12,6 +12,29 @@ The shipper. Consumes the approved PR and executes CI/CD - build, packaging, env
 - **Downstream:** hands the verified release and deployment record to operations and routes post-launch telemetry and user feedback to `product-agent`.
 - **Outer loop:** post-launch telemetry and user feedback route to `product-agent` for the next cycle.
 
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs"]
+        approvedMergedPr["Required: Approved Merged PR"]
+        releaseConfiguration["Required: Release Configuration"]
+        preDeploymentScript["Optional: Pre-Deployment Script"]
+        postDeploymentScript["Optional: Post-Deployment Script"]
+        priorReleaseState["Optional: Prior Release State"]
+        preReleaseEvidence["Optional: Pre-Release Evidence"]
+    end
+    deploymentAgent["Deployment Agent"]
+    subgraph outputs["Outputs"]
+        liveRelease["Output: Live Release"]
+        deploymentRecord["Output: Deployment Record"]
+        rollbackArtifact["Output: Rollback Artifact"]
+        postDeployEvidence["Output: Post-Deploy Evidence"]
+    end
+
+    inputs --> deploymentAgent --> outputs
+```
+
 ## Input artifacts
 
 | Artifact | Requirement | Type | Purpose |

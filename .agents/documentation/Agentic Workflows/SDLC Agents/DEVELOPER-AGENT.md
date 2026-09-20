@@ -12,6 +12,23 @@ The orchestrator of implementation. Pulls sprint-ready tasks from the backlog or
 - **Downstream:** submits an integrated candidate to specification and test gates, invokes `documentation-agent` after tests pass, then hands the documented branch or pull request to `code-review-agent`.
 - **Feedback loops in:** `tests fail` (from test-agent, with diagnostics) and `changes requested` (from code-review-agent, with actionable comments). Fix, then resubmit through the same gate that bounced the work.
 
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs (one required)"]
+        backlog["Optional: Backlog"]
+        userStoryOrSpec["Optional: User Story or Specification"]
+    end
+    codingAgent["Coding Agent"]
+    subgraph src["src"]
+        sourceCode["Output: Source Code"]
+        pullRequest["Output: Pull Request"]
+    end
+
+    inputs --> codingAgent --> src
+```
+
 ## Input artifacts
 
 | Artifact | Requirement | Type | Purpose |

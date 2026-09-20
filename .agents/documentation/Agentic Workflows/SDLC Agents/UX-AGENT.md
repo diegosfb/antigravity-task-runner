@@ -11,6 +11,28 @@ Owns the user experience. Works FROM the ADRs so designs respect real technical 
 - **Upstream:** receives the approved PRD and specifications plus the validated architecture package and ADRs after their respective gates.
 - **Downstream:** hands the approved design package and updated specifications to `project-planner-agent`.
 
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs"]
+        specificationsDirectory["Required: Specifications Directory"]
+        architecturePackage["Optional: Architecture Package"]
+        researchEvidence["Optional: Research and Evidence"]
+        existingExperience["Optional: Existing Experience System"]
+    end
+    uxAgent["UX Agent"]
+    subgraph designPackage["Design Package"]
+        designDocument["Output: Design Document"]
+        wireframes["Output: Wireframes"]
+    end
+    specsUpdated["Output: Specs Updated with UX Design"]
+
+    inputs --> uxAgent
+    uxAgent --> designPackage
+    uxAgent --> specsUpdated
+```
+
 ## Input artifacts
 
 | Artifact | Requirement | Type | Purpose |

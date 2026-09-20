@@ -5220,15 +5220,15 @@ function activate(context) {
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         const workflowDesignDir = path.join(repoRoot, ".agents", "documentation", "Agentic Workflows", "workflow-design");
-        const diagramPath = path.join(workflowDesignDir, "agent-orchestrated-sdlc.mmd");
+        const diagramPreviewPath = path.join(workflowDesignDir, "agent-orchestrated-sdlc-preview.md");
         const designPath = path.join(workflowDesignDir, "ADLC-design.md");
-        const missingPaths = [diagramPath, designPath].filter((filePath) => !fs.existsSync(filePath));
+        const missingPaths = [diagramPreviewPath, designPath].filter((filePath) => !fs.existsSync(filePath));
         if (missingPaths.length > 0) {
             void vscode.window.showErrorMessage(`ADLC Framework Manual files were not found: ${missingPaths.join(", ")}`);
             return;
         }
-        await (0, scripts_1.openFile)(designPath);
-        await vscode.window.showTextDocument(vscode.Uri.file(diagramPath), { preview: true });
+        await vscode.commands.executeCommand("markdown.showPreview", vscode.Uri.file(designPath));
+        await vscode.commands.executeCommand("markdown.showPreviewToSide", vscode.Uri.file(diagramPreviewPath));
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.bringSopManualToProject", async () => {
         const rootPath = (0, utils_1.getRootPath)();

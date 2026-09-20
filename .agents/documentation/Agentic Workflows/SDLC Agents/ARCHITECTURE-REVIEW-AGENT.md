@@ -8,6 +8,22 @@ The Architecture Review Agent independently evaluates an existing architecture p
 
 `architect-agent` produces or expands the architecture package. Architecture Review returns evidence-based findings to that agent for correction or hands an approved package to `project-planner-agent`. `llm-judge-agent` may provide advisory cross-model feedback but never replaces the review verdict.
 
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs"]
+        existingArchitecture["Required: Existing Architecture Folder"]
+        specificationSource["Required: Specification Directory or File"]
+        prd["Optional: PRD"]
+        architectureGuidelines["Optional: Architecture Guidelines"]
+    end
+    architectureReviewAgent["Architecture Review Agent"]
+    reviewFindings["Output: Review Findings"]
+
+    inputs --> architectureReviewAgent --> reviewFindings
+```
+
 ## Input artifacts
 
 | Artifact | Requirement | Purpose |

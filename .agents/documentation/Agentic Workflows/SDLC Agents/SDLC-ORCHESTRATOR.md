@@ -4,13 +4,26 @@
 
 ## What it does
 
-Entry-point orchestrator for the dsfb-sdlc v2 library. Reads the user's intent, consults routing-registry.yaml, and dispatches the correct workflow agent(s), then sequences artifact handoffs along the workflow. Start here unless you already know the exact specialist you need.
+Entry-point orchestrator for the dsfb-sdlc v2 library. Reads the user's intent, consults routing-registry.yaml, and dispatches the correct workflow agent(s), then sequences artifact handoffs along the Project Description → Product → BA → Architect → UX → Project Planner → Backlog → Developer → Spec Validation → Test → Documentation → Code Review → Deployment workflow. Start here unless you already know the exact specialist you need.
 
 ## How it interacts with other agents
 
 - **Role:** `orchestrator`.
 
-- **Declared interaction points:** `ux-agent`, `developer-agent`, `product-agent`, `red-team-agent`, `security-check-agent`, `architect-agent`. The source contract defines the trigger, evidence, and handoff direction for each interaction.
+- **Declared interaction points:** `product-agent`, `ba-agent`, `architect-agent`, `ux-agent`, `project-planner-agent`, `developer-agent`, `spec-validation-agent`, `test-agent`, `documentation-agent`, `code-review-agent`, `deployment-agent`. The source contract defines the trigger, evidence, and handoff direction for each interaction.
+
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs"]
+        userRequest["Required: User Request"]
+    end
+    sdlcOrchestrator["SDLC Orchestrator Agent"]
+    delegation["Output: Delegation to Appropriate Agent(s)"]
+
+    inputs --> sdlcOrchestrator --> delegation
+```
 
 ## Input artifacts
 

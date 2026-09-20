@@ -11,6 +11,22 @@ The verifier. Consumes code plus the ORIGINAL acceptance criteria from ba-agent 
 - **Upstream:** receives an exact implementation candidate and traceability chain from `developer-agent`, governed by the original acceptance criteria from `ba-agent`.
 - **Downstream:** returns actionable failures to `developer-agent` and, when configured, `project-planner-agent`; after full PASS and planner acknowledgement, returns the validated candidate to `developer-agent` for repository finalization.
 
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs"]
+        backlog["Optional: Backlog"]
+        userStoryOrSpec["Optional: User Story or Specification"]
+    end
+    createTestsAgent["Create Tests Agent"]
+    subgraph src["src"]
+        tests["Output: Tests"]
+    end
+
+    inputs --> createTestsAgent --> src
+```
+
 ## Input artifacts
 
 | Artifact | Requirement | Type | Purpose |

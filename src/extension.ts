@@ -6669,9 +6669,9 @@ export function activate(context: vscode.ExtensionContext) {
         "Agentic Workflows",
         "workflow-design"
       );
-      const diagramPath = path.join(workflowDesignDir, "agent-orchestrated-sdlc.mmd");
+      const diagramPreviewPath = path.join(workflowDesignDir, "agent-orchestrated-sdlc-preview.md");
       const designPath = path.join(workflowDesignDir, "ADLC-design.md");
-      const missingPaths = [diagramPath, designPath].filter((filePath) => !fs.existsSync(filePath));
+      const missingPaths = [diagramPreviewPath, designPath].filter((filePath) => !fs.existsSync(filePath));
       if (missingPaths.length > 0) {
         void vscode.window.showErrorMessage(
           `ADLC Framework Manual files were not found: ${missingPaths.join(", ")}`
@@ -6679,8 +6679,8 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      await openFile(designPath);
-      await vscode.window.showTextDocument(vscode.Uri.file(diagramPath), { preview: true });
+      await vscode.commands.executeCommand("markdown.showPreview", vscode.Uri.file(designPath));
+      await vscode.commands.executeCommand("markdown.showPreviewToSide", vscode.Uri.file(diagramPreviewPath));
     })
   );
 

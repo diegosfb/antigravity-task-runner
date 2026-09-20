@@ -12,6 +12,21 @@ Owns the WHAT of the project - translates product vision into concrete, testable
 - **Downstream:** hands approved specifications to `architect-agent` and their acceptance criteria to `project-planner-agent` after the specifications approval gate.
 - **Downstream contract:** test-agent verifies code against YOUR acceptance criteria, not the developer's interpretation. Write them testable.
 
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs"]
+        approvedPrd["Required: Approved PRD"]
+        existingSpecifications["Optional: Existing Specifications"]
+        supportingEvidence["Optional: Supporting Evidence"]
+    end
+    baAgent["BA Agent"]
+    specifications["Output: Specifications"]
+
+    inputs --> baAgent --> specifications
+```
+
 ## Input artifacts
 
 | Artifact | Requirement | Type | Purpose |

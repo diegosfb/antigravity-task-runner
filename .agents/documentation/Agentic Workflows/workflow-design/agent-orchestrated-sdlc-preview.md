@@ -1,3 +1,6 @@
+# Agent-Orchestrated SDLC
+
+```mermaid
 flowchart TB
     classDef definition fill:#1E2761,stroke:#1E2761,color:#FFFFFF
     classDef build fill:#028090,stroke:#028090,color:#FFFFFF
@@ -39,3 +42,4 @@ flowchart TB
     TEST -. FAIL .-> DEV
     REVIEW -. "changes requested" .-> DEV
     LIVE -. "telemetry + user feedback" .-> PRODUCT
+```

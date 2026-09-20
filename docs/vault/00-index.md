@@ -123,3 +123,25 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260920T071202924150Z-problem-fixed-obsidian-launcher-script-resolution]] — Fixed Obsidian launcher script resolution
 
 - [[Notes/20260920T073503674125Z-implementation-note-improved-personal-use-license-text]] — Improved personal-use license text
+
+- [[Notes/20260920T110209484436Z-implementation-note-adlc-framework-manual-opens-rendered-mermaid-preview]] — ADLC Framework Manual opens rendered Mermaid preview
+
+- [[Notes/20260920T110758540479Z-implementation-note-adlc-workflow-diagram-starts-from-project-description]] — ADLC workflow diagram starts from Project Description
+
+- [[Notes/20260920T110956482572Z-implementation-note-removed-stale-vsix-package-include]] — Removed stale VSIX package include
+
+- [[Notes/20260920T111341414818Z-implementation-note-adlc-manual-opens-static-mermaid-preview-file]] — ADLC manual opens static Mermaid preview file
+
+- [[Notes/20260920T111801097242Z-implementation-note-simplified-adlc-workflow-diagram-return-edges]] — Simplified ADLC workflow diagram return edges
+
+- [[Notes/20260920T112258602928Z-implementation-note-sdlc-orchestrator-matches-adlc-workflow-diagram]] — SDLC orchestrator matches ADLC workflow diagram
+
+- [[Notes/20260920T112554831424Z-implementation-note-adlc-design-document-synced-to-workflow-diagram]] — ADLC design document synced to workflow diagram
+
+- [[Notes/20260920T112734514380Z-implementation-note-adlc-manual-opens-design-document-in-markdown-preview]] — ADLC manual opens design document in Markdown preview
+
+- [[Notes/20260920T113423585523Z-implementation-note-adlc-manual-keeps-design-preview-open]] — ADLC manual keeps design preview open
+
+- [[Notes/20260920T114402248640Z-implementation-note-added-agent-page-diagrams-to-sdlc-docs]] — Added agent page diagrams to SDLC docs
+
+- [[Notes/20260920T115143219060Z-implementation-note-adlc-design-clarifies-parent-agent-ownership]] — ADLC design clarifies parent-agent ownership

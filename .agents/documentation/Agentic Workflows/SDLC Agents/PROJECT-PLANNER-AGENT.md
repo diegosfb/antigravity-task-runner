@@ -12,6 +12,22 @@ The arbiter and sequencer. Receives approved specifications including UX require
 - **Downstream:** releases the approved ordered backlog and next unblocked item to `developer-agent`, and returns tracking acknowledgements to `test-agent`.
 - **One door in:** planning agents write to the backlog only through you. **One door out:** execution agents only pull from the backlog.
 
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs"]
+        specificationsDirectory["Required: Specifications Directory"]
+        architectureFolder["Required: Architecture Folder"]
+        designPackage["Optional: Design Package"]
+        existingBacklog["Optional: Existing Backlog"]
+    end
+    projectPlannerAgent["Project Planner Agent"]
+    backlog["Output: Backlog"]
+
+    inputs --> projectPlannerAgent --> backlog
+```
+
 ## Input artifacts
 
 | Artifact | Requirement | Type | Purpose |

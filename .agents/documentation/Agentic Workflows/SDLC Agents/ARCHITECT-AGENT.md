@@ -12,6 +12,25 @@ Designs solution architecture from approved specifications. Use for system bound
 - **Downstream:** hands the validated architecture package to `ux-agent` and technical decomposition to `project-planner-agent` after the architecture approval gate.
 - **Constraint provider:** developer-agent and code-review-agent treat your ADRs as binding constraints.
 
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs"]
+        specificationSource["Required: Specification Directory or File"]
+        existingArchitecture["Optional: Existing Architecture Folder"]
+        prd["Optional: PRD"]
+        architectureGuidelines["Optional: Architecture Guidelines"]
+    end
+    architectAgent["Architect Agent"]
+    subgraph architectureFolder["Architecture Folder"]
+        architectureDocument["Output: Architecture Document"]
+        adrs["Output: ADRs"]
+    end
+
+    inputs --> architectAgent --> architectureFolder
+```
+
 ## Input artifacts
 
 | Artifact | Requirement | Type | Purpose |

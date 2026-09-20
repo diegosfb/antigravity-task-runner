@@ -11,6 +11,19 @@ The quality gate. Consumes passing code and reviews for correctness, security, m
 - **Upstream:** receives a tested, finalized branch or pull request from `developer-agent` after `test-agent` PASS and required specification and security validation.
 - **Downstream:** returns actionable change requests to `developer-agent`, or hands an explicitly approved merged pull request to `deployment-agent`.
 
+## Agent Page Diagram
+
+```mermaid
+flowchart LR
+    subgraph inputs["Inputs"]
+        pullRequest["Required: Pull Request"]
+    end
+    codeReviewAgent["Code Review Agent"]
+    prMerge["Output: PR Merge"]
+
+    inputs --> codeReviewAgent --> prMerge
+```
+
 ## Input artifacts
 
 | Artifact | Requirement | Type | Purpose |
