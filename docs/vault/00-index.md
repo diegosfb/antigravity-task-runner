@@ -113,3 +113,11 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260920T064318240141Z-design-decision-matched-auxiliary-section-to-feature-estimator-color]] — Matched Auxiliary section to Feature Estimator color
 
 - [[Notes/20260920T064522162233Z-implementation-note-grouped-version-increment-actions]] — Grouped version increment actions
+
+- [[Notes/20260920T070503307023Z-implementation-note-changed-increment-versions-group-icon]] — Changed Increment Versions group icon
+
+- [[Notes/20260920T070642886919Z-implementation-note-added-obsidian-vault-visualization-action]] — Added Obsidian Vault Visualization action
+
+- [[Notes/20260920T070837143839Z-implementation-note-added-adlc-framework-manual-action]] — Added ADLC Framework Manual action
+
+- [[Notes/20260920T071202924150Z-problem-fixed-obsidian-launcher-script-resolution]] — Fixed Obsidian launcher script resolution

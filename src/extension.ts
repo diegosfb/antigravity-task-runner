@@ -185,6 +185,11 @@ function getRepoPackageVersion(repoRoot: string): string | undefined {
     return undefined;
   }
 }
+
+export function getObsidianVaultScriptDirectory(repoRoot: string): string {
+  return path.join(repoRoot, "scripts");
+}
+
 export function activate(context: vscode.ExtensionContext) {
   const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
   const PULL_REMOTE_AND_MERGE_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
@@ -5599,6 +5604,21 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.openObsidianVaultVisualization", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+      await runRepoScript("open-obsidian-vault", [], {
+        scriptDir: getObsidianVaultScriptDirectory(repoRoot)
+      });
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("antigravity.cloudArchitectReview", async () => {
       const rootPath = getRootPath();
       if (!rootPath) {
@@ -6630,6 +6650,37 @@ export function activate(context: vscode.ExtensionContext) {
         const message = error instanceof Error ? error.message : String(error);
         void vscode.window.showErrorMessage(`Failed to open SOP manual: ${message}`);
       }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("antigravity.openAdlcFrameworkManual", async () => {
+      const rootPath = getRootPath();
+      if (!rootPath) {
+        void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+        return;
+      }
+
+      const repoRoot = getRepoRoot(rootPath);
+      const workflowDesignDir = path.join(
+        repoRoot,
+        ".agents",
+        "documentation",
+        "Agentic Workflows",
+        "workflow-design"
+      );
+      const diagramPath = path.join(workflowDesignDir, "agent-orchestrated-sdlc.mmd");
+      const designPath = path.join(workflowDesignDir, "ADLC-design.md");
+      const missingPaths = [diagramPath, designPath].filter((filePath) => !fs.existsSync(filePath));
+      if (missingPaths.length > 0) {
+        void vscode.window.showErrorMessage(
+          `ADLC Framework Manual files were not found: ${missingPaths.join(", ")}`
+        );
+        return;
+      }
+
+      await openFile(designPath);
+      await vscode.window.showTextDocument(vscode.Uri.file(diagramPath), { preview: true });
     })
   );
 

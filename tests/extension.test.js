@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const path = require("node:path");
 
 function createVscodeMock() {
   class ThemeColor { constructor(id) { this.id = id; } }
@@ -66,4 +67,12 @@ test("activate is exported as a function", () => {
 test("deactivate is exported", () => {
   const ext = setupExtensionModule();
   assert.equal(typeof ext.deactivate, "function");
+});
+
+test("Obsidian vault script resolves from the active repository", () => {
+  const ext = setupExtensionModule();
+  assert.equal(
+    ext.getObsidianVaultScriptDirectory("/workspace/project"),
+    path.join("/workspace/project", "scripts")
+  );
 });

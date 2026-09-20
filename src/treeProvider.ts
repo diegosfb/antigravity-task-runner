@@ -715,9 +715,24 @@ function getQuickActionItems(): NodeItem[] {
     { kind: "category", label: "Increment Versions" },
     vscode.TreeItemCollapsibleState.Collapsed
   );
-  incrementVersions.iconPath = new vscode.ThemeIcon("versions", QUICK_ACTION_COLOR);
+  incrementVersions.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
   incrementVersions.tooltip = "Increment the project major, minor, or patch version.";
   items.push(incrementVersions);
+
+  const obsidianVaultVisualization = new NodeItem(
+    { kind: "action", label: "Obsidian Vault Visualization" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  obsidianVaultVisualization.iconPath = new vscode.ThemeIcon(
+    "graph",
+    new vscode.ThemeColor("charts.purple")
+  );
+  obsidianVaultVisualization.tooltip = "Open the project Obsidian vault visualization.";
+  obsidianVaultVisualization.command = {
+    command: "antigravity.openObsidianVaultVisualization",
+    title: "Obsidian Vault Visualization"
+  };
+  items.push(obsidianVaultVisualization);
 
   const autocommitCheckpoint = new NodeItem(
     { kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" },
@@ -759,6 +774,18 @@ function getQuickActionItems(): NodeItem[] {
     title: "SOP Manual"
   };
   items.push(sopManual);
+
+  const adlcFrameworkManual = new NodeItem(
+    { kind: "action", label: "ADLC Framework Manual" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  adlcFrameworkManual.iconPath = new vscode.ThemeIcon("book", SOP_MANUAL_ACTION_COLOR);
+  adlcFrameworkManual.tooltip = "Open the ADLC workflow diagram and framework design document.";
+  adlcFrameworkManual.command = {
+    command: "antigravity.openAdlcFrameworkManual",
+    title: "ADLC Framework Manual"
+  };
+  items.push(adlcFrameworkManual);
 
   return items;
 }

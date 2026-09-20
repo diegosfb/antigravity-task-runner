@@ -12,6 +12,7 @@ PR creation aborted! To finish this PR flow:
 2. Run 'Pull Remote and merge' and Resolve any merge issues (verify the merge with main works before opening the PR again).
 3. Try 'Create Pull Request' again
 
+What is this? DEPRECATED
 
 -----------------
 
@@ -20,13 +21,14 @@ antigravity folder	Lets you browse the home Antigravity folder at ~/.gemini/anti
 Deberia ser /Users/diego.brihuega/.antigravity ???
 Cual es la politica entre gemini and antigravity folders?
 
------------------
+Skills what skills from where is it showing?
+Workflows not showing up.
 
+-----------------
 
 Pull Remote and merge does not use an agent.
 
 That sidebar item directly launches the shell script src/pull_remote_and_merge.sh (line 1) from src/extension.ts (line 3634). The flow is script-driven:
-
 
 it may ask for a commit message if you have uncommitted changes - It should call the Commit Item instead of asking for a message. 
 
@@ -40,23 +42,12 @@ it runs the project test command if configured
 
 it pushes the branch
 
+Check and improve. ASk llm for advice
 
 ----------------
-
-It 
 
 Assign Jira Item to Agent	Lets you choose an eligible Jira item and an agent, updates the Jira summary and labels, assigns the issue to you, moves it to In Progress, and launches the selected agent for that issue.
-
-----------------
-
-Meld Diff Error: Error running diff command! ErrorCode: 127 StdErr: /bin/sh: meld: command not found
-
-
-------------------
-
-Can you add a help icon on the top right corner of the Task Runner sidebar panel next to the gear icon for settings.
-When clicked it should bring up the help file Knowhow/help.md
-
+Does it work like that? 
 
 ------------------
 
@@ -64,7 +55,7 @@ Also add a settings section to the file explaining all the settings to the Knowh
 
 ------------------  
 
-Run liteLLM OpenAI add it as a setting.
+Run liteLLM OpenAI add it as a setting. [DEPRECATED FOR NOW]
 
 ------------------  
 
@@ -73,16 +64,26 @@ Detected uncommitted changes on main. They must be committed before creating a n
 Enter a commit message for the changes that should be included before creating the new branch. 
 Should use the commit item instead of asking for a message  
 
+Check if it works like this?
 
-
-
-
-
-
+------------------  
 
 1- USE /Applications/kdiff3.app/Contents/MacOS/kdiff3 file1.txt file2.txt to compare files.
+Meld Diff Error: Error running diff command! ErrorCode: 127 StdErr: /bin/sh: meld: command not found
 
+------------------  
 
+TEST the Auxiliary Agents and Skills section
 
+------------------  
 
-Add the Auxiliary Agents and Skills section
+Obsidian Vault Visualization
+
+Add item Obsidian Vault Visualization before Autocommit Start; and when clicked run scripts/open-obsidian-vault.sh
+
+------------------  
+SOP Manual - Update
+
+------------------  
+
+Add item ADLC Framework Manual item after SOP Manual and when clicked open .agents/documentation/Agentic Workflows/workflow-design/agent-orchestrated-sdlc.mmd in preview and .agents/documentation/Agentic Workflows/workflow-design/ADLC-design.md

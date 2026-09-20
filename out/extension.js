@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getObsidianVaultScriptDirectory = getObsidianVaultScriptDirectory;
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = require("vscode");
@@ -44,6 +45,9 @@ function getRepoPackageVersion(repoRoot) {
     catch {
         return undefined;
     }
+}
+function getObsidianVaultScriptDirectory(repoRoot) {
+    return path.join(repoRoot, "scripts");
 }
 function activate(context) {
     const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
@@ -4436,6 +4440,17 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.incrementPatchVersion", async () => {
         await (0, scripts_1.runRepoScript)("bump-version", ["patch"]);
     }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openObsidianVaultVisualization", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        await (0, scripts_1.runRepoScript)("open-obsidian-vault", [], {
+            scriptDir: getObsidianVaultScriptDirectory(repoRoot)
+        });
+    }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.cloudArchitectReview", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
@@ -5196,6 +5211,24 @@ function activate(context) {
             const message = error instanceof Error ? error.message : String(error);
             void vscode.window.showErrorMessage(`Failed to open SOP manual: ${message}`);
         }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.openAdlcFrameworkManual", async () => {
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        const workflowDesignDir = path.join(repoRoot, ".agents", "documentation", "Agentic Workflows", "workflow-design");
+        const diagramPath = path.join(workflowDesignDir, "agent-orchestrated-sdlc.mmd");
+        const designPath = path.join(workflowDesignDir, "ADLC-design.md");
+        const missingPaths = [diagramPath, designPath].filter((filePath) => !fs.existsSync(filePath));
+        if (missingPaths.length > 0) {
+            void vscode.window.showErrorMessage(`ADLC Framework Manual files were not found: ${missingPaths.join(", ")}`);
+            return;
+        }
+        await (0, scripts_1.openFile)(designPath);
+        await vscode.window.showTextDocument(vscode.Uri.file(diagramPath), { preview: true });
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.bringSopManualToProject", async () => {
         const rootPath = (0, utils_1.getRootPath)();

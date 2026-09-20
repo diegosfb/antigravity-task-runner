@@ -441,7 +441,7 @@ test("quick actions group version increments under Increment Versions", async ()
   assert.ok(incrementVersions);
   assert.equal(incrementVersions.collapsibleState, 1);
   assert.equal(incrementVersions.command, undefined);
-  assert.equal(incrementVersions.iconPath.id, "versions");
+  assert.equal(incrementVersions.iconPath.id, "arrow-up");
   assert.equal(rootItems.some((item) => versionLabels.includes(item.label)), false);
 
   const versionActions = await provider.getChildren(incrementVersions);
@@ -454,6 +454,40 @@ test("quick actions group version increments under Increment Versions", async ()
       "antigravity.incrementPatchVersion"
     ]
   );
+});
+
+test("quick actions place Obsidian Vault Visualization before Autocommit", async () => {
+  const { AntigravityViewProvider } = setupTreeProviderModule();
+  const provider = new AntigravityViewProvider();
+
+  const rootItems = await provider.getChildren();
+  const rootLabels = rootItems.map((item) => item.label);
+  const obsidianIndex = rootLabels.indexOf("Obsidian Vault Visualization");
+  const autocommitIndex = rootLabels.findIndex((label) => label.startsWith("Autocommit "));
+
+  assert.notEqual(obsidianIndex, -1);
+  assert.equal(obsidianIndex, autocommitIndex - 1);
+
+  const obsidian = rootItems[obsidianIndex];
+  assert.equal(obsidian.iconPath.id, "graph");
+  assert.equal(obsidian.command.command, "antigravity.openObsidianVaultVisualization");
+});
+
+test("quick actions place ADLC Framework Manual after SOP Manual", async () => {
+  const { AntigravityViewProvider } = setupTreeProviderModule();
+  const provider = new AntigravityViewProvider();
+
+  const rootItems = await provider.getChildren();
+  const rootLabels = rootItems.map((item) => item.label);
+  const sopIndex = rootLabels.indexOf("SOP Manual");
+  const adlcManualIndex = rootLabels.indexOf("ADLC Framework Manual");
+
+  assert.notEqual(sopIndex, -1);
+  assert.equal(adlcManualIndex, sopIndex + 1);
+
+  const adlcManual = rootItems[adlcManualIndex];
+  assert.equal(adlcManual.iconPath.id, "book");
+  assert.equal(adlcManual.command.command, "antigravity.openAdlcFrameworkManual");
 });
 
 test("top-level Claude actions include terminal launcher entries", async () => {

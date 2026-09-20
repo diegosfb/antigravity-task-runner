@@ -11,10 +11,14 @@
             "id": "eb74ea52824d7c7e",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "Notes/20260919T121409733929Z-design-decision-create-tests-accepts-a-backlog-or-one-user-story-specification.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "20260919T121409733929Z-design-decision-create-tests-accepts-a-backlog-or-one-user-story-specification"
             }
           }
         ]
