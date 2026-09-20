@@ -1,0 +1,4 @@
+interface:
+  display_name: "Presales Engineering"
+  short_description: "Build evidence-backed RFP, demo, and POC artifacts"
+  default_prompt: "Use $presales-engineering to analyze this technical opportunity and produce an evidence-backed pre-sales artifact."

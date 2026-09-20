@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Convert a conversation into a project specification",
+    "es": "Convertir una conversación en una especificación de proyecto"
+  },
+  "displayDescription": {
+    "en": "Convert an already-developed conversation into a validated project specification without conducting a new requirements interview.",
+    "es": "Convierte una conversación desarrollada en una especificación de proyecto validada sin realizar una nueva entrevista de requerimientos."
+  },
+  "version": "1.0.0",
+  "author": "Matt Pocock Skills — adapted",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Specification",
+    "Planning",
+    "Requirements",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "planning",
+    "phase": "backlog-management"
+  }
+}

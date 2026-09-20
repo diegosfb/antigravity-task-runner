@@ -1,74 +1,51 @@
 # Deployment Agent
 
-The `deployment-agent` ships reviewed work safely. Its only workflow intake is
-an approved PR from `code-review-agent`; its output is a verified live release
-with a deployment and rollback record.
+> Source contract: [`deployment-agent.md`](../../../agents/deployment-agent/deployment-agent.md). The source contract is authoritative if this summary and the contract differ.
 
-## Workflow position
+## What it does
 
-```mermaid
-flowchart LR
-    CR[code-review-agent] -->|approved PR only| DEP[deployment-agent]
-    DEP --> CI[Build, package, promote]
-    CI --> PROD[Production release]
-    PROD --> V[Health, smoke, metric watch]
-    V -->|failure criteria| RB[Rollback]
-    PROD -->|telemetry and feedback| P[product-agent]
-```
+The shipper. Consumes the approved PR and executes CI/CD - build, packaging, environment promotion, deploy to production, post-deploy verification - with rollback as the safety artifact. Output is the live release. Closes the outer loop by routing production telemetry and user feedback to product-agent.
 
-## Inputs
+## How it interacts with other agents
 
-- Approved PR from `code-review-agent`.
-- Versioned source and release configuration.
-- Environment promotion and infrastructure definitions.
-- Secret-manager references, never repository credentials.
-- Predefined verification and rollback criteria.
+- **Upstream:** receives an explicitly approved merged pull request from `code-review-agent`; no other change artifact is a valid release intake.
+- **Downstream:** hands the verified release and deployment record to operations and routes post-launch telemetry and user feedback to `product-agent`.
+- **Outer loop:** post-launch telemetry and user feedback route to `product-agent` for the next cycle.
 
-## Outputs
+## Input artifacts
 
-- The live production release.
-- Signed/versioned packages or deployable artifacts.
-- Deployment record: version, artifact, configuration, environment, and
-  rollback point.
-- Post-deploy health, smoke-test, and metric-watch results.
-- Logs, metrics, traces, alerts, and dashboards feeding the product feedback
-  loop.
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `approved_merged_pr` | Required | `repository_reference` | Reviewed and explicitly approved merged change. |
+| `release_configuration` | Required | `file` | YAML release manifest following references/release_configuration_sample. |
+| `workflow_configuration` | Required | `file` | Production release and pre-release gate configuration. |
 
-## Deployment method
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `pre_deployment_script` | Optional | `file` | Reviewed script run before application deployment, such as an approved Terraform infrastructure apply. |
+| `post_deployment_script` | Optional | `file` | Reviewed script run after deployment, such as an approved database setup, migration, or reference-data population. |
+| `prior_release_state` | Optional | `structured_data` | Current deployment, rollback point, and operational baseline. |
+| `pre_release_evidence` | Optional | `structured_data` | Security, compliance, or advisory red-team evidence. |
 
-The same artifact moves from development through staging to production, with
-configuration-only differences. Infrastructure is managed as code. Rollback
-criteria are defined before deployment and the rollback path is tested.
+## Output artifacts
 
-If `spec_validation.red_team_mode` is `pre-release`, deployment invokes the
-red-team workflow against a confirmed ephemeral environment using synthetic
-data. Its findings are advisory for the current release; confirmed findings
-become blocking only through regression tests merged by a human.
+| Artifact | Type | Purpose |
+|---|---|---|
+| `live_release` | `deployment_reference` | Verified production release or explicit blocked/rolled-back outcome. |
+| `deployment_record` | `structured_data` | Version, artifact, target, approvals, timing, and outcome. |
+| `rollback_artifact` | `structured_data` | Tested rollback point, criteria, and execution result. |
+| `post_deploy_evidence` | `structured_data` | Health, smoke-test, telemetry, and watch-window results. |
 
-## Interactions and boundaries
+## Artifact locations
 
-Deployment cannot bypass test or code-review approval. It does not repair code
-or silently create console-managed infrastructure. Production telemetry and
-user feedback return to `product-agent` for the next cycle.
+No fixed repository output path is declared. Artifacts are returned through the invoking workflow, existing branch or pull request, configured backlog, CI/CD system, or another location explicitly supplied at runtime.
 
-## Vault behavior
+## Usage notes
 
-When enabled, material release approaches, incidents, rollback decisions,
-problems, and implementation notes are recorded as linked semantic notes and
-action-log entries. No secrets, tokens, or credentials may enter the vault.
+- Invoke this agent only within the scope and activation rules defined in [`deployment-agent.md`](../../../agents/deployment-agent/deployment-agent.md).
+- Preserve artifact traceability across handoffs; do not substitute summaries for required source evidence.
+- Follow repository approval, security, validation, and failure-routing rules before declaring the work complete.
 
-## Completion and handoff
+## Documentation source
 
-A deployment completes when the approved artifact is live, verification and
-watch-window checks pass, the deployment/rollback record is complete, and the
-observability feedback path is active. Failed criteria trigger the predefined
-rollback response.
-
-<!-- agent-auditor:inventory:start -->
-
-## Audited agent inventory
-
-- Source: [`deployment-agent`](../../../agents/deployment-agent/deployment-agent.md)
-- Subagents: none
-
-<!-- agent-auditor:inventory:end -->
+This page is synchronized from [the canonical agent contract](../../../agents/deployment-agent/deployment-agent.md) and its companion README. Update the canonical contract first when behavior changes.

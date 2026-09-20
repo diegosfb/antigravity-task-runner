@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Create and configure a Jira Software project",
+    "es": "Crear y configurar un proyecto en Jira Software"
+  },
+  "displayDescription": {
+    "en": "Use when asked to create a Jira Software project, covering company-managed project setup, workflow scheme assignment, and board creation.",
+    "es": "Para crear un proyecto de Jira Software cubriendo configuración de proyecto, esquema de flujo de trabajo y creación de tablero."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Jira",
+    "Project Management",
+    "Planning",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "planning",
+    "phase": "project-setup"
+  }
+}

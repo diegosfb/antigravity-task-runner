@@ -21,7 +21,7 @@ function syncViewMetadata(pkg) {
 
       if (view.id === "antigravityView") {
         const versionedTitle = formatVersionedTitle("Task Runner", version);
-        view.name = versionedTitle;
+        view.name = `v${version}`;
         view.contextualTitle = versionedTitle;
         continue;
       }

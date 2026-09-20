@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Analyze ecommerce unit economics and channel mix",
+    "es": "Analizar economía unitaria de ecommerce y mezcla de canales"
+  },
+  "displayDescription": {
+    "en": "Analyze ecommerce unit economics, channel mix, fulfillment, returns, payments, inventory implications, and growth trade-offs.",
+    "es": "Analiza economía unitaria de ecommerce, mezcla de canales, fulfillment, devoluciones, pagos e implicaciones de inventario."
+  },
+  "version": "1.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Ecommerce",
+    "DTC",
+    "Marketplace",
+    "Unit Economics",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "industry-advisory"
+  }
+}

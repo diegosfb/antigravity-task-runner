@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pricing Strategy"
+  short_description: "Design evidence-led SaaS pricing and packaging"
+  default_prompt: "Use $pricing-strategy to assess this SaaS pricing model and recommend evidence-led experiments."

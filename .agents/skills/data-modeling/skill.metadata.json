@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design conceptual or dimensional data models",
+    "es": "Diseñar modelos de datos conceptuales o dimensionales"
+  },
+  "displayDescription": {
+    "en": "Design conceptual, logical, relational, dimensional, or Data Vault models and evaluate modeling tradeoffs.",
+    "es": "Diseña modelos conceptuales, lógicos, relacionales, dimensionales o Data Vault y evalúa compromisos de modelado."
+  },
+  "version": "1.1.0",
+  "author": "Melodic Software",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Data Modeling",
+    "Schema Design",
+    "Dimensional",
+    "Data Vault",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

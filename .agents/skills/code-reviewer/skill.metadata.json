@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Review code for quality and security",
+    "es": "Revisar código por calidad y seguridad"
+  },
+  "displayDescription": {
+    "en": "Code review specialist for quality, security, performance, and best practices.",
+    "es": "Especialista en revisión de código para calidad, seguridad, rendimiento y mejores prácticas."
+  },
+  "version": "1.0.0",
+  "author": "Jeff Allan",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Code Review",
+    "Quality",
+    "Security",
+    "Software Development",
+    "Best Practices"
+  ],
+  "sdlc": {
+    "process": "code-review",
+    "phase": "quality-assurance"
+  }
+}

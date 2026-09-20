@@ -1,0 +1,4 @@
+interface:
+  display_name: "VTU Estimator"
+  short_description: "Price AI Pod subscriptions from scope"
+  default_prompt: "Use $vtu-estimator to convert this SOW into a gated AI Pod subscription proposal."

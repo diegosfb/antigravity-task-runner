@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Run safe database migrations and schema changes",
+    "es": "Ejecutar migraciones de base de datos y cambios de esquema de forma segura"
+  },
+  "displayDescription": {
+    "en": "Database migration best practices for schema changes, data migrations, rollbacks, and zero-downtime deployments.",
+    "es": "Mejores prácticas para migraciones de bases de datos, cambios de esquema, rollbacks y despliegues sin tiempo de inactividad."
+  },
+  "version": "1.0.0",
+  "author": "Affaan Mustafa — Everything Claude Code",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Database Migrations",
+    "Schema Changes",
+    "Zero-Downtime",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Verify and fix Google Cloud authentication",
+    "es": "Verificar y corregir autenticación de Google Cloud"
+  },
+  "displayDescription": {
+    "en": "Guidelines for identifying and resolving missing Google Cloud authentication.",
+    "es": "Guía para identificar y resolver problemas de autenticación faltante en Google Cloud."
+  },
+  "version": "v1",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "GCP",
+    "Authentication",
+    "Cloud",
+    "DevOps",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "cloud-infrastructure"
+  }
+}

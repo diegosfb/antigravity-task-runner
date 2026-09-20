@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Analyze property-technology products and markets",
+    "es": "Analizar productos y mercados de tecnología inmobiliaria"
+  },
+  "displayDescription": {
+    "en": "Analyze property-technology segments, actors, transaction flows, MLS and brokerage dependencies, operating models, and data rights.",
+    "es": "Analiza segmentos de tecnología inmobiliaria, actores, flujos de transacción, dependencias de MLS y corretaje y modelos operativos."
+  },
+  "version": "1.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB TechnicalAdvisorLib",
+  "tags": [
+    "Proptech",
+    "Real Estate",
+    "MLS",
+    "Brokerage",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "industry-advisory"
+  }
+}

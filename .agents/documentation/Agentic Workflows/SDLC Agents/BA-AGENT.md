@@ -1,79 +1,50 @@
 # BA Agent
 
-The `ba-agent` owns the **what**. It translates the product vision into
-functional specifications and acceptance criteria that downstream agents can
-design, plan, implement, and verify without guessing.
+> Source contract: [`ba-agent.md`](../../../agents/ba-agent/ba-agent.md). The source contract is authoritative if this summary and the contract differ.
 
-## Workflow position
+## What it does
 
-```mermaid
-flowchart LR
-    P[product-agent] -->|PRD| BA[ba-agent]
-    BA -->|specifications| A[architect-agent]
-    BA -->|acceptance criteria| PP[project-planner-agent]
-    BA -.->|original acceptance criteria| T[test-agent]
-    T -->|criterion is wrong or ambiguous| BA
-```
+Owns the WHAT of the project - translates product vision into concrete, testable requirements. Produces specs (to architect-agent) and acceptance criteria (to project-planner-agent). The acceptance criteria are the contract the test-agent later verifies against. Use whenever a feature idea must become an unambiguous specification.
 
-## Inputs
+## How it interacts with other agents
 
-The primary input is `docs/project_description/PRD.md`, supported by other
-material under `docs/project_description/`. If no PRD exists, the BA requests
-one or routes the work through `product-agent` before creating specifications.
+- **Upstream:** receives the approved PRD and supporting evidence from `product-agent` after the PRD approval gate.
+- **Downstream:** hands approved specifications to `architect-agent` and their acceptance criteria to `project-planner-agent` after the specifications approval gate.
+- **Downstream contract:** test-agent verifies code against YOUR acceptance criteria, not the developer's interpretation. Write them testable.
 
-During requirements analysis, stakeholder answers and meeting evidence may
-resolve behavioral details. Unresolved questions remain explicit open
-questions; they are never filled with assumptions.
+## Input artifacts
 
-## Outputs
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `approved_prd` | Required | `file` | Approved product requirements and decisions. |
+| `workflow_configuration` | Required | `file` | Specifications approval-gate configuration. |
 
-| Output | Consumer | Purpose |
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `supporting_evidence` | Optional | `file_or_directory` | Reviewed research, meeting analysis, and project context. |
+| `existing_specifications` | Optional | `directory` | Existing specifications to reconcile or update. |
+| `alternative_input_contract` | Optional | `text_or_files` | Developed conversation and verified repository evidence for explicit to-spec runs. |
+
+## Output artifacts
+
+| Artifact | Type | Purpose |
 |---|---|---|
-| Feature specification in `docs/specs/<feature-name>.md` | `architect-agent` | Defines actors, triggers, flows, validation, state/data changes, permissions, and edge cases. |
-| Measurable acceptance criteria | `project-planner-agent` and later `test-agent` | Establishes the behavioral contract for planning and independent verification. |
-| Open Questions section | Product owners and stakeholders | Makes unresolved requirements visible and blocks invention. |
+| `feature_specifications` | `directory` | Validated specifications for every in-scope feature. |
+| `acceptance_criteria` | `structured_data` | Testable criteria for planning and verification. |
 
-Acceptance criteria use Given/When/Then when appropriate and must be specific
-enough to map to tests.
+## Artifact locations
 
-## Ownership boundaries
+The contract declares or references these repository locations:
 
-The BA writes requirements, not code, architecture, estimates, or task
-breakdowns. It does not reinterpret the product strategy or silently overwrite
-an existing specification. Product ambiguity returns to `product-agent`;
-technical decisions go to `architect-agent`; sequencing and estimates belong to
-`project-planner-agent`.
+- `docs/specs/<feature-name>.md`
+- `references/spec-template.md`
 
-## Agent interactions
+## Usage notes
 
-- Receives the product vision from `product-agent`.
-- Sends specifications to `architect-agent` for structural design.
-- Sends acceptance criteria to `project-planner-agent` for traceable backlog
-  construction.
-- Provides the original criteria against which `test-agent` verifies the built
-  behavior.
-- Resolves or escalates criteria that testing identifies as incorrect or
-  ambiguous; tests are not weakened to conceal a requirements problem.
+- Invoke this agent only within the scope and activation rules defined in [`ba-agent.md`](../../../agents/ba-agent/ba-agent.md).
+- Preserve artifact traceability across handoffs; do not substitute summaries for required source evidence.
+- Follow repository approval, security, validation, and failure-routing rules before declaring the work complete.
 
-## Vault behavior
+## Documentation source
 
-When enabled, the vault mirrors canonical specifications into `Specs/` and
-links them to the PRD, ADRs, backlog items, reviews, and tests. Material
-requirements decisions, open issues, and specification conclusions are
-recorded as semantic vault events and dated action-log entries.
-
-## Completion and handoff
-
-A BA handoff is complete when each feature has a structured specification,
-testable acceptance criteria, explicit edge cases and permissions, and no
-hidden ambiguity. Anything unresolved is visible in Open Questions rather than
-being passed downstream as an assumption.
-
-<!-- agent-auditor:inventory:start -->
-
-## Audited agent inventory
-
-- Source: [`ba-agent`](../../../agents/ba-agent/ba-agent.md)
-- Subagents: none
-
-<!-- agent-auditor:inventory:end -->
+This page is synchronized from [the canonical agent contract](../../../agents/ba-agent/ba-agent.md) and its companion README. Update the canonical contract first when behavior changes.

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design a customer discovery interview script",
+    "es": "Diseñar un guión de entrevista de descubrimiento de cliente"
+  },
+  "displayDescription": {
+    "en": "Design customer discovery interview scripts using Jobs-to-be-Done and Mom Test frameworks.",
+    "es": "Diseña guiones de entrevista de descubrimiento usando frameworks de Jobs-to-be-Done y Mom Test."
+  },
+  "version": "1.0.0",
+  "author": "Borghei",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Customer-Interviews",
+    "Discovery",
+    "Jobs-To-Be-Done",
+    "Mom-Test",
+    "Product-Discovery"
+  ],
+  "sdlc": {
+    "process": "product-discovery",
+    "phase": "user-research"
+  }
+}

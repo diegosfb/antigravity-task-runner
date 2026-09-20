@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Content Security"
+  short_description: "Statically scan agent assets for malicious behavior"
+  default_prompt: "Use $agent-content-security to scan the .agents tree for malicious instructions, unsafe scripts, secrets, and supply-chain risks."

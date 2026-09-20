@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "I need to check if a requirement is architecturally feasible",
+    "es": "Necesito verificar si un requerimiento es viable según la arquitectura"
+  },
+  "displayDescription": {
+    "en": "Validate that the proposed initial architecture (ASD) fits the initial requirements (PRD) at project startup, before delivery begins.",
+    "es": "Valida que la arquitectura inicial propuesta (ASD) se ajuste a los requerimientos iniciales (PRD) al inicio del proyecto, antes de comenzar el desarrollo."
+  },
+  "version": "1.0.1",
+  "author": "Globant Engineering Studio",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Architecture",
+    "Validation",
+    "Requirements",
+    "Analysis"
+  ],
+  "sdlc": {
+    "process": "project-startup",
+    "phase": "setup-and-validation"
+  }
+}

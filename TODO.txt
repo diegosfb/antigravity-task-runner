@@ -81,3 +81,13 @@ Should use the commit item instead of asking for a message
 
 
 1- USE /Applications/kdiff3.app/Contents/MacOS/kdiff3 file1.txt file2.txt to compare files.
+
+
+
+Group Add Backlog Item, Take Backlog Item, Mark Backlog Item and Assign Backlog item To Agent under a collapsable/expandable item called Backlog Management
+
+
+Instead of Deploy Agentic Libreries and Deploy SDLC, Deploy ... they shoud be called Install Agentic Libreries and the icon should be the cloud with the arrow pointing down
+
+
+Add the Auxiliary Agents and Skills section

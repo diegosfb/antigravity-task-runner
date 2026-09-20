@@ -12,6 +12,9 @@ import {
 } from "./cloudArchitectReview";
 import { ADLC_AGENT_CATALOG, adlcAgentExists, getAdlcAgentRelativePath } from "./adlcAgents";
 
+const HIDDEN_ADLC_AGENT_ITEM_IDS = new Set(["documentation", "spec-validation"]);
+const ADLC_AGENT_ICON_COLOR = new vscode.ThemeColor("charts.red");
+
 const execAsync = promisify(exec);
 
 export type NodeKind = "category" | "agent" | "workflow" | "folder" | "separator" | "action" | "plugin" | "skill";
@@ -706,7 +709,7 @@ function getQuickActionItems(): NodeItem[] {
     { kind: "category", label: "ADLC Agents" },
     vscode.TreeItemCollapsibleState.Collapsed
   );
-  adlcAgents.iconPath = new vscode.ThemeIcon("organization", new vscode.ThemeColor("charts.purple"));
+  adlcAgents.iconPath = new vscode.ThemeIcon("organization", ADLC_AGENT_ICON_COLOR);
   adlcAgents.tooltip = "Run an ADLC agent from .agents/agents with a chosen harness, model, and input artifacts.";
   items.push(adlcAgents);
 
@@ -987,17 +990,14 @@ function getRepositoryActionItems(): NodeItem[] {
 function getAdlcAgentItems(): NodeItem[] {
   const rootPath = getRootPath();
   const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
-  const agentColor = new vscode.ThemeColor("charts.purple");
-  const unavailableColor = new vscode.ThemeColor("disabledForeground");
-
-  return ADLC_AGENT_CATALOG.map((entry) => {
+  return ADLC_AGENT_CATALOG.filter((entry) => !HIDDEN_ADLC_AGENT_ITEM_IDS.has(entry.id)).map((entry) => {
     const available = repoRoot ? adlcAgentExists(repoRoot, entry.folder) : false;
     const relativePath = getAdlcAgentRelativePath(entry.folder);
     const item = new NodeItem(
       { kind: "action", label: entry.label },
       vscode.TreeItemCollapsibleState.None
     );
-    item.iconPath = new vscode.ThemeIcon("robot", available ? agentColor : unavailableColor);
+    item.iconPath = new vscode.ThemeIcon("robot", ADLC_AGENT_ICON_COLOR);
     item.tooltip = available
       ? `Run ${entry.label} (${relativePath}) with a chosen harness, model, and input artifacts.`
       : `${relativePath} was not found. Deploy the SDLC library to enable this agent.`;

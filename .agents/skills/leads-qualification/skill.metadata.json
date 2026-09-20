@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Define ICP and score leads for qualification",
+    "es": "Definir ICP y puntuar leads para calificación"
+  },
+  "displayDescription": {
+    "en": "Define and calibrate an Ideal Customer Profile, then deterministically score supplied account facts with explicit matching rules.",
+    "es": "Define y calibra un Perfil de Cliente Ideal, luego puntúa de forma determinista los hechos de cuentas con reglas de coincidencia explícitas."
+  },
+  "version": "1.0.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Leads",
+    "Sales-Qualification",
+    "ICP",
+    "Business-Growth",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "sales"
+  }
+}

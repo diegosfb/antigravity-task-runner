@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Tailor resume and cover letter to a job description",
+    "es": "Adaptar currículum y carta de presentación a una oferta de trabajo"
+  },
+  "displayDescription": {
+    "en": "Tailor a truthful resume or CV and supporting cover-letter evidence to a specific job description.",
+    "es": "Adapta un currículum veraz y carta de presentación con evidencia a una descripción de trabajo específica."
+  },
+  "version": "1.1.0",
+  "author": "DSFB",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Resume",
+    "Job Application",
+    "HR",
+    "Career",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "hr",
+    "phase": "recruitment"
+  }
+}

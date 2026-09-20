@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design edge computing and CDN architecture",
+    "es": "Diseñar arquitectura de edge computing y CDN"
+  },
+  "displayDescription": {
+    "en": "Edge computing and CDN architecture reference for CDN strategies, edge deployment, global latency optimization, and multi-region distribution.",
+    "es": "Referencia de arquitectura de edge computing y CDN para estrategias de CDN, despliegue en el edge y optimización de latencia global."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Edge Computing",
+    "CDN",
+    "Architecture",
+    "Multi-Region",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "architecture",
+    "phase": "design"
+  }
+}

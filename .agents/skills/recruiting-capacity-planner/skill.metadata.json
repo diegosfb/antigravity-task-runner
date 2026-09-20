@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Plan staffing fulfillment and recruiting campaigns",
+    "es": "Planificar cumplimiento de personal y campañas de reclutamiento"
+  },
+  "displayDescription": {
+    "en": "Plan staffing fulfillment for professional-services demand using supplied demand and optional bench/capacity files.",
+    "es": "Planifica el cumplimiento de personal para demanda de servicios profesionales usando archivos de demanda y capacidad."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Recruiting",
+    "Capacity Planning",
+    "Staffing",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "delivery",
+    "phase": "capacity-planning"
+  }
+}

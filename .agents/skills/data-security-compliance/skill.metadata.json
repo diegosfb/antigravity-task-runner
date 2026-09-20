@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design data-layer security and compliance controls",
+    "es": "Diseñar controles de seguridad y cumplimiento de la capa de datos"
+  },
+  "displayDescription": {
+    "en": "Design or implement data-layer security, privacy, and compliance controls for sensitive data.",
+    "es": "Diseña o implementa controles de seguridad, privacidad y cumplimiento para datos sensibles."
+  },
+  "version": "1.1.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Security",
+    "Privacy",
+    "Compliance",
+    "Data",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "security"
+  }
+}

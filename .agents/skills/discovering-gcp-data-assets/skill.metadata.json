@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Discover and inspect GCP data assets",
+    "es": "Descubrir e inspeccionar activos de datos en GCP"
+  },
+  "displayDescription": {
+    "en": "Discover and inspect GCP data assets including BigQuery datasets, tables, and Data Catalog entries.",
+    "es": "Descubre e inspecciona activos de datos de GCP incluyendo datasets, tablas y entradas del Catálogo de Datos de BigQuery."
+  },
+  "version": "v4",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "GCP",
+    "BigQuery",
+    "Data Discovery",
+    "Data Catalog",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "cloud-infrastructure"
+  }
+}

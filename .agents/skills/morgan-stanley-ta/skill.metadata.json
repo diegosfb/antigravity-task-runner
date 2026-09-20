@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Perform technical analysis on stocks and crypto",
+    "es": "Realizar análisis técnico de acciones y criptomonedas"
+  },
+  "displayDescription": {
+    "en": "Full technical analysis of any stock, ETF, or crypto asset in the style of a Morgan Stanley senior technical strategist.",
+    "es": "Análisis técnico completo de cualquier acción, ETF o criptoactivo al estilo de un estratega técnico senior de Morgan Stanley."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Technical Analysis",
+    "Finance",
+    "Trading",
+    "Stocks",
+    "Crypto"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "financial-analysis"
+  }
+}

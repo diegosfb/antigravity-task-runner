@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Make AI-generated text read as human-written",
+    "es": "Hacer que el texto generado por IA suene escrito por humanos"
+  },
+  "displayDescription": {
+    "en": "Convert LLM-generated text into text that reads as human-written, changing style, structure, and content as little as possible.",
+    "es": "Convierte texto generado por LLM en texto que se lee como escrito por humanos, cambiando estilo y estructura lo menos posible."
+  },
+  "version": "2.8.0",
+  "author": "Local / source not recorded",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Writing",
+    "Content",
+    "AI Text",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "content",
+    "phase": "writing"
+  }
+}

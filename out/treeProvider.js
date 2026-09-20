@@ -11,6 +11,9 @@ const utils_1 = require("./utils");
 const git_1 = require("./git");
 const terminal_1 = require("./terminal");
 const cloudArchitectReview_1 = require("./cloudArchitectReview");
+const adlcAgents_1 = require("./adlcAgents");
+const HIDDEN_ADLC_AGENT_ITEM_IDS = new Set(["documentation", "spec-validation"]);
+const ADLC_AGENT_ICON_COLOR = new vscode.ThemeColor("charts.red");
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
 class NodeItem extends vscode.TreeItem {
     constructor(payload, collapsibleState) {
@@ -69,6 +72,9 @@ class AntigravityViewProvider {
         }
         if (element.kind === "category" && element.label === "Deploy Agentic Libraries") {
             return getDeployAgenticLibrariesItems();
+        }
+        if (element.kind === "category" && element.label === "ADLC Agents") {
+            return getAdlcAgentItems();
         }
         if (element.kind === "category" && element.label === "Repository Actions") {
             return getRepositoryActionItems();
@@ -555,6 +561,10 @@ function getQuickActionItems() {
         title: "Set Feature Flag for changes"
     };
     items.push(setFeatureFlag);
+    const adlcAgents = new NodeItem({ kind: "category", label: "ADLC Agents" }, vscode.TreeItemCollapsibleState.Collapsed);
+    adlcAgents.iconPath = new vscode.ThemeIcon("organization", ADLC_AGENT_ICON_COLOR);
+    adlcAgents.tooltip = "Run an ADLC agent from .agents/agents with a chosen harness, model, and input artifacts.";
+    items.push(adlcAgents);
     const addBacklogItem = new NodeItem({ kind: "action", label: "Add Backlog Item" }, vscode.TreeItemCollapsibleState.None);
     addBacklogItem.iconPath = new vscode.ThemeIcon("add", JIRA_ACTION_COLOR);
     addBacklogItem.tooltip = "Create a backlog item in docs/backlog, and in Jira too when a project is connected.";
@@ -571,6 +581,14 @@ function getQuickActionItems() {
         title: "Take Backlog Item (Assign)"
     };
     items.push(takeBacklogItemAssign);
+    const markBacklogItemCompleted = new NodeItem({ kind: "action", label: "Mark Backlog Item as Completed" }, vscode.TreeItemCollapsibleState.None);
+    markBacklogItemCompleted.iconPath = new vscode.ThemeIcon("pass", JIRA_ACTION_COLOR);
+    markBacklogItemCompleted.tooltip = "Mark a backlog item (Jira or local) as completed.";
+    markBacklogItemCompleted.command = {
+        command: "antigravity.completeJiraItem",
+        title: "Mark Backlog Item as Completed"
+    };
+    items.push(markBacklogItemCompleted);
     if (!savedJiraProjectKey) {
         const selectOrCreateJiraProject = new NodeItem({ kind: "action", label: "Select/Set Jira Project" }, vscode.TreeItemCollapsibleState.None);
         selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", JIRA_ACTION_COLOR);
@@ -579,15 +597,6 @@ function getQuickActionItems() {
             title: "Select/Set Jira Project"
         };
         items.push(selectOrCreateJiraProject);
-    }
-    else {
-        const completeJiraItem = new NodeItem({ kind: "action", label: "Jira Item Completed" }, vscode.TreeItemCollapsibleState.None);
-        completeJiraItem.iconPath = new vscode.ThemeIcon("pass", JIRA_ACTION_COLOR);
-        completeJiraItem.command = {
-            command: "antigravity.completeJiraItem",
-            title: "Jira Item Completed"
-        };
-        items.push(completeJiraItem);
     }
     const incrementMajor = new NodeItem({ kind: "action", label: "Increment Major Version" }, vscode.TreeItemCollapsibleState.None);
     incrementMajor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
@@ -741,6 +750,27 @@ function getRepositoryActionItems() {
     };
     items.push(agenticReviewOfMerge);
     return items;
+}
+function getAdlcAgentItems() {
+    const rootPath = (0, utils_1.getRootPath)();
+    const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : undefined;
+    return adlcAgents_1.ADLC_AGENT_CATALOG.filter((entry) => !HIDDEN_ADLC_AGENT_ITEM_IDS.has(entry.id)).map((entry) => {
+        const available = repoRoot ? (0, adlcAgents_1.adlcAgentExists)(repoRoot, entry.folder) : false;
+        const relativePath = (0, adlcAgents_1.getAdlcAgentRelativePath)(entry.folder);
+        const item = new NodeItem({ kind: "action", label: entry.label }, vscode.TreeItemCollapsibleState.None);
+        item.iconPath = new vscode.ThemeIcon("robot", ADLC_AGENT_ICON_COLOR);
+        item.tooltip = available
+            ? `Run ${entry.label} (${relativePath}) with a chosen harness, model, and input artifacts.`
+            : `${relativePath} was not found. Deploy the SDLC library to enable this agent.`;
+        if (!available)
+            item.description = "not deployed";
+        item.command = {
+            command: "antigravity.runAdlcAgent",
+            title: entry.label,
+            arguments: [entry.id]
+        };
+        return item;
+    });
 }
 function getDeployAgenticLibrariesItems() {
     const deployColor = new vscode.ThemeColor("charts.blue");

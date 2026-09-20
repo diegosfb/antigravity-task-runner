@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Design or review software architecture",
+    "es": "Diseñar o revisar arquitectura de software"
+  },
+  "displayDescription": {
+    "en": "Design or review software architecture, document ADRs, evaluate technology and system-pattern trade-offs, analyze dependencies and layering, and generate architecture diagrams.",
+    "es": "Diseña o revisa arquitectura de software, documenta ADRs, evalúa compromisos tecnológicos y genera diagramas."
+  },
+  "version": "2.0.0",
+  "author": "Jeff Allan + Borghei",
+  "package": "DSFB SLDC",
+  "tags": [
+    "System-Design",
+    "Architecture",
+    "Adr",
+    "Scalability",
+    "Distributed-Systems",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "architecture",
+    "phase": "design"
+  }
+}

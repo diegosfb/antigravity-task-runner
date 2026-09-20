@@ -1,0 +1,44 @@
+# YAML release configuration sample.
+# Replace placeholders with version-controlled, reviewed repository paths and
+# immutable artifact identifiers. Never place credentials or sensitive values
+# in this file; reference workload identity or an approved secret manager.
+
+version: 1
+
+release:
+  environment: production
+  artifact:
+    kind: container_image
+    reference: ghcr.io/example/application
+    digest: sha256:replace-with-reviewed-immutable-digest
+  pipeline:
+    provider: github-actions
+    configuration: .github/workflows/deploy.yml
+
+infrastructure:
+  configuration: infra/terraform/production
+  reviewed_plan_artifact: artifacts/terraform-production-plan
+  state_backend: managed-remote-backend
+
+deployment:
+  strategy: rolling
+  configuration: deploy/production.yaml
+
+rollback:
+  target: previous-production-release
+  procedure: scripts/rollback.sh
+  triggers:
+    - readiness_check_failed
+    - smoke_test_failed
+    - error_rate_above_threshold
+
+verification:
+  health_checks:
+    - https://service.example.com/health
+  smoke_tests:
+    - tests/smoke/production.postman_collection.json
+  watch_window_minutes: 30
+
+authorization:
+  production_release_gate: required
+  access_method: workload_identity

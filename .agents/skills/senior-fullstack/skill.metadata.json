@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Scaffold and implement fullstack web applications",
+    "es": "Generar e implementar aplicaciones web fullstack"
+  },
+  "displayDescription": {
+    "en": "Fullstack development toolkit with project scaffolding for Next.js, FastAPI, MERN, and Django stacks.",
+    "es": "Kit de desarrollo fullstack con scaffolding de proyectos para stacks Next.js, FastAPI, MERN y Django."
+  },
+  "version": "1.0.0",
+  "author": "Borghei",
+  "package": "DSFB SLDC",
+  "tags": [
+    "React",
+    "Nodejs",
+    "API-Design",
+    "System-Architecture",
+    "Fullstack",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "implementation"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Write Playwright E2E and browser automation tests",
+    "es": "Escribir pruebas E2E y automatización de navegador con Playwright"
+  },
+  "displayDescription": {
+    "en": "Playwright E2E testing specialist for browser automation, E2E tests, Page Object Model, and visual testing.",
+    "es": "Especialista en pruebas E2E con Playwright para automatización de navegador, Page Object Model y pruebas visuales."
+  },
+  "version": "1.0.0",
+  "author": "Jeff Allan",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Playwright",
+    "E2E Testing",
+    "Browser Testing",
+    "Automation",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "testing",
+    "phase": "quality-assurance"
+  }
+}

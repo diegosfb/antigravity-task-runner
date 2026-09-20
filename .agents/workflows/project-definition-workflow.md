@@ -100,27 +100,30 @@ the complete architecture package and pass its approval gate before UX design.
 Pass the approved PRD, relevant specifications, architecture, and ADRs to
 `ux-agent`. UX is part of solution definition and backlog definition: it owns
 user flows, wireframes, interaction states, component behavior, responsive
-behavior, and accessibility requirements, and converts them into design tasks
-for the planner.
+behavior, and accessibility requirements. It records them in the design
+document and embeds implementation-relevant requirements into the affected
+specifications and user stories.
 
 Every user-facing flow must cover applicable empty, loading, error, and success
-states. Every design task must trace to its feature and architectural
+states. Every affected specification must link to its design-document section and architectural
 constraint. If UX exposes an architectural conflict, return it to
 `architect-agent`, update affected artifacts, and repeat their validation and
 approval gates.
 
-For a project with no human-facing experience, still invoke `ux-agent` to
-record a validated not-applicable decision and emit no invented UI tasks.
+For a project with no human-facing experience, leave the design document absent
+or empty and leave the specifications unchanged. Do not create a separate
+applicability or disposition artifact.
 
-Validate the design package and pass the UX/UI approval gate.
+For user-facing work, validate the design document and updated specifications,
+then pass the UX/UI approval gate.
 
 ## Stage 5 — Backlog definition
 
-Pass all three approved planning streams to `project-planner-agent`:
+Pass both approved planning streams to `project-planner-agent`:
 
-1. Acceptance criteria and stories from `ba-agent`.
+1. Acceptance criteria and stories from `ba-agent`, including UX and
+   accessibility requirements embedded by `ux-agent` where applicable.
 2. Technical tasks and dependency edges from `architect-agent`.
-3. Design and accessibility tasks from `ux-agent`.
 
 The planner resolves conflicts, preserves traceability, declares dependencies,
 orders work by dependency then priority and risk, and assigns complexity and

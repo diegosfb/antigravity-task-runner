@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Build and orchestrate GCP data pipelines",
+    "es": "Construir y orquestar pipelines de datos en GCP"
+  },
+  "displayDescription": {
+    "en": "Primary entry point for building, managing, and orchestrating data pipelines on GCP.",
+    "es": "Punto de entrada principal para construir, gestionar y orquestar pipelines de datos en GCP."
+  },
+  "version": "v1",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "GCP",
+    "Data Pipelines",
+    "BigQuery",
+    "Orchestration",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "cloud-infrastructure"
+  }
+}

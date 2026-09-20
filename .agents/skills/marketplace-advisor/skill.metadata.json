@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Analyze marketplace liquidity and business model",
+    "es": "Analizar liquidez y modelo de negocio de marketplace"
+  },
+  "displayDescription": {
+    "en": "Analyze two- and multi-sided marketplace liquidity, supply-demand constraints, matching, trust, disintermediation, and network effects.",
+    "es": "Analiza liquidez de marketplaces de dos y múltiples lados, restricciones de oferta-demanda, matching, confianza y efectos de red."
+  },
+  "version": "1.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Marketplace",
+    "Network Effects",
+    "Business-Growth",
+    "Unit Economics",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "industry-advisory"
+  }
+}

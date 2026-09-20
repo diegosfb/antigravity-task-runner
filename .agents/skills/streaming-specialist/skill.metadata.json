@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Design real-time event streaming systems",
+    "es": "Diseñar sistemas de streaming de eventos en tiempo real"
+  },
+  "displayDescription": {
+    "en": "Design or operate real-time event streaming and stateful processing systems using Kafka, Flink, Spark Structured Streaming, or AWS Kinesis.",
+    "es": "Diseña u opera sistemas de streaming de eventos en tiempo real usando Kafka, Flink, Spark Structured Streaming o AWS Kinesis."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+"package": "DSFB TechnicalAdvisorLib",
+  "tags": [
+    "Streaming",
+    "Kafka",
+    "Flink",
+    "Real-Time",
+    "Event-Driven",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

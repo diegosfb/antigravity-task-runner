@@ -1,0 +1,19 @@
+{
+  "displayName": {
+    "en": "Documentation Agent"
+  },
+  "displayDescription": {
+    "en": "Creates implementation-grounded code documentation after tests pass and before code review. Use for a completed task that needs accurate inline, module, API, or operational documentation tied to the verified revision."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Documentation",
+    "Agent"
+  ],
+  "sdlc": {
+    "process": "sdlc",
+    "phase": "documentation"
+  }
+}

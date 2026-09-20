@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Extract structured context from meeting recordings",
+    "es": "Extraer contexto estructurado de grabaciones de reuniones"
+  },
+  "displayDescription": {
+    "en": "Extract and structure meeting context from audio, video, or transcripts into actionable context packs.",
+    "es": "Extrae y estructura el contexto de reuniones desde audio, video o transcripciones en paquetes de contexto accionables."
+  },
+  "version": "1.1.0",
+  "author": "Globant AIPods team",
+  "package": ["DSFB GeneralPurposeLib", "DSFB SLDC"],
+  "tags": [
+    "Meetings",
+    "Transcription",
+    "Context",
+    "Audio",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "productivity",
+    "phase": "meetings"
+  }
+}

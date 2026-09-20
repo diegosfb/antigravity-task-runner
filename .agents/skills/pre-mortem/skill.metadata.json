@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Run a pre-mortem risk analysis on a plan",
+    "es": "Ejecutar un análisis de pre-mortem sobre un plan"
+  },
+  "displayDescription": {
+    "en": "Pre-mortem risk analysis expert that classifies risks as Tigers, Paper Tigers, and Elephants to surface launch-blocking issues before they happen.",
+    "es": "Experto en análisis de pre-mortem que clasifica riesgos como Tigres, Tigres de Papel y Elefantes para detectar problemas antes de que ocurran."
+  },
+  "version": "1.0.0",
+  "author": "Borghei",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Pre-Mortem",
+    "Risk-Analysis",
+    "Product-Discovery",
+    "Gary-Klein",
+    "Business & Finance"
+  ],
+  "sdlc": {
+    "process": "product-discovery",
+    "phase": "risk-analysis"
+  }
+}

@@ -1,49 +1,41 @@
 # Documentation Agent
 
-`documentation-agent` documents one verified implementation task after
-`spec-validation-agent` confirms CONFORMANT and before `code-review-agent`
-begins review.
+> Source contract: [`documentation-agent.md`](../../../agents/documentation-agent/documentation-agent.md). The source contract is authoritative if this summary and the contract differ.
 
-## Workflow position
+## What it does
 
-```mermaid
-flowchart LR
-    T[test-agent PASS] --> SV[spec-validation-agent]
-    SV -->|CONFORMANT| D[documentation-agent]
-    SV -. DRIFT .-> DEV[developer-agent]
-    D -->|documented revision| SEC[security-check-agent]
-    SEC -->|PASS| R[code-review-agent]
-    D -->|behavior conflict| DEV[developer-agent]
-```
+Creates implementation-grounded code documentation after tests pass and before code review. Use for a completed task that needs accurate inline, module, API, or operational documentation tied to the verified revision.
 
-## Inputs
+## How it interacts with other agents
 
-- The exact tested, spec-conformant task revision and current PASS evidence.
-- Conformance approval from `spec-validation-agent` (DOC runs only after SPEC
-  confirms CONFORMANT).
-- Its backlog item, specification, acceptance criteria, ADRs, and UX constraints.
-- Repository documentation conventions.
+- **Role:** `agent`.
 
-## Outputs
+- **Declared interaction points:** `test-agent`, `code-review-agent`, `developer-agent`. The source contract defines the trigger, evidence, and handoff direction for each interaction.
 
-The same task revision with accurate required code documentation, or a justified
-no-change record, plus a traceable handoff for code review.
+## Input artifacts
 
-## Ownership boundaries
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `verified_implementation` | Required | `repository_state` | Exact task revision with test-agent PASS evidence. |
+| `governing_artifacts` | Required | `files_or_structured_data` | Task, specification, ADR, UX, and acceptance-criteria context. |
 
-The agent owns documentation accuracy, not implementation behavior. It uses the
-existing task branch and PR and never creates a separate documentation PR.
+## Output artifacts
 
-## Completion and handoff
+| Artifact | Type | Purpose |
+|---|---|---|
+| `documented_revision` | `repository_state` | Same verified task revision with accurate scoped documentation. |
+| `documentation_handoff` | `structured_data` | Documentation changes and traceability for code review. |
 
-Required documentation is validated against the tested implementation and sent
-to `code-review-agent`. Executable changes return through development and testing.
+## Artifact locations
 
-<!-- agent-auditor:inventory:start -->
+No fixed repository output path is declared. Artifacts are returned through the invoking workflow, existing branch or pull request, configured backlog, CI/CD system, or another location explicitly supplied at runtime.
 
-## Audited agent inventory
+## Usage notes
 
-- Source: [`documentation-agent`](../../../agents/documentation-agent/documentation-agent.md)
-- Subagents: none
+- Invoke this agent only within the scope and activation rules defined in [`documentation-agent.md`](../../../agents/documentation-agent/documentation-agent.md).
+- Preserve artifact traceability across handoffs; do not substitute summaries for required source evidence.
+- Follow repository approval, security, validation, and failure-routing rules before declaring the work complete.
 
-<!-- agent-auditor:inventory:end -->
+## Documentation source
+
+This page is synchronized from [the canonical agent contract](../../../agents/documentation-agent/documentation-agent.md) and its companion README. Update the canonical contract first when behavior changes.

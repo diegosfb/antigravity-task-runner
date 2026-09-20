@@ -1,43 +1,32 @@
 # Architecture Review Agent
 
-`architecture-review-agent` is the independent architecture gate between
-`architect-agent` and `project-planner-agent`.
+## What it does
 
-## Workflow position
+The Architecture Review Agent independently evaluates an existing architecture package against the approved product definition, specifications, architectural guidelines, and repository constraints. It produces review findings without rewriting the architecture itself.
 
-```mermaid
-flowchart LR
-    A[architect-agent] -->|architecture package| R[architecture-review-agent]
-    R -->|REWORK| A
-    R -->|APPROVED| P[project-planner-agent]
-```
+## How it interacts with other agents
 
-## Inputs
+`architect-agent` produces or expands the architecture package. Architecture Review returns evidence-based findings to that agent for correction or hands an approved package to `project-planner-agent`. `llm-judge-agent` may provide advisory cross-model feedback but never replaces the review verdict.
 
-- The exact architecture document, ADR set, editable diagrams, and technical decomposition.
-- The approved PRD and BA specification package, including reconciled UX output when applicable.
-- Binding repository engineering and security guidance.
+## Input artifacts
 
-## Outputs
+| Artifact | Requirement | Purpose |
+|---|---|---|
+| Existing Architecture Package | Required | Architecture folder containing the architecture document, ADRs, diagrams, and technical decomposition under review. |
+| Specification Directory or File | Required | Defines the approved behavior and constraints the architecture must satisfy. |
+| PRD | Optional | Supplies product goals, users, constraints, and success measures. |
+| Architecture Guidelines | Optional | Supplies additional binding engineering or platform guidance. |
 
-An evidence-based `APPROVED` or `REWORK` record tied to exact artifact versions.
-Planning is blocked until the current package is approved.
+## Output artifacts
 
-## Ownership boundaries
+| Artifact | Purpose |
+|---|---|
+| Review Findings | Evidence-based approval or rework findings tied to the exact architecture package version. |
 
-The reviewer owns the verdict; `architect-agent` owns architecture content and
-corrections. This review does not replace optional cross-model advice.
+## Artifact locations
+
+The architecture package remains in `docs/architecture/`. Review findings identify the reviewed revision and return through the active workflow or configured review location; the screen does not declare a fixed output file.
 
 ## Completion and handoff
 
-Approval hands the reviewed technical decomposition to `project-planner-agent`.
-A material architecture change invalidates the verdict.
-
-<!-- agent-auditor:inventory:start -->
-
-## Audited agent inventory
-
-- Source: [`architecture-review-agent`](../../../agents/architecture-review-agent/architecture-review-agent.md)
-- Subagents: none
-
-<!-- agent-auditor:inventory:end -->
+Planning remains blocked while material findings are unresolved. Any material architecture change invalidates the prior verdict and requires review of the revised package.

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Partnerships Architect"
+  short_description: "Design and evaluate strategic partnerships"
+  default_prompt: "Use $partnerships-architect to evaluate this partnership and recommend whether to proceed, pilot, redesign, defer, or decline."
+policy:
+  allow_implicit_invocation: true

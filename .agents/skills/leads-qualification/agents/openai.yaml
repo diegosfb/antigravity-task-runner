@@ -1,0 +1,6 @@
+interface:
+  display_name: "Lead Qualification"
+  short_description: "Score supplied accounts against a versioned ICP"
+  default_prompt: "Use $leads-qualification to validate this ICP and transparently score these sourced account facts."
+policy:
+  allow_implicit_invocation: true

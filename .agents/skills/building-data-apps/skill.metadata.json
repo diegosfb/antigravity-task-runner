@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Architect and build data dashboards and reports",
+    "es": "Diseñar y construir dashboards e informes de datos"
+  },
+  "displayDescription": {
+    "en": "Architect high-quality data dashboards and interactive reports using the appropriate framework.",
+    "es": "Diseña dashboards de datos de alta calidad e informes interactivos usando el framework apropiado."
+  },
+  "version": "v1",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Data",
+    "Dashboards",
+    "GCP",
+    "Reporting",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

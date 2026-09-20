@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Evaluate and design partnership strategies",
+    "es": "Evaluar y diseñar estrategias de alianzas"
+  },
+  "displayDescription": {
+    "en": "Evaluate potential partners, select partnership models, design partner programs, structure business terms, and model partnership ROI.",
+    "es": "Evalúa socios potenciales, selecciona modelos de alianza, diseña programas y estructura términos de negocio."
+  },
+  "version": "1.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Partnerships",
+    "Business-Growth",
+    "Corporate-Development",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "corporate-development"
+  }
+}

@@ -122,13 +122,20 @@ returns the existing or created Bug/investigation Task ID. Fixes require a new
 evidence-mapped implementation plan, explicit approval, vault recording, and a
 full affected-suite rerun. Reuse the item’s branch and any existing PR.
 
+Invoke `documentation-agent` after `test-agent` returns PASS. Provide the exact
+tested revision, PASS evidence, and governing task, specification, ADR, UX, and
+acceptance-criteria artifacts. Continue with its documented revision or
+justified no-change record. If documentation exposes a code or specification
+conflict, return it to `developer-agent` through the normal revised-plan,
+specification-validation, and test loop.
+
 ### 5. Close the item and finalize its repository state
 
-After the full affected suite passes, `test-agent` sends verification evidence
-and tracked IDs to `project-planner-agent`. Only the planner may mark blocking
-failures and the originating item Done. Wait for its completion
-acknowledgement; backlog access failure blocks finalization rather than being
-silently bypassed.
+After documentation completes, send the documented revision, test verification
+evidence, documentation handoff, and tracked IDs to `project-planner-agent`.
+Only the planner may mark blocking failures and the originating item Done. Wait
+for its completion acknowledgement; backlog access failure blocks finalization
+rather than being silently bypassed.
 
 Return the acknowledgement to `developer-agent`, which then performs the
 configured final self-audit and repository checks:

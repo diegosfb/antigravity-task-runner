@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Generate GCP pipeline orchestration configurations",
+    "es": "Generar configuraciones de orquestación de pipeline en GCP"
+  },
+  "displayDescription": {
+    "en": "Generate or update orchestration pipeline configurations for GCP data workflows.",
+    "es": "Genera o actualiza configuraciones de orquestación de pipeline para flujos de trabajo de datos en GCP."
+  },
+  "version": "v1",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "GCP",
+    "Orchestration",
+    "Pipeline",
+    "Workflow",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "cloud-infrastructure"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design ETL/ELT data pipeline patterns",
+    "es": "Diseñar patrones de pipeline de datos ETL/ELT"
+  },
+  "displayDescription": {
+    "en": "Use when designing data pipelines, choosing between ETL and ELT approaches, or implementing data transformation patterns.",
+    "es": "Para diseñar pipelines de datos, elegir entre enfoques ETL y ELT, o implementar patrones de transformación de datos."
+  },
+  "version": "1.0.0",
+  "author": "Melodic Software",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "ETL",
+    "ELT",
+    "Data Pipelines",
+    "Transformation",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

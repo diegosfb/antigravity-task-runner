@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design user-facing screens and interaction flows",
+    "es": "Diseñar pantallas y flujos de interacción para usuarios"
+  },
+  "displayDescription": {
+    "en": "Design user-facing screens, layouts, visual hierarchy, interaction flows, responsive behavior, and component states.",
+    "es": "Diseña pantallas para usuarios, layouts, jerarquía visual, flujos de interacción, comportamiento responsivo y estados de componentes."
+  },
+  "version": "2.1.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "UI Design",
+    "Screens",
+    "Interaction Design",
+    "Responsive",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "design",
+    "phase": "ui-ux"
+  }
+}

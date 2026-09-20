@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Estimate story points via a council of models",
+    "es": "Estimar story points mediante un consejo de modelos"
+  },
+  "displayDescription": {
+    "en": "Estimate historically calibrated Fibonacci story points through one council workflow with local CLI or OpenRouter models.",
+    "es": "Estima story points de Fibonacci calibrados históricamente a través de un flujo de trabajo de consejo con modelos locales o OpenRouter."
+  },
+  "version": "2.0.0",
+  "author": "DSFB",
+  "package": "DSFB SDLC",
+  "tags": [
+    "Story Points",
+    "Estimation",
+    "Planning",
+    "Fibonacci",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "planning",
+    "phase": "backlog-management"
+  }
+}

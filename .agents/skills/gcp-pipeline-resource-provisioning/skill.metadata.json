@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Provision GCP pipeline resources",
+    "es": "Aprovisionar recursos de pipeline en GCP"
+  },
+  "displayDescription": {
+    "en": "Create or update deployment configurations and provision GCP pipeline resources.",
+    "es": "Crea o actualiza configuraciones de despliegue y aprovisiona recursos de pipeline en GCP."
+  },
+  "version": "v1",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "GCP",
+    "Provisioning",
+    "Infrastructure",
+    "Pipeline",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "cloud-infrastructure"
+  }
+}

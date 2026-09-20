@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Compact conversation into an agent handoff document",
+    "es": "Compactar conversación en un documento de traspaso de agente"
+  },
+  "displayDescription": {
+    "en": "Compact the current conversation into a handoff document for another agent to pick up.",
+    "es": "Compacta la conversación actual en un documento de traspaso para que otro agente lo retome."
+  },
+  "version": "1.0.0",
+  "author": "Matt Pocock Skills",
+  "package": ["DSFB GeneralPurposeLib", "DSFB SLDC"],
+  "tags": [
+    "Workflow",
+    "Handoff",
+    "Coordination",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "workflow",
+    "phase": "coordination"
+  }
+}

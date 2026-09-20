@@ -1,0 +1,6 @@
+interface:
+  display_name: "Executive Advisor"
+  short_description: "On-demand C-level decision counsel"
+  default_prompt: "Use $executive-advisor to challenge this decision from the most relevant executive perspective."
+policy:
+  allow_implicit_invocation: false

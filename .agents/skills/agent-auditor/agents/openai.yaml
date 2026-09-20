@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Auditor"
+  short_description: "Audit agents and synchronize their documentation"
+  default_prompt: "Use $agent-auditor to audit repository agents and update their catalog and workflow documentation."

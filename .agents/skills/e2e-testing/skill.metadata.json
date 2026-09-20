@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Orchestrate end-to-end automated tests",
+    "es": "Orquestar pruebas automatizadas de extremo a extremo"
+  },
+  "displayDescription": {
+    "en": "Specialized skill for orchestrating automated End-to-End (E2E) testing, generating test plans, and executing tests.",
+    "es": "Habilidad especializada para orquestar pruebas E2E automatizadas, generar planes de prueba y ejecutar pruebas."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC",
+  "tags": [
+    "E2E Testing",
+    "Testing",
+    "Automation",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "testing",
+    "phase": "quality-assurance"
+  }
+}

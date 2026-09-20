@@ -1,0 +1,4 @@
+interface:
+  display_name: "Healthtech Advisor"
+  short_description: "Frame health-data, clinical, and market risks"
+  default_prompt: "Use $healthtech-advisor to assess this digital-health product's intended use, data flows, and market constraints."

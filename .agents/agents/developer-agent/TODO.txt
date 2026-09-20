@@ -1,0 +1,1 @@
+Developer Agent es responsable de llamar a test agent to run the test suite nd the spec validation agent y finalmente a documentation agent.

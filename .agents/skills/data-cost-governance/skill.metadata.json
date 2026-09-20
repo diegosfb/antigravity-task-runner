@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Manage and optimize data platform costs",
+    "es": "Gestionar y optimizar costos de plataforma de datos"
+  },
+  "displayDescription": {
+    "en": "Use when managing, optimizing, or attributing costs on a data platform covering Snowflake, BigQuery, Databricks, and FinOps.",
+    "es": "Para gestionar, optimizar o atribuir costos en una plataforma de datos cubriendo Snowflake, BigQuery, Databricks y FinOps."
+  },
+  "version": "1.1.0",
+  "author": "DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Data",
+    "Governance",
+    "Cost",
+    "FinOps",
+    "Business & Finance"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

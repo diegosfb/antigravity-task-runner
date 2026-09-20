@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design data governance and ownership policies",
+    "es": "Diseñar gobernanza de datos y políticas de propiedad"
+  },
+  "displayDescription": {
+    "en": "Design or improve production data governance across ownership, catalogs, lineage, classification, privacy, access control, and data contracts.",
+    "es": "Diseña o mejora la gobernanza de datos en producción cubriendo propiedad, catálogos, linaje, privacidad y contratos de datos."
+  },
+  "version": "1.1.0",
+  "author": "DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Data Governance",
+    "Privacy",
+    "Metadata",
+    "Access Control",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

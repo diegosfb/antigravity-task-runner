@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Build decision-ready Excel financial workbooks",
+    "es": "Construir libros de trabajo Excel financieros listos para decisiones"
+  },
+  "displayDescription": {
+    "en": "Build or revise decision-ready Excel workbooks for financial models, board reporting, planning, and operational analysis.",
+    "es": "Construye o revisa libros de trabajo Excel para modelos financieros, reportes de directorio y análisis operacional."
+  },
+  "version": "1.1.0",
+  "author": "DSFB",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Finance",
+    "Excel",
+    "Financial Modeling",
+    "Business & Finance",
+    "Workbook"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "financial-analysis"
+  }
+}

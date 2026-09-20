@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design microservices and distributed systems",
+    "es": "Diseñar microservicios y sistemas distribuidos"
+  },
+  "displayDescription": {
+    "en": "Distributed systems architect specializing in microservices design patterns, service boundaries, domain-driven design, and event sourcing.",
+    "es": "Arquitecto de sistemas distribuidos especializado en microservicios, límites de servicio, DDD y event sourcing."
+  },
+  "version": "1.0.0",
+  "author": "Jeff Allan",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Microservices",
+    "Distributed Systems",
+    "Kubernetes",
+    "Event-Driven",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "architecture",
+    "phase": "design"
+  }
+}

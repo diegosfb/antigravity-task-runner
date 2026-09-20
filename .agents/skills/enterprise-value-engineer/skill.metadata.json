@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Translate software initiatives into financial impact",
+    "es": "Traducir iniciativas de software en impacto financiero"
+  },
+  "displayDescription": {
+    "en": "Translate software initiatives, PRDs, workflows, and features into conservative annualized financial impact across Revenue, Efficiency, Risk, and Retention.",
+    "es": "Traduce iniciativas de software, PRDs y funcionalidades en impacto financiero anualizado conservador."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "ROI",
+    "Business Value",
+    "Finance",
+    "Enterprise",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "go-to-market"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Review and benchmark a medical bill or EOB",
+    "es": "Revisar y comparar una factura médica o EOB"
+  },
+  "displayDescription": {
+    "en": "Analyze medical bills, EOBs, and procedure charges to verify claim math and benchmark CPT pricing against transparency data.",
+    "es": "Analiza facturas médicas, EOBs y cargos de procedimientos para verificar matemáticas de reclamación y comparar precios CPT."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Healthcare",
+    "Medical Billing",
+    "EOB",
+    "CPT",
+    "Price Transparency"
+  ],
+  "sdlc": {
+    "process": "healthcare",
+    "phase": "billing"
+  }
+}

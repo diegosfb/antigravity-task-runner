@@ -1,0 +1,4 @@
+interface:
+  display_name: "Job Application Resume"
+  short_description: "Tailor truthful resumes to specific roles"
+  default_prompt: "Use $job-application-resume to tailor my factual resume to this job description and identify unsupported gaps."

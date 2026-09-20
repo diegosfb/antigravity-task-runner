@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Design multi-cloud architecture",
+    "es": "Diseñar arquitectura multi-nube"
+  },
+  "displayDescription": {
+    "en": "Multi-cloud architect specializing in AWS, Azure, and GCP for cloud migration, cost optimization, and Well-Architected Framework.",
+    "es": "Arquitecto multi-nube especializado en AWS, Azure y GCP para migración, optimización de costos y Well-Architected Framework."
+  },
+  "version": "1.0.1",
+  "author": "Jeff Allan",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Cloud",
+    "AWS",
+    "Azure",
+    "GCP",
+    "Architecture",
+    "Multi-Cloud"
+  ],
+  "sdlc": {
+    "process": "architecture",
+    "phase": "design"
+  }
+}

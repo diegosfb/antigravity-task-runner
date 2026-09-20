@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Analyze fintech product models and regulatory context",
+    "es": "Analizar modelos de producto fintech y contexto regulatorio"
+  },
+  "displayDescription": {
+    "en": "Analyze fintech money flows, actors, product models, regulatory trigger hypotheses, license-versus-partner options, and KYC/AML responsibilities.",
+    "es": "Analiza flujos de dinero fintech, actores, modelos de producto, hipótesis regulatorias y opciones de licencia vs. socio."
+  },
+  "version": "1.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB TechnicalAdvisorLib",
+  "tags": [
+    "Fintech",
+    "Payments",
+    "Banking",
+    "Regulatory",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "industry-advisory"
+  }
+}

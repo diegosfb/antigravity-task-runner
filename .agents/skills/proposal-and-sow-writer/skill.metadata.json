@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Write client proposals and statements of work",
+    "es": "Redactar propuestas de cliente y declaraciones de trabajo"
+  },
+  "displayDescription": {
+    "en": "Create client proposals and statements of work from an approved scope, including outcomes, deliverables, assumptions, and milestones.",
+    "es": "Crea propuestas de cliente y declaraciones de trabajo a partir de un alcance aprobado, con resultados, entregables, supuestos e hitos."
+  },
+  "version": "1.0.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Proposals",
+    "SOW",
+    "Business-Growth",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "pre-sales",
+    "phase": "solutioning"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Troubleshoot Cloud Composer and Airflow issues",
+    "es": "Resolver problemas de Cloud Composer y Airflow"
+  },
+  "displayDescription": {
+    "en": "Expert guidance for troubleshooting Cloud Composer (Apache Airflow) on GCP.",
+    "es": "Guía experta para resolver problemas de Cloud Composer (Apache Airflow) en GCP."
+  },
+  "version": "v1",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "GCP",
+    "Cloud Composer",
+    "Airflow",
+    "Troubleshooting",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "cloud-infrastructure"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Implement Gemini API integrations",
+    "es": "Implementar integraciones de la API de Gemini"
+  },
+  "displayDescription": {
+    "en": "Reference guidance for implementing or repairing Gemini API integrations with the supported Google Gen AI SDK or REST API.",
+    "es": "Guía de referencia para implementar o reparar integraciones de la API de Gemini con el SDK de Google Gen AI o la API REST."
+  },
+  "version": "1.1.0",
+  "author": "Jezweb Claude Skills",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Gemini",
+    "AI",
+    "Google",
+    "LLM",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "ai-ml"
+  }
+}

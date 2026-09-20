@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Synthesize meeting transcripts into structured insights",
+    "es": "Sintetizar transcripciones de reuniones en conocimientos estructurados"
+  },
+  "displayDescription": {
+    "en": "Analyze supplied meeting transcripts or notes into a traceable meeting-analysis.md containing decisions, actions, risks, and questions.",
+    "es": "Analiza transcripciones o notas de reuniones en un meeting-analysis.md con decisiones, acciones, riesgos y preguntas."
+  },
+  "version": "1.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Meetings",
+    "Meeting Notes",
+    "Decisions",
+    "Actions",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "productivity",
+    "phase": "meetings"
+  }
+}

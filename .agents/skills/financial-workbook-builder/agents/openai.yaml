@@ -1,0 +1,4 @@
+interface:
+  display_name: "Financial Workbook Builder"
+  short_description: "Build auditable financial Excel workbooks"
+  default_prompt: "Use $financial-workbook-builder to create a decision-ready Excel workbook from these requirements and source data."

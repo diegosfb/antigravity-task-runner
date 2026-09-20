@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Design a RAG pipeline for knowledge-grounded LLM apps",
+    "es": "Diseñar un pipeline RAG para aplicaciones LLM con conocimiento"
+  },
+  "displayDescription": {
+    "en": "RAG pipeline design specialist covering embedding strategies, vector databases, retrieval quality, and reranking for knowledge-grounded LLM applications.",
+    "es": "Especialista en diseño de pipelines RAG cubriendo estrategias de embedding, bases de datos vectoriales y calidad de recuperación."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "RAG",
+    "LLM",
+    "Vector Database",
+    "AI",
+    "Architecture",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "architecture",
+    "phase": "design"
+  }
+}

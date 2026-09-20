@@ -254,7 +254,7 @@ test("quick actions include ADLC after feature flag with runner actions", async 
   assert.equal(adlcChildren[4].iconPath.id, "map");
 });
 
-test("quick actions include ADLC Agents after feature flag, greying out undeployed agents", async () => {
+test("quick actions include ADLC Agents after feature flag with red group and agent icons", async () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-tree-provider-adlc-"));
   fs.mkdirSync(path.join(repoRoot, ".agents", "agents", "ba-agent"), { recursive: true });
   fs.writeFileSync(path.join(repoRoot, ".agents", "agents", "ba-agent", "ba-agent.md"), "---\nname: ba-agent\n---\n");
@@ -278,6 +278,7 @@ test("quick actions include ADLC Agents after feature flag, greying out undeploy
     assert.equal(adlcAgents.collapsibleState, 1);
     assert.equal(adlcAgents.command, undefined);
     assert.equal(adlcAgents.iconPath.id, "organization");
+    assert.equal(adlcAgents.iconPath.color.id, "charts.red");
 
     const children = await provider.getChildren(adlcAgents);
     assert.deepEqual(
@@ -292,8 +293,6 @@ test("quick actions include ADLC Agents after feature flag, greying out undeploy
         "Create Tests Agent",
         "Coding Agent",
         "Code Review Agent",
-        "Documentation Agent",
-        "Spec Validation Agent",
         "Deployment Agent",
         "SDLC Orchestrator Agent"
       ]
@@ -301,18 +300,16 @@ test("quick actions include ADLC Agents after feature flag, greying out undeploy
     for (const item of children) {
       assert.equal(item.command.command, "antigravity.runAdlcAgent");
       assert.equal(item.iconPath.id, "robot");
+      assert.equal(item.iconPath.color.id, "charts.red");
     }
 
     const baAgent = children.find((item) => item.label === "BA Agent");
     assert.deepEqual(baAgent.command.arguments, ["ba"]);
     assert.equal(baAgent.description, undefined);
-    assert.equal(baAgent.iconPath.color.id, "charts.purple");
+    assert.equal(baAgent.iconPath.color.id, "charts.red");
 
-    const documentationAgent = children.find((item) => item.label === "Documentation Agent");
-    assert.deepEqual(documentationAgent.command.arguments, ["documentation"]);
-    assert.equal(documentationAgent.description, "not deployed");
-    assert.equal(documentationAgent.iconPath.color.id, "disabledForeground");
-    assert.match(documentationAgent.tooltip, /documentation-agent\.md was not found/);
+    assert.equal(children.some((item) => item.label === "Documentation Agent"), false);
+    assert.equal(children.some((item) => item.label === "Spec Validation Agent"), false);
 
     const codingAgent = children.find((item) => item.label === "Coding Agent");
     assert.deepEqual(codingAgent.command.arguments, ["coding"]);

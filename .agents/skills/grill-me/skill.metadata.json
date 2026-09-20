@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Stress-test a plan with relentless questioning",
+    "es": "Someter un plan a preguntas implacables para fortalecerlo"
+  },
+  "displayDescription": {
+    "en": "Interview the user relentlessly about a plan or design until reaching shared understanding and resolving each branch of the decision tree.",
+    "es": "Entrevista al usuario implacablemente sobre un plan o diseño hasta alcanzar entendimiento compartido y resolver cada rama del árbol de decisiones."
+  },
+  "version": "2.0.0",
+  "author": "Matt Pocock Skills",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Planning",
+    "Design Review",
+    "Advisory",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "advisory"
+  }
+}

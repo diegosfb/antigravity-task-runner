@@ -1,0 +1,4 @@
+interface:
+  display_name: "Thought Leadership Writing"
+  short_description: "Draft credible expert articles and LinkedIn content"
+  default_prompt: "Use $thought-leadership-writing to turn this viewpoint and evidence into a publication-ready article."

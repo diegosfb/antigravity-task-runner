@@ -1,0 +1,4 @@
+interface:
+  display_name: "Edtech Advisor"
+  short_description: "Frame education markets, data, and adoption"
+  default_prompt: "Use $edtech-advisor to assess this education product's market, data, procurement, and adoption implications."

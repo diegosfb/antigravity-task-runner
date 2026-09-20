@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Apply cross-project coding conventions",
+    "es": "Aplicar convenciones de codificación entre proyectos"
+  },
+  "displayDescription": {
+    "en": "Baseline cross-project coding conventions for naming, readability, immutability, and code-quality review.",
+    "es": "Convenciones de codificación base para nomenclatura, legibilidad, inmutabilidad y revisión de calidad."
+  },
+  "version": "1.1.0",
+  "author": "Affaan Mustafa — Everything Claude Code",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Coding Standards",
+    "Quality",
+    "Naming",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "code-review",
+    "phase": "quality-assurance"
+  }
+}

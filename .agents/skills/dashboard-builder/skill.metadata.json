@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design and build operational dashboards",
+    "es": "Diseñar y construir dashboards operacionales"
+  },
+  "displayDescription": {
+    "en": "Design and build decision-oriented operational or business dashboards for Grafana, SigNoz, Google Cloud Monitoring, and Looker Studio.",
+    "es": "Diseña y construye dashboards operacionales orientados a decisiones para Grafana, SigNoz, Google Cloud Monitoring y Looker Studio."
+  },
+  "version": "1.1.0",
+  "author": "Affaan Mustafa — Everything Claude Code (ECC)",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Dashboards",
+    "Grafana",
+    "Looker Studio",
+    "Visualization",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-visualization"
+  }
+}

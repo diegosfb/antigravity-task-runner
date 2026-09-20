@@ -14,10 +14,6 @@ inputs:
     - name: workflow_configuration
       description: Approval, validation, security, and automation settings.
       type: file
-  optional:
-    - name: project_state
-      description: Existing artifacts, approvals, backlog, branches, and workflow evidence.
-      type: files_or_structured_data
 outputs:
   - name: routing_decision
     description: Selected agent or workflow and expected artifact handoff.

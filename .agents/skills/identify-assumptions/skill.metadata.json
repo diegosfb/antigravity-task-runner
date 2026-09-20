@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Map and rank hidden project assumptions",
+    "es": "Mapear y priorizar supuestos ocultos del proyecto"
+  },
+  "displayDescription": {
+    "en": "Identify, map, and rank hidden assumptions in a plan using assumption-mapping and risk-matrix frameworks.",
+    "es": "Identifica, mapea y prioriza supuestos ocultos en un plan usando marcos de mapeo de supuestos y matrices de riesgo."
+  },
+  "version": "1.0.0",
+  "author": "Borghei",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Assumption-Mapping",
+    "Risk-Matrix",
+    "Product-Discovery",
+    "Business & Finance"
+  ],
+  "sdlc": {
+    "process": "product-discovery",
+    "phase": "risk-analysis"
+  }
+}

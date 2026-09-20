@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Build features test-first with TDD",
+    "es": "Construir funcionalidades con TDD primero las pruebas"
+  },
+  "displayDescription": {
+    "en": "Test-driven development — use when the user wants to build features or fix bugs test-first using red-green-refactor.",
+    "es": "Desarrollo orientado a pruebas — para construir funcionalidades o corregir bugs siguiendo el ciclo red-green-refactor."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC",
+  "tags": [
+    "TDD",
+    "Testing",
+    "Red-Green-Refactor",
+    "Test-First",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "testing",
+    "phase": "quality-assurance"
+  }
+}

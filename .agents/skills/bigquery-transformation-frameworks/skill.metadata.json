@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Build BigQuery ELT projects with dbt or Dataform",
+    "es": "Construir proyectos ELT en BigQuery con dbt o Dataform"
+  },
+  "displayDescription": {
+    "en": "Build, modify, troubleshoot, and optimize BigQuery ELT projects using dbt or Dataform.",
+    "es": "Construye, modifica, depura y optimiza proyectos ELT en BigQuery usando dbt o Dataform."
+  },
+  "version": "v2",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "BigQuery",
+    "DBT",
+    "Dataform",
+    "ELT",
+    "GCP",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

@@ -1,1 +1,10 @@
 hide item Run litellm OpenAI
+
+## Status
+
+In Review
+
+## Notes
+
+AGENT ASSUMPTION: Hiding the item means removing it from the Task Runner tree while keeping the registered command available for internal liteLLM startup flows.
+AGENT SOLUTION: Removed the Run liteLLM OpenAI tree item and regenerated the tracked extension build artifacts.

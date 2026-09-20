@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Stress-test a plan against existing project docs",
+    "es": "Someter un plan a prueba contra los documentos del proyecto"
+  },
+  "displayDescription": {
+    "en": "Grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation inline.",
+    "es": "Sesión de interrogatorio que cuestiona tu plan contra el modelo de dominio existente y actualiza documentación en línea."
+  },
+  "version": "1.0.0",
+  "author": "Matt Pocock Skills",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Planning",
+    "Documentation",
+    "Domain Model",
+    "Advisory",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "advisory"
+  }
+}

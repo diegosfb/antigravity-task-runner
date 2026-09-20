@@ -1,0 +1,6 @@
+interface:
+  display_name: "Press Release"
+  short_description: "Draft factual company-agnostic media releases"
+  default_prompt: "Use $press-release to draft a factual press release from these approved announcement details."
+policy:
+  allow_implicit_invocation: true

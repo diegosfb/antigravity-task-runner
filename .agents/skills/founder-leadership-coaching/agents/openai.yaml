@@ -1,0 +1,4 @@
+interface:
+  display_name: "Founder Leadership Coaching"
+  short_description: "Coach founder leadership transitions and delegation"
+  default_prompt: "Use $founder-leadership-coaching to help me examine this leadership bottleneck and design a small evidence-based experiment."

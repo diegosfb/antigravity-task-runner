@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Write and run Apache Beam pipelines on GCP Dataflow",
+    "es": "Escribir y ejecutar pipelines Apache Beam en GCP Dataflow"
+  },
+  "displayDescription": {
+    "en": "Guidance for writing, packaging, and executing Apache Beam pipelines on Google Cloud Dataflow.",
+    "es": "Guía para escribir, empaquetar y ejecutar pipelines Apache Beam en Google Cloud Dataflow."
+  },
+  "version": "v2",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "GCP",
+    "Dataflow",
+    "Apache Beam",
+    "Streaming",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "cloud-infrastructure"
+  }
+}

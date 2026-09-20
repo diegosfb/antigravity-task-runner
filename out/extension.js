@@ -24,6 +24,8 @@ const cloudArchitectReview_1 = require("./cloudArchitectReview");
 const featureEstimator_1 = require("./featureEstimator");
 const grillMe_1 = require("./grillMe");
 const agenticHarnessCommand_1 = require("./agenticHarnessCommand");
+const shellUtils_1 = require("./shellUtils");
+const adlcAgents_1 = require("./adlcAgents");
 const resourceProvider_1 = require("./resourceProvider");
 const updateProjectConfig_1 = require("./updateProjectConfig");
 const explainMe_1 = require("./explainMe");
@@ -4318,66 +4320,111 @@ function activate(context) {
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         const projectKey = getSavedJiraProjectKey(repoRoot);
-        const credentials = await getValidatedJiraCredentials(repoRoot);
-        if (!credentials) {
-            return;
+        let completeCredentials;
+        let jiraItems = [];
+        if (projectKey) {
+            try {
+                completeCredentials = await resolveValidatedJiraCredentials(repoRoot);
+            }
+            catch {
+                completeCredentials = undefined;
+            }
+            if (completeCredentials) {
+                try {
+                    jiraItems = await vscode.window.withProgress({
+                        location: vscode.ProgressLocation.Notification,
+                        title: `Loading your Jira items in ${projectKey.trim().toUpperCase()}`,
+                        cancellable: false
+                    }, async () => (0, jira_1.searchOpenAssignedJiraIssuesForCurrentUser)(completeCredentials, projectKey));
+                }
+                catch {
+                    jiraItems = [];
+                }
+            }
         }
-        if (!projectKey) {
-            void vscode.window.showErrorMessage("Jira Item Completed is disabled because JIRA_PROJECT_KEY is not set for this repository.");
-            provider.refresh();
-            return;
-        }
-        let issues;
+        const backlogDir = path.join(repoRoot, "docs", "backlog");
+        let localItems = [];
         try {
-            issues = await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Loading your Jira items in ${projectKey}`,
-                cancellable: false
-            }, async () => (0, jira_1.searchOpenAssignedJiraIssuesForCurrentUser)(credentials, projectKey));
+            localItems = (0, backlogItemCompleted_1.loadBacklogItemsForCompletion)(backlogDir);
         }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to load Jira items: ${message}`);
+        catch {
+            localItems = [];
+        }
+        const pickItems = [
+            ...jiraItems.map((issue) => ({
+                label: `$(globe) ${issue.key}`,
+                description: issue.summary,
+                detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName, "Jira"]
+                    .filter(Boolean)
+                    .join(" • "),
+                source: "jira",
+                issue
+            })),
+            ...localItems.map((item) => ({
+                label: `$(file) ${item.displayName}`,
+                description: item.summary,
+                detail: `Local${item.typeName ? " • " + item.typeName : ""}${item.statusName ? " • " + item.statusName : ""}`,
+                source: "local",
+                item
+            }))
+        ];
+        if (pickItems.length === 0) {
+            void vscode.window.showInformationMessage("No backlog items found. Add items to docs/backlog or configure a Jira project.");
             return;
         }
-        if (issues.length === 0) {
-            void vscode.window.showInformationMessage(`No Jira tickets assigned to you in To Do or In Progress were found for project ${projectKey}.`);
-            return;
-        }
-        const selection = await vscode.window.showQuickPick(issues.map((issue) => ({
-            label: issue.key,
-            description: issue.summary,
-            detail: [issue.projectKey || issue.projectName, issue.issueTypeName, issue.statusName]
-                .filter(Boolean)
-                .join(" • "),
-            issue
-        })), {
-            title: "Jira Item Completed",
-            placeHolder: `Select one of your Jira tickets in ${projectKey} to move into In Review, or Done if review is unavailable`,
+        const selection = await vscode.window.showQuickPick(pickItems, {
+            title: "Mark Backlog Item as Completed",
+            placeHolder: "Select a backlog item to mark as completed",
             matchOnDescription: true,
             matchOnDetail: true
         });
         if (!selection)
             return;
-        const confirm = await vscode.window.showInformationMessage(`Move ${selection.issue.key} to In Review, or Done if review is unavailable?`, { modal: true }, "Mark Completed");
-        if (confirm !== "Mark Completed")
-            return;
-        try {
-            const transitionResult = await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Completing ${selection.issue.key} in Jira`,
-                cancellable: false
-            }, async () => (0, jira_1.transitionJiraIssueToReviewOrDone)(credentials, projectKey, selection.issue.key));
-            const transitionMessage = transitionResult.statusName === "In Review"
-                ? `Moved Jira item ${selection.issue.key} to In Review.`
-                : transitionResult.fallbackReason
-                    ? `Moved Jira item ${selection.issue.key} to Done because ${transitionResult.fallbackReason}`
-                    : `Moved Jira item ${selection.issue.key} to Done.`;
-            void vscode.window.showInformationMessage(transitionMessage);
+        if (selection.source === "jira") {
+            const { issue } = selection;
+            if (!completeCredentials) {
+                completeCredentials = await getValidatedJiraCredentials(repoRoot);
+                if (!completeCredentials)
+                    return;
+            }
+            const confirm = await vscode.window.showInformationMessage(`Move ${issue.key} to In Review, or Done if review is unavailable?`, { modal: true }, "Mark Completed");
+            if (confirm !== "Mark Completed")
+                return;
+            try {
+                const transitionResult = await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Completing ${issue.key} in Jira`,
+                    cancellable: false
+                }, async () => (0, jira_1.transitionJiraIssueToReviewOrDone)(completeCredentials, projectKey, issue.key));
+                const transitionMessage = transitionResult.statusName === "In Review"
+                    ? `Moved Jira item ${issue.key} to In Review.`
+                    : transitionResult.fallbackReason
+                        ? `Moved Jira item ${issue.key} to Done because ${transitionResult.fallbackReason}`
+                        : `Moved Jira item ${issue.key} to Done.`;
+                void vscode.window.showInformationMessage(transitionMessage);
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Failed to update Jira item: ${message}`);
+            }
         }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            void vscode.window.showErrorMessage(`Failed to update Jira item: ${message}`);
+        else {
+            const { item } = selection;
+            const confirm = await vscode.window.showInformationMessage(`Mark "${item.displayName}" as Completed?`, { modal: true }, "Mark Completed");
+            if (confirm !== "Mark Completed")
+                return;
+            try {
+                let content = fs.readFileSync(item.filePath, "utf8");
+                const date = new Date().toISOString().split("T")[0];
+                const statusNote = `\n\n## Status Change\nStatus: Completed\nDate: ${date}\n`;
+                content = content.replace(/\n{2,}##\s*status(?:\s+change)?\s*\n[\s\S]*$/i, "");
+                fs.writeFileSync(item.filePath, content.trimEnd() + statusNote, "utf8");
+                void vscode.window.showInformationMessage(`Marked "${item.displayName}" as Completed.`);
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Failed to update backlog item: ${message}`);
+            }
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.incrementMajorVersion", async () => {
@@ -4835,6 +4882,129 @@ function activate(context) {
             return;
         }
         void vscode.window.showInformationMessage("Opened Feature Flag setup terminal.");
+    }));
+    const showAdlcAgentRunDialog = (repoRoot, definition) => new Promise((resolve) => {
+        const defaultHarnessCommand = (0, settings_1.getAgenticHarnessExecutionCommand)();
+        const defaultExecutable = (0, shellUtils_1.getExecutableName)(defaultHarnessCommand);
+        const defaultHarness = (0, adlcAgents_1.isAdlcHarness)(defaultExecutable) ? defaultExecutable : "claude";
+        const defaultModelMatch = /(?:--model|-m)\s+(\S+)/.exec(defaultHarnessCommand);
+        const defaultModel = defaultModelMatch ? defaultModelMatch[1] : "";
+        const panel = vscode.window.createWebviewPanel("adlcAgentRun", definition.label, vscode.ViewColumn.Active, { enableScripts: true });
+        panel.webview.html = (0, adlcAgents_1.renderAdlcAgentRunHtml)(panel.webview, definition, {
+            defaultHarness,
+            defaultModel
+        });
+        let settled = false;
+        const resolveOnce = (value) => {
+            if (settled)
+                return;
+            settled = true;
+            resolve(value);
+        };
+        const postError = (message) => void panel.webview.postMessage({ type: "adlcAgentError", payload: { message } });
+        panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (!message)
+                return;
+            if (message.type === "adlcAgentCancel") {
+                panel.dispose();
+                return;
+            }
+            if (message.type === "adlcAgentBrowse") {
+                const inputName = String(message.payload?.inputName || "");
+                const kind = String(message.payload?.kind || "any");
+                const picked = await vscode.window.showOpenDialog({
+                    canSelectFiles: kind !== "folder",
+                    canSelectFolders: kind !== "file",
+                    canSelectMany: false,
+                    defaultUri: vscode.Uri.file(repoRoot),
+                    openLabel: `Select ${inputName}`
+                });
+                const uri = picked?.[0];
+                if (!uri)
+                    return;
+                const relative = path.relative(repoRoot, uri.fsPath);
+                const value = relative && !relative.startsWith("..") && !path.isAbsolute(relative) ? relative : uri.fsPath;
+                void panel.webview.postMessage({ type: "adlcAgentBrowseResult", payload: { inputName, value } });
+                return;
+            }
+            if (message.type !== "adlcAgentExecute")
+                return;
+            const payload = message.payload || {};
+            const harness = String(payload.harness || "");
+            if (!(0, adlcAgents_1.isAdlcHarness)(harness)) {
+                postError("Select a supported harness.");
+                return;
+            }
+            const inputs = {};
+            if (payload.inputs && typeof payload.inputs === "object") {
+                for (const [name, value] of Object.entries(payload.inputs)) {
+                    inputs[name] = String(value ?? "").trim();
+                }
+            }
+            const missing = (0, adlcAgents_1.getMissingRequiredAdlcInputs)(definition, inputs);
+            if (missing.length > 0) {
+                postError(`Missing required inputs: ${missing.join(", ")}`);
+                return;
+            }
+            resolveOnce({
+                harness,
+                model: String(payload.model || "").trim(),
+                inputs,
+                additionalInstructions: String(payload.additionalInstructions || "")
+            });
+            panel.dispose();
+        }, undefined, context.subscriptions);
+    });
+    context.subscriptions.push(vscode.commands.registerCommand("antigravity.runAdlcAgent", async (entryId) => {
+        const entry = (0, adlcAgents_1.findAdlcAgentCatalogEntry)(String(entryId || ""));
+        if (!entry) {
+            void vscode.window.showErrorMessage(`Unknown ADLC agent: ${String(entryId)}`);
+            return;
+        }
+        const rootPath = (0, utils_1.getRootPath)();
+        if (!rootPath) {
+            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            return;
+        }
+        const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
+        if (!(0, adlcAgents_1.adlcAgentExists)(repoRoot, entry.folder)) {
+            void vscode.window.showWarningMessage(`${entry.label} is not available: ${(0, adlcAgents_1.getAdlcAgentRelativePath)(entry.folder)} was not found. Deploy the SDLC library first.`);
+            return;
+        }
+        let definition;
+        try {
+            definition = (0, adlcAgents_1.loadAdlcAgentDefinition)(repoRoot, entry);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to read ${entry.label} definition: ${message}`);
+            return;
+        }
+        const request = await showAdlcAgentRunDialog(repoRoot, definition);
+        if (!request)
+            return;
+        const harnessCommand = (0, adlcAgents_1.buildAdlcHarnessCommand)(request.harness, request.model);
+        const promptFilePath = writeAgentPromptFile(`adlc-${entry.id}`, (0, adlcAgents_1.buildAdlcAgentPrompt)(definition, request));
+        const commandLine = (0, agenticHarnessCommand_1.buildAgenticHarnessFileCommandForCommand)(harnessCommand, repoRoot, promptFilePath, "prompt");
+        (0, logger_1.logAlways)(`[runAdlcAgent] ${entry.id}: ${commandLine}`);
+        try {
+            if ((0, settings_1.getUseExternalTerminal)()) {
+                await (0, terminal_1.openCommandInExternalTerminal)(repoRoot, commandLine);
+            }
+            else {
+                (0, terminal_1.runInPersistentTerminal)(`ADLC: ${entry.label}`, [`cd ${(0, utils_1.quoteShellArg)(repoRoot)}`, commandLine], {
+                    iconPath: new vscode.ThemeIcon("robot", terminal_1.CLAUDE_ACTION_COLOR),
+                    color: terminal_1.CLAUDE_ACTION_COLOR
+                });
+            }
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Failed to launch ${entry.label}: ${message}`);
+            return;
+        }
+        void vscode.window.showInformationMessage(`Launched ${entry.label} with ${harnessCommand}.`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.updateGithubActions", async () => {
         launchUpdateProjectConfigPrompt("updateGithubActions", "Update Github Actions", updateProjectConfig_1.UPDATE_GITHUB_ACTIONS_PROMPT, "github-action", "Opened GitHub Actions update terminal.");

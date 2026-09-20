@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Audit skills for quality and portfolio health",
+    "es": "Auditar habilidades por calidad y salud del portafolio"
+  },
+  "displayDescription": {
+    "en": "Audit installed skills for authoring compliance, broken resources, exact duplicates, trigger collisions, and functional overlap.",
+    "es": "Audita habilidades instaladas para detectar cumplimiento, recursos rotos, duplicados exactos y colisiones de disparadores."
+  },
+  "version": "1.2.1",
+  "author": "DSFB",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Agent-Ops",
+    "Audit",
+    "Skills",
+    "Portfolio",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "agent-ops",
+    "phase": "management"
+  }
+}

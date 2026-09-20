@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Diagnose hard bugs and performance regressions",
+    "es": "Diagnosticar bugs difíciles y regresiones de rendimiento"
+  },
+  "displayDescription": {
+    "en": "Diagnosis loop for hard bugs and performance regressions.",
+    "es": "Bucle de diagnóstico para bugs difíciles y regresiones de rendimiento."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Debugging",
+    "Bug Diagnosis",
+    "Performance",
+    "Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "debugging"
+  }
+}

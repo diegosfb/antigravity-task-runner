@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Analyze customer success data and build plans",
+    "es": "Analizar datos de éxito del cliente y construir planes"
+  },
+  "displayDescription": {
+    "en": "Analyze supplied SaaS customer-success data using configurable health, retention-risk, and expansion-signal heuristics.",
+    "es": "Analiza datos de éxito del cliente SaaS usando heurísticas de salud, riesgo de retención y señales de expansión."
+  },
+  "version": "1.0.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Customer-Success",
+    "SaaS",
+    "Retention",
+    "Business-Growth"
+  ],
+  "sdlc": {
+    "process": "product-discovery",
+    "phase": "user-research"
+  }
+}

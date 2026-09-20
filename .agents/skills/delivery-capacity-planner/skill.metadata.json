@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Design and validate delivery team composition",
+    "es": "Diseñar y validar la composición del equipo de entrega"
+  },
+  "displayDescription": {
+    "en": "Design and challenge professional-services delivery team composition from project descriptions, staffing demands, or profile lists.",
+    "es": "Diseña y cuestiona la composición del equipo de entrega de servicios profesionales a partir de descripciones de proyectos y demandas de personal."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Capacity Planning",
+    "Staffing",
+    "Delivery",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "delivery",
+    "phase": "capacity-planning"
+  }
+}

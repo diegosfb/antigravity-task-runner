@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Develop with BigQuery services and optimizations",
+    "es": "Desarrollar con servicios y optimizaciones de BigQuery"
+  },
+  "displayDescription": {
+    "en": "Comprehensive guidance for BigQuery services, optimizations, and development best practices.",
+    "es": "Guía completa para servicios de BigQuery, optimizaciones y mejores prácticas de desarrollo."
+  },
+  "version": "v1",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "BigQuery",
+    "GCP",
+    "SQL",
+    "Data Engineering",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "cloud-infrastructure"
+  }
+}

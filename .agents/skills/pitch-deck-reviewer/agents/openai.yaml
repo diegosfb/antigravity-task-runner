@@ -1,0 +1,6 @@
+interface:
+  display_name: "Pitch Deck Reviewer"
+  short_description: "Review decks without rewriting them"
+  default_prompt: "Use $pitch-deck-reviewer to critique this deck and produce prioritized, slide-specific findings without editing it."
+policy:
+  allow_implicit_invocation: true

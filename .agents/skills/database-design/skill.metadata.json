@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design database schemas and indexing strategies",
+    "es": "Diseñar esquemas de base de datos y estrategias de indexación"
+  },
+  "displayDescription": {
+    "en": "Database design principles and decision-making covering schema design, indexing strategy, ORM selection, and serverless databases.",
+    "es": "Principios de diseño de bases de datos que cubren diseño de esquemas, estrategia de indexación y selección de ORM."
+  },
+  "version": "1.0.0",
+  "author": "Antigravity Awesome Skills",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Database Design",
+    "Schema",
+    "Indexing",
+    "ORM",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

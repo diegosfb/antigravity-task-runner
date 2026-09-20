@@ -1,0 +1,6 @@
+interface:
+  display_name: "Recruiting Capacity Planner"
+  short_description: "Model bench, recruiting gaps, and staffing ramps"
+  default_prompt: "Use $recruiting-capacity-planner to match this staffing demand to supplied capacity and model the recruiting and productive-capacity ramp."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Draft investor outreach and communication emails",
+    "es": "Redactar correos de contacto y comunicación con inversores"
+  },
+  "displayDescription": {
+    "en": "Draft cold emails, warm intro blurbs, follow-ups, update emails, and investor communications for fundraising.",
+    "es": "Redacta correos fríos, blurbs de presentación, seguimientos y actualizaciones para inversores en fundraising."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Investor Relations",
+    "Outreach",
+    "Fundraising",
+    "Email",
+    "Communications"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "investor-relations"
+  }
+}

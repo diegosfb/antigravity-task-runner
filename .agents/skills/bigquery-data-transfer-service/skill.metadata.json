@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Inspect BigQuery Data Transfer configurations",
+    "es": "Inspeccionar configuraciones de BigQuery Data Transfer"
+  },
+  "displayDescription": {
+    "en": "Discovers and inspects BigQuery Data Transfer Service (DTS) configurations.",
+    "es": "Descubre e inspecciona configuraciones del servicio BigQuery Data Transfer (DTS)."
+  },
+  "version": "v1",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "BigQuery",
+    "GCP",
+    "Data Transfer",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "cloud-infrastructure"
+  }
+}

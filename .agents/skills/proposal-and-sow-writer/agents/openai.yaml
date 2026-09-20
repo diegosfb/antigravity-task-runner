@@ -1,0 +1,6 @@
+interface:
+  display_name: "Proposal and SOW Writer"
+  short_description: "Create scoped client proposals and SOWs"
+  default_prompt: "Use $proposal-and-sow-writer to turn this approved scope into a client-ready proposal or SOW."
+policy:
+  allow_implicit_invocation: true

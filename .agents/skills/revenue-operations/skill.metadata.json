@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Analyze pipeline and GTM efficiency for SaaS",
+    "es": "Analizar pipeline y eficiencia GTM para SaaS"
+  },
+  "displayDescription": {
+    "en": "Pipeline analysis, forecast accuracy tracking, and GTM efficiency measurement for SaaS revenue teams.",
+    "es": "Análisis de pipeline, seguimiento de precisión de pronósticos y medición de eficiencia GTM para equipos de ingresos SaaS."
+  },
+  "version": "1.0.0",
+  "author": "borghei",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "RevOps",
+    "Pipeline",
+    "Forecast",
+    "GTM-Efficiency",
+    "SaaS-Metrics"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "go-to-market"
+  }
+}

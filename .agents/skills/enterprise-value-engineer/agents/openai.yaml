@@ -1,0 +1,4 @@
+interface:
+  display_name: "Enterprise Value Engineer"
+  short_description: "Quantify software initiatives' business value"
+  default_prompt: "Use $enterprise-value-engineer to create a conservative business-impact analysis for this software initiative."

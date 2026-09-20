@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Build a throwaway prototype to explore a design",
+    "es": "Construir un prototipo desechable para explorar un diseño"
+  },
+  "displayDescription": {
+    "en": "Build a throwaway prototype to flush out a design before committing to it, routing between a terminal app or UI variations.",
+    "es": "Construye un prototipo desechable para explorar un diseño antes de comprometerse, entre una app de terminal o variaciones de UI."
+  },
+  "version": "1.0.0",
+  "author": "Matt Pocock",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Prototype",
+    "Design",
+    "UI",
+    "Exploration",
+    "Development"
+  ],
+  "sdlc": {
+    "process": "product-discovery",
+    "phase": "prototyping"
+  }
+}

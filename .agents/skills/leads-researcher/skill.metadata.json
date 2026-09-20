@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Research target accounts from public sources",
+    "es": "Investigar cuentas objetivo a partir de fuentes públicas"
+  },
+  "displayDescription": {
+    "en": "Research target companies or accounts from authorized public sources and produce evidence-backed account briefs with citations.",
+    "es": "Investiga empresas o cuentas objetivo a partir de fuentes públicas autorizadas y produce briefings de cuentas respaldados por evidencia."
+  },
+  "version": "1.0.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Sales-Research",
+    "Leads",
+    "Account Research",
+    "Business-Growth",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "sales"
+  }
+}

@@ -1,93 +1,44 @@
 # Product Agent
 
-The `product-agent` owns the **why** of the product. It is the entry point to
-the SDLC: it turns evidence from the market, stakeholders, users, and
-production into a measurable product vision for the `ba-agent`.
+> Source contract: [`product-agent.md`](../../../agents/product-agent/product-agent.md). The source contract is authoritative if this summary and the contract differ.
 
-## Workflow position
+## What it does
 
-```mermaid
-flowchart LR
-    E[Market, competitors,<br/>stakeholders, telemetry] --> P[product-agent]
-    R[Meeting recordings] --> H[harvesting-meeting-context]
-    N[Meeting notes or transcripts] --> M[meeting-insights]
-    H -->|transcripts| M
-    M -->|reviewed meeting-analysis.md| P
-    P -->|PRD| BA[ba-agent]
-    PROD[Production feedback] -->|next-cycle evidence| P
-```
+Owns the WHY of the project - product envisioning, market research, competitive benchmarking, user feedback synthesis, and configurable pre-mortem risk analysis. Entry point of the SDLC workflow. Produces the PRD (docs/project_description/PRD.md) consumed by ba-agent. Use at kickoff, when evaluating a product direction, or when synthesizing production feedback into the next cycle.
 
-## Inputs
+## How it interacts with other agents
 
-| Input | Source | Use |
+- **Consumes:** market signals, competitor analyses, stakeholder input, reviewed meeting analyses, and (post-launch) production telemetry and user feedback.
+- **Produces:** the **PRD** at `docs/project_description/PRD.md` (per `references/prd-template.md`): problem statement, goals with success metrics, target users, market/competitive landscape, strategic priorities, differentiation, high-level capabilities, constraints, and PRD Risk Analysis.
+- **Hands over to:** `ba-agent` (the PRD is its primary input).
+- **Receives back:** user feedback from production (outer loop) - synthesize it into the next vision revision.
+
+## Input artifacts
+
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `product_definition_source` | Required | `file_or_directory` | Product definition directory or file containing the product brief, project context, goals, constraints, or existing product definition. |
+
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `supporting_evidence` | Optional | `file_or_directory` | Reviewed meeting analyses, market research, competitor analysis, customer feedback, telemetry, and other supporting product evidence. |
+
+## Output artifacts
+
+| Artifact | Type | Purpose |
 |---|---|---|
-| Market signals and research | Public and commissioned research | Establish demand, trends, and risks. |
-| Competitor analysis | Benchmarks and product evidence | Identify positioning and differentiation. |
-| Stakeholder input | Interviews, meetings, and business context | Clarify goals, constraints, and strategic priorities. |
-| Reviewed meeting analysis | `meeting-insights`, optionally after recording transcription | Supply cited decisions, product evidence, disagreement, assumptions, and unknowns. |
-| User feedback and telemetry | Production and research loops | Measure outcomes and revise the vision. |
+| `prd_file` | `file` | Approved Product Requirements Document handed to the BA Agent. |
 
-When information is incomplete, the product-agent summarizes what is already
-known and asks only the questions needed to avoid guessing.
+## Artifact locations
 
-For recordings, `harvesting-meeting-context` produces the transcripts and
-`meeting-insights` turns them into reviewed product evidence. Existing notes or
-transcripts go directly to `meeting-insights`. The product-agent preserves each
-finding as an observation, participant opinion, team assumption, or
-interpretation and never treats heuristic extraction as validation.
+No fixed repository output path is declared. Artifacts are returned through the invoking workflow, existing branch or pull request, configured backlog, CI/CD system, or another location explicitly supplied at runtime.
 
-For folder conventions, invocation examples, verification, and PRD handoff,
-see [Meeting Evidence with Product Agent](MEETING-EVIDENCE-WITH-PRODUCT-AGENT.md).
+## Usage notes
 
-## Outputs
+- Invoke this agent only within the scope and activation rules defined in [`product-agent.md`](../../../agents/product-agent/product-agent.md).
+- Preserve artifact traceability across handoffs; do not substitute summaries for required source evidence.
+- Follow repository approval, security, validation, and failure-routing rules before declaring the work complete.
 
-The canonical output is `docs/project_description/PRD.md`. It contains:
+## Documentation source
 
-- Problem statement and target users.
-- Goals, each with a measurable success metric.
-- Market and competitive landscape.
-- Strategic priorities and differentiation.
-- High-level capabilities and product constraints.
-- Evidence supporting important claims.
-
-The PRD is handed to `ba-agent`. It is revised when evidence changes the
-vision; competing append-only visions are not maintained.
-
-## Ownership boundaries
-
-The product-agent defines outcomes and direction. It does not write functional
-specifications, acceptance criteria, architecture, implementation tasks, or
-code. Those belong respectively to `ba-agent`, `architect-agent`,
-`project-planner-agent`, and `developer-agent`.
-
-## Agent interactions
-
-- `ba-agent` consumes the PRD and turns its high-level capabilities into
-  unambiguous, testable requirements.
-- Production feedback returns to the product-agent for synthesis into the next
-  product cycle.
-- Unresolved product-purpose questions from downstream agents are routed back
-  here; implementation details are not.
-
-## Vault behavior
-
-When the Obsidian vault is enabled, the PRD is mirrored into `PRD/`. Material
-product decisions, trade-offs, lessons, and updates are recorded through
-`scripts/helper-scripts/vault-event.py`, producing linked notes and dated action-log entries.
-The PRD remains canonical; the vault is its navigation and audit layer.
-
-## Completion and handoff
-
-The product-agent is ready to hand off when the PRD states a supported problem,
-target users, measurable goals, strategic priorities, headline capabilities,
-and known constraints clearly enough for the BA to specify behavior without
-inventing the product vision.
-
-<!-- agent-auditor:inventory:start -->
-
-## Audited agent inventory
-
-- Source: [`product-agent`](../../../agents/product-agent/product-agent.md)
-- Subagents: none
-
-<!-- agent-auditor:inventory:end -->
+This page is synchronized from [the canonical agent contract](../../../agents/product-agent/product-agent.md) and its companion README. Update the canonical contract first when behavior changes.

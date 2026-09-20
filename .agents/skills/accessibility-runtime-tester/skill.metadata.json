@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Run accessibility tests against a live app",
+    "es": "Ejecutar pruebas de accesibilidad en una app en ejecución"
+  },
+  "displayDescription": {
+    "en": "Runtime accessibility testing — executes a11y checks against a running application rather than static review.",
+    "es": "Pruebas de accesibilidad en tiempo de ejecución contra una aplicación en funcionamiento."
+  },
+  "version": "2.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Accessibility",
+    "Testing",
+    "A11y",
+    "WCAG",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "testing",
+    "phase": "quality-assurance"
+  }
+}

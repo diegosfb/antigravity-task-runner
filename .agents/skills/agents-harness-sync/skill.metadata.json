@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Sync agent definitions across harnesses",
+    "es": "Sincronizar definiciones de agentes entre arneses"
+  },
+  "displayDescription": {
+    "en": "Security-scan, audit, normalize, repair, and synchronize canonical agent definitions under .agents to supported harness directories.",
+    "es": "Escanea, audita, normaliza y sincroniza definiciones canónicas de agentes a los directorios de arnés soportados."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Agent-Ops",
+    "Sync",
+    "Deployment",
+    "Harness"
+  ],
+  "sdlc": {
+    "process": "agent-ops",
+    "phase": "management"
+  }
+}

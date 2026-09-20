@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "California tax planning for high earners",
+    "es": "Planificación fiscal en California para altos ingresos"
+  },
+  "displayDescription": {
+    "en": "Aggressive but risk-aware tax guidance for California high earners covering federal and CA tax, AMT, capital gains, and equity compensation.",
+    "es": "Orientación fiscal agresiva pero consciente del riesgo para altos ingresos en California, cubriendo AMT, ganancias de capital y compensación en equity."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Tax",
+    "California",
+    "Finance",
+    "Planning",
+    "Equity-Compensation"
+  ],
+  "sdlc": {
+    "process": "finance",
+    "phase": "tax"
+  }
+}

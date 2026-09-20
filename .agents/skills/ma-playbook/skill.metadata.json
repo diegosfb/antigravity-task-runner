@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Structure M&A analysis from screening to integration",
+    "es": "Estructurar análisis de M&A desde screening hasta integración"
+  },
+  "displayDescription": {
+    "en": "Structure non-binding merger and acquisition analysis across deal thesis, target screening, diligence, valuation, deal terms, and post-merger integration.",
+    "es": "Estructura análisis no vinculante de fusiones y adquisiciones desde tesis de negocio hasta integración post-fusión."
+  },
+  "version": "2.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "M&A",
+    "Corporate Development",
+    "Due Diligence",
+    "Valuation",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "corporate-development"
+  }
+}

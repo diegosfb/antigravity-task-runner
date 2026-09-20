@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Set up observability, monitoring, and alerting",
+    "es": "Configurar observabilidad, monitoreo y alertas"
+  },
+  "displayDescription": {
+    "en": "Observability and performance specialist for logging, metrics, tracing, alerting, and performance testing.",
+    "es": "Especialista en observabilidad y rendimiento para logging, métricas, trazabilidad, alertas y pruebas de rendimiento."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Monitoring",
+    "Observability",
+    "Logging",
+    "Metrics",
+    "Tracing",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "observability"
+  }
+}

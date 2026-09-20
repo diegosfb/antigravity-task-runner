@@ -1,79 +1,51 @@
 # UX Agent
 
-The `ux-agent` owns the user experience. It turns product context,
-specifications, and architectural constraints into implementable design tasks
-that are scheduled alongside technical work.
+> Source contract: [`ux-agent.md`](../../../agents/ux-agent/ux-agent.md). The source contract is authoritative if this summary and the contract differ.
 
-## Workflow position
+## What it does
 
-```mermaid
-flowchart LR
-    P[Product vision] --> UX[ux-agent]
-    A[architect-agent] -->|ADRs| UX
-    S[Feature specifications] --> UX
-    UX -->|design tasks and specs| PP[project-planner-agent]
-    UX -->|constraint conflict| A
-```
+Owns the user experience. Works FROM the ADRs so designs respect real technical constraints. Produces a design package with a design document and wireframes, and embeds approved UX and accessibility requirements into the affected specifications. Use for any user-facing design work.
 
-## Inputs
+## How it interacts with other agents
 
-- ADRs from `architect-agent`, used as real design constraints.
-- Product vision for user and outcome context.
-- Feature specifications for the behavior and states requiring design.
-- Existing design-system conventions and accessibility standards.
+- **Upstream:** receives the approved PRD and specifications plus the validated architecture package and ADRs after their respective gates.
+- **Downstream:** hands the approved design package and updated specifications to `project-planner-agent`.
 
-## Outputs
+## Input artifacts
 
-The UX agent produces design specifications and planner-ready design tasks,
-including:
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `approved_product_context` | Required | `files` | Approved PRD and relevant feature specifications. |
+| `workflow_configuration` | Required | `file` | UX/UI design approval-gate configuration. |
 
-- User flows and wireframes.
-- Component definitions and design-system usage or extensions.
-- Interaction patterns.
-- Empty, loading, error, and success states.
-- Accessibility requirements aligned with WCAG 2.1/2.2.
-- Traceability to the relevant feature specification and ADR constraint.
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `architecture_package` | Optional | `files_or_directory` | Approved architecture, diagrams, and applicable ADRs when available. |
+| `research_and_evidence` | Optional | `files_or_structured_data` | Reviewed user research, meeting analysis, and feedback. |
+| `existing_experience_system` | Optional | `files_or_repository_state` | Current UI, design system, patterns, and prior design artifacts. |
 
-These outputs are handed to `project-planner-agent`, so design work is
-sequenced with—not deferred until after—the associated technical work.
+## Output artifacts
 
-## Ownership boundaries
+| Artifact | Type | Purpose |
+|---|---|---|
+| `design_package` | `directory` | Design folder containing the design document and wireframes. |
+| `updated_specifications` | `files` | Affected specifications with approved UX, interaction, state, responsive, and accessibility requirements embedded. |
 
-The UX agent owns experience and design requirements, not product strategy,
-architecture, backlog sequencing, or implementation. It extends the existing
-design system instead of forking it. If an ADR makes a required experience
-impossible, UX returns the conflict to `architect-agent` rather than silently
-designing around it.
+## Artifact locations
 
-## Agent interactions
+The contract declares or references these repository locations:
 
-- Uses the product vision to preserve user and outcome context.
-- Designs within ADRs supplied by `architect-agent`.
-- Escalates architecture/design conflicts to the architect.
-- Sends design tasks to `project-planner-agent`, which resolves dependencies,
-  sequencing, priority, and estimates alongside technical tasks.
-- Supplies implementable design constraints that later guide development and
-  testing, while not directly controlling either stage.
+- `docs/design/`
+- `docs/design/design.md`
+- `docs/design/wireframes/`
+- `docs/specs/`
 
-## Vault behavior
+## Usage notes
 
-When enabled, canonical design artifacts under `docs/ux/` are mirrored into
-`UX/` and linked to the relevant specs, ADRs, backlog items, and test cases.
-Material design decisions, accessibility conclusions, trade-offs, and issues
-are recorded through semantic vault events and the action log.
+- Invoke this agent only within the scope and activation rules defined in [`ux-agent.md`](../../../agents/ux-agent/ux-agent.md).
+- Preserve artifact traceability across handoffs; do not substitute summaries for required source evidence.
+- Follow repository approval, security, validation, and failure-routing rules before declaring the work complete.
 
-## Completion and handoff
+## Documentation source
 
-UX work is ready for planning when each user-facing feature has complete flows
-and states, component and interaction requirements, accessibility criteria,
-and explicit links to its specification and architectural constraints. Any
-unresolved architecture conflict remains visible and escalated.
-
-<!-- agent-auditor:inventory:start -->
-
-## Audited agent inventory
-
-- Source: [`ux-agent`](../../../agents/ux-agent/ux-agent.md)
-- Subagents: none
-
-<!-- agent-auditor:inventory:end -->
+This page is synchronized from [the canonical agent contract](../../../agents/ux-agent/ux-agent.md) and its companion README. Update the canonical contract first when behavior changes.

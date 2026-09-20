@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Analyze education-technology markets and products",
+    "es": "Analizar mercados y productos de tecnología educativa"
+  },
+  "displayDescription": {
+    "en": "Analyze education-technology markets, buyers, procurement, learning context, student-data exposure, and integrations.",
+    "es": "Analiza mercados de tecnología educativa, compradores, adquisición, contexto de aprendizaje y exposición de datos de estudiantes."
+  },
+  "version": "1.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB TechnicalAdvisorLib",
+  "tags": [
+    "EdTech",
+    "Education",
+    "K-12",
+    "Higher Education",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "industry-advisory"
+  }
+}

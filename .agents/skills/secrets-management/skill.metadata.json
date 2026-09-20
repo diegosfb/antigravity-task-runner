@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design secret storage, rotation, and access controls",
+    "es": "Diseñar almacenamiento de secretos, rotación y controles de acceso"
+  },
+  "displayDescription": {
+    "en": "Design or review secret storage, access, rotation, revocation, and application integration using centralized managers and workload identity.",
+    "es": "Diseña o revisa almacenamiento de secretos, acceso, rotación, revocación e integración de aplicaciones usando gestores centralizados."
+  },
+  "version": "1.0.0",
+  "author": "Melodic Software",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Secrets Management",
+    "Security",
+    "Vault",
+    "Credentials",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "security"
+  }
+}

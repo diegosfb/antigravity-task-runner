@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Create Postman collections and API test scripts",
+    "es": "Crear colecciones Postman y scripts de prueba de API"
+  },
+  "displayDescription": {
+    "en": "Create Postman collections and test scripts for API testing and use-case coverage.",
+    "es": "Crea colecciones Postman y scripts de prueba para testing de APIs y cobertura de casos de uso."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Postman",
+    "API Testing",
+    "Testing",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "testing",
+    "phase": "quality-assurance"
+  }
+}

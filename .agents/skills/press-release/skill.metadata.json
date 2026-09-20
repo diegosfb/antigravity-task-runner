@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Draft a press release for a company announcement",
+    "es": "Redactar un comunicado de prensa para un anuncio empresarial"
+  },
+  "displayDescription": {
+    "en": "Create company-agnostic press releases for product launches, partnerships, corporate announcements, events, awards, and executive appointments.",
+    "es": "Crea comunicados de prensa para lanzamientos de productos, alianzas, anuncios corporativos, eventos, premios y nombramientos."
+  },
+  "version": "1.1.0",
+  "author": "DSFB Professional Services",
+  "package": "DSFB ProfessionalServicesLib",
+
+  "tags": [
+    "Press Release",
+    "Communications",
+    "PR",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "content",
+    "phase": "writing"
+  }
+}

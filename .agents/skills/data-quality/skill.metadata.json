@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Implement data quality controls and monitoring",
+    "es": "Implementar controles de calidad de datos y monitoreo"
+  },
+  "displayDescription": {
+    "en": "Design and implement production data-quality controls, tests, anomaly detection, service objectives, alerting, and incident response.",
+    "es": "Diseña e implementa controles de calidad de datos en producción, pruebas, detección de anomalías y respuesta a incidentes."
+  },
+  "version": "1.1.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Data Quality",
+    "Testing",
+    "Monitoring",
+    "Anomaly Detection",
+    "Data Engineering"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

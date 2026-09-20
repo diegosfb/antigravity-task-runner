@@ -1,0 +1,4 @@
+interface:
+  display_name: "Marketplace Advisor"
+  short_description: "Analyze marketplace liquidity and economics"
+  default_prompt: "Use $marketplace-advisor to assess this marketplace's sides, liquidity, network effects, and economics."

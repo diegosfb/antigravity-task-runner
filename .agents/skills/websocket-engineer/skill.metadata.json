@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Build WebSocket and real-time communication systems",
+    "es": "Construir sistemas de comunicación WebSocket en tiempo real"
+  },
+  "displayDescription": {
+    "en": "WebSocket specialist for real-time communication systems using Socket.IO, bidirectional messaging, and presence systems.",
+    "es": "Especialista en WebSocket para sistemas de comunicación en tiempo real con Socket.IO, mensajería bidireccional y sistemas de presencia."
+  },
+  "version": "1.0.0",
+  "author": "Jeff Allan",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "WebSocket",
+    "Real-Time",
+    "Socket.IO",
+    "Pub/Sub",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "backend"
+  }
+}

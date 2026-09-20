@@ -1,0 +1,6 @@
+interface:
+  display_name: "Contract Drafting Assistant"
+  short_description: "Draft contracts for qualified legal review"
+  default_prompt: "Use $contract-drafting-assistant to prepare a clearly labelled contract draft and counsel-review checklist."
+policy:
+  allow_implicit_invocation: false

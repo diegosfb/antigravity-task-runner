@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Map and document an existing codebase",
+    "es": "Mapear y documentar una base de código existente"
+  },
+  "displayDescription": {
+    "en": "Produces seven populated documents in docs/codebase/ covering everything needed to work effectively on the project.",
+    "es": "Genera siete documentos en docs/codebase/ con todo lo necesario para trabajar en el proyecto."
+  },
+  "version": "1.3.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Codebase",
+    "Documentation",
+    "Onboarding",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "agent-ops",
+    "phase": "management"
+  }
+}

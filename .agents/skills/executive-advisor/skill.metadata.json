@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Get C-level counsel on strategy and operations",
+    "es": "Obtener asesoría de nivel C en estrategia y operaciones"
+  },
+  "displayDescription": {
+    "en": "Provide explicitly requested C-level counsel for strategy, finance, technology, operations, product, revenue, people, and governance.",
+    "es": "Proporciona asesoría de nivel C solicitada explícitamente en estrategia, finanzas, tecnología, operaciones y gobernanza."
+  },
+  "version": "1.3.0",
+  "author": "DSFB Professional Services C-level agents + Borghei",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Executive",
+    "Strategy",
+    "Leadership",
+    "C-Level",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "leadership"
+  }
+}

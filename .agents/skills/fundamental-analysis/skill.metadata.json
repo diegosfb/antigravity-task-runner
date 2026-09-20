@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Research and analyze publicly traded assets",
+    "es": "Investigar y analizar activos cotizados en bolsa"
+  },
+  "displayDescription": {
+    "en": "Research and analyze publicly traded equities, ETFs, REITs, bonds, and cryptoassets using current primary-source data and valuation methods.",
+    "es": "Investiga y analiza acciones, ETFs, REITs, bonos y criptoactivos cotizados usando datos de fuentes primarias y métodos de valoración."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Finance",
+    "Stocks",
+    "Valuation",
+    "Investment Analysis",
+    "Business & Finance"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "financial-analysis"
+  }
+}

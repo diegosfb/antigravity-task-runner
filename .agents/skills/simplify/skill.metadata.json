@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Simplify code by removing unnecessary complexity",
+    "es": "Simplificar código eliminando complejidad innecesaria"
+  },
+  "displayDescription": {
+    "en": "Build, fix, or refactor code with the smallest safe solution that satisfies the request, reducing overengineering and unnecessary abstractions.",
+    "es": "Construye, corrige o refactoriza código con la solución más pequeña y segura que satisface el requerimiento."
+  },
+  "version": "1.0.0",
+  "author": "Dietrich Gebert / Daniel Ilin / Anthropic",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Simplify",
+    "Refactoring",
+    "Code Quality",
+    "Cleanup",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "code-review",
+    "phase": "quality-assurance"
+  }
+}

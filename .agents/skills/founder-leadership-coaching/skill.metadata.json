@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Leadership coaching for founders and executives",
+    "es": "Coaching de liderazgo para fundadores y ejecutivos"
+  },
+  "displayDescription": {
+    "en": "Help founders and first-time executives reflect on leadership transitions, delegation, decision bottlenecks, and executive-team development.",
+    "es": "Ayuda a fundadores y ejecutivos primerizos a reflexionar sobre transiciones de liderazgo, delegación y desarrollo del equipo ejecutivo."
+  },
+  "version": "2.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Leadership",
+    "Coaching",
+    "Founder",
+    "Executive Development",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "leadership"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design validation experiments for product hypotheses",
+    "es": "Diseñar experimentos de validación de hipótesis de producto"
+  },
+  "displayDescription": {
+    "en": "Design fast, low-cost experiments to validate product hypotheses before committing to full development.",
+    "es": "Diseña experimentos rápidos y de bajo costo para validar hipótesis de producto antes de comprometerse al desarrollo completo."
+  },
+  "version": "1.0.0",
+  "author": "Borghei",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Experimentation",
+    "Pretotyping",
+    "Lean-Validation",
+    "Product-Discovery",
+    "Business & Finance"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "advisory"
+  }
+}

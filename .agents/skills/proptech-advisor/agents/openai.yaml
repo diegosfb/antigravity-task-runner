@@ -1,0 +1,4 @@
+interface:
+  display_name: "Proptech Advisor"
+  short_description: "Frame property-tech models and dependencies"
+  default_prompt: "Use $proptech-advisor to assess this proptech model, actors, data flows, and regulatory questions."

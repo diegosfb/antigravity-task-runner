@@ -1,0 +1,23 @@
+{
+  "duration_months": 6,
+  "complexity": 1.0,
+  "risk": 1.0,
+  "environment": 1.0,
+  "ai_capacity_multiplier": 1.0,
+  "artifacts": [
+    {
+      "artifact_key": "feature_implementation",
+      "count": 2,
+      "base_vtus": 5,
+      "tokens_per_unit": 5500000,
+      "allocations": [
+        {"expert_key": "senior_software_engineer", "allocation_percent": 77},
+        {"expert_key": "technical_lead", "allocation_percent": 23}
+      ]
+    }
+  ],
+  "experts": {
+    "senior_software_engineer": {"vtu_capacity_per_month": 25, "monthly_rate_usd": 4653, "active_months": 6},
+    "technical_lead": {"vtu_capacity_per_month": 20, "monthly_rate_usd": 8409, "active_months": 6}
+  }
+}

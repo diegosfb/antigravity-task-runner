@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Build an evidence-grounded business plan",
+    "es": "Construir un plan de negocio basado en evidencia"
+  },
+  "displayDescription": {
+    "en": "Build evidence-grounded business plans for a decided business concept in lean, investor, lender, or internal operating-plan formats.",
+    "es": "Construye planes de negocio basados en evidencia para un concepto decidido en formatos lean, inversor, prestamista o plan operativo."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Business Planning",
+    "Business & Finance",
+    "Finance",
+    "Strategy"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "planning"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Estimate software delivery time and effort",
+    "es": "Estimar tiempo y esfuerzo de entrega de software"
+  },
+  "displayDescription": {
+    "en": "Estimate software delivery time, effort, staffing, or complexity with explicit scope, assumptions, risk, and confidence ranges.",
+    "es": "Estima tiempo de entrega de software, esfuerzo, personal o complejidad con alcance, supuestos, riesgo y rangos de confianza explícitos."
+  },
+  "version": "2.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Estimation",
+    "Planning",
+    "Staffing",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "planning",
+    "phase": "backlog-management"
+  }
+}

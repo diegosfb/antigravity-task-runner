@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Create investor-facing fundraising materials",
+    "es": "Crear materiales de fundraising para inversores"
+  },
+  "displayDescription": {
+    "en": "Create and update pitch decks, one-pagers, investor memos, accelerator applications, and financial models.",
+    "es": "Crea y actualiza pitch decks, one-pagers, memos para inversores, aplicaciones a aceleradoras y modelos financieros."
+  },
+  "version": "1.0.0",
+  "author": "Globant Engineering Studio",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Investor Relations",
+    "Fundraising",
+    "Pitch Deck",
+    "Finance"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "investor-relations"
+  }
+}

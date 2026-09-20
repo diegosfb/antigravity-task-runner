@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Review accessibility and WCAG compliance",
+    "es": "Revisar accesibilidad y cumplimiento WCAG"
+  },
+  "displayDescription": {
+    "en": "Web accessibility (WCAG 2.1/2.2), inclusive UX, and a11y review for design tasks and UI audits.",
+    "es": "Accesibilidad web (WCAG 2.1/2.2), UX inclusiva y revisión de a11y para tareas de diseño y auditorías de UI."
+  },
+  "version": "2.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Accessibility",
+    "WCAG",
+    "A11y",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "testing",
+    "phase": "quality-assurance"
+  }
+}

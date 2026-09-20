@@ -1,74 +1,47 @@
 # Code Review Agent
 
-The `code-review-agent` is the final quality gate before deployment. It reviews
-only code that has passed the `test-agent`, using the backlog scope and ADRs as
-binding baselines.
+> Source contract: [`code-review-agent.md`](../../../agents/code-review-agent/code-review-agent.md). The source contract is authoritative if this summary and the contract differ.
 
-## Workflow position
+## What it does
 
-```mermaid
-flowchart LR
-    T[test-agent PASS] --> CR[code-review-agent]
-    ADR[Architecture and ADRs] --> CR
-    B[Backlog scope] --> CR
-    CR -->|approved PR| DEP[deployment-agent]
-    CR -->|actionable change requests| D[developer-agent]
-    D -->|approved fix through testing| CR
-```
+The quality gate. Consumes passing code and reviews for correctness, security, maintainability, and ADR conformance. Emits change requests (loop back to developer-agent) or an approved PR (to deployment-agent). Absorbs security-reviewer - security is a review lens here, not a separate stage.
 
-## Inputs
+## How it interacts with other agents
 
-- A feature branch or PR that has passed the test-agent.
-- The backlog item defining approved scope.
-- ADRs and architecture defining binding structural decisions.
-- Repository coding, security, and maintainability standards.
+- **Upstream:** receives a tested, finalized branch or pull request from `developer-agent` after `test-agent` PASS and required specification and security validation.
+- **Downstream:** returns actionable change requests to `developer-agent`, or hands an explicitly approved merged pull request to `deployment-agent`.
 
-Untested code is not accepted into review.
+## Input artifacts
 
-## Review method
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `review_candidate` | Required | `repository_state` | Tested branch or pull request and complete diff. |
+| `verification_evidence` | Required | `structured_data` | Test PASS and required validation results. |
+| `governing_contracts` | Required | `files_or_structured_data` | Backlog scope, specifications, acceptance criteria, ADRs, and design constraints. |
+| `workflow_configuration` | Required | `file` | Pull-request merge gate and repository workflow configuration. |
 
-Every review applies four lenses:
+| Artifact | Requirement | Type | Purpose |
+|---|---|---|---|
+| `prior_review_context` | Optional | `structured_data` | Earlier findings, responses, and tracked defect references. |
 
-1. Correctness and maintainability: logic, errors, clarity, and inconsistent
-   implementations.
-2. Security: validation, authentication/authorization, injection, secrets, and
-   dependency risk.
-3. Standards: DRY, KISS, YAGNI, naming, typing, and coding conventions.
-4. ADR conformance: alignment with recorded architectural decisions.
+## Output artifacts
 
-Scope is checked first. Unapproved work outside the backlog item is a finding.
+| Artifact | Type | Purpose |
+|---|---|---|
+| `review_decision` | `structured_data` | Evidence-backed approval or changes-requested verdict. |
+| `change_requests` | `structured_data` | Actionable findings returned to developer-agent when review fails. |
+| `approved_pr` | `repository_reference` | Validated and explicitly approved merged pull request for deployment-agent. |
 
-## Outputs
+## Artifact locations
 
-- Actionable change requests identifying file/location, issue, rationale, and
-  suggested direction; or
-- An approved PR for `deployment-agent`, including a statement of what the
-  review checked.
+No fixed repository output path is declared. Artifacts are returned through the invoking workflow, existing branch or pull request, configured backlog, CI/CD system, or another location explicitly supplied at runtime.
 
-## Interactions and boundaries
+## Usage notes
 
-Change requests return to `developer-agent`. Every returned fix follows the
-developer's mandatory plan, explicit user approval, vault persistence,
-implementation, and test cycle before re-review. The reviewer reports issues
-but does not implement fixes, weaken tests, rewrite scope, or deploy releases.
+- Invoke this agent only within the scope and activation rules defined in [`code-review-agent.md`](../../../agents/code-review-agent/code-review-agent.md).
+- Preserve artifact traceability across handoffs; do not substitute summaries for required source evidence.
+- Follow repository approval, security, validation, and failure-routing rules before declaring the work complete.
 
-## Vault behavior
+## Documentation source
 
-When enabled, material findings, security issues, decisions, and review
-conclusions are recorded as semantic notes and dated action-log entries.
-Review artifacts under `docs/reviews/` are mirrored into `Reviews/` and linked
-to their governing specs, ADRs, backlog items, and implementation.
-
-## Completion and handoff
-
-Review completes with either precise change requests or an approval that states
-the examined baseline. Only an approved PR advances to deployment.
-
-<!-- agent-auditor:inventory:start -->
-
-## Audited agent inventory
-
-- Source: [`code-review-agent`](../../../agents/code-review-agent/code-review-agent.md)
-- Subagents: none
-
-<!-- agent-auditor:inventory:end -->
+This page is synchronized from [the canonical agent contract](../../../agents/code-review-agent/code-review-agent.md) and its companion README. Update the canonical contract first when behavior changes.

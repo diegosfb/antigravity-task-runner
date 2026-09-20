@@ -1,0 +1,6 @@
+interface:
+  display_name: "Customer Success Manager"
+  short_description: "Analyze customer health, risk, and expansion"
+  default_prompt: "Use $customer-success-manager to analyze this authorized customer-success dataset and recommend human-reviewed next actions."
+policy:
+  allow_implicit_invocation: true

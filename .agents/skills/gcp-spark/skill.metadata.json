@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Run Spark jobs on GCP Dataproc",
+    "es": "Ejecutar trabajos Spark en GCP Dataproc"
+  },
+  "displayDescription": {
+    "en": "Guidance for writing and executing Spark on Dataproc for large-scale data processing on GCP.",
+    "es": "Guía para escribir y ejecutar Spark en Dataproc para procesamiento de datos a gran escala en GCP."
+  },
+  "version": "v2",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "GCP",
+    "Spark",
+    "Dataproc",
+    "Data Processing",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "cloud-infrastructure"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Design a UI component and token system",
+    "es": "Diseñar un sistema de componentes y tokens de UI"
+  },
+  "displayDescription": {
+    "en": "Design-system creation covering components, design tokens, UI patterns, and system governance.",
+    "es": "Creación de sistema de diseño cubriendo componentes, design tokens, patrones de UI y gobernanza del sistema."
+  },
+  "version": "1.1.0",
+  "author": "Borghei",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Design-System",
+    "Components",
+    "Tokens",
+    "UI-Patterns",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "design",
+    "phase": "ui-ux"
+  }
+}

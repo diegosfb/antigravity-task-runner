@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Draft business contract language",
+    "es": "Redactar lenguaje para contratos empresariales"
+  },
+  "displayDescription": {
+    "en": "Draft or structurally compare review-required business contract language, including NDAs, MSAs, service agreements, and DPAs.",
+    "es": "Redacta o compara estructuralmente lenguaje de contratos empresariales, incluyendo NDAs, MSAs, acuerdos de servicio y DPAs."
+  },
+  "version": "1.0.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Legal",
+    "Contracts",
+    "Business-Growth",
+    "Drafting"
+  ],
+  "sdlc": {
+    "process": "legal",
+    "phase": "contracting"
+  }
+}

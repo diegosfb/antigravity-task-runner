@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Analyze digital-health product context and strategy",
+    "es": "Analizar contexto y estrategia de producto de salud digital"
+  },
+  "displayDescription": {
+    "en": "Analyze digital-health product context, health-data flows, HIPAA-role hypotheses, medical-device questions, and clinical workflow.",
+    "es": "Analiza contexto de producto de salud digital, flujos de datos de salud, hipótesis HIPAA y flujo de trabajo clínico."
+  },
+  "version": "1.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB TechnicalAdvisorLib",
+  "tags": [
+    "Healthtech",
+    "Healthcare",
+    "HIPAA",
+    "Digital Health",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "industry-advisory"
+  }
+}

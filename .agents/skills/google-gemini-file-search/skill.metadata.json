@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Use Gemini File Search for managed retrieval",
+    "es": "Usar Gemini File Search para recuperación gestionada"
+  },
+  "displayDescription": {
+    "en": "Managed retrieval with Gemini File Search for document-grounded question answering and knowledge retrieval.",
+    "es": "Recuperación gestionada con Gemini File Search para respuesta a preguntas y recuperación de conocimiento basados en documentos."
+  },
+  "version": "1.0.0",
+  "author": "Jezweb Claude Skills",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Gemini",
+    "File Search",
+    "Retrieval",
+    "AI",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "ai-ml"
+  }
+}

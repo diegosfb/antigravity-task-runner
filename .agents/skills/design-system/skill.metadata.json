@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Extract and audit the design system from a codebase",
+    "es": "Extraer y auditar el sistema de diseño de una base de código"
+  },
+  "displayDescription": {
+    "en": "Extract, document, or audit the design system already expressed by an existing frontend codebase.",
+    "es": "Extrae, documenta o audita el sistema de diseño expresado en una base de código frontend existente."
+  },
+  "version": "1.1.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Design System",
+    "Frontend",
+    "UI",
+    "Tokens",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "design",
+    "phase": "ui-ux"
+  }
+}

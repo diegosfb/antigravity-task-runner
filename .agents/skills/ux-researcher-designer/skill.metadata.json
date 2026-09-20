@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Conduct UX research and design user experiences",
+    "es": "Realizar investigación UX y diseñar experiencias de usuario"
+  },
+  "displayDescription": {
+    "en": "UX research and design covering usability testing, user interviews, personas, and experience design.",
+    "es": "Investigación y diseño UX cubriendo pruebas de usabilidad, entrevistas de usuario, personas y diseño de experiencia."
+  },
+  "version": "1.0.0",
+  "author": "Borghei",
+  "package": "DSFB SLDC",
+  "tags": [
+    "UX-Research",
+    "Usability-Testing",
+    "User-Interviews",
+    "Personas",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "product-discovery",
+    "phase": "user-research"
+  }
+}

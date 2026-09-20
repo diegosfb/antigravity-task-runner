@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Generate and prioritize product ideas",
+    "es": "Generar y priorizar ideas de producto"
+  },
+  "displayDescription": {
+    "en": "Structured product ideation combining the Product Trio approach with Teresa Torres' Opportunity Solution Tree framework.",
+    "es": "Ideación estructurada de producto combinando el enfoque del Product Trio con el Árbol de Soluciones de Teresa Torres."
+  },
+  "version": "1.0.0",
+  "author": "Borghei",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Product-Discovery",
+    "Ideation",
+    "Opportunity-Solution-Tree",
+    "Business & Finance"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "advisory"
+  }
+}

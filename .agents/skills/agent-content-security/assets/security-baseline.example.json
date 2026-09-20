@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "suppressions": [
+    {
+      "fingerprint": "replace-with-reviewed-fingerprint",
+      "rationale": "Reviewed example text; not reachable as executable behavior.",
+      "expires": "2026-12-31",
+      "reviewer": "replace-with-reviewer"
+    }
+  ]
+}

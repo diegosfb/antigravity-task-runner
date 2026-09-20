@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Explain how a solution or technology works",
+    "es": "Explicar cómo funciona una solución o tecnología"
+  },
+  "displayDescription": {
+    "en": "Acts as a Senior Engineer to explain how a solution works, the 'why' behind architectural decisions, and alternative approaches with pros and cons.",
+    "es": "Actúa como Ingeniero Senior para explicar cómo funciona una solución, el 'por qué' detrás de decisiones arquitectónicas y alternativas."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB TechnicalAdvisorLib",
+  "tags": [
+    "Explain",
+    "Architecture",
+    "Education",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "advisory"
+  }
+}

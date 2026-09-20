@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ecommerce Advisor"
+  short_description: "Analyze ecommerce economics and operations"
+  default_prompt: "Use $ecommerce-advisor to assess this ecommerce model, unit economics, channels, and fulfillment options."

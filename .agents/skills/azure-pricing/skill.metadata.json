@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Fetch Azure pricing and cost estimates",
+    "es": "Obtener precios de Azure y estimaciones de costos"
+  },
+  "displayDescription": {
+    "en": "Fetches real-time Azure retail pricing using the Azure Retail Prices API and estimates Copilot Studio agent credit consumption.",
+    "es": "Obtiene precios minoristas de Azure en tiempo real y estima el consumo de créditos de Copilot Studio."
+  },
+  "version": "1.2.0",
+  "author": "anthonychu",
+  "package": "DSFB TechnicalAdvisorLib",
+  "tags": [
+    "Azure",
+    "Cloud",
+    "Pricing",
+    "Cost-Estimation"
+  ],
+  "sdlc": {
+    "process": "cloud",
+    "phase": "cost-estimation"
+  }
+}

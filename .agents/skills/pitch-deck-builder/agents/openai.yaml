@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pitch Deck Builder"
+  short_description: "Build evidence-led presentation narratives"
+  default_prompt: "Use $pitch-deck-builder to turn this business context into a compelling, validated pitch deck."

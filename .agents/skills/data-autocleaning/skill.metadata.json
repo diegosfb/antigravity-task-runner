@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Auto-clean and transform data in BigQuery",
+    "es": "Limpiar y transformar datos automáticamente en BigQuery"
+  },
+  "displayDescription": {
+    "en": "Automated data quality and transformation capabilities for Dataform/dbt/BigQuery.",
+    "es": "Capacidades automatizadas de calidad y transformación de datos para Dataform/dbt/BigQuery."
+  },
+  "version": "v1",
+  "author": "Google Data Agent Kit",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Data",
+    "BigQuery",
+    "Dataform",
+    "Quality",
+    "Transformation"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

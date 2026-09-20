@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Evaluate a startup or business idea",
+    "es": "Evaluar una idea de startup o negocio"
+  },
+  "displayDescription": {
+    "en": "Evaluate a startup or business idea using evidence, explicit assumptions, market and unit-economics scenarios, founder fit, risks, and defensibility.",
+    "es": "Evalúa una idea de startup o negocio con evidencia, supuestos explícitos, escenarios de mercado y economía unitaria."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Startup",
+    "Evaluation",
+    "Business & Finance",
+    "Analysis",
+    "Validation"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "planning"
+  }
+}

@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 
 const { syncViewMetadata } = require("../src/sync-view-name.js");
 
-test("syncViewMetadata keeps the Task Runner view title stable", () => {
+test("syncViewMetadata avoids duplicating the Task Runner container title", () => {
   const pkg = {
     version: "9.9.9",
     contributes: {
@@ -24,7 +24,7 @@ test("syncViewMetadata keeps the Task Runner view title stable", () => {
 
   assert.deepEqual(pkg.contributes.views.antigravityContainer[0], {
     id: "antigravityView",
-    name: "Task Runner v9.9.9",
+    name: "v9.9.9",
     contextualTitle: "Task Runner v9.9.9",
     icon: "Resources/taskrunner.svg"
   });
@@ -58,7 +58,7 @@ test("syncViewMetadata keeps prerelease versions in view titles", () => {
 
   assert.deepEqual(pkg.contributes.views.antigravityContainer[0], {
     id: "antigravityView",
-    name: "Task Runner v9.9.9-beta.1",
+    name: "v9.9.9-beta.1",
     contextualTitle: "Task Runner v9.9.9-beta.1",
     icon: "Resources/taskrunner.svg"
   });

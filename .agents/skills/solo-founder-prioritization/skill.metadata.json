@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Prioritize work as a solo founder with limited time",
+    "es": "Priorizar trabajo como fundador solo con tiempo limitado"
+  },
+  "displayDescription": {
+    "en": "Help a solo founder prioritize competing product, sales, marketing, support, finance, and operational work under limited time, cash, and attention.",
+    "es": "Ayuda a un fundador solo a priorizar trabajo de producto, ventas, marketing, soporte y operaciones con tiempo y capital limitados."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Founder",
+    "Prioritization",
+    "Business & Finance",
+    "Leadership",
+    "Startup"
+  ],
+  "sdlc": {
+    "process": "consulting",
+    "phase": "leadership"
+  }
+}

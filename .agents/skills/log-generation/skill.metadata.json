@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Add structured logging and observability to a codebase",
+    "es": "Agregar logging estructurado y observabilidad a una base de código"
+  },
+  "displayDescription": {
+    "en": "Add and validate structured logging, log management, and environment-specific log configuration for common stacks.",
+    "es": "Agrega y valida logging estructurado, gestión de logs y configuración específica por entorno para stacks comunes."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Logging",
+    "Observability",
+    "Monitoring",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "observability"
+  }
+}

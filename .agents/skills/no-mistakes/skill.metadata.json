@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Validate code changes through a full pipeline gate",
+    "es": "Validar cambios de código a través de un pipeline completo"
+  },
+  "displayDescription": {
+    "en": "Validate your code changes through the no-mistakes pipeline — automated code review, tests, lint, docs, push, PR, and CI.",
+    "es": "Valida tus cambios de código a través del pipeline no-mistakes — revisión automatizada, pruebas, lint, docs, push, PR y CI."
+  },
+  "version": "1.0.0",
+  "author": "Kun Cheng - https://github.com/kunchenguid/no-mistakes",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Code Review",
+    "Validation",
+    "CI/CD",
+    "Quality Assurance",
+    "Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "debugging"
+  }
+}

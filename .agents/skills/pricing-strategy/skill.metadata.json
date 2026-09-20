@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Design a pricing and monetization strategy",
+    "es": "Diseñar una estrategia de precios y monetización"
+  },
+  "displayDescription": {
+    "en": "Pricing strategy and monetization design covering value-based pricing, SaaS packaging, and revenue optimization.",
+    "es": "Diseño de estrategia de precios y monetización cubriendo pricing basado en valor, empaquetado SaaS y optimización de ingresos."
+  },
+  "version": "1.1.0",
+  "author": "borghei",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Pricing",
+    "Monetization",
+    "SaaS",
+    "Value-Based-Pricing",
+    "Revenue",
+    "Business Growth"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "go-to-market"
+  }
+}

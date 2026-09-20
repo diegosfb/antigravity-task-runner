@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Improve or craft LLM prompts",
+    "es": "Mejorar o crear prompts para LLMs"
+  },
+  "displayDescription": {
+    "en": "Use when the user wants to improve, evaluate, or craft a prompt for any LLM task.",
+    "es": "Para cuando el usuario quiere mejorar, evaluar o crear un prompt para cualquier tarea con LLMs."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Prompt Engineering",
+    "AI",
+    "LLM",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "ai-ml"
+  }
+}

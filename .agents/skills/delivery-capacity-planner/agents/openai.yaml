@@ -1,0 +1,6 @@
+interface:
+  display_name: "Delivery Capacity Planner"
+  short_description: "Design feasible professional-services teams"
+  default_prompt: "Use $delivery-capacity-planner to validate this delivery-team design and explain the recommended role, seniority, and location mix."
+policy:
+  allow_implicit_invocation: true

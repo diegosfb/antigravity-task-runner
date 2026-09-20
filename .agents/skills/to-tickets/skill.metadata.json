@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Break a spec into context-sized backlog tickets",
+    "es": "Dividir una especificación en tickets de backlog de tamaño adecuado"
+  },
+  "displayDescription": {
+    "en": "Break an approved specification or plan into context-sized tracer-bullet tickets with explicit blocking edges.",
+    "es": "Divide una especificación o plan aprobado en tickets tracer-bullet de tamaño adecuado con bordes de bloqueo explícitos."
+  },
+  "version": "1.0.0",
+  "author": "Matt Pocock Skills — adapted",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Tickets",
+    "Backlog",
+    "Planning",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "planning",
+    "phase": "backlog-management"
+  }
+}

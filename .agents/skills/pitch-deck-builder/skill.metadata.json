@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Create or rebuild an investor pitch deck",
+    "es": "Crear o reconstruir un pitch deck para inversores"
+  },
+  "displayDescription": {
+    "en": "Create or restructure investor, fundraising, sales, product, and partnership pitch decks through focused discovery and evidence-led narrative planning.",
+    "es": "Crea o reestructura pitch decks para inversores, ventas y alianzas mediante descubrimiento enfocado y planificación narrativa basada en evidencia."
+  },
+  "version": "1.0.1",
+  "author": "DSFB Professional Services",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Pitch Deck",
+    "Investor Relations",
+    "Fundraising",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "investor-relations"
+  }
+}

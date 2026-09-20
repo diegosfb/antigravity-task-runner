@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Convert a SOW into an AI Pod VTU subscription proposal",
+    "es": "Convertir un SOW en una propuesta de suscripción VTU de AI Pod"
+  },
+  "displayDescription": {
+    "en": "Convert a client SOW or defined delivery scope into a gated Value Throughput Unit (VTU) AI Pod subscription proposal.",
+    "es": "Convierte un SOW de cliente en una propuesta de suscripción de AI Pod con Unidades de Rendimiento de Valor (VTU)."
+  },
+  "version": "1.1.0",
+  "author": "DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "VTU",
+    "AI Pods",
+    "Estimation",
+    "Consulting & Professional Services",
+    "Subscription"
+  ],
+  "sdlc": {
+    "process": "planning",
+    "phase": "backlog-management"
+  }
+}

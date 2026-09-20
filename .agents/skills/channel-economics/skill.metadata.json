@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Analyze channel economics and partner programs",
+    "es": "Analizar economía de canales y programas de socios"
+  },
+  "displayDescription": {
+    "en": "Channel economics, partner program design, margin analysis, and go-to-market channel strategy.",
+    "es": "Economía de canales, diseño de programas de socios, análisis de márgenes y estrategia de GTM."
+  },
+  "version": "1.0.0",
+  "author": "borghei",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Channel-Economics",
+    "Channel-Strategy",
+    "Partner-Program",
+    "Margin-Analysis",
+    "Gtm"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "go-to-market"
+  }
+}

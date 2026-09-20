@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Perform financial analysis and modeling",
+    "es": "Realizar análisis financiero y modelado"
+  },
+  "displayDescription": {
+    "en": "Financial analysis covering DCF valuation, budgeting, forecasting, and financial ratios.",
+    "es": "Análisis financiero que cubre valoración DCF, presupuesto, previsiones y ratios financieros."
+  },
+  "version": "1.0.0",
+  "author": "borghei",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Financial-Analysis",
+    "DCF",
+    "Budgeting",
+    "Forecasting",
+    "Ratios"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "financial-analysis"
+  }
+}

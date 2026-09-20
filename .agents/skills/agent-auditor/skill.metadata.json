@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Audit agent definitions and catalog",
+    "es": "Auditar definiciones de agentes y catálogo"
+  },
+  "displayDescription": {
+    "en": "Audit repository agent definitions and subagents for structural quality, broken resources, duplicates, and workflow-documentation drift.",
+    "es": "Audita definiciones de agentes del repositorio para detectar problemas de calidad, recursos rotos y duplicados."
+  },
+  "version": "1.7.0",
+  "author": "DSFB",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Agent-Ops",
+    "Audit",
+    "Software Development",
+    "Catalog"
+  ],
+  "sdlc": {
+    "process": "agent-ops",
+    "phase": "management"
+  }
+}

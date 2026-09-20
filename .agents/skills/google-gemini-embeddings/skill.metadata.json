@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Use Gemini for embeddings and semantic search",
+    "es": "Usar Gemini para embeddings y búsqueda semántica"
+  },
+  "displayDescription": {
+    "en": "Gemini embedding decisions, configurations, and implementations for semantic search and vector use cases.",
+    "es": "Decisiones, configuraciones e implementaciones de embeddings de Gemini para búsqueda semántica y casos de uso vectoriales."
+  },
+  "version": "1.0.0",
+  "author": "Jezweb Claude Skills",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Gemini",
+    "Embeddings",
+    "AI",
+    "Semantic Search",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "ai-ml"
+  }
+}

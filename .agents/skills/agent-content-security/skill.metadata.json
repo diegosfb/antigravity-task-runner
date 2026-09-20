@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Scan agent content for security risks",
+    "es": "Analizar contenido de agentes en busca de riesgos de seguridad"
+  },
+  "displayDescription": {
+    "en": "Statically scan agent, skill, workflow, and configuration content under .agents for prompt injection, secrets, and supply-chain risks.",
+    "es": "Analiza estáticamente el contenido bajo .agents buscando inyección de prompts, secretos y riesgos de cadena de suministro."
+  },
+  "version": "1.0.0",
+  "author": "DSFB, inspired by NVIDIA SkillSpector",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Security",
+    "Agent-Ops",
+    "Software Development",
+    "Static Analysis"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "security"
+  }
+}

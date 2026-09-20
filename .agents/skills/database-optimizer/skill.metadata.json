@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Optimize database queries and performance",
+    "es": "Optimizar consultas de base de datos y rendimiento"
+  },
+  "displayDescription": {
+    "en": "Expert database optimizer specializing in query optimization, performance tuning, and scalability across PostgreSQL, MySQL, and other systems.",
+    "es": "Optimizador experto de bases de datos especializado en optimización de consultas y ajuste de rendimiento."
+  },
+  "version": "1.0.0",
+  "author": "Jeff Allan",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Database",
+    "Performance",
+    "Query Optimization",
+    "PostgreSQL",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

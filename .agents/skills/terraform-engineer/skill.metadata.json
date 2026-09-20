@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Write Terraform infrastructure-as-code",
+    "es": "Escribir infraestructura como código con Terraform"
+  },
+  "displayDescription": {
+    "en": "Senior Terraform engineer for infrastructure as code, multi-cloud provisioning, and modular architecture.",
+    "es": "Ingeniero senior de Terraform para infraestructura como código, aprovisionamiento multi-nube y arquitectura modular."
+  },
+  "version": "1.0.0",
+  "author": "Jeff Allan",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Terraform",
+    "IaC",
+    "Infrastructure",
+    "Multi-Cloud",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "infrastructure"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Generate implementation-grounded code documentation",
+    "es": "Generar documentación de código basada en la implementación"
+  },
+  "displayDescription": {
+    "en": "Generate implementation-grounded inline API comments, module READMEs, and API references from source code.",
+    "es": "Genera comentarios de API, READMEs de módulos y referencias de API basados en el código fuente."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Documentation",
+    "API",
+    "README",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "documentation"
+  }
+}

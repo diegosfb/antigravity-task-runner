@@ -1,21 +1,125 @@
-MIT License
+DRAFT — REQUIRES REVIEW BY QUALIFIED COUNSEL — NOT READY FOR SIGNATURE
 
-Copyright (c) 2026 dsfb
+Personal Use Source License 1.0
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Copyright (c) 2026 Diego Fernandez Brihuega
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+By exercising any permission granted below, you accept and agree to this
+License.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. Definitions
+
+"Licensed Work" means the software and accompanying materials distributed
+with this License.
+
+"Personal Use" means use by a natural person solely on that person's own
+behalf, for private study, education, research, experimentation, entertainment,
+or a hobby, without compensation, anticipated commercial application, or any
+purpose connected with a trade, profession, business, or organization.
+
+"Organization" means any corporation, limited liability company, partnership,
+sole proprietorship, nonprofit organization, educational institution,
+government body, public agency, association, or other organized group, whether
+or not operated for profit.
+
+"Organizational Use" means any use of the Licensed Work by, for, at the request
+of, under the direction of, or for the actual or anticipated benefit of an
+Organization. It includes use by an employee, officer, director, contractor,
+consultant, volunteer, student, researcher, or other individual acting within
+their duties or relationship with an Organization or using an Organization's
+time, equipment, accounts, systems, facilities, or other resources.
+
+2. Personal-Use License Grant
+
+Subject to this License, the Licensor grants you a limited, worldwide,
+royalty-free, non-exclusive, non-transferable, and non-sublicensable license to
+download, reproduce, install, execute, study, and modify the Licensed Work only
+for Personal Use. You may make a reasonable number of copies solely for backup
+or archival purposes.
+
+3. Restrictions
+
+The license in Section 2 does not permit you to:
+
+a. make any Organizational Use of the Licensed Work, including evaluation,
+   proof-of-concept work, development, testing, quality assurance, continuous
+   integration, staging, demonstration, training, internal operations, or
+   production use;
+
+b. use the Licensed Work for commercial activity, professional activity,
+   revenue generation, compensated work, or any actual or anticipated business
+   purpose;
+
+c. distribute, publish, sell, rent, lease, sublicense, host for third parties,
+   provide as a service, or otherwise make available the Licensed Work or any
+   modified or derivative version of it; or
+
+d. remove or alter copyright, license, attribution, or proprietary notices.
+
+The restrictions in this Section apply whether the relevant activity is
+internal or external, temporary or permanent, experimental or operational,
+and whether or not it directly generates revenue.
+
+4. Commercial License Required
+
+Any Organizational Use or other use outside the permissions expressly granted
+in Section 2 requires a separate paid commercial license signed by the
+Licensor before that use begins. Access to source code, possession of a copy,
+or prior Personal Use does not grant or imply a commercial license.
+
+5. Modifications
+
+You may create modifications and derivative works only for Personal Use and may
+not distribute or otherwise make them available to any other person or entity.
+You acquire no ownership interest in the Licensed Work by creating a
+modification or derivative work.
+
+6. Ownership and Reservation of Rights
+
+The Licensed Work is licensed, not sold. The Licensor retains all right, title,
+and interest in and to the Licensed Work. No rights are granted by implication,
+estoppel, or otherwise. All rights not expressly granted are reserved.
+
+This License does not grant permission to use any trademark, service mark,
+trade name, or logo of the Licensor.
+
+7. Termination
+
+Your rights under this License terminate automatically and immediately if you
+breach any term of this License. Upon termination, you must stop using the
+Licensed Work and destroy all copies and modifications in your possession or
+control. Sections 3, 6, 8, 9, 10, and 11 survive termination.
+
+8. Disclaimer of Warranties
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSED WORK IS
+PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTY OF ANY KIND, EXPRESS,
+IMPLIED, OR STATUTORY, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. THE LICENSOR DOES NOT WARRANT
+THAT THE LICENSED WORK WILL BE ERROR-FREE, SECURE, OR UNINTERRUPTED.
+
+9. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR WILL NOT BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL,
+OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA, PROFITS, REVENUE, BUSINESS, OR
+GOODWILL, ARISING FROM OR RELATED TO THE LICENSED WORK OR THIS LICENSE, UNDER
+ANY THEORY OF LIABILITY, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+10. Governing Law
+
+This License is governed by the laws of the State of California and applicable
+federal laws of the United States, without regard to conflict-of-laws rules.
+
+11. General Terms
+
+If any provision of this License is held unenforceable, it will be enforced to
+the maximum extent permitted and the remaining provisions will remain in
+effect. A waiver must be in writing and signed by the Licensor. A waiver of one
+breach is not a waiver of any other breach. This License is the entire agreement
+between you and the Licensor concerning the permissions granted here and may be
+modified only by a written agreement signed by the Licensor.
+
+This License applies only to versions of the Licensed Work that the Licensor
+distributes under this License. It does not revoke rights previously granted
+for copies distributed under another license.

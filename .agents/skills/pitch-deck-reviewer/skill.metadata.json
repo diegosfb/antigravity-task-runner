@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Review and critique an existing pitch deck",
+    "es": "Revisar y criticar un pitch deck existente"
+  },
+  "displayDescription": {
+    "en": "Review an existing investor, fundraising, sales, product, or partnership deck and produce prioritized, slide-specific findings.",
+    "es": "Revisa un pitch deck existente y produce hallazgos priorizados específicos por diapositiva."
+  },
+  "version": "1.1.0",
+  "author": "borghei; adapted by DSFB",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Pitch Deck",
+    "Review",
+    "Investor Relations",
+    "Presentations",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "investor-relations"
+  }
+}

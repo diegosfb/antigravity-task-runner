@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Advise on business investments and portfolio",
+    "es": "Asesorar sobre inversiones empresariales y portafolio"
+  },
+  "displayDescription": {
+    "en": "Business investment advisory covering portfolio strategy, due diligence, ROI analysis, and risk assessment.",
+    "es": "Asesoría de inversión empresarial que cubre estrategia de portafolio, diligencia debida, análisis de ROI y riesgo."
+  },
+  "version": "1.0.0",
+  "author": "borghei",
+  "package": "DSFB BusinessFinancesLib",
+  "tags": [
+    "Investment",
+    "Portfolio",
+    "Due-Diligence",
+    "Roi",
+    "Risk-Analysis",
+    "Diversification"
+  ],
+  "sdlc": {
+    "process": "business-strategy",
+    "phase": "financial-analysis"
+  }
+}

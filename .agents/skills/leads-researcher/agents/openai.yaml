@@ -1,0 +1,6 @@
+interface:
+  display_name: "Lead Researcher"
+  short_description: "Create sourced public account-research briefs"
+  default_prompt: "Use $leads-researcher to research this account from authorized public sources and produce a cited evidence brief."
+policy:
+  allow_implicit_invocation: true

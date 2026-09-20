@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Build production AI systems with LangChain",
+    "es": "Construir sistemas de IA en producción con LangChain"
+  },
+  "displayDescription": {
+    "en": "Expert LangChain developer guidance specializing in production-grade AI systems using LangChain 0.1+ and LangGraph.",
+    "es": "Guía experta de LangChain especializada en sistemas de IA de calidad de producción usando LangChain 0.1+ y LangGraph."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "LangChain",
+    "AI",
+    "LLM",
+    "LangGraph",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "ai-ml"
+  }
+}

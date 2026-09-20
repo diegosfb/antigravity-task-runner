@@ -1,0 +1,4 @@
+interface:
+  display_name: "M&A Playbook"
+  short_description: "Structure M&A diligence and integration planning"
+  default_prompt: "Use $ma-playbook to structure this M&A decision, diligence, and integration work with explicit assumptions and approval gates."

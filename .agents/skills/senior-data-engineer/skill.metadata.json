@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Implement data engineering pipelines and warehousing",
+    "es": "Implementar pipelines de ingeniería de datos y almacenamiento"
+  },
+  "displayDescription": {
+    "en": "Senior data engineering implementation covering Airflow, Spark, data pipelines, warehousing, and ETL.",
+    "es": "Implementación senior de ingeniería de datos cubriendo Airflow, Spark, pipelines de datos, almacenamiento y ETL."
+  },
+  "version": "1.1.0",
+  "author": "Borghei",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Airflow",
+    "Spark",
+    "Data-Pipelines",
+    "Warehousing",
+    "ETL",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "implementation"
+  }
+}

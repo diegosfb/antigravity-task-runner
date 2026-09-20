@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Create thought leadership and expert articles",
+    "es": "Crear contenido de liderazgo de pensamiento y artículos expertos"
+  },
+  "displayDescription": {
+    "en": "Create publication-ready thought leadership, opinion pieces, technical articles, corporate blog posts, and platform-native LinkedIn content.",
+    "es": "Crea contenido de liderazgo de pensamiento listo para publicación, piezas de opinión, artículos técnicos y contenido de LinkedIn."
+  },
+  "version": "1.1.0",
+  "author": "Affaan Mustafa — Everything Claude Code, adapted by DSFB",
+  "package": "DSFB ProfessionalServicesLib",
+  "tags": [
+    "Thought Leadership",
+    "Writing",
+    "LinkedIn",
+    "Content",
+    "Consulting & Professional Services"
+  ],
+  "sdlc": {
+    "process": "content",
+    "phase": "writing"
+  }
+}

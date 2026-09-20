@@ -46,6 +46,9 @@ export type AdlcAgentInput = {
   label?: string;
 };
 
+export const ARCHITECTURE_MODES = ["new_architecture", "existing_architecture_expansion"] as const;
+export type ArchitectureMode = (typeof ARCHITECTURE_MODES)[number];
+
 // Conventional repo paths for an agent's inputs, per the workflow described in
 // its own agent definition (e.g. ba-agent consumes the PRD that product-agent
 // writes, and reconciles against the existing specs directory). Prefilled as
@@ -54,6 +57,9 @@ export type AdlcAgentInput = {
 // Review Agent share architect-agent.md but need different defaults (the
 // review agent's whole job is reviewing the existing architecture package).
 const ADLC_AGENT_INPUT_DEFAULTS: Record<string, Record<string, string>> = {
+  product: {
+    product_definition_source: path.posix.join("docs", "product-definition")
+  },
   ba: {
     approved_prd: path.posix.join("docs", "project_description", "PRD.md"),
     existing_specifications: path.posix.join("docs", "specs")
@@ -63,19 +69,19 @@ const ADLC_AGENT_INPUT_DEFAULTS: Record<string, Record<string, string>> = {
     architecture_package: path.posix.join("docs", "architecture")
   },
   architect: {
-    specifications_directory: path.posix.join("docs", "specs"),
-    product_context: path.posix.join("docs", "project_description", "PRD.md"),
-    development_guidelines: path.posix.join("docs", "architecture", "development_guidelines.md")
+    specification_source: path.posix.join("docs", "specs"),
+    prd_file: path.posix.join("docs", "project_description", "PRD.md"),
+    existing_architecture_package: path.posix.join("docs", "architecture")
   },
   "architecture-review": {
-    specifications_directory: path.posix.join("docs", "specs"),
-    product_context: path.posix.join("docs", "project_description", "PRD.md"),
-    development_guidelines: path.posix.join("docs", "architecture", "development_guidelines.md"),
+    specification_source: path.posix.join("docs", "specs"),
+    prd_file: path.posix.join("docs", "project_description", "PRD.md"),
     existing_architecture_package: path.posix.join("docs", "architecture")
   },
   "project-planner": {
     requirements_stream: path.posix.join("docs", "specs"),
     technical_stream: path.posix.join("docs", "architecture"),
+    design_package: path.posix.join("docs", "design"),
     existing_backlog: path.posix.join("docs", "backlog")
   },
   coding: {
@@ -107,7 +113,7 @@ export function applyAdlcAgentInputRequiredOverrides(entryId: string, inputs: Ad
 // the frontmatter allows (e.g. Architecture Review Agent's product_context
 // is always the single PRD file, never a directory).
 const ADLC_AGENT_INPUT_TYPE_OVERRIDES: Record<string, Record<string, string>> = {
-  architect: { product_context: "file" },
+  architect: { product_context: "file", prd_file: "file" },
   "architecture-review": { product_context: "file" },
   ux: { approved_product_context: "directory" }
 };
@@ -126,11 +132,41 @@ export function applyAdlcAgentInputTypeOverrides(entryId: string, inputs: AdlcAg
 // architect agents, since that is always what it points to). The underlying
 // name is unchanged -- it is still what request.inputs and the prompt key by.
 const ADLC_AGENT_INPUT_LABEL_OVERRIDES: Record<string, Record<string, string>> = {
-  architect: { product_context: "PRD" },
-  "architecture-review": { product_context: "PRD" },
-  ux: { approved_product_context: "Specifications Directory" },
-  "project-planner": { requirements_stream: "Specifications Folder", technical_stream: "Architecture Documents" },
-  coding: { backlog_item: "Backlog" }
+  product: {
+    product_definition_source: "Product Definition",
+    supporting_evidence: "Supporting Evidence"
+  },
+  architect: {
+    product_context: "PRD",
+    prd_file: "PRD",
+    existing_architecture_package: "Existing Architecture Folder",
+    specification_source: "Specification Directory or File",
+    architecture_guidelines: "Architecture Guidelines"
+  },
+  "architecture-review": {
+    product_context: "PRD",
+    prd_file: "PRD",
+    existing_architecture_package: "Existing Architecture Folder",
+    specification_source: "Specification Directory or File",
+    architecture_guidelines: "Architecture Guidelines"
+  },
+  ux: {
+    approved_product_context: "Specifications Directory",
+    architecture_package: "Architecture Package",
+    research_and_evidence: "Research and Evidence",
+    existing_experience_system: "Existing Experience System"
+  },
+  "project-planner": {
+    requirements_stream: "Specifications Directory",
+    technical_stream: "Architecture Folder",
+    design_package: "Design Package",
+    existing_backlog: "Existing Backlog"
+  },
+  coding: {
+    backlog_item: "Backlog",
+    user_story_or_specification: "User Story or Specification"
+  },
+  "code-review": { review_candidate: "Pull Request" }
 };
 
 export function applyAdlcAgentInputLabelOverrides(entryId: string, inputs: AdlcAgentInput[]): AdlcAgentInput[] {
@@ -148,11 +184,15 @@ export function applyAdlcAgentInputLabelOverrides(entryId: string, inputs: AdlcA
 // development_guidelines). Names not listed keep their original relative
 // order and are placed after the listed ones.
 const ADLC_AGENT_INPUT_ORDER: Record<string, string[]> = {
+  product: ["product_definition_source", "supporting_evidence"],
+  ba: ["approved_prd", "existing_specifications", "supporting_evidence"],
+  ux: ["approved_product_context", "architecture_package", "research_and_evidence", "existing_experience_system"],
+  architect: ["specification_source", "existing_architecture_package", "prd_file", "architecture_guidelines"],
   "architecture-review": [
     "existing_architecture_package",
-    "specifications_directory",
-    "development_guidelines",
-    "product_context"
+    "specification_source",
+    "prd_file",
+    "architecture_guidelines"
   ]
 };
 
@@ -168,28 +208,25 @@ export function applyAdlcAgentInputOrder(entryId: string, inputs: AdlcAgentInput
 }
 
 // Fully custom input fields for an agent, appended after whatever real
-// frontmatter inputs remain visible (for product and test, that filtered
-// set is empty, so these are the only fields shown). Used when the agent's
+// frontmatter inputs remain visible. Used when the agent's
 // declared inputs don't match how the run page should ask for them at all,
 // rather than just needing a default, label, type, or order tweak.
 const ADLC_AGENT_SYNTHETIC_INPUTS: Record<string, AdlcAgentInput[]> = {
-  product: [
-    {
-      name: "artifacts_directory",
-      description: "Notes, meeting analyses, product descriptions, briefs, and other input artifacts for this agent.",
-      type: "directory",
-      required: true,
-      defaultValue: path.posix.join("docs", "product-definition")
-    }
-  ],
   test: [
     {
       name: "backlog",
       label: "Backlog",
-      description: "The sequenced, dependency-ordered backlog to create tests for.",
+      description: "The backlog contains user stories sequenced by dependencies.",
       type: "directory",
-      required: true,
+      required: false,
       defaultValue: path.posix.join("docs", "backlog")
+    },
+    {
+      name: "user_story_or_specification",
+      label: "User Story or Specification",
+      description: "A single user story or specification to create tests for instead of the whole backlog.",
+      type: "file_or_directory",
+      required: false
     }
   ]
 };
@@ -205,149 +242,224 @@ export function getAdlcAgentSyntheticInputs(entryId: string): AdlcAgentInput[] {
 // catalog entry id.
 const ADLC_AGENT_DIAGRAM_HTML: Record<string, string> = {
   product: `
-      <div class="diagram">
+      <div class="diagram diagram-product">
         <div class="diagram-row">
           <div class="diagram-group">
-            <div class="diagram-group-label">Product Definition</div>
+            <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Meeting Notes Folder</div>
-              <div class="diagram-box">Project Description File</div>
+              <div class="diagram-box diagram-box-required">Product Definition</div>
+              <div class="diagram-box diagram-box-optional">Supporting Evidence</div>
             </div>
           </div>
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box diagram-box-emphasis">Product Agent</div>
           <div class="diagram-arrow">&#8594;</div>
-          <div class="diagram-box">PRD</div>
+          <div class="diagram-box diagram-box-output">PRD</div>
         </div>
       </div>`,
   ba: `
-      <div class="diagram">
+      <div class="diagram diagram-ba">
         <div class="diagram-row">
           <div class="diagram-group">
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Approved PRD</div>
-              <div class="diagram-box">Existing Specifications</div>
+              <div class="diagram-box diagram-box-required">Approved PRD</div>
+              <div class="diagram-box diagram-box-optional">Existing Specifications</div>
+              <div class="diagram-box diagram-box-optional">Supporting Evidence</div>
             </div>
           </div>
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box diagram-box-emphasis">BA Agent</div>
           <div class="diagram-arrow">&#8594;</div>
-          <div class="diagram-box">Specifications</div>
+          <div class="diagram-box diagram-box-output">Specifications</div>
         </div>
       </div>`,
   ux: `
-      <div class="diagram">
+      <div class="diagram diagram-ux">
         <div class="diagram-row">
           <div class="diagram-group">
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Specifications Directory</div>
-              <div class="diagram-box">Architecture Package</div>
+              <div class="diagram-box diagram-box-required">Specifications Directory</div>
+              <div class="diagram-box diagram-box-optional">Architecture Package</div>
+              <div class="diagram-box diagram-box-optional">Research and Evidence</div>
+              <div class="diagram-box diagram-box-optional">Existing Experience System</div>
             </div>
           </div>
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box diagram-box-emphasis">UX Agent</div>
           <div class="diagram-arrow">&#8594;</div>
-          <div class="diagram-box">Design Package</div>
+          <div class="diagram-group-boxes">
+            <div class="diagram-group diagram-group-output">
+              <div class="diagram-group-label">Design Package</div>
+              <div class="diagram-group-boxes">
+                <div class="diagram-box diagram-box-output">Design Document</div>
+                <div class="diagram-box diagram-box-output">Wireframes</div>
+              </div>
+            </div>
+            <div class="diagram-box diagram-box-output">Specs Updated with UX Design</div>
+          </div>
         </div>
       </div>`,
   architect: `
-      <div class="diagram">
+      <div class="diagram diagram-architect">
         <div class="diagram-row">
           <div class="diagram-group">
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Specifications Directory</div>
-              <div class="diagram-box">PRD</div>
-              <div class="diagram-box">Development Guidelines</div>
+              <div class="diagram-box diagram-box-required">Specification Directory or File</div>
+              <div class="diagram-box diagram-box-optional">Existing Architecture Folder</div>
+              <div class="diagram-box diagram-box-optional">PRD</div>
+              <div class="diagram-box diagram-box-optional">Architecture Guidelines</div>
             </div>
           </div>
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box diagram-box-emphasis">Architect Agent</div>
           <div class="diagram-arrow">&#8594;</div>
-          <div class="diagram-box">Architecture Document</div>
+          <div class="diagram-group diagram-group-output">
+            <div class="diagram-group-label">Architecture Folder</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box diagram-box-output">Architecture Document</div>
+              <div class="diagram-box diagram-box-output">ADRs</div>
+            </div>
+          </div>
         </div>
       </div>`,
   "architecture-review": `
-      <div class="diagram">
+      <div class="diagram diagram-architecture-review">
         <div class="diagram-row">
           <div class="diagram-group">
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Existing Architecture Package</div>
-              <div class="diagram-box">Specifications Directory</div>
-              <div class="diagram-box">Development Guidelines</div>
-              <div class="diagram-box">PRD</div>
+              <div class="diagram-box diagram-box-required">Existing Architecture Folder</div>
+              <div class="diagram-box diagram-box-required">Specification Directory or File</div>
+              <div class="diagram-box diagram-box-optional">PRD</div>
+              <div class="diagram-box diagram-box-optional">Architecture Guidelines</div>
             </div>
           </div>
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box diagram-box-emphasis">Architecture Review Agent</div>
           <div class="diagram-arrow">&#8594;</div>
-          <div class="diagram-box">Review Findings</div>
+          <div class="diagram-box diagram-box-output">Review Findings</div>
         </div>
       </div>`,
   "project-planner": `
-      <div class="diagram">
+      <div class="diagram diagram-project-planner">
         <div class="diagram-row">
           <div class="diagram-group">
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Specifications Folder</div>
-              <div class="diagram-box">Architecture Documents</div>
-              <div class="diagram-box">Existing Backlog</div>
+              <div class="diagram-box diagram-box-required">Specifications Directory</div>
+              <div class="diagram-box diagram-box-required">Architecture Folder</div>
+              <div class="diagram-box diagram-box-optional">Design Package</div>
+              <div class="diagram-box diagram-box-optional">Existing Backlog</div>
             </div>
           </div>
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box diagram-box-emphasis">Project Planner Agent</div>
           <div class="diagram-arrow">&#8594;</div>
-          <div class="diagram-box">Task Backlog</div>
+          <div class="diagram-box diagram-box-output">Backlog</div>
         </div>
       </div>`,
   test: `
-      <div class="diagram">
+      <div class="diagram diagram-test">
         <div class="diagram-row">
           <div class="diagram-group">
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Backlog</div>
+              <div class="diagram-box diagram-box-optional">Backlog</div>
+              <div class="diagram-box diagram-box-optional">User Story or Specification</div>
             </div>
           </div>
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box diagram-box-emphasis">Create Tests Agent</div>
           <div class="diagram-arrow">&#8594;</div>
-          <div class="diagram-box">Test Suite</div>
+          <div class="diagram-group diagram-group-output">
+            <div class="diagram-group-label">src</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box diagram-box-output">Tests</div>
+            </div>
+          </div>
         </div>
       </div>`,
   coding: `
-      <div class="diagram">
+      <div class="diagram diagram-coding">
         <div class="diagram-row">
           <div class="diagram-group">
-            <div class="diagram-group-label">Inputs</div>
+            <div class="diagram-group-label">Inputs (one required)</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Backlog</div>
-              <div class="diagram-box">src Tests</div>
+              <div class="diagram-box diagram-box-optional">Backlog</div>
+              <div class="diagram-box diagram-box-optional">User Story or Specification</div>
             </div>
           </div>
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box diagram-box-emphasis">Coding Agent</div>
           <div class="diagram-arrow">&#8594;</div>
-          <div class="diagram-box">Pull Request</div>
+          <div class="diagram-group diagram-group-output">
+            <div class="diagram-group-label">src</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box diagram-box-output">Source Code</div>
+              <div class="diagram-box diagram-box-output">Pull Request</div>
+            </div>
+          </div>
         </div>
       </div>`,
   "code-review": `
-      <div class="diagram">
+      <div class="diagram diagram-code-review">
         <div class="diagram-row">
           <div class="diagram-group">
             <div class="diagram-group-label">Inputs</div>
             <div class="diagram-group-boxes">
-              <div class="diagram-box">Pull Request</div>
+              <div class="diagram-box diagram-box-required">Pull Request</div>
             </div>
           </div>
           <div class="diagram-arrow">&#8594;</div>
           <div class="diagram-box diagram-box-emphasis">Code Review Agent</div>
           <div class="diagram-arrow">&#8594;</div>
-          <div class="diagram-box">Review Decision</div>
+          <div class="diagram-box diagram-box-output">PR Merge</div>
+        </div>
+      </div>`,
+  deployment: `
+      <div class="diagram diagram-deployment">
+        <div class="diagram-row">
+          <div class="diagram-group">
+            <div class="diagram-group-label">Inputs</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box diagram-box-required">Approved Merged PR</div>
+              <div class="diagram-box diagram-box-required">Release Configuration</div>
+              <div class="diagram-box diagram-box-optional">Pre-Deployment Script</div>
+              <div class="diagram-box diagram-box-optional">Post-Deployment Script</div>
+              <div class="diagram-box diagram-box-optional">Prior Release State</div>
+              <div class="diagram-box diagram-box-optional">Pre-Release Evidence</div>
+            </div>
+          </div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box diagram-box-emphasis">Deployment Agent</div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-group diagram-group-output">
+            <div class="diagram-group-label">Outputs</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box diagram-box-output">Live Release</div>
+              <div class="diagram-box diagram-box-output">Deployment Record</div>
+              <div class="diagram-box diagram-box-output">Rollback Artifact</div>
+              <div class="diagram-box diagram-box-output">Post-Deploy Evidence</div>
+            </div>
+          </div>
+        </div>
+      </div>`,
+  "sdlc-orchestrator": `
+      <div class="diagram diagram-sdlc-orchestrator">
+        <div class="diagram-row">
+          <div class="diagram-group">
+            <div class="diagram-group-label">Inputs</div>
+            <div class="diagram-group-boxes">
+              <div class="diagram-box diagram-box-required">User Request</div>
+            </div>
+          </div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box diagram-box-emphasis">SDLC Orchestrator Agent</div>
+          <div class="diagram-arrow">&#8594;</div>
+          <div class="diagram-box diagram-box-output">Delegation to Appropriate Agent(s)</div>
         </div>
       </div>`
 };
@@ -363,6 +475,8 @@ export type AdlcAgentDefinition = {
   filePath: string;
   description: string;
   inputs: AdlcAgentInput[];
+  architectureMode?: ArchitectureMode;
+  architectureModeReason?: string;
   promptHint?: string;
   diagramHtml?: string;
 };
@@ -459,17 +573,15 @@ export function isAdlcAutoConfigInput(name: string): boolean {
 }
 
 // Inputs hidden for a specific agent because they add no practical value on
-// the run page for that agent (e.g. BA Agent's supporting_evidence and
-// alternative_input_contract are broad catch-alls better handled through the
-// default artifacts directory or the free-form additional instructions).
+// the run page for that agent (e.g. BA Agent's alternative_input_contract is a
+// specialized to-spec path better handled through explicit workflow routing).
 // Keyed by catalog entry id: Architect Agent hides existing_architecture_package
 // (it is authoring a new package), but Architecture Review Agent needs that
 // same input as its primary, mandatory subject, so it is not hidden there.
 const ADLC_AGENT_HIDDEN_INPUTS: Record<string, string[]> = {
-  ba: ["supporting_evidence", "alternative_input_contract"],
-  ux: ["research_and_evidence", "existing_experience_system"],
-  architect: ["existing_architecture_package"],
-  "project-planner": ["design_stream", "backlog_destination", "execution_evidence"],
+  ba: ["alternative_input_contract"],
+  architect: ["architecture_mode", "development_guidelines"],
+  "project-planner": ["backlog_destination", "execution_evidence"],
   test: [
     "candidate_revision",
     "acceptance_criteria",
@@ -479,7 +591,7 @@ const ADLC_AGENT_HIDDEN_INPUTS: Record<string, string[]> = {
     "red_team_target"
   ],
   coding: ["repository_state", "feedback_context"],
-  "code-review": ["review_candidate", "verification_evidence", "governing_contracts", "prior_review_context"]
+  "code-review": ["verification_evidence", "governing_contracts", "prior_review_context"]
 };
 
 export function isAdlcAgentHiddenInput(entryId: string, name: string): boolean {
@@ -501,23 +613,59 @@ export function applyAdlcAgentInputDefaults(entryId: string, inputs: AdlcAgentIn
   });
 }
 
+export type ArchitectArchitectureModeDetection = {
+  mode: ArchitectureMode;
+  reason: string;
+};
+
+export function detectArchitectArchitectureMode(repoRoot: string): ArchitectArchitectureModeDetection {
+  const architectureRoot = path.join(repoRoot, "docs", "architecture");
+  const architectureDocumentExists = fs.existsSync(path.join(architectureRoot, "architecture.md"));
+  const adrDirectory = path.join(architectureRoot, "adrs");
+  let adrEvidenceExists = false;
+
+  if (fs.existsSync(adrDirectory)) {
+    try {
+      adrEvidenceExists = fs.readdirSync(adrDirectory).some((name) => name.toLowerCase().endsWith(".md"));
+    } catch {
+      return {
+        mode: "new_architecture",
+        reason: "The ADR directory could not be read, so the run defaults to new architecture."
+      };
+    }
+  }
+
+  if (architectureDocumentExists && adrEvidenceExists) {
+    return {
+      mode: "existing_architecture_expansion",
+      reason: "Detected an existing architecture document and ADR evidence in docs/architecture."
+    };
+  }
+  return {
+    mode: "new_architecture",
+    reason: "A complete architecture document and ADR set was not found in docs/architecture."
+  };
+}
+
 export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalogEntry): AdlcAgentDefinition {
   const filePath = getAdlcAgentFilePath(repoRoot, entry.folder);
   const markdown = fs.readFileSync(filePath, "utf8");
   const { description, inputs } = parseAdlcAgentFrontmatter(markdown);
-  const visibleInputs = applyAdlcAgentInputOrder(
-    entry.id,
-    applyAdlcAgentInputLabelOverrides(
+  const visibleInputs =
+    applyAdlcAgentInputOrder(
       entry.id,
-      applyAdlcAgentInputTypeOverrides(
+      applyAdlcAgentInputLabelOverrides(
         entry.id,
-        applyAdlcAgentInputRequiredOverrides(
+        applyAdlcAgentInputTypeOverrides(
           entry.id,
-          applyAdlcAgentInputDefaults(entry.id, filterUserFacingAdlcInputs(inputs, entry.id))
+          applyAdlcAgentInputRequiredOverrides(
+            entry.id,
+            applyAdlcAgentInputDefaults(entry.id, filterUserFacingAdlcInputs(inputs, entry.id))
+          )
         )
       )
-    )
-  );
+    );
+  const architectureModeDetection = entry.id === "architect" ? detectArchitectArchitectureMode(repoRoot) : undefined;
   return {
     id: entry.id,
     label: entry.label,
@@ -525,6 +673,8 @@ export function loadAdlcAgentDefinition(repoRoot: string, entry: AdlcAgentCatalo
     filePath,
     description,
     inputs: [...visibleInputs, ...getAdlcAgentSyntheticInputs(entry.id)],
+    architectureMode: architectureModeDetection?.mode,
+    architectureModeReason: architectureModeDetection?.reason,
     promptHint: entry.promptHint,
     diagramHtml: getAdlcAgentDiagramHtml(entry.id)
   };
@@ -596,9 +746,24 @@ export function getMissingRequiredAdlcInputs(
   definition: AdlcAgentDefinition,
   inputs: Record<string, string>
 ): string[] {
-  return definition.inputs
+  const missing = definition.inputs
     .filter((input) => input.required && !(inputs[input.name] || "").trim())
     .map((input) => input.name);
+  if (
+    definition.id === "test" &&
+    !(inputs.backlog || "").trim() &&
+    !(inputs.user_story_or_specification || "").trim()
+  ) {
+    missing.push("backlog or user_story_or_specification");
+  }
+  if (
+    definition.id === "coding" &&
+    !(inputs.backlog_item || "").trim() &&
+    !(inputs.user_story_or_specification || "").trim()
+  ) {
+    missing.push("backlog_item or user_story_or_specification");
+  }
+  return missing;
 }
 
 export function buildAdlcAgentPrompt(definition: AdlcAgentDefinition, request: AdlcAgentRunRequest): string {
@@ -607,9 +772,19 @@ export function buildAdlcAgentPrompt(definition: AdlcAgentDefinition, request: A
     `You are the \`${definition.folder}\` ADLC agent. Before doing anything else, read and follow the agent definition at \`${agentPath}\`, including its references and subagents.`
   ];
   if (definition.promptHint) sections.push(definition.promptHint);
+  if (definition.architectureMode) {
+    sections.push(`Internally detected architecture mode: \`${definition.architectureMode}\`.`);
+  }
 
   if (definition.inputs.length > 0) {
-    const inputLines = definition.inputs.map((input) => {
+    const hasTargetedSource =
+      (definition.id === "test" || definition.id === "coding") &&
+      Boolean((request.inputs.user_story_or_specification || "").trim());
+    const overriddenBacklogInput = definition.id === "coding" ? "backlog_item" : "backlog";
+    const promptInputs = definition.inputs.filter(
+      (input) => !(hasTargetedSource && input.name === overriddenBacklogInput)
+    );
+    const inputLines = promptInputs.map((input) => {
       const value = (request.inputs[input.name] || "").trim();
       const requirement = input.required ? "required" : "optional";
       return `- ${input.name} (${requirement}): ${value || "not provided"}`;
@@ -690,6 +865,7 @@ export function renderAdlcAgentRunHtml(
         border-radius: 6px;
       }
       textarea { min-height: 90px; resize: vertical; }
+      .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
       .title { font-size: 18px; font-weight: 600; }
       .description { font-size: 13px; color: var(--vscode-descriptionForeground); }
       .panel-section {
@@ -711,13 +887,17 @@ export function renderAdlcAgentRunHtml(
       .diagram { margin: 4px 0 8px; overflow-x: auto; }
       .diagram-row { display: flex; align-items: center; gap: 10px; }
       .diagram-group { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px dashed var(--vscode-panel-border, var(--vscode-input-border, transparent)); border-radius: 8px; }
+      .diagram-product .diagram-group, .diagram-ba .diagram-group, .diagram-architect .diagram-group, .diagram-architecture-review .diagram-group, .diagram-ux .diagram-group, .diagram-project-planner .diagram-group, .diagram-test .diagram-group, .diagram-coding .diagram-group, .diagram-code-review .diagram-group, .diagram-deployment .diagram-group, .diagram-sdlc-orchestrator .diagram-group { border-color: var(--vscode-charts-yellow, #cca700); border-style: dotted; }
       .diagram-group-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--vscode-descriptionForeground); }
       .diagram-group-boxes { display: flex; flex-direction: column; gap: 6px; }
       .diagram-box { padding: 8px 12px; border: 1px solid var(--vscode-panel-border, var(--vscode-input-border, transparent)); border-radius: 6px; background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background)); font-size: 12px; white-space: nowrap; text-align: center; }
+      .diagram-box-required { border-color: var(--vscode-charts-orange, #d18616); }
+      .diagram-box-optional { border-color: var(--vscode-panel-border, var(--vscode-input-border, transparent)); }
+      .diagram-box-output { border-color: var(--vscode-charts-green, #89d185); }
+      .diagram-architect .diagram-group-output, .diagram-ux .diagram-group-output, .diagram-test .diagram-group-output, .diagram-coding .diagram-group-output, .diagram-deployment .diagram-group-output { border-color: var(--vscode-charts-green, #89d185); border-style: dotted; }
       .diagram-box-emphasis { border-color: var(--vscode-focusBorder, var(--vscode-charts-purple)); font-weight: 600; }
       .diagram-arrow { font-size: 16px; color: var(--vscode-descriptionForeground); flex: none; }
       .error { min-height: 18px; font-size: 12px; color: var(--vscode-errorForeground); }
-      .actions { display: flex; justify-content: flex-end; gap: 8px; }
       button { border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; white-space: nowrap; }
       button[type="submit"] { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
       button[type="button"] { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
@@ -726,8 +906,13 @@ export function renderAdlcAgentRunHtml(
   <body>
     <form id="adlc-agent-form">
       <div>
-        <div class="title">${escapeHtml(definition.label)}</div>
-        <div class="hint"><code>${escapeHtml(getAdlcAgentRelativePath(definition.folder))}</code></div>
+        <div class="page-header">
+          <div>
+            <div class="title">${escapeHtml(definition.label)}</div>
+            <div class="hint"><code>${escapeHtml(getAdlcAgentRelativePath(definition.folder))}</code></div>
+          </div>
+          <button type="submit">Run</button>
+        </div>
         ${definition.description ? `<p class="description">${escapeHtml(definition.description)}</p>` : ""}
         ${definition.diagramHtml || ""}
       </div>
@@ -755,10 +940,6 @@ export function renderAdlcAgentRunHtml(
         <textarea id="additional-instructions" placeholder="Optional context, scope, or constraints for this run"></textarea>
       </label>
       <div class="error" id="error-message"></div>
-      <div class="actions">
-        <button type="button" id="cancel-button">Cancel</button>
-        <button type="submit">Execute</button>
-      </div>
     </form>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
@@ -770,6 +951,8 @@ export function renderAdlcAgentRunHtml(
       const commandPreview = document.getElementById("command-preview");
       const errorMessage = document.getElementById("error-message");
       const additionalInstructions = document.getElementById("additional-instructions");
+      const requiresAlternativeSource = ${definition.id === "test" || definition.id === "coding" ? "true" : "false"};
+      const backlogInputName = ${JSON.stringify(definition.id === "coding" ? "backlog_item" : "backlog")};
 
       function quoteIfNeeded(value) {
         return /^[A-Za-z0-9_./:-]+$/.test(value) ? value : "'" + value.replace(/'/g, "'\\\\''") + "'";
@@ -817,10 +1000,6 @@ export function renderAdlcAgentRunHtml(
         }
       });
 
-      document.getElementById("cancel-button").addEventListener("click", () => {
-        vscode.postMessage({ type: "adlcAgentCancel" });
-      });
-
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         errorMessage.textContent = "";
@@ -833,6 +1012,10 @@ export function renderAdlcAgentRunHtml(
         }
         if (missing.length > 0) {
           errorMessage.textContent = "Missing required inputs: " + missing.join(", ");
+          return;
+        }
+        if (requiresAlternativeSource && !inputs[backlogInputName] && !inputs.user_story_or_specification) {
+          errorMessage.textContent = "Provide either Backlog or User Story or Specification.";
           return;
         }
         vscode.postMessage({

@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Estimate infrastructure capacity and system requirements",
+    "es": "Estimar capacidad de infraestructura y requisitos del sistema"
+  },
+  "displayDescription": {
+    "en": "Estimate runtime demand such as request rate, concurrency, storage, bandwidth, and latency budgets using explicit units and scenarios.",
+    "es": "Estima demanda en tiempo de ejecución como tasa de solicitudes, concurrencia, almacenamiento, ancho de banda y presupuestos de latencia."
+  },
+  "version": "1.1.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Estimation",
+    "Infrastructure",
+    "Capacity Planning",
+    "Performance",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "planning",
+    "phase": "backlog-management"
+  }
+}

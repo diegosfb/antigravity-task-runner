@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Build an automated data collection agent",
+    "es": "Construir un agente automatizado de recolección de datos"
+  },
+  "displayDescription": {
+    "en": "Build a fully automated AI-powered data collection agent for any public source such as job boards, prices, news, and listings.",
+    "es": "Construye un agente de recolección de datos con IA para fuentes públicas como bolsas de empleo, precios, noticias y listados."
+  },
+  "version": "1.0.0",
+  "author": "DSFB",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Data",
+    "Scraping",
+    "Automation",
+    "Productivity Tools"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

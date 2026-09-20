@@ -1,0 +1,6 @@
+interface:
+  display_name: "Dashboard Builder"
+  short_description: "Build operational and Looker Studio dashboards"
+  default_prompt: "Use $dashboard-builder to turn these questions and data sources into a validated dashboard design."
+policy:
+  allow_implicit_invocation: true

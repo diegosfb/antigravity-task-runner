@@ -1,0 +1,24 @@
+{
+  "displayName": {
+    "en": "Develop on Snowflake data warehouse",
+    "es": "Desarrollar en el data warehouse Snowflake"
+  },
+  "displayDescription": {
+    "en": "Snowflake development covering SQL, data warehouse design, query optimization, and warehouse sizing.",
+    "es": "Desarrollo en Snowflake cubriendo SQL, diseño de data warehouse, optimización de consultas y dimensionamiento de warehouse."
+  },
+  "version": "1.0.0",
+  "author": "Borghei",
+  "package": "DSFB SLDC-extendedLib",
+  "tags": [
+    "Snowflake",
+    "SQL",
+    "Data-Warehouse",
+    "Query-Optimization",
+    "Software Development"
+  ],
+  "sdlc": {
+    "process": "development",
+    "phase": "data-engineering"
+  }
+}

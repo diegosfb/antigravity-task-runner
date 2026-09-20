@@ -1,0 +1,25 @@
+{
+  "displayName": {
+    "en": "Create diagrams and architecture visuals with draw.io",
+    "es": "Crear diagramas y visualizaciones de arquitectura con draw.io"
+  },
+  "displayDescription": {
+    "en": "Use when the user requests diagrams, flowcharts, architecture diagrams, ER diagrams, UML, or any visualization.",
+    "es": "Usar cuando se soliciten diagramas, flujogramas, diagramas de arquitectura, ER, UML o cualquier visualización."
+  },
+  "version": "2.3.0",
+  "author": "Agents365-ai",
+  "package": "DSFB SLDC",
+  "tags": [
+    "Drawio",
+    "Diagram",
+    "Flowchart",
+    "Architecture",
+    "Visualization",
+    "UML"
+  ],
+  "sdlc": {
+    "process": "design",
+    "phase": "diagramming"
+  }
+}

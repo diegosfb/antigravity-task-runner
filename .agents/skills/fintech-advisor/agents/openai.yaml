@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fintech Advisor"
+  short_description: "Frame fintech models, flows, and regulatory risk"
+  default_prompt: "Use $fintech-advisor to map this fintech product's money flows, operating model, and regulatory questions."

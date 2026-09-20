@@ -1,0 +1,23 @@
+{
+  "displayName": {
+    "en": "Auto-optimize an asset with iterative loops",
+    "es": "Optimizar automáticamente un activo con bucles iterativos"
+  },
+  "displayDescription": {
+    "en": "Turn 'is it good?' into one objective number, then run repeated hypothesize → edit → score → keep-or-revert rounds until a goal is hit.",
+    "es": "Convierte '¿es bueno?' en un número objetivo y ejecuta rondas de hipótesis → edición → puntuación hasta alcanzar una meta."
+  },
+  "version": "1.0.0",
+  "author": "DSFB based on https://github.com/karpathy/autoresearch",
+  "package": "DSFB GeneralPurposeLib",
+  "tags": [
+    "Research",
+    "Optimization",
+    "Experimentation",
+    "Autoresearch"
+  ],
+  "sdlc": {
+    "process": "research",
+    "phase": "experimentation"
+  }
+}
