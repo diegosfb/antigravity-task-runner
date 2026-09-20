@@ -115,12 +115,24 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
       ];
     }
 
-    if (element.kind === "category" && element.label === "Deploy Agentic Libraries") {
+    if (element.kind === "category" && element.label === "Install Agentic Libraries") {
       return getDeployAgenticLibrariesItems();
+    }
+
+    if (element.kind === "category" && element.label === "Backlog Management") {
+      return getBacklogManagementItems();
+    }
+
+    if (element.kind === "category" && element.label === "Increment Versions") {
+      return getIncrementVersionItems();
     }
 
     if (element.kind === "category" && element.label === "ADLC Agents") {
       return getAdlcAgentItems();
+    }
+
+    if (element.kind === "category" && element.label === "Auxiliary Agents and Skills") {
+      return getAuxiliaryAgentAndSkillItems();
     }
 
     if (element.kind === "category" && element.label === "Repository Actions") {
@@ -385,8 +397,7 @@ const SOP_MANUAL_ACTION_COLOR = new vscode.ThemeColor("charts.yellow");
 const WHITE_FOLDER_COLOR = new vscode.ThemeColor("terminal.ansiWhite");
 const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
 const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
-const CLOUD_ARCHITECT_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
-const EXPLAIN_ME_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiCyan");
+const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBrightBlue");
 const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
 const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(
   path.resolve(__dirname, "..", "Resources", "feature-estimator-red.svg")
@@ -611,25 +622,10 @@ function getQuickActionItems(): NodeItem[] {
   const items: NodeItem[] = [];
   const rootPath = getRootPath();
   const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
-  const cloudInfrastructureSignals = repoRoot
-    ? detectCloudInfrastructureSignals(repoRoot, 3)
-    : [];
-  const hasCloudInfrastructure = cloudInfrastructureSignals.length > 0;
   const hasRepo = repoRoot ? fs.existsSync(path.join(repoRoot, ".git")) : false;
   const autocommitRunning = repoRoot ? isAutocommitRunning(repoRoot) : false;
   const hasAgentFolder = repoRoot ? fs.existsSync(path.join(getWorkspaceProjectPath(repoRoot), ".agent")) : false;
   const hasGitHub = repoRoot ? hasGitHubRemoteSync(repoRoot) : false;
-  const savedJiraProjectKey =
-    repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
-      ? (
-        fs
-          .readFileSync(path.join(repoRoot, ".env"), "utf8")
-          .match(/^\s*JIRA_PROJECT_KEY\s*=\s*([^\r\n#]+)/m)?.[1] ?? ""
-      )
-        .trim()
-        .replace(/^['"]|['"]$/g, "")
-        .toUpperCase()
-      : "";
 
   const setupWorkspace = new NodeItem(
     { kind: "action", label: "Setup Workspace" },
@@ -651,26 +647,20 @@ function getQuickActionItems(): NodeItem[] {
   items.push(setupWorkspace);
 
   const deployAgenticLibraries = new NodeItem(
-    { kind: "category", label: "Deploy Agentic Libraries" },
+    { kind: "category", label: "Install Agentic Libraries" },
     vscode.TreeItemCollapsibleState.Collapsed
   );
-  deployAgenticLibraries.iconPath = new vscode.ThemeIcon("cloud-upload", QUICK_ACTION_COLOR);
-  deployAgenticLibraries.tooltip = "Deploy agentic libraries to the current workspace.";
+  deployAgenticLibraries.iconPath = new vscode.ThemeIcon("cloud-download", QUICK_ACTION_COLOR);
+  deployAgenticLibraries.tooltip = "Install agentic libraries in the current workspace.";
   items.push(deployAgenticLibraries);
 
-
-
-  const assignBacklogItemToAgent = new NodeItem(
-    { kind: "action", label: "Assign Backlog Item to Agent" },
-    vscode.TreeItemCollapsibleState.None
+  const backlogManagement = new NodeItem(
+    { kind: "category", label: "Backlog Management" },
+    vscode.TreeItemCollapsibleState.Collapsed
   );
-  assignBacklogItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
-  assignBacklogItemToAgent.tooltip = "Assign a Jira item or a local backlog item from docs/backlog to the selected agent.";
-  assignBacklogItemToAgent.command = {
-    command: "antigravity.assignBacklogItemToAgent",
-    title: "Assign Backlog Item to Agent"
-  };
-  items.push(assignBacklogItemToAgent);
+  backlogManagement.iconPath = new vscode.ThemeIcon("checklist", JIRA_ACTION_COLOR);
+  backlogManagement.tooltip = "Create, assign, take, and complete backlog items.";
+  items.push(backlogManagement);
 
   if (!hasRepo) {
     const initRepo = new NodeItem(
@@ -713,136 +703,21 @@ function getQuickActionItems(): NodeItem[] {
   adlcAgents.tooltip = "Run an ADLC agent from .agents/agents with a chosen harness, model, and input artifacts.";
   items.push(adlcAgents);
 
-  const addBacklogItem = new NodeItem(
-    { kind: "action", label: "Add Backlog Item" },
-    vscode.TreeItemCollapsibleState.None
+  const auxiliaryAgentsAndSkills = new NodeItem(
+    { kind: "category", label: "Auxiliary Agents and Skills" },
+    vscode.TreeItemCollapsibleState.Collapsed
   );
-  addBacklogItem.iconPath = new vscode.ThemeIcon("add", JIRA_ACTION_COLOR);
-  addBacklogItem.tooltip = "Create a backlog item in docs/backlog, and in Jira too when a project is connected.";
-  addBacklogItem.command = {
-    command: "antigravity.addBacklogItem",
-    title: "Add Backlog Item"
-  };
-  items.push(addBacklogItem);
+  auxiliaryAgentsAndSkills.iconPath = new vscode.ThemeIcon("tools", FEATURE_ESTIMATOR_ACTION_COLOR);
+  auxiliaryAgentsAndSkills.tooltip = "Open or run supporting agents and skills outside the core ADLC sequence.";
+  items.push(auxiliaryAgentsAndSkills);
 
-  const takeBacklogItemAssign = new NodeItem(
-    { kind: "action", label: "Take Backlog Item (Assign)" },
-    vscode.TreeItemCollapsibleState.None
+  const incrementVersions = new NodeItem(
+    { kind: "category", label: "Increment Versions" },
+    vscode.TreeItemCollapsibleState.Collapsed
   );
-  takeBacklogItemAssign.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
-  takeBacklogItemAssign.tooltip = "Take a backlog item (Jira or local) and assign it to yourself, moving it to In Progress.";
-  takeBacklogItemAssign.command = {
-    command: "antigravity.takeBacklogItemAssign",
-    title: "Take Backlog Item (Assign)"
-  };
-  items.push(takeBacklogItemAssign);
-
-  const markBacklogItemCompleted = new NodeItem(
-    { kind: "action", label: "Mark Backlog Item as Completed" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  markBacklogItemCompleted.iconPath = new vscode.ThemeIcon("pass", JIRA_ACTION_COLOR);
-  markBacklogItemCompleted.tooltip = "Mark a backlog item (Jira or local) as completed.";
-  markBacklogItemCompleted.command = {
-    command: "antigravity.completeJiraItem",
-    title: "Mark Backlog Item as Completed"
-  };
-  items.push(markBacklogItemCompleted);
-
-  if (!savedJiraProjectKey) {
-    const selectOrCreateJiraProject = new NodeItem(
-      { kind: "action", label: "Select/Set Jira Project" },
-      vscode.TreeItemCollapsibleState.None
-    );
-    selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", JIRA_ACTION_COLOR);
-    selectOrCreateJiraProject.command = {
-      command: "antigravity.selectOrCreateJiraProject",
-      title: "Select/Set Jira Project"
-    };
-    items.push(selectOrCreateJiraProject);
-  }
-
-  const incrementMajor = new NodeItem(
-    { kind: "action", label: "Increment Major Version" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  incrementMajor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
-  incrementMajor.command = {
-    command: "antigravity.incrementMajorVersion",
-    title: "Increment Major Version"
-  };
-  items.push(incrementMajor);
-
-  const incrementMinor = new NodeItem(
-    { kind: "action", label: "Increment Minor Version" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  incrementMinor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
-  incrementMinor.command = {
-    command: "antigravity.incrementMinorVersion",
-    title: "Increment Minor Version"
-  };
-  items.push(incrementMinor);
-
-  const incrementPatch = new NodeItem(
-    { kind: "action", label: "Increment Patch Version" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  incrementPatch.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
-  incrementPatch.command = {
-    command: "antigravity.incrementPatchVersion",
-    title: "Increment Patch Version"
-  };
-  items.push(incrementPatch);
-
-  const cloudArchitectReview = new NodeItem(
-    { kind: "action", label: "Cloud Architect Review" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  if (hasCloudInfrastructure) {
-    cloudArchitectReview.iconPath = new vscode.ThemeIcon("cloud", CLOUD_ARCHITECT_ACTION_COLOR);
-    cloudArchitectReview.command = {
-      command: "antigravity.cloudArchitectReview",
-      title: "Cloud Architect Review"
-    };
-    cloudArchitectReview.tooltip =
-      `Detected cloud infrastructure signals: ${cloudInfrastructureSignals.join(", ")}`;
-  } else {
-    cloudArchitectReview.iconPath = new vscode.ThemeIcon(
-      "cloud",
-      new vscode.ThemeColor("disabledForeground")
-    );
-    cloudArchitectReview.tooltip =
-      `Disabled because no cloud infrastructure signals were detected in this project. ` +
-      "Looked for directories like infra/terraform/k8s and files such as deploy scripts, docker-compose, and Terraform manifests.";
-  }
-  items.push(cloudArchitectReview);
-
-  const featureEstimator = new NodeItem(
-    { kind: "action", label: "Feature Estimator" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  featureEstimator.iconPath = FEATURE_ESTIMATOR_ICON_PATH;
-  featureEstimator.command = {
-    command: "antigravity.featureEstimator",
-    title: "Feature Estimator"
-  };
-  featureEstimator.tooltip =
-    "Estimate a feature from a To Do Jira item or a free-form description using the selected Agentic Harness.";
-  items.push(featureEstimator);
-
-  const explainMe = new NodeItem(
-    { kind: "action", label: "Explain Me" },
-    vscode.TreeItemCollapsibleState.None
-  );
-  explainMe.iconPath = new vscode.ThemeIcon("comment-discussion", EXPLAIN_ME_ACTION_COLOR);
-  explainMe.command = {
-    command: "antigravity.explainMe",
-    title: "Explain Me"
-  };
-  explainMe.tooltip =
-    "Download the latest explain-me skill into the project and ask the selected Agentic Harness to explain the whole solution and the latest uncommitted changes.";
-  items.push(explainMe);
+  incrementVersions.iconPath = new vscode.ThemeIcon("versions", QUICK_ACTION_COLOR);
+  incrementVersions.tooltip = "Increment the project major, minor, or patch version.";
+  items.push(incrementVersions);
 
   const autocommitCheckpoint = new NodeItem(
     { kind: "action", label: autocommitRunning ? "Autocommit Stop" : "Autocommit Start" },
@@ -1000,7 +875,7 @@ function getAdlcAgentItems(): NodeItem[] {
     item.iconPath = new vscode.ThemeIcon("robot", ADLC_AGENT_ICON_COLOR);
     item.tooltip = available
       ? `Run ${entry.label} (${relativePath}) with a chosen harness, model, and input artifacts.`
-      : `${relativePath} was not found. Deploy the SDLC library to enable this agent.`;
+      : `${relativePath} was not found. Install the SDLC library to enable this agent.`;
     if (!available) item.description = "not deployed";
     item.command = {
       command: "antigravity.runAdlcAgent",
@@ -1011,47 +886,137 @@ function getAdlcAgentItems(): NodeItem[] {
   });
 }
 
+function getAuxiliaryAgentAndSkillItems(): NodeItem[] {
+  const rootPath = getRootPath();
+  const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
+  const cloudInfrastructureSignals = repoRoot
+    ? detectCloudInfrastructureSignals(repoRoot, 3)
+    : [];
+  const entries: Array<{
+    label: string;
+    kind: "agent" | "skill" | "action";
+    icon: string;
+    relativePath?: string;
+    command?: string;
+    tooltip?: string;
+  }> = [
+    {
+      label: "Consultant Agent",
+      kind: "agent",
+      icon: "robot",
+      relativePath: ".agents/agents/consultant-agent/consultant-agent.md"
+    },
+    {
+      label: "Explain-me Agent",
+      kind: "action",
+      icon: "comment-discussion",
+      command: "antigravity.explainMe",
+      tooltip: "Run the explain-me skill against the current solution and uncommitted changes."
+    },
+    { label: "Grill-me", kind: "skill", icon: "flame", relativePath: ".agents/skills/grill-me/SKILL.md" },
+    { label: "Pre-mortem Agent", kind: "skill", icon: "warning", relativePath: ".agents/skills/pre-mortem/SKILL.md" },
+    { label: "Handoff", kind: "skill", icon: "arrow-swap", relativePath: ".agents/skills/handoff/SKILL.md" },
+    { label: "Conversation To Spec", kind: "skill", icon: "file-text", relativePath: ".agents/skills/to-spec/SKILL.md" },
+    { label: "Spec To Tickets", kind: "skill", icon: "issues", relativePath: ".agents/skills/to-tickets/SKILL.md" },
+    { label: "llm-judge-agent", kind: "agent", icon: "law", relativePath: ".agents/agents/llm-judge-agent/llm-judge-agent.md" },
+    {
+      label: "Feature Estimator Agent",
+      kind: "action",
+      icon: "pulse",
+      command: "antigravity.featureEstimator",
+      tooltip: "Estimate a feature from a Jira item or free-form description."
+    },
+    { label: "Autoresearch Agent", kind: "skill", icon: "telescope", relativePath: ".agents/skills/autoresearch/SKILL.md" },
+    { label: "Brainstorm Ideas", kind: "skill", icon: "lightbulb", relativePath: ".agents/skills/brainstorm-ideas/SKILL.md" },
+    { label: "Customer Interviewer", kind: "skill", icon: "comment-discussion", relativePath: ".agents/skills/customer-interview-script/SKILL.md" },
+    { label: "System Design Agent", kind: "skill", icon: "type-hierarchy", relativePath: ".agents/skills/architecture-designer/SKILL.md" },
+    { label: "Prototype Builder", kind: "skill", icon: "beaker", relativePath: ".agents/skills/prototype/SKILL.md" },
+    { label: "Story Point Council", kind: "skill", icon: "organization", relativePath: ".agents/skills/storypoints-council/SKILL.md" },
+    {
+      label: "Cloud Architect Review",
+      kind: "action",
+      icon: "cloud",
+      command: cloudInfrastructureSignals.length > 0 ? "antigravity.cloudArchitectReview" : undefined,
+      tooltip: cloudInfrastructureSignals.length > 0
+        ? `Detected cloud infrastructure signals: ${cloudInfrastructureSignals.join(", ")}`
+        : "Disabled because no cloud infrastructure signals were detected in this project."
+    }
+  ];
+
+  return entries.map((entry) => {
+    const filePath = repoRoot && entry.relativePath
+      ? path.join(repoRoot, entry.relativePath)
+      : undefined;
+    const item = new NodeItem(
+      { kind: entry.kind, label: entry.label, filePath },
+      vscode.TreeItemCollapsibleState.None
+    );
+    item.iconPath = entry.label === "Feature Estimator Agent"
+      ? FEATURE_ESTIMATOR_ICON_PATH
+      : new vscode.ThemeIcon(entry.icon, FEATURE_ESTIMATOR_ACTION_COLOR);
+    item.tooltip = entry.tooltip ?? entry.relativePath;
+
+    if (entry.command) {
+      item.command = {
+        command: entry.command,
+        title: entry.label
+      };
+    } else if (filePath && fs.existsSync(filePath)) {
+      item.command = {
+        command: "antigravity.openAgent",
+        title: `Open ${entry.label}`,
+        arguments: [filePath]
+      };
+    } else if (entry.relativePath) {
+      item.description = "not installed";
+      item.tooltip = `${entry.relativePath} was not found. Install the corresponding agentic library to enable it.`;
+    }
+
+    return item;
+  });
+}
+
 function getDeployAgenticLibrariesItems(): NodeItem[] {
   const deployColor = new vscode.ThemeColor("charts.blue");
 
   const deploySdlc = new NodeItem(
-    { kind: "action", label: "Deploy SDLC" },
+    { kind: "action", label: "Install SDLC" },
     vscode.TreeItemCollapsibleState.None
   );
-  deploySdlc.iconPath = new vscode.ThemeIcon("cloud-upload", deployColor);
+  deploySdlc.iconPath = new vscode.ThemeIcon("cloud-download", deployColor);
   deploySdlc.command = {
     command: "antigravity.deployAgenticLibSdlc",
-    title: "Deploy SDLC"
+    title: "Install SDLC"
   };
 
   const deploySdlcExtended = new NodeItem(
-    { kind: "action", label: "Deploy SDLC Extended" },
+    { kind: "action", label: "Install SDLC Extended" },
     vscode.TreeItemCollapsibleState.None
   );
-  deploySdlcExtended.iconPath = new vscode.ThemeIcon("cloud-upload", deployColor);
+  deploySdlcExtended.iconPath = new vscode.ThemeIcon("cloud-download", deployColor);
   deploySdlcExtended.command = {
     command: "antigravity.deployAgenticLibSdlcExtended",
-    title: "Deploy SDLC Extended"
+    title: "Install SDLC Extended"
   };
 
   const deployProfessionalServices = new NodeItem(
-    { kind: "action", label: "Deploy Professional Services" },
+    { kind: "action", label: "Install Professional Services" },
     vscode.TreeItemCollapsibleState.None
   );
-  deployProfessionalServices.iconPath = new vscode.ThemeIcon("cloud-upload", deployColor);
+  deployProfessionalServices.iconPath = new vscode.ThemeIcon("cloud-download", deployColor);
   deployProfessionalServices.command = {
     command: "antigravity.deployAgenticLibProfessionalServices",
-    title: "Deploy Professional Services"
+    title: "Install Professional Services"
   };
 
   const deployTechAdvisory = new NodeItem(
-    { kind: "action", label: "Deploy Tech Advisory" },
+    { kind: "action", label: "Install Tech Advisory" },
     vscode.TreeItemCollapsibleState.None
   );
-  deployTechAdvisory.iconPath = new vscode.ThemeIcon("cloud-upload", deployColor);
+  deployTechAdvisory.iconPath = new vscode.ThemeIcon("cloud-download", deployColor);
   deployTechAdvisory.command = {
     command: "antigravity.deployAgenticLibTechAdvisory",
-    title: "Deploy Tech Advisory"
+    title: "Install Tech Advisory"
   };
 
   const cleanDeployedLibs = new NodeItem(
@@ -1065,6 +1030,117 @@ function getDeployAgenticLibrariesItems(): NodeItem[] {
   };
 
   return [deploySdlc, deploySdlcExtended, deployProfessionalServices, deployTechAdvisory, cleanDeployedLibs];
+}
+
+function getBacklogManagementItems(): NodeItem[] {
+  const items: NodeItem[] = [];
+  const rootPath = getRootPath();
+  const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
+  const savedJiraProjectKey =
+    repoRoot && fs.existsSync(path.join(repoRoot, ".env"))
+      ? (
+        fs
+          .readFileSync(path.join(repoRoot, ".env"), "utf8")
+          .match(/^\s*JIRA_PROJECT_KEY\s*=\s*([^\r\n#]+)/m)?.[1] ?? ""
+      )
+        .trim()
+        .replace(/^['"]|['"]$/g, "")
+        .toUpperCase()
+      : "";
+
+  if (!savedJiraProjectKey) {
+    const selectOrCreateJiraProject = new NodeItem(
+      { kind: "action", label: "Select/Set Jira Project" },
+      vscode.TreeItemCollapsibleState.None
+    );
+    selectOrCreateJiraProject.iconPath = new vscode.ThemeIcon("project", JIRA_ACTION_COLOR);
+    selectOrCreateJiraProject.command = {
+      command: "antigravity.selectOrCreateJiraProject",
+      title: "Select/Set Jira Project"
+    };
+    items.push(selectOrCreateJiraProject);
+  }
+
+  const addBacklogItem = new NodeItem(
+    { kind: "action", label: "Add Backlog Item" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  addBacklogItem.iconPath = new vscode.ThemeIcon("add", JIRA_ACTION_COLOR);
+  addBacklogItem.tooltip = "Create a backlog item in docs/backlog, and in Jira too when a project is connected.";
+  addBacklogItem.command = {
+    command: "antigravity.addBacklogItem",
+    title: "Add Backlog Item"
+  };
+
+  const takeBacklogItemAssign = new NodeItem(
+    { kind: "action", label: "Take Backlog Item (Assign)" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  takeBacklogItemAssign.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
+  takeBacklogItemAssign.tooltip = "Take a backlog item (Jira or local) and assign it to yourself, moving it to In Progress.";
+  takeBacklogItemAssign.command = {
+    command: "antigravity.takeBacklogItemAssign",
+    title: "Take Backlog Item (Assign)"
+  };
+
+  const markBacklogItemCompleted = new NodeItem(
+    { kind: "action", label: "Mark Backlog Item as Completed" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  markBacklogItemCompleted.iconPath = new vscode.ThemeIcon("pass", JIRA_ACTION_COLOR);
+  markBacklogItemCompleted.tooltip = "Mark a backlog item (Jira or local) as completed.";
+  markBacklogItemCompleted.command = {
+    command: "antigravity.completeJiraItem",
+    title: "Mark Backlog Item as Completed"
+  };
+
+  const assignBacklogItemToAgent = new NodeItem(
+    { kind: "action", label: "Assign Backlog Item to Agent" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  assignBacklogItemToAgent.iconPath = new vscode.ThemeIcon("person-add", JIRA_ACTION_COLOR);
+  assignBacklogItemToAgent.tooltip = "Assign a Jira item or a local backlog item from docs/backlog to the selected agent.";
+  assignBacklogItemToAgent.command = {
+    command: "antigravity.assignBacklogItemToAgent",
+    title: "Assign Backlog Item to Agent"
+  };
+
+  items.push(addBacklogItem, takeBacklogItemAssign, markBacklogItemCompleted, assignBacklogItemToAgent);
+  return items;
+}
+
+function getIncrementVersionItems(): NodeItem[] {
+  const incrementMajor = new NodeItem(
+    { kind: "action", label: "Increment Major Version" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  incrementMajor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
+  incrementMajor.command = {
+    command: "antigravity.incrementMajorVersion",
+    title: "Increment Major Version"
+  };
+
+  const incrementMinor = new NodeItem(
+    { kind: "action", label: "Increment Minor Version" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  incrementMinor.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
+  incrementMinor.command = {
+    command: "antigravity.incrementMinorVersion",
+    title: "Increment Minor Version"
+  };
+
+  const incrementPatch = new NodeItem(
+    { kind: "action", label: "Increment Patch Version" },
+    vscode.TreeItemCollapsibleState.None
+  );
+  incrementPatch.iconPath = new vscode.ThemeIcon("arrow-up", QUICK_ACTION_COLOR);
+  incrementPatch.command = {
+    command: "antigravity.incrementPatchVersion",
+    title: "Increment Patch Version"
+  };
+
+  return [incrementMajor, incrementMinor, incrementPatch];
 }
 
 function getUpdateProjectConfigItems(): NodeItem[] {

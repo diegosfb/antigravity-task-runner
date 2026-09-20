@@ -318,6 +318,144 @@ test("quick actions include ADLC Agents after feature flag with red group and ag
   }
 });
 
+test("quick actions group auxiliary agents and skills after ADLC Agents using the estimator color", async () => {
+  const { AntigravityViewProvider } = setupTreeProviderModule();
+  const provider = new AntigravityViewProvider();
+
+  const rootItems = await provider.getChildren();
+  const rootLabels = rootItems.map((item) => item.label);
+  const adlcIndex = rootLabels.indexOf("ADLC Agents");
+  const auxiliaryIndex = rootLabels.indexOf("Auxiliary Agents and Skills");
+
+  assert.notEqual(adlcIndex, -1);
+  assert.equal(auxiliaryIndex, adlcIndex + 1);
+
+  const auxiliary = rootItems[auxiliaryIndex];
+  assert.equal(auxiliary.collapsibleState, 1);
+  assert.equal(auxiliary.command, undefined);
+  assert.equal(auxiliary.iconPath.id, "tools");
+  assert.equal(auxiliary.iconPath.color.id, "terminal.ansiBrightBlue");
+
+  const children = await provider.getChildren(auxiliary);
+  assert.deepEqual(
+    children.map((item) => item.label),
+    [
+      "Consultant Agent",
+      "Explain-me Agent",
+      "Grill-me",
+      "Pre-mortem Agent",
+      "Handoff",
+      "Conversation To Spec",
+      "Spec To Tickets",
+      "llm-judge-agent",
+      "Feature Estimator Agent",
+      "Autoresearch Agent",
+      "Brainstorm Ideas",
+      "Customer Interviewer",
+      "System Design Agent",
+      "Prototype Builder",
+      "Story Point Council",
+      "Cloud Architect Review"
+    ]
+  );
+  for (const item of children) {
+    if (item.iconPath.color) assert.equal(item.iconPath.color.id, "terminal.ansiBrightBlue");
+  }
+
+  assert.equal(children.find((item) => item.label === "Explain-me Agent").command.command, "antigravity.explainMe");
+  assert.equal(children.find((item) => item.label === "Feature Estimator Agent").command.command, "antigravity.featureEstimator");
+  assert.equal(rootLabels.includes("Explain Me"), false);
+  assert.equal(rootLabels.includes("Feature Estimator"), false);
+  assert.equal(rootLabels.includes("Cloud Architect Review"), false);
+});
+
+test("quick actions present agentic libraries as install actions", async () => {
+  const { AntigravityViewProvider } = setupTreeProviderModule();
+  const provider = new AntigravityViewProvider();
+
+  const rootItems = await provider.getChildren();
+  const installLibraries = rootItems.find((item) => item.label === "Install Agentic Libraries");
+
+  assert.ok(installLibraries);
+  assert.equal(installLibraries.iconPath.id, "cloud-download");
+  assert.equal(installLibraries.tooltip, "Install agentic libraries in the current workspace.");
+
+  const installActions = await provider.getChildren(installLibraries);
+  assert.deepEqual(
+    installActions.slice(0, 4).map((item) => item.label),
+    ["Install SDLC", "Install SDLC Extended", "Install Professional Services", "Install Tech Advisory"]
+  );
+  for (const item of installActions.slice(0, 4)) {
+    assert.equal(item.iconPath.id, "cloud-download");
+    assert.match(item.command.title, /^Install /);
+  }
+});
+
+test("quick actions group backlog commands under Backlog Management", async () => {
+  const { AntigravityViewProvider } = setupTreeProviderModule();
+  const provider = new AntigravityViewProvider();
+
+  const rootItems = await provider.getChildren();
+  const backlogManagement = rootItems.find((item) => item.label === "Backlog Management");
+
+  assert.ok(backlogManagement);
+  assert.equal(backlogManagement.collapsibleState, 1);
+  assert.equal(backlogManagement.command, undefined);
+  assert.equal(backlogManagement.iconPath.id, "checklist");
+
+  const backlogLabels = [
+    "Select/Set Jira Project",
+    "Add Backlog Item",
+    "Take Backlog Item (Assign)",
+    "Mark Backlog Item as Completed",
+    "Assign Backlog Item to Agent"
+  ];
+  assert.equal(rootItems.some((item) => backlogLabels.includes(item.label)), false);
+
+  const backlogActions = await provider.getChildren(backlogManagement);
+  assert.deepEqual(backlogActions.map((item) => item.label), backlogLabels);
+  assert.deepEqual(
+    backlogActions.map((item) => item.command.command),
+    [
+      "antigravity.selectOrCreateJiraProject",
+      "antigravity.addBacklogItem",
+      "antigravity.takeBacklogItemAssign",
+      "antigravity.completeJiraItem",
+      "antigravity.assignBacklogItemToAgent"
+    ]
+  );
+});
+
+test("quick actions group version increments under Increment Versions", async () => {
+  const { AntigravityViewProvider } = setupTreeProviderModule();
+  const provider = new AntigravityViewProvider();
+
+  const rootItems = await provider.getChildren();
+  const incrementVersions = rootItems.find((item) => item.label === "Increment Versions");
+  const versionLabels = [
+    "Increment Major Version",
+    "Increment Minor Version",
+    "Increment Patch Version"
+  ];
+
+  assert.ok(incrementVersions);
+  assert.equal(incrementVersions.collapsibleState, 1);
+  assert.equal(incrementVersions.command, undefined);
+  assert.equal(incrementVersions.iconPath.id, "versions");
+  assert.equal(rootItems.some((item) => versionLabels.includes(item.label)), false);
+
+  const versionActions = await provider.getChildren(incrementVersions);
+  assert.deepEqual(versionActions.map((item) => item.label), versionLabels);
+  assert.deepEqual(
+    versionActions.map((item) => item.command.command),
+    [
+      "antigravity.incrementMajorVersion",
+      "antigravity.incrementMinorVersion",
+      "antigravity.incrementPatchVersion"
+    ]
+  );
+});
+
 test("top-level Claude actions include terminal launcher entries", async () => {
   const { AntigravityViewProvider } = setupTreeProviderModule();
   const provider = new AntigravityViewProvider();

@@ -101,3 +101,15 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260919T134002139924Z-implementation-note-task-runner-view-name-no-longer-duplicates-the-container-title]] — Task Runner view name no longer duplicates the container title
 
 - [[Notes/20260919T141111740645Z-implementation-note-agentic-workflow-documentation-synchronized-with-current-agent-contracts]] — Agentic workflow documentation synchronized with current agent contracts
+
+- [[Notes/20260920T062542951741Z-implementation-note-renamed-agentic-library-deployment-actions-to-installation-actions]] — Renamed agentic library deployment actions to installation actions
+
+- [[Notes/20260920T062847508713Z-implementation-note-grouped-backlog-actions-under-backlog-management]] — Grouped backlog actions under Backlog Management
+
+- [[Notes/20260920T063804472547Z-implementation-note-added-auxiliary-agents-and-skills-sidebar-section]] — Added Auxiliary Agents and Skills sidebar section
+
+- [[Notes/20260920T064201132590Z-implementation-note-moved-jira-project-selection-into-backlog-management]] — Moved Jira project selection into Backlog Management
+
+- [[Notes/20260920T064318240141Z-design-decision-matched-auxiliary-section-to-feature-estimator-color]] — Matched Auxiliary section to Feature Estimator color
+
+- [[Notes/20260920T064522162233Z-implementation-note-grouped-version-increment-actions]] — Grouped version increment actions
