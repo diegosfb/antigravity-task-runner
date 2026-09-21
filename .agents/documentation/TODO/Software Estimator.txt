@@ -1,0 +1,481 @@
+Software Estimator
+
+
+You are a senior software engineer and you need to estimate the complexity and effort of excecuting a project.
+
+For that you:
+
+1- Ask clarifying questions to the user to understand and define better the scope, success criteria, what is included in the scope and what is out of scope.
+If you make any assumptions also tell the user the assumptions you are making and validate with the user.
+
+2- Define a well articulated scope for the project with details of what is included and what is out of scope.
+Add a success criteria and a list of the assumptions made
+
+3- Breakdown the scope into epics and user stories. Ensure the full scope is contained on them.
+Each user story should have one objective, a success criteria and it should be doable by one engineer (don’t make user stories that mix all skills - frontend, backend, data, cloud, testing, design and ux,etc)
+
+Offer to create a project in Jira with the epics and user stories for project execution.
+
+4- Estimate the complexity in t-shirt sizes and the man hours required to complete it by a senior software engineer.
+Make 3 sets if estimations (optimistic, most probable, pesimistic) and one traditional estimation and another one AI estimation considering the team is using claude code and Ai coding and productivity tools very efficiently 
+
+5- create a table with the breakdown of man hours by skill required frontend, backend, data, cloud, testing, design and ux,etc
+
+6- create a final conclusion with the whole estimation of the project adding all the man hours required to complete it
+
+——————————————-
+
+
+Output:
+
+VSCode Extension
+Claude Code Manager
+Project Scope, Epics & Effort Estimation
+April 2026  |  Senior Software Engineer Estimate
+
+ 
+ 
+1. Assumptions
+The following assumptions define the boundaries and context of this estimation. Please review and confirm or correct any that do not reflect your intentions.
+ 
+#
+Assumption
+A1
+Target audience: individual developers and small teams
+A2
+Git platform: GitHub first; GitLab as a stretch goal
+A3
+UX: Sidebar tree view + Command Palette + Webview panels for rich settings UI
+A4
+Cloud/infra: AWS + Generic Terraform templates in v1; GCP/Azure in v2
+A5
+No backend server — extension is fully local + calls GitHub/Claude APIs directly
+A6
+No telemetry or team sync in v1
+A7
+Extension published to VS Code Marketplace
+A8
+Claude Code settings = managing claude.json, custom instructions, memory files, MCP server configs
+A9
+Version bumping follows semver and reads/writes package.json, pyproject.toml, Cargo.toml
+A10
+Release creation = tagging + GitHub Release notes (AI-generated via Claude API)
+ 
+2. Project Scope
+2.1 In Scope
+Module 1 — Claude Code Settings Manager: Visual editor for claude.json, MCP server configuration UI, custom instructions manager, memory file browser, and settings profile import/export.
+Module 2 — Version Management: Detect and display current version from package.json/pyproject.toml/Cargo.toml, bump major/minor/patch, preview diff, and auto-commit.
+Module 3 — Release Automation: Create GitHub releases, AI-generated release notes via Claude API, tag creation and push.
+Module 4 — Infrastructure Setup: Scaffold Terraform templates for AWS patterns (Lambda, ECS, S3+CF, RDS), .env.example generation.
+Module 5 — CI/CD Pipeline Automation: Generate GitHub Actions workflows for Node.js, Python, Docker, and Terraform; inject into .github/workflows/.
+Module 6 — Extension Core & UX: Sidebar activity panel, command palette commands, status bar indicators, webview settings UI, GitHub auth, error handling.
+ 
+2.2 Out of Scope (v1)
+• GitLab and Bitbucket support
+• GCP and Azure infrastructure templates
+• Backend server, team sync, or shared settings
+• Telemetry or analytics
+• Monorepo support with multiple packages
+• IDE support outside VS Code
+• Claude Code CLI installation or update management
+ 
+2.3 Success Criteria
+• Developer can visually manage all Claude Code config files without editing JSON manually
+• Version bump + commit takes < 5 seconds via command palette
+• Full GitHub release (tag + notes + publish) created in < 30 seconds
+• Terraform scaffold for a standard AWS pattern generated in < 1 minute
+• GitHub Actions workflow generated and placed correctly for 4+ runtime templates
+• Extension passes VS Code Marketplace review and publishes successfully
+ 
+3. Epics & User Stories
+The project is broken down into 7 epics and 35 user stories. Each story has a single objective and can be completed by one engineer.
+ 
+EPIC 1 — Extension Foundation
+ID
+Title
+Objective
+Success Criteria
+E1-S1
+Scaffold VSCode Extension
+Set up TypeScript extension with esbuild, ESLint, testing framework
+npm run compile succeeds; extension activates in Development Host
+E1-S2
+Sidebar Activity Bar & Tree View Shell
+Register activity bar icon and tree view providers for all modules
+Sidebar appears with collapsed module sections
+E1-S3
+GitHub Auth & Token Management
+Securely store/retrieve GitHub PAT using VSCode SecretStorage
+Token stored, retrieved, validated against GitHub API
+E1-S4
+Extension Settings & Config Schema
+Define all extension settings with JSON schema validation
+Settings appear in VSCode settings UI with descriptions
+E1-S5
+Error Handling & Notification System
+Centralized error handler with user-friendly toasts and output channel
+Errors shown in notification; details in Output panel
+E1-S6
+Packaging & Marketplace Publish Pipeline
+vsce package + GitHub Actions CI for .vsix
+CI produces .vsix; manual publish step works
+ 
+EPIC 2 — Claude Code Settings Manager
+ID
+Title
+Objective
+Success Criteria
+E2-S1
+Detect & Parse claude.json
+Locate and parse claude.json in workspace root or ~/.claude/
+File found; parsed model/permissions/tools displayed
+E2-S2
+Webview Settings Editor — Model & Permissions
+Rich UI to edit model selection and permission flags
+Changes saved back to claude.json correctly
+E2-S3
+MCP Server Configuration UI
+List, add, remove, and test MCP server entries
+Server config written; test shows connection status
+E2-S4
+Custom Instructions Manager
+CRUD UI for custom instruction files; activate/deactivate toggle
+Active instruction reflected in claude.json
+E2-S5
+Memory File Browser
+Tree view listing memory .md files; open/edit in editor
+Files open in standard VS Code editor tab
+E2-S6
+Settings Profile Import/Export
+Export current config as named profile; import from file
+Exported JSON re-importable without data loss
+ 
+EPIC 3 — Version Management
+ID
+Title
+Objective
+Success Criteria
+E3-S1
+Version File Detection
+Auto-detect package.json, pyproject.toml, Cargo.toml in workspace
+Correct file detected; current version shown in status bar
+E3-S2
+Version Bump Command
+Command palette + tree view button to bump version (major/minor/patch)
+File updated with new semver; diff shown in preview
+E3-S3
+Version Bump Commit
+Auto-stage and commit version file after bump
+Git commit created with message 'chore: bump version to x.y.z'
+E3-S4
+Pre-bump Validation
+Check for uncommitted changes before bumping; warn user
+User warned if working tree dirty; can proceed or cancel
+ 
+EPIC 4 — Release Automation
+ID
+Title
+Objective
+Success Criteria
+E4-S1
+Git Tag Creation & Push
+Create annotated Git tag from current version and push to origin
+Tag visible on GitHub remote
+E4-S2
+Commit History Fetcher
+Fetch commits since last tag via Git log
+List of commits with messages returned correctly
+E4-S3
+AI Release Notes Generator
+Send commit list to Claude API; receive formatted release notes
+Notes returned in markdown with categorized sections
+E4-S4
+GitHub Release Publisher
+Create GitHub Release via API with tag + notes
+Release visible on GitHub Releases page
+E4-S5
+Release Preview & Confirmation UI
+Webview with tag, notes preview, confirm/cancel before publish
+User can edit notes before publishing
+ 
+EPIC 5 — Infrastructure Setup
+ID
+Title
+Objective
+Success Criteria
+E5-S1
+Infra Template Registry
+Define catalog of Terraform templates (Lambda, ECS, S3+CF, RDS)
+Templates listed in tree view
+E5-S2
+Template Selection & Config UI
+Webview wizard: select template, fill in variables
+Variables collected and validated
+E5-S3
+Scaffold Infra Files into Project
+Write rendered Terraform files into /infra folder
+Files created; folder structure correct
+E5-S4
+.env.example Generator
+Parse Terraform variables and output .env.example
+All variable blocks reflected in .env.example
+ 
+EPIC 6 — CI/CD Pipeline Automation
+ID
+Title
+Objective
+Success Criteria
+E6-S1
+Workflow Template Registry
+Define YAML workflow templates for Node.js, Python, Docker, Terraform
+Templates listed and selectable
+E6-S2
+Workflow Config UI
+Ask user for branch triggers, env vars, deploy targets
+Config collected without validation errors
+E6-S3
+Inject Workflow Files
+Write .yml into .github/workflows/
+File created; valid YAML confirmed by parser
+E6-S4
+Workflow Conflict Detection
+Detect existing workflows and warn before overwrite
+User prompted on conflict; no silent overwrites
+ 
+EPIC 7 — QA & Polish
+ID
+Title
+Objective
+Success Criteria
+E7-S1
+Unit Tests — Core Utilities
+Test version parsing, file detection, Git utilities
+80% coverage on utility modules
+E7-S2
+Integration Tests — Settings Manager
+Test read/write round-trips for claude.json
+No data loss on all supported config shapes
+E7-S3
+Integration Tests — Release Flow
+Mock GitHub API; test full release pipeline
+All steps complete without real API calls
+E7-S4
+End-to-End Tests (Extension Host)
+Run key user flows via @vscode/test-electron
+5 critical flows pass in CI
+E7-S5
+UX Review & Accessibility Pass
+Review all webviews for contrast, keyboard nav, error states
+No critical a11y issues; consistent design
+E7-S6
+Documentation — README & Marketplace Listing
+Write README, feature GIFs, marketplace description
+Marketplace listing complete with visuals
+ 
+4. Effort Estimation
+4.1 Three-Point Estimation (Traditional — Senior Engineer)
+Epic
+T-Shirt
+Optimistic (hrs)
+Most Probable (hrs)
+Pessimistic (hrs)
+E1: Foundation
+M
+16
+24
+36
+E2: Claude Settings
+L
+28
+40
+56
+E3: Version Mgmt
+S
+12
+18
+26
+E4: Release Automation
+M
+20
+30
+44
+E5: Infra Setup
+M
+18
+28
+40
+E6: CI/CD Automation
+S-M
+12
+18
+28
+E7: QA & Polish
+M
+20
+32
+48
+TOTAL
+ 
+126 hrs
+190 hrs
+278 hrs
+ 
+PERT Weighted Estimate: (Optimistic + 4 x Most Probable + Pessimistic) / 6 = (126 + 760 + 278) / 6 = 194 hours
+ 
+4.2 AI-Assisted Estimation (Claude Code + AI Coding Tools)
+Assuming the team uses Claude Code, Copilot, and AI-assisted code generation efficiently (60-65% productivity multiplier on implementation tasks; testing and design compress less).
+ 
+Epic
+Traditional (hrs)
+AI-Assisted (hrs)
+Multiplier
+E1: Foundation
+24
+12
+0.50x
+E2: Claude Settings
+40
+18
+0.45x
+E3: Version Mgmt
+18
+8
+0.44x
+E4: Release Automation
+30
+14
+0.47x
+E5: Infra Setup
+28
+14
+0.50x
+E6: CI/CD Automation
+18
+8
+0.44x
+E7: QA & Polish
+32
+22
+0.69x*
+TOTAL
+190 hrs
+96 hrs
+~0.51x
+ 
+* Testing and documentation compress less with AI — these still require human judgment for coverage quality and UX review.
+ 
+5. Man Hours by Skill
+5.1 Traditional Estimation Breakdown
+Skill
+E1
+E2
+E3
+E4
+E5
+E6
+TOTAL
+Frontend / Webview (TypeScript/React)
+4
+22
+2
+8
+10
+4
+54 hrs (28%)
+Extension Backend (VSCode API / Node.js)
+12
+10
+12
+14
+10
+10
+72 hrs (38%)
+Cloud / Infra (Terraform, AWS)
+0
+0
+0
+0
+12
+4
+18 hrs (9%)
+DevOps / CI-CD
+4
+0
+0
+4
+2
+4
+18 hrs (9%)
+QA / Testing
+2
+4
+2
+2
+2
+2
+30 hrs (16%)
+TOTAL
+24
+40
+18
+30
+28
+18
+190 hrs
+ 
+5.2 AI-Assisted Breakdown by Skill
+Skill
+Traditional (hrs)
+AI-Assisted (hrs)
+Savings (hrs)
+Frontend / Webview
+54
+24
+30
+Extension Backend
+72
+36
+36
+Cloud / Infra
+18
+10
+8
+DevOps / CI-CD
+18
+8
+10
+QA / Testing
+30
+18
+12
+TOTAL
+190 hrs
+96 hrs
+94 hrs saved
+ 
+6. Final Conclusion
+Scope: 7 Epics  |  35 User Stories  |  5 Engineering Disciplines
+ 
+Traditional Estimation
+AI-Assisted Estimation
+Optimistic: 126 hrs (~3.5 weeks, 1 engineer)
+Most Probable: 96 hrs (~2.5 weeks, 1 engineer)
+Most Probable: 190 hrs (~5 weeks, 1 engineer)
+Savings vs traditional: ~94 hrs (~49% reduction)
+Pessimistic: 278 hrs (~7 weeks, 1 engineer)
+Enabled by: Claude Code, Copilot, AI code gen
+PERT Weighted Estimate: 194 hrs
+Recommended AI Estimate: 96-120 hrs
+ 
+Key Risks & Contingencies
+• Webview complexity is the highest risk — rich UIs in VSCode webviews are notoriously tricky; budget a buffer here
+• Claude API integration for release notes is straightforward but rate limits and latency need graceful handling
+• Cross-platform testing (Windows path separators, Git CLI availability) adds hidden time
+• VS Code Marketplace review can take 1-3 days and may require iterative changes
+• GitHub API changes or rate limits could impact release automation reliability
+ 
+Recommendation
+For a solo senior engineer using AI coding tools efficiently, a 10-12 week timeline (part-time) or 2.5-3 weeks (full-time focused) is realistic for a production-ready v1. Budget an additional 20% buffer (~20 hrs) for unexpected platform quirks and Marketplace review cycles.
+
+🚀 Ready to Create Jira Project?
+I can create a Jira project with all 7 epics and 35 user stories pre-loaded, including story points mapped from the t-shirt sizes above. Just say the word and I’ll connect to your Atlassian workspace and set it up.​​​​​​​​​​​​​​​​

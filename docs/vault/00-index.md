@@ -145,3 +145,29 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260920T114402248640Z-implementation-note-added-agent-page-diagrams-to-sdlc-docs]] — Added agent page diagrams to SDLC docs
 
 - [[Notes/20260920T115143219060Z-implementation-note-adlc-design-clarifies-parent-agent-ownership]] — ADLC design clarifies parent-agent ownership
+
+- [[Notes/20260921T040811235068Z-implementation-note-updated-context-budget-recommendations-with-actual-analyzer-path-and-current-hig]] — Updated context budget recommendations with actual analyzer path and current HIGH snapshot
+
+- [[Notes/20260921T041237448490Z-implementation-note-updated-agentic-workflows-docs-to-match-project-description-workflow]] — Updated Agentic Workflows docs to match Project Description workflow
+
+- [[Notes/20260921T041750899514Z-implementation-note-updated-review-notes-for-adlc-workflow-consistency]] — Updated review notes for ADLC workflow consistency
+
+- [[Notes/20260921T042335842412Z-implementation-note-workflows-tree-now-lists-workspace-agents-workflows]] — Workflows tree now lists workspace .agents workflows
+
+- [[Notes/20260921T043004746671Z-implementation-note-skills-tree-now-includes-shared-and-multi-harness-skill-sources]] — Skills tree now includes shared and multi-harness skill sources
+
+- [[Notes/20260921T043652889962Z-implementation-note-agents-tree-now-includes-shared-and-multi-harness-agent-sources]] — Agents tree now includes shared and multi-harness agent sources
+
+- [[Notes/20260921T045129345146Z-implementation-note-synchronized-agents-skills-catalog-with-local-project-definitions]] — Synchronized Agents & Skills catalog with local project definitions
+
+- [[Backlog/story-adlc-agents-section]] — synced artifact
+
+- [[Backlog/story-mark-backlog-item-as-completed]] — synced artifact
+
+- [[Backlog/story-assistance-agents]] — synced artifact
+
+- [[Backlog/story-us-002-repository-actions]] — synced artifact
+
+- [[Backlog/story-take-backlog-item-assign]] — synced artifact
+
+- [[Notes/20260921T045940199025Z-implementation-note-ignored-local-setup-directories]] — Ignored local setup directories

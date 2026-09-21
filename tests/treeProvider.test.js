@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { promisify } = require("node:util");
 
 function createVscodeMock(configuration = {}) {
   class ThemeColor { constructor(id) { this.id = id; } }
@@ -157,6 +158,131 @@ test("readSkillsDir skips directories without SKILL.md", () => {
   const result = readSkillsDir(tmpDir);
   assert.equal(result.length, 0);
   fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test("Skills category includes project and multi-harness skill sources", async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-tree-provider-skills-"));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-tree-provider-home-"));
+  const writeSkill = (root, name) => {
+    const skillDir = path.join(root, name);
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(path.join(skillDir, "SKILL.md"), `# ${name}\n`, "utf8");
+  };
+
+  writeSkill(path.join(repoRoot, ".agents", "skills"), "shared-project-skill");
+  writeSkill(path.join(repoRoot, ".codex", "skills"), "project-codex-skill");
+  writeSkill(path.join(repoRoot, ".gemini", "skills"), "project-gemini-skill");
+  writeSkill(path.join(repoRoot, ".opencode", "skills"), "project-opencode-skill");
+  writeSkill(path.join(homeRoot, ".codex", "skills", ".system"), "user-codex-system-skill");
+  writeSkill(path.join(homeRoot, ".gemini", "skills"), "user-gemini-skill");
+  writeSkill(path.join(homeRoot, ".config", "opencode", "skills"), "user-opencode-skill");
+
+  const { AntigravityViewProvider } = setupTreeProviderModule(
+    {},
+    {
+      os: { ...os, homedir: () => homeRoot },
+      child_process: { exec: (_command, _options, callback) => callback(null, "", "") },
+      "./utils": {
+        getRootPath: () => repoRoot,
+        getRepoRoot: () => repoRoot,
+        getWorkspaceProjectPath: () => repoRoot
+      },
+      "./git": {
+        isAutocommitRunning: () => false,
+        hasGitHubRemoteSync: () => false,
+        getCurrentBranchNameSync: () => undefined
+      }
+    }
+  );
+  const provider = new AntigravityViewProvider();
+
+  try {
+    const rootItems = await provider.getChildren();
+    const skills = rootItems.find((item) => item.label === "Skills");
+
+    assert.ok(skills);
+    const children = await provider.getChildren(skills);
+    const byLabel = new Map(children.map((item) => [item.label, item]));
+
+    assert.equal(byLabel.get("shared-project-skill").description, "Project .agents");
+    assert.equal(byLabel.get("project-codex-skill").description, "Project Codex");
+    assert.equal(byLabel.get("project-gemini-skill").description, "Project Gemini");
+    assert.equal(byLabel.get("project-opencode-skill").description, "Project OpenCode");
+    assert.equal(byLabel.get("user-codex-system-skill").description, "User Codex system");
+    assert.equal(byLabel.get("user-gemini-skill").description, "User Gemini");
+    assert.equal(byLabel.get("user-opencode-skill").description, "User OpenCode config");
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
+});
+
+test("Agents category includes project and multi-harness agent sources", async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-tree-provider-agents-"));
+  const homeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-tree-provider-home-"));
+  const writeFile = (filePath, content = "# Agent\n") => {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, content, "utf8");
+  };
+
+  writeFile(path.join(repoRoot, ".agents", "agents", "shared-project-agent", "shared-project-agent.md"));
+  writeFile(path.join(repoRoot, ".codex", "agents", "project-codex-agent.toml"), "name = \"project-codex-agent\"\n");
+  writeFile(path.join(repoRoot, ".gemini", "agents", "project-gemini-agent.md"));
+  writeFile(path.join(repoRoot, ".opencode", "agents", "project-opencode-agent.md"));
+  writeFile(path.join(homeRoot, ".codex", "agents", "user-codex-agent.toml"), "name = \"user-codex-agent\"\n");
+  writeFile(path.join(homeRoot, ".gemini", "agents", "user-gemini-agent.md"));
+  writeFile(path.join(homeRoot, ".config", "opencode", "agents", "user-opencode-agent.md"));
+
+  const claudeAgentsOutput = [
+    "User agents:",
+    "claude-cli-agent · claude-sonnet-4-20250506 · user memory"
+  ].join("\n");
+  const execMock = (_command, _options, callback) => callback(null, claudeAgentsOutput, "");
+  execMock[promisify.custom] = () => Promise.resolve({ stdout: claudeAgentsOutput, stderr: "" });
+
+  const { AntigravityViewProvider } = setupTreeProviderModule(
+    {},
+    {
+      os: { ...os, homedir: () => homeRoot },
+      child_process: { exec: execMock },
+      "./utils": {
+        getRootPath: () => repoRoot,
+        getRepoRoot: () => repoRoot,
+        getWorkspaceProjectPath: () => repoRoot
+      },
+      "./git": {
+        isAutocommitRunning: () => false,
+        hasGitHubRemoteSync: () => false,
+        getCurrentBranchNameSync: () => undefined
+      }
+    }
+  );
+  const provider = new AntigravityViewProvider();
+
+  try {
+    const rootItems = await provider.getChildren();
+    const agents = rootItems.find((item) => item.label === "Agents");
+
+    assert.ok(agents);
+    const children = await provider.getChildren(agents);
+    const byLabel = new Map(children.map((item) => [item.label, item]));
+
+    assert.equal(byLabel.get("shared-project-agent").description, "Project .agents");
+    assert.equal(byLabel.get("project-codex-agent").description, "Project Codex");
+    assert.equal(byLabel.get("project-gemini-agent").description, "Project Gemini");
+    assert.equal(byLabel.get("project-opencode-agent").description, "Project OpenCode");
+    assert.equal(byLabel.get("user-codex-agent").description, "User Codex");
+    assert.equal(byLabel.get("user-gemini-agent").description, "User Gemini");
+    assert.equal(byLabel.get("user-opencode-agent").description, "User OpenCode config");
+    assert.equal(byLabel.get("project-codex-agent").command.command, "antigravity.openAgent");
+
+    const claudeCliAgent = byLabel.get("claude-cli-agent");
+    assert.equal(claudeCliAgent.description, "claude-sonnet-4-20250506");
+    assert.equal(claudeCliAgent.command.command, "antigravity.runClaudeAgent");
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+    fs.rmSync(homeRoot, { recursive: true, force: true });
+  }
 });
 
 test("emptyItem creates NodeItem with circle-slash icon", () => {
@@ -488,6 +614,55 @@ test("quick actions place ADLC Framework Manual after SOP Manual", async () => {
   const adlcManual = rootItems[adlcManualIndex];
   assert.equal(adlcManual.iconPath.id, "book");
   assert.equal(adlcManual.command.command, "antigravity.openAdlcFrameworkManual");
+});
+
+test("Workflows category lists workspace .agents workflows", async () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-tree-provider-workflows-"));
+  const workflowsDir = path.join(repoRoot, ".agents", "workflows");
+  fs.mkdirSync(workflowsDir, { recursive: true });
+  fs.writeFileSync(path.join(workflowsDir, "project-definition-workflow.md"), "# Project Definition\n", "utf8");
+  fs.writeFileSync(path.join(workflowsDir, "README.md"), "# Ignore\n", "utf8");
+
+  const { AntigravityViewProvider } = setupTreeProviderModule(
+    {},
+    {
+      "./utils": {
+        getRootPath: () => repoRoot,
+        getRepoRoot: () => repoRoot,
+        getWorkspaceProjectPath: () => repoRoot,
+        getAntigravityHomePath: () => undefined,
+        safeReadDir: async (dirPath) => {
+          try {
+            return await fs.promises.readdir(dirPath, { withFileTypes: true });
+          } catch {
+            return [];
+          }
+        }
+      },
+      "./git": {
+        isAutocommitRunning: () => false,
+        hasGitHubRemoteSync: () => false,
+        getCurrentBranchNameSync: () => undefined
+      }
+    }
+  );
+  const provider = new AntigravityViewProvider();
+
+  try {
+    const rootItems = await provider.getChildren();
+    const workflows = rootItems.find((item) => item.label === "Workflows");
+
+    assert.ok(workflows);
+    const children = await provider.getChildren(workflows);
+
+    assert.deepEqual(children.map((item) => item.label), ["project-definition-workflow"]);
+    assert.equal(children[0].kind, "workflow");
+    assert.equal(children[0].filePath, path.join(workflowsDir, "project-definition-workflow.md"));
+    assert.equal(children[0].command.command, "antigravity.runWorkflow");
+    assert.deepEqual(children[0].command.arguments, [path.join(workflowsDir, "project-definition-workflow.md")]);
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
 });
 
 test("top-level Claude actions include terminal launcher entries", async () => {

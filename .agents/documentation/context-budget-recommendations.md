@@ -196,40 +196,65 @@ It cannot accurately measure:
 
 Treat context-budget results as **engineering estimates**, not billing-accurate prompt measurements.
 
+## Current repository snapshot
+
+The current repository is above the default 10K engineering budget because the
+skill catalog is large enough that compact discovery metadata still adds up.
+
+Last checked: 2026-09-21 with `python3 scripts/context-budget.py --budget 10000`.
+
+| Harness | Core instructions | Agents | Skills | Estimated startup | Status |
+|---|---:|---:|---:|---:|---|
+| Claude Code | 4,802 | 14 | 127 | 16,602 | **HIGH** |
+| Codex | 2,682 | 14 | 127 | 14,482 | **HIGH** |
+| Gemini CLI | 4,827 | 14 | 127 | 16,627 | **HIGH** |
+| Antigravity | 2,682 | 14 | 127 | 14,482 | **HIGH** |
+| OpenCode | 2,682 | 14 | 127 | 14,482 | **HIGH** |
+
+This does not mean the `.agents` library is too large. It means startup
+discovery needs ongoing management, especially skill descriptions and which
+discovery metadata each harness exposes by default.
+
 ## Using context-budget.py
 
-Install at:
+Run the analyzer from the repository root:
+
+```bash
+python3 scripts/context-budget.py
+```
+
+The canonical library copy is also available at:
 
 ```text
-.agents/context-budget.py
+.agents/agentic-libraries/context-budget.py
 ```
 
 Analyze all supported harnesses:
 
 ```bash
-./.agents/context-budget.py
+python3 scripts/context-budget.py
 ```
 
 Analyze one:
 
 ```bash
-./.agents/context-budget.py --harness claude
-./.agents/context-budget.py --harness codex
-./.agents/context-budget.py --harness gemini
-./.agents/context-budget.py --harness antigravity
-./.agents/context-budget.py --harness opencode
+python3 scripts/context-budget.py --harness claude
+python3 scripts/context-budget.py --harness codex
+python3 scripts/context-budget.py --harness gemini
+python3 scripts/context-budget.py --harness antigravity
+python3 scripts/context-budget.py --harness opencode
 ```
 
 Change the engineering budget:
 
 ```bash
-./.agents/context-budget.py --budget 15000
+python3 scripts/context-budget.py --budget 15000
 ```
 
 Machine-readable output:
 
 ```bash
-./.agents/context-budget.py --json
+python3 scripts/context-budget.py --json
 ```
 
 The analyzer reports core instructions, agent/skill discovery estimates, average description sizes, startup total, budget usage, GOOD/WATCH/HIGH status, complete `.agents` text-library size, startup/library percentage, and descriptions exceeding the ~100-token routing target.
@@ -239,7 +264,7 @@ The analyzer reports core instructions, agent/skill discovery estimates, average
 A local or CI validation can run:
 
 ```bash
-./.agents/context-budget.py --budget 10000
+python3 scripts/context-budget.py --budget 10000
 ```
 
 Suggested policy:

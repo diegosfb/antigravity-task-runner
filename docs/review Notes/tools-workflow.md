@@ -1,199 +1,106 @@
-# Tools Workflow
+# Tools Workflow Review Notes
 
-The full pipeline from backlog item to production deployment.
+These notes describe how local tools, GitHub, GitHub Actions, and deployment
+support the ADLC workflow. They are advisory review notes, not the canonical
+workflow definition.
 
----
+Canonical ADLC workflow source:
 
-## Pipeline Overview
+```text
+.agents/documentation/Agentic Workflows/workflow-design/agent-orchestrated-sdlc.mmd
+```
+
+## Status
+
+Needs separation of concerns. The previous note was useful as a generic tool
+map, but it blurred three different flows:
+
+- full Agent-Orchestrated SDLC;
+- Task Runner sidebar convenience actions;
+- GitHub Actions CI/CD automation.
+
+## Canonical ADLC Flow
 
 ```mermaid
 flowchart LR
-    PM["📋 Jira\nor GitHub Issues\n──────────\nBacklog &\nSprint Mgmt"]
-    AG["🤖 Antigravity\n──────────\nClaude + Coding\nAI-assisted dev"]
-    GH["🐙 GitHub\n──────────\nVersion Control\nPR & Commit\nbest practices"]
-    CI["⚙️ GitHub Actions\n──────────\nCI/CD &\nAutomated tasks"]
-    DP["🚀 Deployment\n──────────\nTests per platform\nDocker → DockerHub\nDeploy to servers"]
+    Project["Project Description"]
+    Product["Product Agent"]
+    BA["BA Agent"]
+    Architect["Architect Agent"]
+    UX["UX Agent"]
+    Planner["Project Planner Agent"]
+    Backlog["Backlog"]
+    Developer["Developer Agent"]
+    Spec["Spec Validation Agent"]
+    Test["Test Agent"]
+    Docs["Documentation Agent"]
+    Review["Code Review Agent"]
+    Deploy["Deployment Agent"]
+    Live["Live Release"]
 
-    PM --> AG --> GH --> CI --> DP
+    Project --> Product --> BA --> Architect --> UX --> Planner --> Backlog
+    Backlog --> Developer --> Spec --> Test --> Docs --> Review --> Deploy --> Live
 ```
 
----
+`sdlc-orchestrator` is the only agent that enforces the full sequence. Direct
+agent invocation remains valid for bounded specialist work, but it does not
+prove the complete ADLC workflow has run.
 
-## Expanded Stage View
+## Supporting Toolchain
 
 ```mermaid
 flowchart LR
+    Planning["Jira / Markdown backlog"]
+    TaskRunner["Task Runner sidebar"]
+    Agents["ADLC agents"]
+    GitHub["GitHub PR workflow"]
+    Actions["GitHub Actions"]
+    Deploy["Deployment target"]
 
-    subgraph PM ["📋 Planning"]
-        pm1(Backlog grooming)
-        pm2(Sprint planning)
-        pm3(Issue assignment)
-        pm4(Progress tracking)
-        pm1 --> pm2 --> pm3 --> pm4
-    end
-
-    subgraph AG ["🤖 Antigravity — Claude + Coding"]
-        ag1(Take / Assign Jira Item)
-        ag2(Create Feature Branch)
-        ag3(AI-assisted coding)
-        ag4(Build & Test locally)
-        ag5(Commit with AI message)
-        ag6(Agentic code review)
-        ag1 --> ag2 --> ag3 --> ag4 --> ag5 --> ag6
-    end
-
-    subgraph GH ["🐙 GitHub"]
-        gh1(Feature branch pushed)
-        gh2(Pull Request opened)
-        gh3(Code review & feedback)
-        gh4(Squash & Merge to main)
-        gh5(Branch deleted)
-        gh1 --> gh2 --> gh3 --> gh4 --> gh5
-    end
-
-    subgraph CI ["⚙️ GitHub Actions"]
-        ci1(PR checks triggered)
-        ci2(Lint & static analysis)
-        ci3(Unit & integration tests)
-        ci4(Build artifact)
-        ci5(Merge to main triggers CD)
-        ci1 --> ci2 --> ci3 --> ci4 --> ci5
-    end
-
-    subgraph DP ["🚀 Deployment"]
-        dp1(Run tests on each\ntarget platform)
-        dp2(Build Docker image\nPublish to DockerHub)
-        dp3(Deploy to servers\nQA → UAT → Prod)
-        dp1 --> dp2
-        dp2 --> dp3
-    end
-
-    PM --> AG --> GH --> CI --> DP
+    Planning --> TaskRunner
+    TaskRunner --> Agents
+    Agents --> GitHub
+    GitHub --> Actions
+    Actions --> Deploy
 ```
-
----
 
 ## Tool Responsibilities
 
-| Stage | Tool | Role | Key outputs |
-|-------|------|------|-------------|
-| **Planning** | Jira / GitHub Issues | Backlog management, sprint planning, issue tracking, progress visibility | Prioritized issue with assignee and status |
-| **Development** | Antigravity + Claude | AI-assisted coding, branch creation, local build/test, commit message generation, agentic code review | Committed feature branch with passing local tests |
-| **Version Control** | GitHub | Source of truth for all code, PR workflow, code review, squash-and-merge to `main` | Clean `main` history with reviewed, approved changes |
-| **CI/CD** | GitHub Actions | Automated lint, test, build on every PR and push; triggers deployment pipeline on merge to `main` | Green build artifacts, deployment triggers |
-| **Deployment** | GitHub Actions + Docker + Servers | Cross-platform test runs, Docker image build and publish to DockerHub, server deployment across environments | Running application in QA / UAT / Prod |
+| Area | Tool | Role | Important boundary |
+|---|---|---|---|
+| Orchestration | `sdlc-orchestrator` | Sequences ADLC agents and gates | Canonical workflow owner. |
+| Planning | Jira / Markdown backlog | Stores prioritized work | Planner owns sequencing. |
+| Local actions | Task Runner sidebar | Runs build, test, branch, PR, release helpers | Convenience UI, not proof of ADLC completion. |
+| Repository | GitHub | Branches, PRs, review, merge | Code Review Agent owns workflow review gate. |
+| Automation | GitHub Actions | CI/CD checks and release automation | Must be deterministic and enforced server-side. |
+| Release | Deployment Agent | Release config, approvals, rollback evidence | Production approval is mandatory. |
 
----
+## Current GitHub Actions Reality
 
-## How the Stages Connect
+Current workflow files are:
 
-```mermaid
-flowchart TD
-    Issue["Jira or GitHub Issue\n(ticket created, assigned)"]
+| File | Trigger | Current behavior |
+|---|---|---|
+| `.github/workflows/ci.yml` | Push/PR to `main` | Runs `npm ci`, `npm run lint`, `npm run build`, and `npm test`, but each step is allowed to echo and continue on failure or missing script. |
+| `.github/workflows/cd.yml` | `v*` tags | Placeholder QA deployment echo. |
 
-    Branch["Antigravity: Create Feature Branch\nfrom latest main"]
+This means the toolchain map should not claim strong CI/CD enforcement yet.
 
-    Code["Antigravity: Code + Build + Test\n(local loop until green)"]
+## Inconsistencies Found
 
-    Commit["Antigravity: Commit\n(AI-generated message, .env excluded)"]
+- Prior note said "Claude + Coding"; this repository now documents portable
+  agent usage across multiple harnesses.
+- Prior deployment section assumed DockerHub and QA/UAT/Prod promotion. Current
+  workflow files do not implement that.
+- Prior flow started from backlog item only. The canonical ADLC flow starts from
+  Project Description and reaches backlog through product, BA, architecture, UX,
+  and planning gates.
 
-    PR["GitHub: Create Pull Request\n(Antigravity drafts Why / How)"]
+## Proposed Improvements
 
-    Review["GitHub: Code Review\n(reviewer approves or requests changes)"]
-
-    Merge["GitHub: Squash & Merge → main"]
-
-    PRChecks["GitHub Actions: PR checks\n(lint, tests, build)"]
-
-    CDPipeline["GitHub Actions: CD pipeline\n(triggered by merge to main)"]
-
-    Tests["Run automated tests\nper target platform"]
-
-    Docker["Build Docker image\nPublish to DockerHub\n(optional)"]
-
-    Deploy["Deploy to servers\nQA → UAT → Prod"]
-
-    JiraDone["Jira: Item moved to Done"]
-
-    Issue --> Branch --> Code --> Commit --> PR
-    PR --> PRChecks
-    PRChecks -->|Pass| Review
-    PRChecks -->|Fail| Code
-    Review -->|Changes requested| Code
-    Review -->|Approved| Merge
-    Merge --> CDPipeline --> Tests --> Docker --> Deploy
-    Merge --> JiraDone
-```
-
----
-
-## Docker Path (Optional)
-
-Docker is used when the application is packaged and distributed as a container image.
-
-```mermaid
-flowchart LR
-    A[GitHub Actions CD triggered] --> B[Build Docker image]
-    B --> C[Tag image with version\ne.g. v1.4.2 and latest]
-    C --> D[Push to DockerHub]
-    D --> E{Deploy target}
-    E -- Cloud VM / bare metal --> F[Pull image on server\ndocker pull + docker run]
-    E -- Kubernetes --> G[Update manifest image tag\nkubectl rollout]
-    E -- Compose-based --> H[docker compose pull + up -d]
-```
-
----
-
-## Environment Promotion
-
-```mermaid
-flowchart LR
-    Main["main branch\n(always deployable)"]
-    QA["QA environment\nAutomated smoke tests"]
-    UAT["UAT environment\nStakeholder sign-off"]
-    Prod["Production\nLive users"]
-
-    Main -->|CD auto-deploy| QA
-    QA -->|QA pass + approval| UAT
-    UAT -->|UAT sign-off + release tag| Prod
-```
-
-> **Task Runner role at each gate:**
-> - Before QA: **Pull Remote and Merge** → **Run Project Tests** → **Create Pull Request**
-> - Before UAT: **Increment Version** after QA approval
-> - Before Prod: **Create Repo Release** to produce the release tag that triggers the production deployment
-
----
-
-## Tools at a Glance
-
-```
-┌─────────────────┐    ┌──────────────────────┐    ┌────────────────────┐
-│  Jira /         │    │    Antigravity        │    │      GitHub        │
-│  GitHub Issues  │───▶│  (Task Runner +       │───▶│  (Version control, │
-│                 │    │   Claude Code)        │    │   PR workflow,     │
-│  • Backlog      │    │                       │    │   code review)     │
-│  • Sprints      │    │  • Branch creation    │    │                    │
-│  • Assignments  │    │  • AI-assisted coding │    │  • Feature branch  │
-│  • Progress     │    │  • Build & test loop  │    │  • Pull Request    │
-│                 │    │  • Commit & PR        │    │  • Squash & Merge  │
-└─────────────────┘    │  • Code review        │    └────────┬───────────┘
-                       └──────────────────────┘             │
-                                                             ▼
-                       ┌──────────────────────────────────────────────────┐
-                       │              GitHub Actions                       │
-                       │  (CI/CD — triggers on PR open and merge to main) │
-                       │                                                   │
-                       │  PR checks: lint · tests · build                 │
-                       │  CD pipeline: test matrix · Docker · deploy      │
-                       └──────────────────────┬───────────────────────────┘
-                                              │
-                                              ▼
-                       ┌──────────────────────────────────────────────────┐
-                       │               Deployment                          │
-                       │                                                   │
-                       │  • Automated tests per target platform           │
-                       │  • Docker image built & pushed to DockerHub      │
-                       │  • Servers updated: QA → UAT → Production        │
-                       └──────────────────────────────────────────────────┘
-```
+- Convert `ci.yml` from "best effort" commands to hard-failing checks once the
+  desired CI contract is approved.
+- Replace the placeholder `cd.yml` with Deployment Agent-aligned release
+  evidence, environment approval, rollback, and smoke-test behavior.
+- Add a short UI note explaining that Task Runner actions support, but do not
+  replace, `sdlc-orchestrator`.

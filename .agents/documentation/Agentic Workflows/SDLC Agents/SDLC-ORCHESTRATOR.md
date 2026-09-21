@@ -17,7 +17,7 @@ Entry-point orchestrator for the dsfb-sdlc v2 library. Reads the user's intent, 
 ```mermaid
 flowchart LR
     subgraph inputs["Inputs"]
-        userRequest["Required: User Request"]
+        projectDescription["Required: Project Description"]
     end
     sdlcOrchestrator["SDLC Orchestrator Agent"]
     delegation["Output: Delegation to Appropriate Agent(s)"]

@@ -137,8 +137,8 @@ These exist today but are mainly used by advanced or partially surfaced commands
 | `codex` | `~/.codex` | That folder exists |
 | Custom add-ons folder | The folder from `antigravity.customAgenticPlatformAddons` | The setting is configured and the folder exists |
 | `Claude Plugins` | Output of `claude plugin list` | Always shown; contents depend on CLI availability |
-| `Agents` | Output of `claude agents` | Always shown; contents depend on CLI availability |
-| `Skills` | Project skills from `.agent/skills` and `.claude/skills`, user skills from `~/.claude/skills`, and enabled plugin skills from the Claude plugin cache | Always shown |
+| `Agents` | Project and user agents from shared `.agents` plus Claude, Codex, Gemini, OpenCode, and runnable Claude CLI agents | Always shown |
+| `Skills` | Project, user, and plugin skills from shared `.agents` plus Claude, Codex, Gemini, and OpenCode skill folders | Always shown |
 | `Workflows` | Markdown files under `~/.gemini/antigravity/workflows` | When that folder exists |
 
 ### Quick Actions
@@ -322,20 +322,44 @@ Current behavior:
 
 ### Agents
 
-- Source: `claude agents`
-- Clicking an item runs `claude --agent <name>` in the current repo
-- The list can include user, plugin, built-in, and project agents depending on your Claude setup
+Task Runner merges agents from:
+
+- `<repo>/.agents/agents`
+- `<repo>/.agent/agents`
+- `<repo>/.claude/agents`
+- `<repo>/.codex/agents`
+- `<repo>/.gemini/agents`
+- `<repo>/.opencode/agents`
+- `~/.claude/agents`
+- `~/.codex/agents`
+- `~/.gemini/agents`
+- `~/.gemini/antigravity/agents`
+- `~/.opencode/agents`
+- `~/.config/opencode/agents`
+- runnable Claude CLI agents from `claude agents`
+
+Clicking a file-backed agent opens its definition file. Clicking a Claude CLI agent runs `claude --agent <name>` in the current repo.
 
 ### Skills
 
 Task Runner merges skills from:
 
+- `<repo>/.agents/skills`
 - `<repo>/.agent/skills`
 - `<repo>/.claude/skills`
+- `<repo>/.codex/skills`
+- `<repo>/.gemini/skills`
+- `<repo>/.opencode/skills`
 - `~/.claude/skills`
+- `~/.codex/skills`
+- `~/.codex/skills/.system`
+- `~/.gemini/skills`
+- `~/.gemini/antigravity/skills`
+- `~/.opencode/skills`
+- `~/.config/opencode/skills`
 - enabled Claude plugin caches under `~/.claude/plugins/cache/.../skills`
 
-Clicking a skill opens its `SKILL.md`.
+Clicking a skill opens its `SKILL.md`. The item description shows the source, such as `Project .agents`, `User Codex system`, or `User Gemini`.
 
 ### Workflows
 

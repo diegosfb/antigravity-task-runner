@@ -1,207 +1,73 @@
-#DEPENDENCIES: 
+# Jira Project Creation Dependencies
 
-## The JIRA project creation workflow needs to have the project created with the correct project type, boards and workflow scheme.
-For that ensure that you use a skill that matches the creation criteria.
-Right now it is skill ~/.claude/skills/jira-project-creation/SKILL.md
+These notes cover operational dependencies for creating a Jira Software project.
+They are not `package.json` dependencies.
 
----
-name: jira-project-creation
-description: Use when asked to create a Jira Software project. Covers company-managed (classic) project setup, workflow scheme assignment, Kanban board creation, column configuration, and issue type setup. Use when the user says "create a Jira project", "set up a Jira project", or gives project name/key/description parameters.
----
+## Status
 
-# Jira Project Creation
+Sound with path and ownership corrections. Jira project creation is setup work,
+not a top-level ADLC workflow stage. During the ADLC workflow, backlog ownership
+belongs to `project-planner-agent`.
 
-## Overview
+## Canonical Skill
 
-Creating a Jira Software company-managed project via REST API requires several steps beyond the initial `POST /project` call. The board, columns, and issue types all need explicit configuration — defaults are always wrong.
+Use the local skill:
 
-Uses `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN` environment variables. Never ask the user to create anything manually unless blocked by missing permissions.
-
-## Required Parameters
-
-Confirm these before starting:
-- **Name** and **Key** (e.g. `AABB`)
-- **Description**
-- **Workflow scheme name** (must exist in the instance)
-- **Board type** (default: Kanban)
-- **Board columns** (default: To Do, In Progress, In Review, Done)
-- **Work types** (default: Task, Epic, Bug, New Feature, Improvement)
-
----
-
-## Steps
-
-### 1. Get cloudId and account ID
-
-Run both in parallel:
-- `getAccessibleAtlassianResources` → note `id` (cloudId)
-- `atlassianUserInfo` → note `account_id`
-
-### 2. Find workflow scheme ID
-
-```bash
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  -H "Accept: application/json" \
-  "${JIRA_BASE_URL}rest/api/3/workflowscheme"
+```text
+.agents/skills/jira-project-creation/SKILL.md
 ```
 
-Match by `name` → note the `id`.
+Do not point agents at `~/.claude/skills/...`; this repository is designed to be
+portable across Claude Code, Codex, Gemini CLI, Antigravity, and OpenCode.
 
-### 3. Create the project
+## Required Inputs
 
-```bash
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
-  "${JIRA_BASE_URL}rest/api/3/project" \
-  -d '{
-    "key": "<KEY>",
-    "name": "<NAME>",
-    "projectTypeKey": "software",
-    "description": "<DESCRIPTION>",
-    "leadAccountId": "<accountId>",
-    "workflowScheme": <schemeId>,
-    "assigneeType": "PROJECT_LEAD"
-  }'
-```
+Confirm before creating a Jira project:
 
-**Critical:** Do NOT include `projectTemplateKey`. It conflicts with `workflowScheme` and causes an error. Omitting the template and passing `workflowScheme` directly produces a classic (company-managed) project (`"style": "classic", "simplified": false`).
+- project name and key;
+- description;
+- workflow scheme name that already exists in the Jira instance;
+- board type, normally Kanban;
+- board columns, normally Backlog, To Do, In Progress, In Review, Done;
+- issue/work types, normally Task, Epic, Bug, New Feature, and Improvement.
 
-Note the returned project `id`.
+## Required Setup Sequence
 
-### 4. Create the board filter
+1. Resolve Atlassian `cloudId` and current user `accountId`.
+2. Find the workflow scheme ID by name.
+3. Create a company-managed software project with `workflowScheme`.
+4. Create a board filter for the project.
+5. Share the filter; a private filter can make the board appear missing.
+6. Create the Kanban board from the shared filter.
+7. Split `In Review` from `In Progress` if Jira merges them by default.
+8. Add required issue types to the project's issue type scheme.
+9. Verify board columns and issue types before reporting completion.
 
-```bash
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
-  "${JIRA_BASE_URL}rest/api/3/filter" \
-  -d '{"name": "<KEY> Kanban Filter", "jql": "project = <KEY> ORDER BY created DESC"}'
-```
+## Critical Jira Notes
 
-Note the returned filter `id`.
+- Do not include `projectTemplateKey` when passing `workflowScheme`; those
+  settings conflict for the intended company-managed project flow.
+- Classic company-managed project board URLs require the `/c/` segment:
+  `https://<site>.atlassian.net/jira/software/c/projects/<KEY>/boards/<boardId>`.
+- The standard Agile API does not support all board column updates; the
+  GreenHopper endpoint may be required for column remapping.
+- Missing issue types after creation usually mean the issue type scheme needs to
+  be updated.
 
-### 5. Share the filter
+## ADLC Consistency
 
-Required — the board will 404 if the filter is private.
+- Jira project creation prepares the tracking system.
+- `project-planner-agent` owns backlog sequencing and Jira or Markdown backlog
+  updates during the workflow.
+- `developer-agent` consumes approved backlog scope; it should not bypass the
+  planner in the orchestrated flow.
 
-```bash
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
-  "${JIRA_BASE_URL}rest/api/3/filter/<filterId>/permission" \
-  -d '{"type": "authenticated"}'
-```
+## Inconsistencies Found
 
-### 6. Create the Kanban board
+- Prior note referenced a Claude-specific global skill path.
+- Prior title was ambiguous and looked like package dependency documentation.
 
-```bash
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
-  "${JIRA_BASE_URL}rest/agile/1.0/board" \
-  -d '{
-    "name": "<KEY> board",
-    "type": "kanban",
-    "filterId": <filterId>,
-    "location": {"type": "project", "projectKeyOrId": "<KEY>"}
-  }'
-```
+## Proposed Improvements
 
-Note the returned board `id`.
-
-### 7. Fix board columns
-
-**Why:** Jira merges "In Review" into the "In Progress" column by default. You must split it out.
-
-First read the current column IDs and status IDs:
-
-```bash
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  -H "Accept: application/json" \
-  "${JIRA_BASE_URL}rest/greenhopper/1.0/rapidviewconfig/editmodel?rapidViewId=<boardId>"
-```
-
-Inspect `rapidListConfig.mappedColumns` for column `id` values and `mappedStatuses[].id` values.
-
-Then rewrite columns via the GreenHopper API — the standard Agile API does not support PUT on board configuration:
-
-```bash
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  -X PUT -H "Accept: application/json" -H "Content-Type: application/json" \
-  "${JIRA_BASE_URL}rest/greenhopper/1.0/rapidviewconfig/columns" \
-  -d '{
-    "rapidViewId": <boardId>,
-    "mappedColumns": [
-      {"id": <backlogColId>, "name": "Backlog",      "isKanPlanColumn": true,  "mappedStatuses": []},
-      {"id": <todoColId>,    "name": "To Do",        "isKanPlanColumn": false, "mappedStatuses": [{"id": "<toDoStatusId>"}]},
-      {"id": <inProgColId>,  "name": "In Progress",  "isKanPlanColumn": false, "mappedStatuses": [{"id": "<inProgressStatusId>"}]},
-      {"id": null,           "name": "In Review",    "isKanPlanColumn": false, "mappedStatuses": [{"id": "<inReviewStatusId>"}]},
-      {"id": <doneColId>,    "name": "Done",         "isKanPlanColumn": false, "mappedStatuses": [{"id": "<doneStatusId>"}]}
-    ]
-  }'
-```
-
-`"In Review"` gets `"id": null` because it is a new column being created.
-
-### 8. Fix issue types
-
-**Why:** Projects created without a template start with only Task + Sub-task.
-
-Get the project's issue type scheme ID:
-
-```bash
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  -H "Accept: application/json" \
-  "${JIRA_BASE_URL}rest/api/3/issuetypescheme/project?projectId=<projectId>"
-```
-
-Note `issueTypeScheme.id`. Then find the IDs of the needed types:
-
-```bash
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  -H "Accept: application/json" \
-  "${JIRA_BASE_URL}rest/api/3/issuetype"
-```
-
-Add the missing types (Epic, Bug, New Feature, Improvement) to the scheme:
-
-```bash
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  -X PUT -H "Accept: application/json" -H "Content-Type: application/json" \
-  "${JIRA_BASE_URL}rest/api/3/issuetypescheme/<schemeId>/issuetype" \
-  -d '{"issueTypeIds": ["<epicId>", "<bugId>", "<newFeatureId>", "<improvementId>"]}'
-```
-
-A 400 "already present" error is harmless — it means they were already in the scheme.
-
-### 9. Verify and report
-
-Run in parallel:
-
-```bash
-# Confirm columns
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  "${JIRA_BASE_URL}rest/agile/1.0/board/<boardId>/configuration"
-
-# Confirm issue types
-curl -s -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
-  "${JIRA_BASE_URL}rest/api/3/project/<KEY>?expand=issueTypes"
-```
-
-Report the project key and board URL:
-
-```
-https://<site>.atlassian.net/jira/software/c/projects/<KEY>/boards/<boardId>
-```
-
-**The `/c/` segment is required for classic (company-managed) projects. Omitting it causes a 404.**
-
----
-
-## Common Mistakes
-
-| Mistake | Fix |
-|---|---|
-| Including `projectTemplateKey` with `workflowScheme` | Remove `projectTemplateKey` entirely |
-| Board 404 after creation | Filter must be shared (`type: authenticated`) |
-| Board URL without `/c/` | Classic projects require `/c/` in path |
-| Only Task visible in work types | Add Epic, Bug, New Feature, Improvement to issue type scheme |
-| In Review missing from board | Split it from In Progress via GreenHopper columns API |
-| `PUT /rest/agile/1.0/board/{id}/configuration` → 405 | Use GreenHopper API instead: `PUT /rest/greenhopper/1.0/rapidviewconfig/columns` |
+- Link this note from any Jira setup UI only as an operational reference.
+- Add a checklist for required Jira permissions if project creation fails.

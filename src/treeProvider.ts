@@ -210,44 +210,98 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
   }
 
   private async getAgentItems(): Promise<NodeItem[]> {
+    const rootPath = getRootPath();
+    const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
+    const allAgents: Array<{
+      name: string;
+      filePath?: string;
+      source: string;
+      section: string;
+      model?: string;
+      runnableClaude?: boolean;
+    }> = [];
+    const seenAgentPaths = new Set<string>();
+    const seenClaudeAgents = new Set<string>();
+    const addAgentsFromDir = (dir: string, source: string, section: string): void => {
+      for (const agent of readAgentsDir(dir)) {
+        const agentKey = getAgentFileKey(agent.filePath);
+        if (seenAgentPaths.has(agentKey)) continue;
+        seenAgentPaths.add(agentKey);
+        allAgents.push({ ...agent, source, section });
+      }
+    };
+
+    // Project agents: shared .agents plus harness-specific project agent folders.
+    if (repoRoot) {
+      const projectBase = getWorkspaceProjectPath(repoRoot);
+      addAgentsFromDir(path.join(repoRoot, ".agents", "agents"), "Project .agents", "Project");
+      addAgentsFromDir(path.join(projectBase, ".agent", "agents"), "Project .agent", "Project");
+      addAgentsFromDir(path.join(repoRoot, ".claude", "agents"), "Project Claude", "Project");
+      addAgentsFromDir(path.join(repoRoot, ".codex", "agents"), "Project Codex", "Project");
+      addAgentsFromDir(path.join(repoRoot, ".gemini", "agents"), "Project Gemini", "Project");
+      addAgentsFromDir(path.join(repoRoot, ".opencode", "agents"), "Project OpenCode", "Project");
+    }
+
+    // User agents: harness-specific global agent folders.
+    addAgentsFromDir(path.join(os.homedir(), ".claude", "agents"), "User Claude", "User");
+    addAgentsFromDir(path.join(os.homedir(), ".codex", "agents"), "User Codex", "User");
+    addAgentsFromDir(path.join(os.homedir(), ".gemini", "agents"), "User Gemini", "User");
+    addAgentsFromDir(path.join(os.homedir(), ".gemini", "antigravity", "agents"), "User Gemini Antigravity", "User");
+    addAgentsFromDir(path.join(os.homedir(), ".opencode", "agents"), "User OpenCode", "User");
+    addAgentsFromDir(path.join(os.homedir(), ".config", "opencode", "agents"), "User OpenCode config", "User");
+
     try {
-      const rootPath = getRootPath();
-      const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
       const opts = repoRoot ? { timeout: 8000, cwd: repoRoot } : { timeout: 8000 };
       const { stdout, stderr } = await execAsync("claude agents 2>&1", opts);
       const agents = parseAgentsOutput(stdout || stderr || "");
-      if (agents.length === 0) {
-        return [emptyItem("No agents found")];
+      for (const agent of agents) {
+        const agentKey = `${agent.section.toLowerCase()}:${agent.name}`;
+        if (seenClaudeAgents.has(agentKey)) continue;
+        seenClaudeAgents.add(agentKey);
+        allAgents.push({
+          ...agent,
+          source: "Claude CLI",
+          runnableClaude: true
+        });
       }
-      const SECTION_ICON: Record<string, string> = {
-        user: "account",
-        plugin: "extensions",
-        "built-in": "robot",
-        project: "account"
-      };
-      return agents.map(({ name, model, section }) => {
+    } catch {
+      // File-backed agents remain useful even when the Claude CLI is unavailable.
+    }
+
+    if (allAgents.length === 0) {
+      return [emptyItem("No agents found")];
+    }
+
+    const SECTION_ICON: Record<string, string> = {
+      user: "account",
+      plugin: "extensions",
+      "built-in": "robot",
+      project: "account"
+    };
+    return allAgents
+      .sort((a, b) => a.name.localeCompare(b.name) || a.source.localeCompare(b.source))
+      .map(({ name, filePath, source, section, model, runnableClaude }) => {
         const sectionKey = section.toLowerCase();
         const item = new NodeItem(
-          { kind: "agent", label: name, filePath: name },
+          { kind: "agent", label: name, filePath: filePath ?? name },
           vscode.TreeItemCollapsibleState.None
         );
-        item.contextValue = "antigravityClaudeAgent";
-        item.description = model;
-        item.tooltip = `${section} agent · ${model}`;
+        item.contextValue = runnableClaude ? "antigravityClaudeAgent" : "antigravityAgentItem";
+        item.description = runnableClaude ? model : source;
+        item.tooltip = runnableClaude
+          ? `${section} agent · ${source} · ${model}`
+          : `${section} agent · ${source}`;
         item.iconPath = new vscode.ThemeIcon(
           SECTION_ICON[sectionKey] ?? "robot",
           CLAUDE_ACTION_COLOR
         );
         item.command = {
-          command: "antigravity.runClaudeAgent",
-          title: `Run ${name}`,
-          arguments: [name]
+          command: runnableClaude ? "antigravity.runClaudeAgent" : "antigravity.openAgent",
+          title: runnableClaude ? `Run ${name}` : "Open Agent",
+          arguments: [filePath ?? name]
         };
         return item;
       });
-    } catch {
-      return [emptyItem("Failed to list agents")];
-    }
   }
 
   private async getSkillItems(): Promise<NodeItem[]> {
@@ -255,31 +309,41 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
     const repoRoot = rootPath ? getRepoRoot(rootPath) : undefined;
 
     const allSkills: Array<{ name: string; filePath: string; source: string; section: string }> = [];
+    const seenSkillPaths = new Set<string>();
+    const addSkillsFromDir = (dir: string, source: string, section: string): void => {
+      for (const skill of readSkillsDir(dir)) {
+        const skillKey = getSkillFileKey(skill.filePath);
+        if (seenSkillPaths.has(skillKey)) continue;
+        seenSkillPaths.add(skillKey);
+        allSkills.push({ ...skill, source, section });
+      }
+    };
 
-    // Project skills: <workspaceProjectPath>/.agent/skills/ and <repoRoot>/.claude/skills/ (deduped)
+    // Project skills: shared .agents plus harness-specific project skill folders.
     if (repoRoot) {
       const projectBase = getWorkspaceProjectPath(repoRoot);
-      const seenProjectSkills = new Set<string>();
-      for (const s of readSkillsDir(path.join(projectBase, ".agent", "skills"))) {
-        seenProjectSkills.add(s.name);
-        allSkills.push({ ...s, section: "Project" });
-      }
-      // .claude/skills is often a symlink to .agent/skills — only add extras
-      for (const s of readSkillsDir(path.join(repoRoot, ".claude", "skills"))) {
-        if (!seenProjectSkills.has(s.name)) {
-          allSkills.push({ ...s, section: "Project" });
-        }
-      }
+      addSkillsFromDir(path.join(repoRoot, ".agents", "skills"), "Project .agents", "Project");
+      addSkillsFromDir(path.join(projectBase, ".agent", "skills"), "Project .agent", "Project");
+      addSkillsFromDir(path.join(repoRoot, ".claude", "skills"), "Project Claude", "Project");
+      addSkillsFromDir(path.join(repoRoot, ".codex", "skills"), "Project Codex", "Project");
+      addSkillsFromDir(path.join(repoRoot, ".gemini", "skills"), "Project Gemini", "Project");
+      addSkillsFromDir(path.join(repoRoot, ".opencode", "skills"), "Project OpenCode", "Project");
     }
 
-    // User skills: ~/.claude/skills/<name>/SKILL.md
-    const userSkillsDir = path.join(os.homedir(), ".claude", "skills");
-    for (const s of readSkillsDir(userSkillsDir)) {
-      allSkills.push({ ...s, section: "User" });
-    }
+    // User skills: harness-specific global skill folders.
+    addSkillsFromDir(path.join(os.homedir(), ".claude", "skills"), "User Claude", "User");
+    addSkillsFromDir(path.join(os.homedir(), ".codex", "skills"), "User Codex", "User");
+    addSkillsFromDir(path.join(os.homedir(), ".codex", "skills", ".system"), "User Codex system", "User");
+    addSkillsFromDir(path.join(os.homedir(), ".gemini", "skills"), "User Gemini", "User");
+    addSkillsFromDir(path.join(os.homedir(), ".gemini", "antigravity", "skills"), "User Gemini Antigravity", "User");
+    addSkillsFromDir(path.join(os.homedir(), ".opencode", "skills"), "User OpenCode", "User");
+    addSkillsFromDir(path.join(os.homedir(), ".config", "opencode", "skills"), "User OpenCode config", "User");
 
     // Plugin skills: enabled plugins → cache → skills
     for (const s of await readEnabledPluginSkills()) {
+      const skillKey = getSkillFileKey(s.filePath);
+      if (seenSkillPaths.has(skillKey)) continue;
+      seenSkillPaths.add(skillKey);
       allSkills.push({ ...s, section: "Plugin" });
     }
 
@@ -287,39 +351,49 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
       return [emptyItem("No skills found")];
     }
 
-    return allSkills.map(({ name, filePath, source, section }) => {
-      const item = new NodeItem(
-        { kind: "skill", label: name, filePath },
-        vscode.TreeItemCollapsibleState.None
-      );
-      item.contextValue = "antigravitySkillItem";
-      item.description = source;
-      item.tooltip = `${section} skill · ${source}`;
-      item.iconPath = new vscode.ThemeIcon("symbol-keyword", CLAUDE_ACTION_COLOR);
-      item.command = {
-        command: "antigravity.openAgent",
-        title: "Open Skill",
-        arguments: [filePath]
-      };
-      return item;
-    });
+    return allSkills
+      .sort((a, b) => a.name.localeCompare(b.name) || a.source.localeCompare(b.source))
+      .map(({ name, filePath, source, section }) => {
+        const item = new NodeItem(
+          { kind: "skill", label: name, filePath },
+          vscode.TreeItemCollapsibleState.None
+        );
+        item.contextValue = "antigravitySkillItem";
+        item.description = source;
+        item.tooltip = `${section} skill · ${source}`;
+        item.iconPath = new vscode.ThemeIcon("symbol-keyword", CLAUDE_ACTION_COLOR);
+        item.command = {
+          command: "antigravity.openAgent",
+          title: "Open Skill",
+          arguments: [filePath]
+        };
+        return item;
+      });
   }
 
   private async getWorkflowItems(): Promise<NodeItem[]> {
-    const rootPath = getAntigravityHomePath();
-    if (!rootPath) {
+    const rootPath = getRootPath();
+    const workflowDirs: string[] = [];
+    if (rootPath) {
+      workflowDirs.push(path.join(getRepoRoot(rootPath), ".agents", "workflows"));
+    }
+
+    const antigravityHomePath = getAntigravityHomePath();
+    if (antigravityHomePath) {
+      workflowDirs.push(path.join(antigravityHomePath, "workflows"));
+    }
+
+    if (workflowDirs.length === 0) {
       return [missingRootItem()];
     }
 
-    const workflowsDir = path.join(rootPath, "workflows");
-    const entries = await safeReadDir(workflowsDir);
-
-    const markdownFiles = entries.filter(
-      (entry) => entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md"
-    );
-
-    const items = markdownFiles
-      .map((entry) => {
+    const items: NodeItem[] = [];
+    for (const workflowsDir of workflowDirs) {
+      const entries = await safeReadDir(workflowsDir);
+      const markdownFiles = entries.filter(
+        (entry) => entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md"
+      );
+      items.push(...markdownFiles.map((entry) => {
         const workflowFile = path.join(workflowsDir, entry.name);
         const item = new NodeItem(
           { kind: "workflow", label: entry.name.replace(/\.md$/, ""), filePath: workflowFile },
@@ -332,8 +406,10 @@ export class AntigravityViewProvider implements vscode.TreeDataProvider<NodeItem
         };
         item.iconPath = new vscode.ThemeIcon("play");
         return item;
-      })
-      .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+      }));
+    }
+
+    items.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 
     return items.length > 0 ? items : [emptyItem("No workflows found")];
   }
@@ -439,6 +515,77 @@ function emptyItem(label: string): NodeItem {
   return item;
 }
 
+function readAgentsDir(dir: string): Array<{ name: string; filePath: string; source: string }> {
+  if (!fs.existsSync(dir)) return [];
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const entryPath = path.join(dir, entry.name);
+      if (isDirectoryEntry(entryPath, entry)) {
+        const filePath = findAgentDefinitionFile(entryPath, entry.name);
+        return filePath ? [{ name: entry.name, filePath, source: path.basename(dir) }] : [];
+      }
+      if (isAgentDefinitionFile(entry.name) && isFileEntry(entryPath, entry)) {
+        return [{
+          name: entry.name.replace(/\.(md|toml|ya?ml)$/i, ""),
+          filePath: entryPath,
+          source: path.basename(dir)
+        }];
+      }
+      return [];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function findAgentDefinitionFile(agentDir: string, agentName: string): string | undefined {
+  const candidates = [
+    `${agentName}.md`,
+    "AGENT.md",
+    "agent.md",
+    `${agentName}.toml`,
+    "AGENT.toml",
+    "agent.toml",
+    `${agentName}.yaml`,
+    `${agentName}.yml`,
+    "AGENT.yaml",
+    "AGENT.yml"
+  ].map((fileName) => path.join(agentDir, fileName));
+  return candidates.find((filePath) => fs.existsSync(filePath));
+}
+
+function isAgentDefinitionFile(fileName: string): boolean {
+  return fileName !== "README.md" && /\.(md|toml|ya?ml)$/i.test(fileName);
+}
+
+function isDirectoryEntry(entryPath: string, entry: fs.Dirent): boolean {
+  if (entry.isDirectory()) return true;
+  if (!entry.isSymbolicLink()) return false;
+  try {
+    return fs.statSync(entryPath).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function isFileEntry(entryPath: string, entry: fs.Dirent): boolean {
+  if (entry.isFile()) return true;
+  if (!entry.isSymbolicLink()) return false;
+  try {
+    return fs.statSync(entryPath).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function getAgentFileKey(filePath: string): string {
+  try {
+    return fs.realpathSync(filePath);
+  } catch {
+    return path.resolve(filePath);
+  }
+}
+
 function readSkillsDir(dir: string): Array<{ name: string; filePath: string; source: string }> {
   if (!fs.existsSync(dir)) return [];
   try {
@@ -455,6 +602,14 @@ function readSkillsDir(dir: string): Array<{ name: string; filePath: string; sou
       .filter((s) => fs.existsSync(s.filePath));
   } catch {
     return [];
+  }
+}
+
+function getSkillFileKey(filePath: string): string {
+  try {
+    return fs.realpathSync(filePath);
+  } catch {
+    return path.resolve(filePath);
   }
 }
 

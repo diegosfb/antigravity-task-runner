@@ -4,11 +4,11 @@ This documentation describes the current ADLC agent lifecycle and artifact hando
 
 ## Entry point
 
-`sdlc-orchestrator` accepts a **User Request**, consults routing configuration, and delegates to the appropriate agent or workflow. It does not require a `project_state` input and does not produce domain artifacts itself.
+`sdlc-orchestrator` enforces the full Agent-Orchestrated SDLC when the input is a **Project Description**. It sequences the canonical handoffs, checks the applicable gates, and resumes from the earliest missing or stale workflow stage. The other agents can still be invoked individually for bounded specialist work.
 
 ## Project definition workflow
 
-`product-agent -> ba-agent -> architect-agent -> ux-agent -> project-planner-agent`
+`project-description -> product-agent -> ba-agent -> architect-agent -> ux-agent -> project-planner-agent -> backlog`
 
 | Stage | Main inputs | Main outputs |
 |---|---|---|
@@ -22,9 +22,9 @@ Architecture mode is detected automatically. A complete `docs/architecture/archi
 
 ## Implementation workflow
 
-`developer-agent -> spec-validation-agent -> test-agent -> documentation-agent -> code-review-agent -> deployment-agent`
+`developer-agent -> spec-validation-agent -> test-agent -> documentation-agent -> code-review-agent -> deployment-agent -> live-release`
 
-Developer Agent can implement the next approved backlog item or one supplied user story/specification. A supplied user story/specification takes precedence and the backlog is ignored for that run. Existing code and tests are implicit inputs.
+Developer Agent owns development work for backlog items or targeted implementation scope. Existing code and tests are implicit inputs; implementation-specific specialists live behind Developer Agent rather than as top-level workflow stages.
 
 1. Developer Agent creates an approved implementation plan and integrates source code under `src/` on the task branch.
 2. Spec Validation checks spec conformance when explicitly invoked by the workflow and automatically when configured with `drift_check_mode: on-implementation`.
@@ -33,6 +33,8 @@ Developer Agent can implement the next approved backlog item or one supplied use
 5. Developer Agent finalizes the branch or pull request and hands the PR to Code Review Agent.
 6. Code Review emits change requests or an approved PR merge.
 7. Deployment Agent consumes the approved merged PR plus a YAML release configuration and optional pre/post-deployment scripts.
+
+The canonical feedback loops are: specification drift returns to Developer Agent, specification gaps return to BA Agent, test failures return to Developer Agent, code-review changes return to Developer Agent, and production telemetry or user feedback returns to Product Agent.
 
 ## Visual conventions in Task Runner
 
@@ -62,7 +64,7 @@ Developer Agent can implement the next approved backlog item or one supplied use
 
 ### Supporting pages
 
-- [Spec Validation Agent](Axiliary%20Agents/SPEC-VALIDATION-AGENT.md)
+- [Spec Validation Agent](Auxiliary%20Agents/SPEC-VALIDATION-AGENT.md)
 - [Meeting Evidence with Product Agent](SDLC%20Agents/MEETING-EVIDENCE-WITH-PRODUCT-AGENT.md)
 - [Orchestration Explanation](orchestration-explanation.md)
 - [ADLC Design](workflow-design/ADLC-design.md)

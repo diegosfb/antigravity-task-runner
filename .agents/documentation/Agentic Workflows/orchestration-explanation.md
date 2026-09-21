@@ -2,13 +2,13 @@
 
 ## Routing model
 
-The SDLC Orchestrator receives a User Request, reads `routing-registry.yaml`, applies `ADLC_workflow_settings.json`, and delegates to the smallest adequate agent set. It reports the selected agent, routing reason, expected output, and next consumer.
+The SDLC Orchestrator receives a Project Description for the full Agent-Orchestrated SDLC, reads `routing-registry.yaml`, applies `ADLC_workflow_settings.json`, and delegates to the smallest adequate agent set for the current workflow stage. It reports the selected agent, routing reason, expected output, and next consumer.
 
-The orchestrator does not accept `project_state` as a visible input. Existing repository artifacts are discovered by the selected agent or workflow.
+The orchestrator does not accept `project_state` as a visible input. Existing repository artifacts are discovered by the selected agent or workflow. Agents remain individually invokable for bounded specialist work, but only `sdlc-orchestrator` enforces the complete end-to-end sequence.
 
 ## Definition chain
 
-`Product -> BA -> Architect -> UX -> Project Planner`
+`Project Description -> Product -> BA -> Architect -> UX -> Project Planner -> Backlog`
 
 - Product Agent creates the PRD from a Product Definition and optional Supporting Evidence.
 - BA Agent converts the approved PRD into testable specifications. Existing Specifications and Supporting Evidence are optional context.
@@ -20,15 +20,15 @@ The orchestrator does not accept `project_state` as a visible input. Existing re
 
 ## Implementation chain
 
-`Developer -> Spec Validation -> Test -> Documentation -> Code Review`
+`Developer -> Spec Validation -> Test -> Documentation -> Code Review -> Deployment -> Live`
 
-Developer Agent accepts either the approved backlog scope or one User Story or Specification. The targeted story/specification wins when both are present. It uses existing code and tests implicitly, integrates source code under `src/`, and produces the task branch or pull request.
+Developer Agent owns development work for the approved backlog scope or targeted implementation scope. It uses existing code and tests implicitly, integrates source code under `src/`, and produces the task branch or pull request.
 
 Spec Validation compares spec-covered behavior with the governing specifications. The backlog workflow invokes it explicitly even when `drift_check_mode` is `on-demand`; standalone implementation runs invoke it automatically only when the mode is `on-implementation`.
 
 Test Agent can consume the backlog or one User Story or Specification. The targeted item takes precedence. Tests are created and run against the exact candidate, with test-plan approval and configured red-team behavior.
 
-After Test Agent returns PASS, Developer Agent invokes Documentation Agent with the exact tested revision and governing artifacts. Documentation Agent either updates required documentation or returns a justified no-change record. A discovered code/spec conflict returns through the revised-plan, spec-validation, and test loop.
+After Test Agent returns PASS, Developer Agent invokes Documentation Agent with the exact tested revision and governing artifacts. Documentation Agent either updates required documentation or returns a justified no-change record.
 
 Code Review Agent consumes the Pull Request and returns change requests or PR Merge approval. Requested changes return to Developer Agent and re-enter the relevant gates.
 
@@ -42,7 +42,6 @@ It produces the Live Release, Deployment Record, Rollback Artifact, and Post-Dep
 
 - Specification drift returns to Developer Agent or a specification gap returns to BA Agent.
 - Test failures return to Developer Agent and optionally become planner-tracked defects.
-- Documentation conflicts return to Developer Agent and repeat validation.
 - Code-review changes return to Developer Agent.
 - Production telemetry and user feedback return to Product Agent.
 
