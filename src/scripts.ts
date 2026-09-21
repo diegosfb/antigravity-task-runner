@@ -218,9 +218,9 @@ export async function runRepoScript(
   logAlways(`[runRepoScript] requested scriptName=${scriptName} args=${JSON.stringify(args)}`);
   const rootPath = getRootPath();
   if (!rootPath) {
-    logAlways("[runRepoScript] ERROR: rootPath not set or invalid");
-    void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
-    await runInSecondaryTerminal([`echo "[antigravity] ERROR: rootPath not set or invalid"`]);
+    logAlways("[runRepoScript] ERROR: project root not available or invalid");
+    void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
+    await runInSecondaryTerminal([`echo "[task-runner] ERROR: project root not available"`]);
     return;
   }
   const repoRoot = getRepoRoot(rootPath);
@@ -266,7 +266,7 @@ export async function openFile(filePath: string): Promise<void> {
 export async function runWorkflow(workflowFile: string): Promise<void> {
   const rootPath = getRootPath();
   if (!rootPath) {
-    void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+    void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
     return;
   }
   const repoRoot = getRepoRoot(rootPath);
@@ -323,7 +323,7 @@ export function interpolateAgentArgs(template: string, agentName: string, agentF
 export async function runAgent(agentName: string, agentFile: string): Promise<void> {
   const rootPath = getRootPath();
   if (!rootPath) {
-    void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+    void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
     return;
   }
   const repoRoot = getRepoRoot(rootPath);

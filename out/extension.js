@@ -92,7 +92,7 @@ function activate(context) {
         (0, logger_1.log)(`[${logKey}] triggered`);
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -122,7 +122,7 @@ function activate(context) {
         }
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -188,18 +188,6 @@ function activate(context) {
         return `feature/${issueKey}-${description}`;
     };
     const resolveClaudeWorkflowFile = (workflowName) => {
-        const config = vscode.workspace.getConfiguration("antigravity");
-        const configuredFolderRaw = config.get("workflowsFolder") || path.join(os.homedir(), ".gemini");
-        const configuredFolder = configuredFolderRaw.startsWith("~")
-            ? path.join(os.homedir(), configuredFolderRaw.slice(1))
-            : configuredFolderRaw;
-        const configuredCandidates = [
-            path.join(configuredFolder, "workflows", workflowName, "WORKFLOW.md"),
-            path.join(configuredFolder, workflowName, "WORKFLOW.md")
-        ];
-        const configuredPath = configuredCandidates.find((candidate) => fs.existsSync(candidate));
-        if (configuredPath)
-            return configuredPath;
         const bundledPath = path.join(extensionRoot, "Knowhow", "Antigravity workflows", workflowName, "WORKFLOW.md");
         if (fs.existsSync(bundledPath))
             return bundledPath;
@@ -767,12 +755,12 @@ function activate(context) {
             !apiToken ? "Jira API Token" : undefined
         ].filter((value) => Boolean(value));
         if (missing.length > 0) {
-            throw new Error(`Missing Jira credentials in Antigravity Settings: ${missing.join(", ")}.`);
+            throw new Error(`Missing Jira credentials in TaskRunner Settings: ${missing.join(", ")}.`);
         }
         return { baseUrl, email, apiToken };
     };
     const isJiraCredentialsConfigurationMessage = (message) => message === jira_1.INVALID_JIRA_TOKEN_MESSAGE ||
-        message.startsWith("Missing Jira credentials in Antigravity Settings:");
+        message.startsWith("Missing Jira credentials in TaskRunner Settings:");
     const showJiraCredentialsValidationError = async (error) => {
         const rawMessage = error instanceof Error ? error.message : String(error);
         const message = isJiraCredentialsConfigurationMessage(rawMessage)
@@ -2762,7 +2750,7 @@ function activate(context) {
     context.subscriptions.push(vscode.window.registerTreeDataProvider("antigravityView", provider));
     void watchGitRepositoriesForTreeRefresh();
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openSettings", async () => {
-        const panel = vscode.window.createWebviewPanel("antigravitySettings", "Antigravity Settings", vscode.ViewColumn.Active, { enableScripts: true });
+        const panel = vscode.window.createWebviewPanel("antigravitySettings", "TaskRunner Settings", vscode.ViewColumn.Active, { enableScripts: true });
         panel.webview.html = (0, settings_1.renderAntigravitySettingsHtml)(panel.webview);
         panel.webview.onDidReceiveMessage(async (message) => {
             if (!message || message.type !== "applySettings")
@@ -2795,7 +2783,7 @@ function activate(context) {
                 }
             }
             provider.refresh();
-            void vscode.window.showInformationMessage("Antigravity settings updated.");
+            void vscode.window.showInformationMessage("TaskRunner settings updated.");
         }, undefined, context.subscriptions);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openHelpDoc", async () => {
@@ -2883,7 +2871,7 @@ function activate(context) {
         }
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const projectRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -2918,7 +2906,7 @@ function activate(context) {
         }
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const projectRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -2960,7 +2948,7 @@ function activate(context) {
         const skillSource = stat.isDirectory() ? filePath : path.dirname(filePath);
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const projectRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -2999,7 +2987,7 @@ function activate(context) {
         }
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const projectRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3064,8 +3052,8 @@ function activate(context) {
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                (0, logger_1.log)(`[openClaudeTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                (0, logger_1.log)(`[openClaudeTerminal] ERROR: project root not available`);
+                void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3089,7 +3077,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOllamaClaudeTerminal", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3123,8 +3111,8 @@ function activate(context) {
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                (0, logger_1.log)(`[openAgentMonitorClaudeTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                (0, logger_1.log)(`[openAgentMonitorClaudeTerminal] ERROR: project root not available`);
+                void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3141,8 +3129,8 @@ function activate(context) {
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                (0, logger_1.log)(`[openAgentMonitorCodexTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                (0, logger_1.log)(`[openAgentMonitorCodexTerminal] ERROR: project root not available`);
+                void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3159,8 +3147,8 @@ function activate(context) {
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                (0, logger_1.log)(`[openAgentMonitorOpenCodeTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                (0, logger_1.log)(`[openAgentMonitorOpenCodeTerminal] ERROR: project root not available`);
+                void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3177,8 +3165,8 @@ function activate(context) {
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                (0, logger_1.log)(`[openOllamaCodexTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                (0, logger_1.log)(`[openOllamaCodexTerminal] ERROR: project root not available`);
+                void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3193,7 +3181,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openOpenClaudeTerminal", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3207,8 +3195,8 @@ function activate(context) {
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                (0, logger_1.log)(`[openCodexTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                (0, logger_1.log)(`[openCodexTerminal] ERROR: project root not available`);
+                void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3229,8 +3217,8 @@ function activate(context) {
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                (0, logger_1.log)(`[openOpencodeTerminal] ERROR: rootPath not set`);
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                (0, logger_1.log)(`[openOpencodeTerminal] ERROR: project root not available`);
+                void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3302,7 +3290,7 @@ function activate(context) {
             }
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
                 return;
             }
             const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3489,8 +3477,8 @@ function activate(context) {
         (0, logger_1.logAlways)(`[initRepository] triggered`);
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            (0, logger_1.logAlways)(`[initRepository] ERROR: rootPath not set`);
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            (0, logger_1.logAlways)(`[initRepository] ERROR: project root not available`);
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3539,8 +3527,8 @@ function activate(context) {
         (0, logger_1.logAlways)(`[initRepositoryConfigUpdate] triggered`);
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            (0, logger_1.logAlways)(`[initRepositoryConfigUpdate] ERROR: rootPath not set`);
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            (0, logger_1.logAlways)(`[initRepositoryConfigUpdate] ERROR: project root not available`);
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3559,8 +3547,8 @@ function activate(context) {
         try {
             const rootPath = (0, utils_1.getRootPath)();
             if (!rootPath) {
-                (0, logger_1.logAlways)("[commitChanges] ERROR: rootPath not set");
-                void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+                (0, logger_1.logAlways)("[commitChanges] ERROR: project root not available");
+                void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
                 return;
             }
             repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3611,7 +3599,7 @@ function activate(context) {
         }
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3629,7 +3617,7 @@ function activate(context) {
             const rootPath = (0, utils_1.getRootPath)();
             const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (!repoRoot) {
-                (0, logger_1.log)(`[createClaudeMd] ERROR: no workspace folder or rootPath`);
+                (0, logger_1.log)(`[createClaudeMd] ERROR: no workspace folder`);
                 void vscode.window.showErrorMessage("No workspace folder is open.");
                 return;
             }
@@ -3648,7 +3636,7 @@ function activate(context) {
             const rootPath = (0, utils_1.getRootPath)();
             const repoRoot = rootPath ? (0, utils_1.getRepoRoot)(rootPath) : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (!repoRoot) {
-                (0, logger_1.log)(`[createAgentMd] ERROR: no workspace folder or rootPath`);
+                (0, logger_1.log)(`[createAgentMd] ERROR: no workspace folder`);
                 void vscode.window.showErrorMessage("No workspace folder is open.");
                 return;
             }
@@ -3667,7 +3655,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createInfrastructure", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3693,7 +3681,7 @@ function activate(context) {
     const runAgenticLibScript = async (scriptName) => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3722,7 +3710,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.selectOrCreateJiraProject", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3739,7 +3727,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.addJiraItem", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3821,7 +3809,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.addBacklogItem", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3918,7 +3906,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.takeJiraItemAssign", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -3986,7 +3974,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.takeBacklogItemAssign", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4106,7 +4094,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.assignJiraItemToAgent", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4197,7 +4185,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.assignBacklogItemToAgent", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4319,7 +4307,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.completeJiraItem", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4443,7 +4431,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openObsidianVaultVisualization", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4454,7 +4442,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.cloudArchitectReview", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4487,7 +4475,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.featureEstimator", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4531,7 +4519,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.explainMe", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4560,7 +4548,7 @@ function activate(context) {
         (0, logger_1.log)(`[createRepoTagVersion] triggered`);
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4594,7 +4582,7 @@ function activate(context) {
         (0, logger_1.log)("[createFeatureBranch] triggered");
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4622,7 +4610,7 @@ function activate(context) {
         (0, logger_1.log)("[createPullRequest] triggered");
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4689,7 +4677,7 @@ function activate(context) {
         (0, logger_1.log)("[mergeBranchToMain] triggered");
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4749,7 +4737,7 @@ function activate(context) {
         (0, logger_1.log)("[checkoutMain] triggered");
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4787,7 +4775,7 @@ function activate(context) {
         (0, logger_1.log)("[pullRemoteAndMerge] triggered");
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4832,7 +4820,7 @@ function activate(context) {
         (0, logger_1.log)("[agenticReviewOfMerge] triggered");
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4874,7 +4862,7 @@ function activate(context) {
         (0, logger_1.log)("[setFeatureFlag] triggered");
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -4979,7 +4967,7 @@ function activate(context) {
         }
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -5031,7 +5019,7 @@ function activate(context) {
         (0, logger_1.log)("[reviewPullRequest] triggered");
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -5065,13 +5053,13 @@ function activate(context) {
         (0, logger_1.log)("[approvePullRequest] triggered");
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
         const workflowFile = resolveClaudeWorkflowFile("approve_pull_request");
         if (!workflowFile) {
-            void vscode.window.showErrorMessage("Approve pull request workflow not found in the configured Antigravity Workflows Folder or the bundled extension files.");
+            void vscode.window.showErrorMessage("Approve pull request workflow not found in the bundled extension files.");
             return;
         }
         (0, terminal_1.runInPersistentTerminal)("Agentic Harness Approve Pull Request", [
@@ -5088,7 +5076,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.createRepoTag", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -5122,7 +5110,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.autocommitCheckpoint", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -5149,7 +5137,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.autocommitRevert", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -5164,7 +5152,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.switchEnvironment", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -5215,7 +5203,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.openAdlcFrameworkManual", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);
@@ -5233,7 +5221,7 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.bringSopManualToProject", async () => {
         const rootPath = (0, utils_1.getRootPath)();
         if (!rootPath) {
-            void vscode.window.showErrorMessage("Antigravity rootPath is not set or invalid.");
+            void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to determine the project root.");
             return;
         }
         const repoRoot = (0, utils_1.getRepoRoot)(rootPath);

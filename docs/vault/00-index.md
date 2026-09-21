@@ -171,3 +171,15 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Backlog/story-take-backlog-item-assign]] — synced artifact
 
 - [[Notes/20260921T045940199025Z-implementation-note-ignored-local-setup-directories]] — Ignored local setup directories
+
+- [[Notes/20260921T050948050154Z-implementation-note-renamed-and-simplified-taskrunner-settings-page]] — Renamed and simplified TaskRunner settings page
+
+- [[Notes/20260921T052226362459Z-implementation-note-documented-workspace-project-path-usage-in-task-runner-help]] — Documented Workspace Project Path usage in Task Runner help
+
+- [[Notes/20260921T052710688784Z-implementation-note-changed-default-terminal-names-to-taskrunner-labels]] — Changed default terminal names to TaskRunner labels
+
+- [[Notes/20260921T053326288476Z-implementation-note-removed-obsolete-taskrunner-root-path-setting]] — Removed obsolete TaskRunner Root Path setting
+
+- [[Notes/20260921T053841291641Z-implementation-note-removed-obsolete-taskrunner-workflows-folder-setting]] — Removed obsolete TaskRunner Workflows Folder setting
+
+- [[Notes/20260921T055455227491Z-implementation-note-removed-unused-scratch-test-sh-files]] — Removed unused scratch_test.sh files

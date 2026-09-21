@@ -259,13 +259,6 @@ function getExtensionSettingsFields(): SettingsField[] {
   );
   return [
     {
-      key: "rootPath",
-      label: "Antigravity Root Path",
-      description: "Path to the antigravity directory that contains agents/ and workflows/.",
-      placeholder: "./.agent/antigravity",
-      value: config.get<string>("rootPath") || ""
-    },
-    {
       key: "workspaceProjectPath",
       label: "Workspace Project Path",
       description: "Path where workspace files are extracted and downloaded to. Relative paths are resolved from the project root.",
@@ -273,25 +266,17 @@ function getExtensionSettingsFields(): SettingsField[] {
       value: config.get<string>("workspaceProjectPath") || ""
     },
     {
-      key: "workflowsFolder",
-      label: "Antigravity Workflows Folder",
-      description:
-        "Base folder used to look up Claude workflows. The extension checks both <folder>/workflows/<name>/WORKFLOW.md and <folder>/<name>/WORKFLOW.md before falling back to bundled workflows.",
-      placeholder: "~/.gemini",
-      value: config.get<string>("workflowsFolder") || ""
-    },
-    {
       key: "terminalName",
       label: "Workflow Terminal Name",
       description: "Terminal name used when running workflow scripts.",
-      placeholder: "Antigravity Workflow",
+      placeholder: "TaskRunner Workflow",
       value: config.get<string>("terminalName") || ""
     },
     {
       key: "agentTerminalName",
       label: "Agent Terminal Name",
       description: "Terminal name used when running agents.",
-      placeholder: "Antigravity Agent",
+      placeholder: "TaskRunner Agent",
       value: config.get<string>("agentTerminalName") || ""
     },
     {
@@ -316,21 +301,6 @@ function getExtensionSettingsFields(): SettingsField[] {
       value: config.get<string>("projectTestingCommand") || ""
     },
     {
-      key: "antigravityPath",
-      label: "Antigravity Executable",
-      description: "Path to the Antigravity executable for running agents.",
-      placeholder: "antigravity",
-      value: config.get<string>("antigravityPath") || ""
-    },
-    {
-      key: "antigravityArgs",
-      label: "Antigravity Arguments",
-      description:
-        'Arguments template for Antigravity. Supports {agent} and {agentFile} placeholders.',
-      placeholder: '"{agentFile}"',
-      value: config.get<string>("antigravityArgs") || ""
-    },
-    {
       key: "jiraBaseUrl",
       label: "Jira Base URL",
       description: "Jira base URL used for all Jira actions.",
@@ -352,34 +322,6 @@ function getExtensionSettingsFields(): SettingsField[] {
       value: config.get<string>("jiraApiToken") || ""
     },
     {
-      key: "autoUpdateClaudeMd",
-      label: "Auto-update CLAUDE.md on autocommit start",
-      description: "When enabled, autocommit start will also run Claude to update CLAUDE.md.",
-      placeholder: "",
-      value: "",
-      type: "checkbox",
-      checked: config.get<boolean>("autoUpdateClaudeMd") ?? false
-    },
-    {
-      key: "createReleaseBranchWhenCreatingReleases",
-      label: "Create release Branch when creating releases",
-      description:
-        "When enabled, creating a repo release also creates, switches to, and pushes a release branch with the release name.",
-      placeholder: "",
-      value: "",
-      type: "checkbox",
-      checked: config.get<boolean>("createReleaseBranchWhenCreatingReleases") ?? true
-    },
-    {
-      key: "enableDebugLogging",
-      label: "Enable debug logging",
-      description: "When enabled, debug logs are written to the Antigravity output channel.",
-      placeholder: "",
-      value: "",
-      type: "checkbox",
-      checked: config.get<boolean>("enableDebugLogging") ?? false
-    },
-    {
       key: "useAgentForGithubRepositoryManagement",
       label: "Use Agent for Github Repository Management",
       description: "When enabled, agent-driven flows are preferred for GitHub repository management tasks.",
@@ -399,9 +341,9 @@ function getExtensionSettingsFields(): SettingsField[] {
     },
     {
       key: "agenticHarnessExecutionCommand",
-      label: "Agentic Harnes execution commads",
+      label: "Agentic Harness Execution Command",
       description:
-        "Pick a saved command or type your own. Applying settings saves custom values into the list for next time.",
+        "Primary agent command used for Jira assignments, feature work, setup helpers, and other full agent runs. Pick a saved command or type a custom one.",
       placeholder: "claude",
       value: selectedAgenticHarnessExecutionCommand,
       type: "command-list",
@@ -410,9 +352,9 @@ function getExtensionSettingsFields(): SettingsField[] {
     },
     {
       key: "lightAgenticHarnessExecutionCommand",
-      label: "Light Agentic Harness execution commands",
+      label: "Light Agentic Harness Execution Command",
       description:
-        "Pick a saved command or type your own. Applying settings saves custom values into the list for next time.",
+        "Lightweight agent command used for short unattended tasks such as commit messages and Jira text. Pick a saved command or type a custom one.",
       note:
         "Note: This is used for light command usage like generating commit messages, Jira messages, etc. This command should run in an unattended way and close the session once it is done.",
       placeholder: "claude --model claude-haiku-4-5-20251001",
@@ -449,14 +391,14 @@ export function renderAntigravitySettingsHtml(webview: vscode.Webview): string {
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Antigravity Settings</title>
+    <title>TaskRunner Settings</title>
     <style>
       body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--vscode-foreground); background: var(--vscode-editor-background); margin: 0; padding: 24px; }
       h1 { font-size: 18px; margin: 0 0 8px; }
       p { margin: 0 0 16px; color: var(--vscode-descriptionForeground); font-size: 12px; }
       .targets { display: flex; gap: 16px; margin-bottom: 18px; font-size: 12px; }
       .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-      .field-checkbox { flex-direction: row; align-items: center; gap: 8px; }
+      .field-checkbox { display: flex; align-items: center; gap: 8px; }
       label { font-size: 12px; color: var(--vscode-descriptionForeground); }
       input[type="text"], select { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); font-size: 13px; }
       .description { font-size: 11px; color: var(--vscode-descriptionForeground); }
@@ -469,7 +411,7 @@ export function renderAntigravitySettingsHtml(webview: vscode.Webview): string {
     </style>
   </head>
   <body>
-    <h1>Antigravity Settings</h1>
+    <h1>TaskRunner Settings</h1>
     <p>Update extension settings and apply them to your workspace or user profile.</p>
     <div class="targets" id="targets">
       <label><input type="radio" name="target" value="workspace" id="target-workspace" /> Workspace</label>
@@ -489,26 +431,55 @@ export function renderAntigravitySettingsHtml(webview: vscode.Webview): string {
 
       function createField(field) {
         const wrapper = document.createElement("div");
+        const helpText = field.description || field.label;
+        const descriptionId = "description-" + field.key;
+        const appendDescription = () => {
+          const desc = document.createElement("div");
+          desc.id = descriptionId;
+          desc.className = "description";
+          desc.textContent = field.description || "";
+          desc.title = helpText;
+          wrapper.appendChild(desc);
+        };
+        const appendNote = () => {
+          if (!field.note) return;
+          const note = document.createElement("div");
+          note.className = "note";
+          note.textContent = field.note;
+          note.title = field.note;
+          wrapper.appendChild(note);
+        };
         if (field.type === "checkbox") {
-          wrapper.className = "field field-checkbox";
+          wrapper.className = "field";
+          const checkboxRow = document.createElement("div");
+          checkboxRow.className = "field-checkbox";
           const cb = document.createElement("input");
           cb.type = "checkbox";
           cb.id = "field-" + field.key;
           cb.checked = !!field.checked;
+          cb.title = helpText;
+          cb.setAttribute("aria-describedby", descriptionId);
           const label = document.createElement("label");
           label.textContent = field.label;
           label.setAttribute("for", "field-" + field.key);
-          wrapper.appendChild(cb);
-          wrapper.appendChild(label);
+          label.title = helpText;
+          checkboxRow.appendChild(cb);
+          checkboxRow.appendChild(label);
+          wrapper.appendChild(checkboxRow);
+          appendDescription();
+          appendNote();
         } else if (field.type === "command-list") {
           wrapper.className = "field";
           const label = document.createElement("label");
           label.textContent = field.label;
           label.setAttribute("for", "field-" + field.key);
+          label.title = helpText;
           const controls = document.createElement("div");
           controls.className = "command-list-controls";
           const select = document.createElement("select");
           select.id = "field-preset-" + field.key;
+          select.title = helpText;
+          select.setAttribute("aria-label", field.label + " preset");
           const customOption = document.createElement("option");
           customOption.value = "__custom__";
           customOption.textContent = "Custom value";
@@ -524,6 +495,8 @@ export function renderAntigravitySettingsHtml(webview: vscode.Webview): string {
           input.type = "text";
           input.value = field.value || "";
           if (field.placeholder) input.placeholder = field.placeholder;
+          input.title = helpText;
+          input.setAttribute("aria-describedby", descriptionId);
           const syncPresetFromInput = () => {
             const selectedPreset = (field.options || []).find((optionValue) => optionValue === input.value);
             select.value = selectedPreset || "__custom__";
@@ -534,42 +507,29 @@ export function renderAntigravitySettingsHtml(webview: vscode.Webview): string {
           });
           input.addEventListener("input", syncPresetFromInput);
           syncPresetFromInput();
-          const desc = document.createElement("div");
-          desc.className = "description";
-          desc.textContent = field.description || "";
           wrapper.appendChild(label);
           controls.appendChild(select);
           controls.appendChild(input);
           wrapper.appendChild(controls);
-          wrapper.appendChild(desc);
-          if (field.note) {
-            const note = document.createElement("div");
-            note.className = "note";
-            note.textContent = field.note;
-            wrapper.appendChild(note);
-          }
+          appendDescription();
+          appendNote();
         } else {
           wrapper.className = "field";
           const label = document.createElement("label");
           label.textContent = field.label;
           label.setAttribute("for", "field-" + field.key);
+          label.title = helpText;
           const input = document.createElement("input");
           input.id = "field-" + field.key;
           input.type = "text";
           input.value = field.value || "";
           if (field.placeholder) input.placeholder = field.placeholder;
-          const desc = document.createElement("div");
-          desc.className = "description";
-          desc.textContent = field.description || "";
+          input.title = helpText;
+          input.setAttribute("aria-describedby", descriptionId);
           wrapper.appendChild(label);
           wrapper.appendChild(input);
-          wrapper.appendChild(desc);
-          if (field.note) {
-            const note = document.createElement("div");
-            note.className = "note";
-            note.textContent = field.note;
-            wrapper.appendChild(note);
-          }
+          appendDescription();
+          appendNote();
         }
         return wrapper;
       }

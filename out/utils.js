@@ -22,28 +22,15 @@ const os = require("os");
 const http = require("http");
 const https = require("https");
 function getRootPath() {
-    const rootPath = vscode.workspace.getConfiguration("antigravity").get("rootPath");
-    if (rootPath && fs.existsSync(rootPath))
-        return rootPath;
     const workspaceRoot = getWorkspaceRoot();
     if (!workspaceRoot)
         return undefined;
-    const antigravityRoot = path.join(workspaceRoot, ".agent", "antigravity");
-    if (fs.existsSync(antigravityRoot))
-        return antigravityRoot;
     if (fs.existsSync(workspaceRoot))
         return workspaceRoot;
     return undefined;
 }
 function getRepoRoot(rootPath) {
-    const normalized = path.resolve(rootPath);
-    const parts = normalized.split(path.sep);
-    if (parts.length >= 2 &&
-        parts[parts.length - 2] === ".agent" &&
-        parts[parts.length - 1] === "antigravity") {
-        return path.resolve(normalized, "..", "..");
-    }
-    return normalized;
+    return path.resolve(rootPath);
 }
 function getWorkspaceRoot() {
     const folders = vscode.workspace.workspaceFolders;

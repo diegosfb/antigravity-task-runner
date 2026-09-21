@@ -34,10 +34,10 @@ test("getRepoRoot returns normalized path when not inside .agent/antigravity", (
   assert.equal(utils.getRepoRoot("/some/path"), "/some/path");
 });
 
-test("getRepoRoot walks up from .agent/antigravity", () => {
+test("getRepoRoot treats .agent/antigravity as a normal project path", () => {
   const utils = setupUtilsModule();
   const result = utils.getRepoRoot("/project/.agent/antigravity");
-  assert.equal(result, "/project");
+  assert.equal(result, "/project/.agent/antigravity");
 });
 
 test("resolveProjectWorkspaceRoot appends workspace for repo roots", () => {

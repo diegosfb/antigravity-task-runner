@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.12.69",
+  "version": "4.12.71",
   "publisher": "dsfb",
   "license": "SEE LICENSE IN LICENSE",
   "icon": "Resources/taskrunner.png",
@@ -275,9 +275,9 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "v4.12.69",
+          "name": "v4.12.71",
           "icon": "Resources/taskrunner.svg",
-          "contextualTitle": "Task Runner v4.12.69"
+          "contextualTitle": "Task Runner v4.12.71"
         }
       ]
     },
@@ -381,19 +381,14 @@
     "configuration": {
       "title": "Task Runner",
       "properties": {
-        "antigravity.rootPath": {
-          "type": "string",
-          "default": "./.agent/antigravity",
-          "description": "Path to the antigravity directory that contains agents/ and workflows/."
-        },
         "antigravity.terminalName": {
           "type": "string",
-          "default": "Antigravity Workflow",
+          "default": "TaskRunner Workflow",
           "description": "Terminal name used when running workflow scripts."
         },
         "antigravity.agentTerminalName": {
           "type": "string",
-          "default": "Antigravity Agent",
+          "default": "TaskRunner Agent",
           "description": "Terminal name used when running agents."
         },
         "antigravity.defaultGithubCodeReviewer": {
@@ -445,11 +440,6 @@
           "type": "string",
           "default": "./",
           "description": "Path where workspace files are extracted and downloaded to. Relative paths are resolved from the project root."
-        },
-        "antigravity.workflowsFolder": {
-          "type": "string",
-          "default": "/Users/diego.brihuega/.gemini",
-          "description": "Base folder used to resolve Claude workflows. The extension checks both <folder>/workflows/<name>/WORKFLOW.md and <folder>/<name>/WORKFLOW.md before falling back to bundled workflows."
         },
         "antigravity.autoUpdateClaudeMd": {
           "type": "boolean",

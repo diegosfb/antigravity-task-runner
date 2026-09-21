@@ -35,7 +35,7 @@ test("CLAUDE_ACTION_COLOR is exported", () => {
 
 test("getAgentTerminalName returns the agent terminal name", () => {
   const terminal = setupTerminalModule();
-  assert.equal(terminal.getAgentTerminalName(), "Antigravity Agent");
+  assert.equal(terminal.getAgentTerminalName(), "TaskRunner Agent");
 });
 
 test("runInSecondaryTerminal is an async function", () => {

@@ -1,6 +1,6 @@
 # task-runner
 
-VS Code extension that lists Antigravity agents and workflows from the configured `.agent/antigravity` directory.
+VS Code extension that lists TaskRunner agents and workflows from the current project root.
 
 ## Usage
 
@@ -12,7 +12,6 @@ VS Code extension that lists Antigravity agents and workflows from the configure
 
 ## Settings
 
-- `antigravity.rootPath`: Path to the `.agent/antigravity` folder.
 - `antigravity.terminalName`: Terminal name used when running workflow scripts.
 - `antigravity.agentTerminalName`: Terminal name used when running agents.
 - `antigravity.agenticPlatform`: Agentic platform used when running agents (`antigravity`, `openclaude`, `codex`, or `ollama`).

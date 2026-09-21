@@ -6,27 +6,14 @@ import * as http from "http";
 import * as https from "https";
 
 export function getRootPath(): string | undefined {
-  const rootPath = vscode.workspace.getConfiguration("antigravity").get<string>("rootPath");
-  if (rootPath && fs.existsSync(rootPath)) return rootPath;
   const workspaceRoot = getWorkspaceRoot();
   if (!workspaceRoot) return undefined;
-  const antigravityRoot = path.join(workspaceRoot, ".agent", "antigravity");
-  if (fs.existsSync(antigravityRoot)) return antigravityRoot;
   if (fs.existsSync(workspaceRoot)) return workspaceRoot;
   return undefined;
 }
 
 export function getRepoRoot(rootPath: string): string {
-  const normalized = path.resolve(rootPath);
-  const parts = normalized.split(path.sep);
-  if (
-    parts.length >= 2 &&
-    parts[parts.length - 2] === ".agent" &&
-    parts[parts.length - 1] === "antigravity"
-  ) {
-    return path.resolve(normalized, "..", "..");
-  }
-  return normalized;
+  return path.resolve(rootPath);
 }
 
 export function getWorkspaceRoot(): string | undefined {

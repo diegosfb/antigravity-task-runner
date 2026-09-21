@@ -28,11 +28,11 @@ function getOrCreateTerminal(name, options = {}) {
 }
 function getAgentTerminalName() {
     return (vscode.workspace.getConfiguration("antigravity").get("agentTerminalName") ||
-        "Antigravity Agent");
+        "TaskRunner Agent");
 }
 function getTerminalName() {
     return (vscode.workspace.getConfiguration("antigravity").get("terminalName") ||
-        "Antigravity Workflow");
+        "TaskRunner Workflow");
 }
 async function runInSecondaryTerminal(lines) {
     const terminal = getOrCreateTerminal(getTerminalName());

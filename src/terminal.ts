@@ -22,14 +22,14 @@ function getOrCreateTerminal(name: string, options: Omit<vscode.TerminalOptions,
 export function getAgentTerminalName(): string {
   return (
     vscode.workspace.getConfiguration("antigravity").get<string>("agentTerminalName") ||
-    "Antigravity Agent"
+    "TaskRunner Agent"
   );
 }
 
 function getTerminalName(): string {
   return (
     vscode.workspace.getConfiguration("antigravity").get<string>("terminalName") ||
-    "Antigravity Workflow"
+    "TaskRunner Workflow"
   );
 }
 

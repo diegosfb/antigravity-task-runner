@@ -64,15 +64,22 @@ Use the title-bar gear button or VS Code settings to edit `antigravity.*`.
 
 | Setting | What it controls | Used by |
 | --- | --- | --- |
-| `antigravity.rootPath` | Main Antigravity content root. Defaults to `./.agent/antigravity`. If that does not exist, the extension falls back to the workspace root. | Repo root detection, agents, workflows |
 | `antigravity.workspaceProjectPath` | Where workspace files should be created or downloaded. Relative values are resolved from the repo root. | `Setup Workspace`, internal workspace bootstrap flows |
-| `antigravity.workflowsFolder` | Extra workflow lookup root. Task Runner checks `<folder>/workflows/<name>/WORKFLOW.md` and `<folder>/<name>/WORKFLOW.md` before falling back to bundled workflows. | `Approve a Pull Request` and other workflow lookups |
 | `antigravity.terminalName` | Shared VS Code terminal name for normal Task Runner script runs. | Build/test/scripts |
 | `antigravity.agentTerminalName` | VS Code terminal name used for agent-oriented persistent terminals. | Agent launches and some helper actions |
 | `antigravity.buildCommand` | Exact build command to run. | `Build Project` |
 | `antigravity.projectTestingCommand` | Exact test command to run. | `Run Project Tests`, PR and merge flows |
 | `antigravity.defaultGithubCodeReviewer` | Default reviewer suggestion passed into the PR flow. | `Create Pull Request` |
 | `antigravity.enableDebugLogging` | Enables extra logs in the `Antigravity Task Runner` output channel. | Troubleshooting |
+
+**When to change `antigravity.workspaceProjectPath`:** keep `./` when the
+current repo is the project Task Runner should modify directly. Use a different
+path when this repo is acting as a controller, template, or tooling repo and
+generated or downloaded project files should land somewhere else. For example,
+use `./workspace` to keep generated files in a dedicated folder,
+`./sandbox/client-app` for a nested prototype, `../my-generated-project` for a
+sibling folder, or an absolute path such as `/Users/you/dev/output-project` for
+a fixed external destination.
 
 ### Agent And Harness Settings
 
