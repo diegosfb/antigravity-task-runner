@@ -70,7 +70,7 @@ const CLOUD_INFRA_SKIP_DIRECTORIES = new Set([
     "Knowhow",
     "node_modules",
     "out",
-    "Resources",
+    "resources",
     "target",
     "vendor",
     "venv"

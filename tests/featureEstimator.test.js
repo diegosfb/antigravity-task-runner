@@ -25,7 +25,7 @@ test("copyFeatureEstimatorSkill copies the skill into .agent/skills and .claude/
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-feature-estimator-"));
   const extensionRoot = path.join(tempRoot, "extension");
   const projectRoot = path.join(tempRoot, "project");
-  const sourceRoot = path.join(extensionRoot, "Resources", "estimator");
+  const sourceRoot = path.join(extensionRoot, "resources", "estimator");
 
   fs.mkdirSync(sourceRoot, { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, "SKILL.md"), "# Estimator\n");
@@ -50,7 +50,7 @@ test("copyFeatureEstimatorSkill does not overwrite an existing bundled estimator
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-feature-estimator-"));
   const extensionRoot = path.join(tempRoot, "extension");
   const projectRoot = path.join(tempRoot, "project");
-  const sourceRoot = path.join(extensionRoot, "Resources", "estimator");
+  const sourceRoot = path.join(extensionRoot, "resources", "estimator");
   const existingAgentSkill = path.join(projectRoot, ".agent", "skills", "estimator", "SKILL.md");
   const existingClaudeSkill = path.join(projectRoot, ".claude", "skills", "estimator", "SKILL.md");
 

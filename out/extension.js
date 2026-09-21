@@ -88,7 +88,7 @@ function activate(context) {
     const provider = new treeProvider_1.AntigravityViewProvider();
     const extensionRoot = context.extensionPath;
     const resourceProvider = (0, resourceProvider_1.createGitHubResourceProvider)();
-    const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(path.join(extensionRoot, "Resources", "feature-estimator-red.svg"));
+    const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(path.join(extensionRoot, "resources", "feature-estimator-red.svg"));
     (0, logger_1.log)(`[activate] Extension root: ${extensionRoot}`);
     const launchClaudeInit = async (repoRoot, guidelinesFileName = "Project Level CLAUDE.md Guidelines.txt") => {
         (0, logger_1.log)(`[launchClaudeInit] repoRoot: ${repoRoot}`);
@@ -962,7 +962,7 @@ function activate(context) {
     <form id="feature-estimator-form">
       <div class="intro">
         <div>Estimate a feature from a Jira item in To Do or from a free-form description.</div>
-        <div class="hint">When you click Estimate, Task Runner downloads the latest estimator skill into this project from the Task Runner GitHub Resources folder and launches the selected Agentic Harness command from Settings. When you click Grill Me, it downloads the latest grill-me skill and launches a feature review prompt with the same selected Jira item or text description.</div>
+        <div class="hint">When you click Estimate, Task Runner downloads the latest estimator skill into this project from the Task Runner GitHub resources folder and launches the selected Agentic Harness command from Settings. When you click Grill Me, it downloads the latest grill-me skill and launches a feature review prompt with the same selected Jira item or text description.</div>
       </div>
 
       <div class="mode-list">
@@ -1272,7 +1272,7 @@ function activate(context) {
             panel.dispose();
         }, undefined, context.subscriptions);
     });
-    const getProjectSopManualPath = (repoRoot) => path.join(repoRoot, "Resources", "sop.md");
+    const getProjectSopManualPath = (repoRoot) => path.join(repoRoot, "resources", "sop.md");
     const validateJiraProjectKey = (value) => {
         const normalized = value.trim().toUpperCase();
         if (!normalized)
@@ -3376,17 +3376,17 @@ function activate(context) {
         (0, logger_1.logAlways)(`[Setup Workspace] workspaceDir: ${workspaceDir}`);
         let projectTemplates;
         try {
-            projectTemplates = await (0, projectTemplates_1.loadProjectTemplates)(path.join(extensionRoot, "Resources"), resourceProvider);
+            projectTemplates = await (0, projectTemplates_1.loadProjectTemplates)(path.join(extensionRoot, "resources"), resourceProvider);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             (0, logger_1.logAlways)(`[Setup Workspace] ERROR loading templates: ${message}`);
-            void vscode.window.showErrorMessage(`Unable to load Resources/project-templates.json: ${message}`);
+            void vscode.window.showErrorMessage(`Unable to load resources/project-templates.json: ${message}`);
             return;
         }
         if (projectTemplates.length === 0) {
             (0, logger_1.logAlways)("[Setup Workspace] ERROR: No valid project templates found");
-            void vscode.window.showErrorMessage("Resources/project-templates.json does not contain any valid project templates.");
+            void vscode.window.showErrorMessage("resources/project-templates.json does not contain any valid project templates.");
             return;
         }
         const selectedTemplate = await showSetupWorkspaceDialog(workspaceDir, projectTemplates);

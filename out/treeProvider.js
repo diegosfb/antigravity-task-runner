@@ -371,7 +371,7 @@ const FEATURE_FLAG_ACTION_COLOR = new vscode.ThemeColor("charts.purple");
 const MERGE_REVIEW_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiRed");
 const FEATURE_ESTIMATOR_ACTION_COLOR = new vscode.ThemeColor("terminal.ansiBrightBlue");
 const UPDATE_PROJECT_CONFIG_ACTION_COLOR = new vscode.ThemeColor("charts.green");
-const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(path.resolve(__dirname, "..", "Resources", "feature-estimator-red.svg"));
+const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(path.resolve(__dirname, "..", "resources", "feature-estimator-red.svg"));
 const TOP_LEVEL_LINKED_FOLDERS = [
     { label: "claude", path: path.join(os.homedir(), ".claude") },
     { label: "codex", path: path.join(os.homedir(), ".codex") }

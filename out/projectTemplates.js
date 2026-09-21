@@ -155,10 +155,10 @@ function buildSetupWorkspacePrompt(template, workspaceDir) {
         "Prefer non-interactive commands and finish once the missing files are extracted or downloaded."
     ].join(" ");
 }
-async function buildUpdateAgentsMdPrompt(resourcesRoot = path.resolve(__dirname, "..", "Resources"), resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(resourcesRoot)) {
+async function buildUpdateAgentsMdPrompt(resourcesRoot = path.resolve(__dirname, "..", "resources"), resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(resourcesRoot)) {
     return (await resourceProvider.readTextFile(path.join("prompts", "update-agents-md.md"))).trim();
 }
-async function buildUpdateAgentsMdPromptFilePath(extensionRoot, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(path.join(extensionRoot, "Resources"))) {
+async function buildUpdateAgentsMdPromptFilePath(extensionRoot, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(path.join(extensionRoot, "resources"))) {
     return resourceProvider.ensureFile(path.join("prompts", "update-agents-md.md"));
 }
 //# sourceMappingURL=projectTemplates.js.map

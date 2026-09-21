@@ -25,9 +25,9 @@ type GitHubContentsEntry = {
 
 const DEFAULT_GITHUB_REF = "main";
 const DEFAULT_RESOURCES_RAW_BASE_URL =
-  "https://github.com/diegosfb/antigravity-task-runner/blob/main/Resources";
+  "https://github.com/diegosfb/antigravity-task-runner/blob/main/resources";
 const DEFAULT_RESOURCES_CONTENTS_API_BASE_URL =
-  "https://api.github.com/repos/diegosfb/antigravity-task-runner/contents/Resources";
+  "https://api.github.com/repos/diegosfb/antigravity-task-runner/contents/resources";
 
 function normalizeRelativePath(relativePath: string): string {
   const normalized = relativePath.trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");

@@ -61,7 +61,7 @@ test("copyJiraProjectCreationSkill copies the skill into .agent/skills and .clau
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-jira-project-skill-"));
   const extensionRoot = path.join(tempRoot, "extension");
   const projectRoot = path.join(tempRoot, "project");
-  const sourceRoot = path.join(extensionRoot, "Resources", "jira-project-creation");
+  const sourceRoot = path.join(extensionRoot, "resources", "jira-project-creation");
 
   fs.mkdirSync(sourceRoot, { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, "SKILL.md"), "# Jira Project Creation\n");
@@ -92,7 +92,7 @@ test("copyJiraProjectCreationSkill does not overwrite an existing bundled skill"
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-jira-project-skill-"));
   const extensionRoot = path.join(tempRoot, "extension");
   const projectRoot = path.join(tempRoot, "project");
-  const sourceRoot = path.join(extensionRoot, "Resources", "jira-project-creation");
+  const sourceRoot = path.join(extensionRoot, "resources", "jira-project-creation");
   const existingAgentSkill = path.join(
     projectRoot,
     ".agent",

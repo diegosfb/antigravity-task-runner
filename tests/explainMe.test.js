@@ -25,7 +25,7 @@ test("copyExplainMeSkill copies the skill into .agent/skills and .claude/skills"
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-explain-me-"));
   const extensionRoot = path.join(tempRoot, "extension");
   const projectRoot = path.join(tempRoot, "project");
-  const sourceRoot = path.join(extensionRoot, "Resources", "explain-me");
+  const sourceRoot = path.join(extensionRoot, "resources", "explain-me");
 
   fs.mkdirSync(sourceRoot, { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, "SKILL.md"), "# Explain Me\n");
@@ -50,7 +50,7 @@ test("copyExplainMeSkill does not overwrite an existing bundled explain-me skill
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-explain-me-"));
   const extensionRoot = path.join(tempRoot, "extension");
   const projectRoot = path.join(tempRoot, "project");
-  const sourceRoot = path.join(extensionRoot, "Resources", "explain-me");
+  const sourceRoot = path.join(extensionRoot, "resources", "explain-me");
   const existingAgentSkill = path.join(projectRoot, ".agent", "skills", "explain-me", "SKILL.md");
   const existingClaudeSkill = path.join(projectRoot, ".claude", "skills", "explain-me", "SKILL.md");
 

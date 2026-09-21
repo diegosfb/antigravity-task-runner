@@ -55,7 +55,7 @@ test("copyCloudArchitectSkill copies the skill into .agent/skills and .claude/sk
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-cloud-review-"));
   const extensionRoot = path.join(tempRoot, "extension");
   const projectRoot = path.join(tempRoot, "project");
-  const sourceRoot = path.join(extensionRoot, "Resources", "cloud-architect");
+  const sourceRoot = path.join(extensionRoot, "resources", "cloud-architect");
 
   fs.mkdirSync(sourceRoot, { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, "SKILL.md"), "# Cloud Architect\n");
@@ -86,7 +86,7 @@ test("copyCloudArchitectSkill does not overwrite an existing project skill", asy
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-cloud-review-"));
   const extensionRoot = path.join(tempRoot, "extension");
   const projectRoot = path.join(tempRoot, "project");
-  const sourceRoot = path.join(extensionRoot, "Resources", "cloud-architect");
+  const sourceRoot = path.join(extensionRoot, "resources", "cloud-architect");
   const existingAgentSkill = path.join(
     projectRoot,
     ".agent",

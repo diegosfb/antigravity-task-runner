@@ -19,7 +19,7 @@
 ./plugins/agent-usage-monitor/.codex-plugin
 ./plugins/agent-usage-monitor/.codex-plugin/plugin.json
 ./resources
-./project-setup.sh
+./scripts/create-project-structure-file.sh
 ./Knowhow
 ./.opencode
 ./.opencode/agents
@@ -165,6 +165,7 @@
 ./scripts/speak-plan.sh
 ./scripts/docker-warmup.sh
 ./scripts/open-obsidian-vault.sh
+./scripts/deploy-project-structure.sh
 ./scripts/build-version.sh
 ./.github
 ./.github/workflows
@@ -184,3 +185,4 @@
 ./CLAUDE.md
 ./src
 ./ADLC_workflow_settings help.md
+./project-structure-deployment.md

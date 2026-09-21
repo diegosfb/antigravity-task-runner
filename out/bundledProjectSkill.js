@@ -21,9 +21,9 @@ async function ensureDirectoryExists(directoryPath) {
     }
     await fs.promises.mkdir(directoryPath, { recursive: true });
 }
-async function copyBundledSkillToProject(extensionRoot, projectRoot, skillName, sourceRelativeDirectory = skillName, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(path.join(extensionRoot, "Resources"))) {
+async function copyBundledSkillToProject(extensionRoot, projectRoot, skillName, sourceRelativeDirectory = skillName, resourceProvider = (0, resourceProvider_1.createFileSystemResourceProvider)(path.join(extensionRoot, "resources"))) {
     const normalizedSourceDirectory = sourceRelativeDirectory
-        .replace(/^Resources[\\/]/, "")
+        .replace(/^resources[\\/]/, "")
         .replace(/\\/g, "/");
     const sourcePath = await resourceProvider.ensureDirectory(normalizedSourceDirectory);
     const copiedSkillPaths = [];

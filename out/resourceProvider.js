@@ -8,8 +8,8 @@ const https = require("https");
 const os = require("os");
 const path = require("path");
 const DEFAULT_GITHUB_REF = "main";
-const DEFAULT_RESOURCES_RAW_BASE_URL = "https://github.com/diegosfb/antigravity-task-runner/blob/main/Resources";
-const DEFAULT_RESOURCES_CONTENTS_API_BASE_URL = "https://api.github.com/repos/diegosfb/antigravity-task-runner/contents/Resources";
+const DEFAULT_RESOURCES_RAW_BASE_URL = "https://github.com/diegosfb/antigravity-task-runner/blob/main/resources";
+const DEFAULT_RESOURCES_CONTENTS_API_BASE_URL = "https://api.github.com/repos/diegosfb/antigravity-task-runner/contents/resources";
 function normalizeRelativePath(relativePath) {
     const normalized = relativePath.trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
     if (!normalized) {

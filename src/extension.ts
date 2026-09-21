@@ -236,7 +236,7 @@ export function activate(context: vscode.ExtensionContext) {
   const extensionRoot = context.extensionPath;
   const resourceProvider = createGitHubResourceProvider();
   const FEATURE_ESTIMATOR_ICON_PATH = vscode.Uri.file(
-    path.join(extensionRoot, "Resources", "feature-estimator-red.svg")
+    path.join(extensionRoot, "resources", "feature-estimator-red.svg")
   );
   log(`[activate] Extension root: ${extensionRoot}`);
   const launchClaudeInit = async (
@@ -1244,7 +1244,7 @@ export function activate(context: vscode.ExtensionContext) {
     <form id="feature-estimator-form">
       <div class="intro">
         <div>Estimate a feature from a Jira item in To Do or from a free-form description.</div>
-        <div class="hint">When you click Estimate, Task Runner downloads the latest estimator skill into this project from the Task Runner GitHub Resources folder and launches the selected Agentic Harness command from Settings. When you click Grill Me, it downloads the latest grill-me skill and launches a feature review prompt with the same selected Jira item or text description.</div>
+        <div class="hint">When you click Estimate, Task Runner downloads the latest estimator skill into this project from the Task Runner GitHub resources folder and launches the selected Agentic Harness command from Settings. When you click Grill Me, it downloads the latest grill-me skill and launches a feature review prompt with the same selected Jira item or text description.</div>
       </div>
 
       <div class="mode-list">
@@ -1578,7 +1578,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
   const getProjectSopManualPath = (repoRoot: string): string =>
-    path.join(repoRoot, "Resources", "sop.md");
+    path.join(repoRoot, "resources", "sop.md");
 
   const validateJiraProjectKey = (value: string): string | undefined => {
     const normalized = value.trim().toUpperCase();
@@ -4146,14 +4146,14 @@ export function activate(context: vscode.ExtensionContext) {
       let projectTemplates: ProjectTemplate[];
       try {
         projectTemplates = await loadProjectTemplates(
-          path.join(extensionRoot, "Resources"),
+          path.join(extensionRoot, "resources"),
           resourceProvider
         );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logAlways(`[Setup Workspace] ERROR loading templates: ${message}`);
         void vscode.window.showErrorMessage(
-          `Unable to load Resources/project-templates.json: ${message}`
+          `Unable to load resources/project-templates.json: ${message}`
         );
         return;
       }
@@ -4161,7 +4161,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (projectTemplates.length === 0) {
         logAlways("[Setup Workspace] ERROR: No valid project templates found");
         void vscode.window.showErrorMessage(
-          "Resources/project-templates.json does not contain any valid project templates."
+          "resources/project-templates.json does not contain any valid project templates."
         );
         return;
       }

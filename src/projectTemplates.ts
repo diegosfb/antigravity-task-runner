@@ -202,7 +202,7 @@ export function buildSetupWorkspacePrompt(
 }
 
 export async function buildUpdateAgentsMdPrompt(
-  resourcesRoot = path.resolve(__dirname, "..", "Resources"),
+  resourcesRoot = path.resolve(__dirname, "..", "resources"),
   resourceProvider = createFileSystemResourceProvider(resourcesRoot)
 ): Promise<string> {
   return (await resourceProvider.readTextFile(path.join("prompts", "update-agents-md.md"))).trim();
@@ -210,7 +210,7 @@ export async function buildUpdateAgentsMdPrompt(
 
 export async function buildUpdateAgentsMdPromptFilePath(
   extensionRoot: string,
-  resourceProvider = createFileSystemResourceProvider(path.join(extensionRoot, "Resources"))
+  resourceProvider = createFileSystemResourceProvider(path.join(extensionRoot, "resources"))
 ): Promise<string> {
   return resourceProvider.ensureFile(path.join("prompts", "update-agents-md.md"));
 }

@@ -13,7 +13,7 @@ test("syncViewMetadata avoids duplicating the Task Runner container title", () =
             id: "antigravityView",
             name: "Tasky Runner v1.2.3",
             contextualTitle: "Tasky Runner v1.2.3",
-            icon: "Resources/taskrunner.svg"
+            icon: "resources/taskrunner.svg"
           }
         ]
       }
@@ -26,7 +26,7 @@ test("syncViewMetadata avoids duplicating the Task Runner container title", () =
     id: "antigravityView",
     name: "v9.9.9",
     contextualTitle: "Task Runner v9.9.9",
-    icon: "Resources/taskrunner.svg"
+    icon: "resources/taskrunner.svg"
   });
 });
 
@@ -40,7 +40,7 @@ test("syncViewMetadata keeps prerelease versions in view titles", () => {
             id: "antigravityView",
             name: "Task Runner",
             contextualTitle: "Task Runner",
-            icon: "Resources/taskrunner.svg"
+            icon: "resources/taskrunner.svg"
           }
         ],
         otherContainer: [
@@ -60,7 +60,7 @@ test("syncViewMetadata keeps prerelease versions in view titles", () => {
     id: "antigravityView",
     name: "v9.9.9-beta.1",
     contextualTitle: "Task Runner v9.9.9-beta.1",
-    icon: "Resources/taskrunner.svg"
+    icon: "resources/taskrunner.svg"
   });
 
   assert.deepEqual(pkg.contributes.views.otherContainer[0], {

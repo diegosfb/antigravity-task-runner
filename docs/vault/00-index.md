@@ -203,3 +203,11 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260921T071246492502Z-implementation-note-project-structure-script-avoids-blocking-overwrite-prompt]] — Project structure script avoids blocking overwrite prompt
 
 - [[Notes/20260921T084320077620Z-implementation-note-rebuilt-project-structure-zip-with-real-file-contents]] — Rebuilt project structure zip with real file contents
+
+- [[Notes/20260921T085824721056Z-implementation-note-moved-project-setup-script-into-scripts-folder]] — Moved project setup script into scripts folder
+
+- [[Notes/20260921T090140803184Z-implementation-note-moved-project-structure-deploy-script-into-scripts-folder]] — Moved project structure deploy script into scripts folder
+
+- [[Notes/20260921T091507308054Z-implementation-note-renamed-resources-folder-to-resources]] — Renamed Resources folder to resources
+
+- [[Notes/20260921T091722226881Z-implementation-note-documented-and-hardened-project-structure-zip-creation]] — Documented and hardened project structure zip creation

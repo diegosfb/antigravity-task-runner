@@ -28,10 +28,10 @@ export async function copyBundledSkillToProject(
   projectRoot: string,
   skillName: string,
   sourceRelativeDirectory = skillName,
-  resourceProvider = createFileSystemResourceProvider(path.join(extensionRoot, "Resources"))
+  resourceProvider = createFileSystemResourceProvider(path.join(extensionRoot, "resources"))
 ): Promise<string[]> {
   const normalizedSourceDirectory = sourceRelativeDirectory
-    .replace(/^Resources[\\/]/, "")
+    .replace(/^resources[\\/]/, "")
     .replace(/\\/g, "/");
   const sourcePath = await resourceProvider.ensureDirectory(normalizedSourceDirectory);
   const copiedSkillPaths: string[] = [];

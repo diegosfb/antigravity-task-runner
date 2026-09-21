@@ -126,7 +126,7 @@ a fixed external destination.
 | Setting | What it controls | Used by |
 | --- | --- | --- |
 | `antigravity.customAgenticPlatformAddons` | Extra local folder to show in the linked-folder section. | Sidebar linked folders |
-| `antigravity.projectStructureAndAgentsRepository` | GitHub repository URL used by `create-project-structure.sh` as the source for project structure and agents. Defaults to `https://github.com/diegosfb/antigravity-task-runner`. | Project structure bootstrap |
+| `antigravity.projectStructureAndAgentsRepository` | GitHub repository URL used by `scripts/deploy-project-structure.sh` as the source for project structure and agents. Defaults to `https://github.com/diegosfb/antigravity-task-runner`. | Project structure bootstrap |
 | `antigravity.createReleaseBranchWhenCreatingReleases` | If enabled, repo release creation also creates and pushes a release branch. | `Create Repo Release` |
 | `antigravity.autoUpdateClaudeMd` | If autocommit start is used, also asks Claude to update `CLAUDE.md`. | Internal autocommit flow |
 
@@ -190,7 +190,7 @@ These exist today but are mainly used by advanced or partially surfaced commands
 | `Obsidian Vault Visualization` | Opens the project Obsidian vault visualization. | Requires the vault visualization assets to exist. |
 | `Autocommit Start` / `Autocommit Stop` | Starts or stops Task Runner's autocommit checkpoint flow. | Shows disabled text when no GitHub repository is connected. |
 | `Revert Changes` | Runs the autocommit revert script. | Appears only when autocommit is already running. |
-| `SOP Manual` | Opens the project SOP at `Resources/sop.md` if present, otherwise downloads and opens the bundled SOP. | Right-click the item to copy the SOP into the project. |
+| `SOP Manual` | Opens the project SOP at `resources/sop.md` if present, otherwise downloads and opens the bundled SOP. | Right-click the item to copy the SOP into the project. |
 | `ADLC Framework Manual` | Opens the ADLC workflow diagram and framework design document. | Sidebar action. |
 
 ### `Install Agentic Libraries` Children
@@ -453,7 +453,7 @@ Clicking a skill opens its `SKILL.md`. The item description shows the source, su
 | `Add to Custom Agents` | Agent folders or agent markdown files | Creates a symlink into `.agent/agents` |
 | `Enable Plugin` | Disabled plugin entries | Runs `claude plugin enable <plugin>` |
 | `Disable Plugin` | Enabled plugin entries | Runs `claude plugin disable <plugin>` |
-| `Bring to Project` | `SOP Manual` | Copies the bundled SOP into `Resources/sop.md` |
+| `Bring to Project` | `SOP Manual` | Copies the bundled SOP into `resources/sop.md` |
 
 ## Command Palette And Explorer Features Outside The Current Sidebar
 

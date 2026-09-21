@@ -2,8 +2,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VSCODE_SETTINGS="$SCRIPT_DIR/.vscode/settings.json"
-TMP_DIR="${PROJECT_STRUCTURE_TMP:-$SCRIPT_DIR/tmp}"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+VSCODE_SETTINGS="$PROJECT_ROOT/.vscode/settings.json"
+TMP_DIR="${PROJECT_STRUCTURE_TMP:-$PROJECT_ROOT/tmp}"
 ZIP_PATH="$TMP_DIR/project-structure.zip"
 DEFAULT_REPO_URL="https://github.com/diegosfb/antigravity-task-runner"
 
@@ -24,7 +25,7 @@ value = data.get("antigravity.projectStructureAndAgentsRepository") or default
 print(value)
 PY
 )
-DEST=$(python3 - "$VSCODE_SETTINGS" "$SCRIPT_DIR" <<'PY'
+DEST=$(python3 - "$VSCODE_SETTINGS" "$PROJECT_ROOT" <<'PY'
 import json
 import os
 import sys

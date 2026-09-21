@@ -105,7 +105,7 @@ test("buildUpdateAgentsMdPrompt includes the progressive disclosure refactor ste
 
 test("copySetupWorkspaceGuideFiles copies CLAUDE.md and AGENTS.md into the project root", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
-  const resourcesRoot = path.join(tempRoot, "Resources");
+  const resourcesRoot = path.join(tempRoot, "resources");
   const projectRoot = path.join(tempRoot, "workspace");
 
   fs.mkdirSync(resourcesRoot, { recursive: true });
@@ -127,7 +127,7 @@ test("copySetupWorkspaceGuideFiles copies CLAUDE.md and AGENTS.md into the proje
 
 test("copySetupWorkspaceGuideFiles does not overwrite existing project guide files", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
-  const resourcesRoot = path.join(tempRoot, "Resources");
+  const resourcesRoot = path.join(tempRoot, "resources");
   const projectRoot = path.join(tempRoot, "workspace");
 
   fs.mkdirSync(resourcesRoot, { recursive: true });
@@ -220,7 +220,7 @@ test("ensureSetupWorkspaceDirectories does not recreate existing directories or 
 
 test("copySetupWorkspaceSkills copies jira-project-creation into .agent/skills", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
-  const resourcesRoot = path.join(tempRoot, "Resources");
+  const resourcesRoot = path.join(tempRoot, "resources");
   const projectRoot = path.join(tempRoot, "workspace");
   const skillSourceRoot = path.join(resourcesRoot, "jira-project-creation");
 
@@ -241,7 +241,7 @@ test("copySetupWorkspaceSkills copies jira-project-creation into .agent/skills",
 
 test("copySetupWorkspaceSkills does not overwrite an existing bundled skill", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-project-template-"));
-  const resourcesRoot = path.join(tempRoot, "Resources");
+  const resourcesRoot = path.join(tempRoot, "resources");
   const projectRoot = path.join(tempRoot, "workspace");
   const sourceSkillRoot = path.join(resourcesRoot, "jira-project-creation");
   const existingSkillRoot = path.join(

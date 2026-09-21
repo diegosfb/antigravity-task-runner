@@ -2,10 +2,10 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.12.74",
+  "version": "4.12.75",
   "publisher": "dsfb",
   "license": "SEE LICENSE IN LICENSE",
-  "icon": "Resources/taskrunner.png",
+  "icon": "resources/taskrunner.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/diegosfb/antigravity-task-runner.git"
@@ -267,7 +267,7 @@
         {
           "id": "antigravityContainer",
           "title": "Task Runner",
-          "icon": "Resources/taskrunner.svg"
+          "icon": "resources/taskrunner.svg"
         }
       ]
     },
@@ -275,9 +275,9 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "v4.12.74",
-          "icon": "Resources/taskrunner.svg",
-          "contextualTitle": "Task Runner v4.12.74"
+          "name": "v4.12.75",
+          "icon": "resources/taskrunner.svg",
+          "contextualTitle": "Task Runner v4.12.75"
         }
       ]
     },
@@ -527,14 +527,14 @@
         "antigravity.projectStructureAndAgentsRepository": {
           "type": "string",
           "default": "https://github.com/diegosfb/antigravity-task-runner",
-          "description": "GitHub repository URL used as the source for create-project-structure.sh, project structure, and agents."
+          "description": "GitHub repository URL used as the source for scripts/deploy-project-structure.sh, project structure, and agents."
         }
       }
     }
   },
   "files": [
     "out/**",
-    "Resources/**",
+    "resources/**",
     "package.json",
     "LICENSE",
     "routerconfig.example.json",

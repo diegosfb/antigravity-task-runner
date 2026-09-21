@@ -783,7 +783,7 @@ function getExtensionSettingsFields(): SettingsField[] {
     {
       key: "projectStructureAndAgentsRepository",
       label: "Project Structure & Agents Repository",
-      description: "GitHub repository URL used by create-project-structure.sh as the source for project structure and agents.",
+      description: "GitHub repository URL used by scripts/deploy-project-structure.sh as the source for project structure and agents.",
       placeholder: DEFAULT_PROJECT_STRUCTURE_AND_AGENTS_REPOSITORY,
       value: config.get<string>("projectStructureAndAgentsRepository") || DEFAULT_PROJECT_STRUCTURE_AND_AGENTS_REPOSITORY
     }

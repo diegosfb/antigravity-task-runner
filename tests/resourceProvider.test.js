@@ -10,9 +10,9 @@ const {
   createGitHubResourceProvider
 } = require("../out/resourceProvider.js");
 
-test("createFileSystemResourceProvider resolves files and directories from a local Resources root", async () => {
+test("createFileSystemResourceProvider resolves files and directories from a local resources root", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-resource-provider-"));
-  const resourcesRoot = path.join(tempRoot, "Resources");
+  const resourcesRoot = path.join(tempRoot, "resources");
   const skillRoot = path.join(resourcesRoot, "cloud-architect");
 
   fs.mkdirSync(skillRoot, { recursive: true });
@@ -35,19 +35,19 @@ test("createGitHubResourceProvider downloads remote files and directories into i
     const key = `${url.pathname}${url.search}`;
     requestCounts.set(key, (requestCounts.get(key) || 0) + 1);
 
-    if (url.pathname === "/blob/main/Resources/help.md" && url.searchParams.get("raw") === "1") {
+    if (url.pathname === "/blob/main/resources/help.md" && url.searchParams.get("raw") === "1") {
       response.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" });
       response.end("# Remote Help\n");
       return;
     }
 
-    if (url.pathname === "/blob/main/Resources/cloud-architect/SKILL.md") {
+    if (url.pathname === "/blob/main/resources/cloud-architect/SKILL.md") {
       response.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" });
       response.end("# Remote Cloud Architect\n");
       return;
     }
 
-    if (url.pathname === "/blob/main/Resources/cloud-architect/references/aws.md") {
+    if (url.pathname === "/blob/main/resources/cloud-architect/references/aws.md") {
       response.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" });
       response.end("# Remote AWS\n");
       return;
@@ -60,7 +60,7 @@ test("createGitHubResourceProvider downloads remote files and directories into i
           {
             name: "SKILL.md",
             type: "file",
-            download_url: `http://127.0.0.1:${server.address().port}/blob/main/Resources/cloud-architect/SKILL.md?raw=1`
+            download_url: `http://127.0.0.1:${server.address().port}/blob/main/resources/cloud-architect/SKILL.md?raw=1`
           },
           {
             name: "references",
@@ -78,7 +78,7 @@ test("createGitHubResourceProvider downloads remote files and directories into i
           {
             name: "aws.md",
             type: "file",
-            download_url: `http://127.0.0.1:${server.address().port}/blob/main/Resources/cloud-architect/references/aws.md?raw=1`
+            download_url: `http://127.0.0.1:${server.address().port}/blob/main/resources/cloud-architect/references/aws.md?raw=1`
           }
         ])
       );
@@ -95,7 +95,7 @@ test("createGitHubResourceProvider downloads remote files and directories into i
   const provider = createGitHubResourceProvider({
     cacheRoot: fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-resource-cache-")),
     contentsApiBaseUrl: `http://127.0.0.1:${server.address().port}/api`,
-    rawBaseUrl: `http://127.0.0.1:${server.address().port}/blob/main/Resources`
+    rawBaseUrl: `http://127.0.0.1:${server.address().port}/blob/main/resources`
   });
 
   const helpPath = await provider.ensureFile("help.md");
@@ -114,9 +114,9 @@ test("createGitHubResourceProvider downloads remote files and directories into i
   await provider.ensureFile("help.md");
   await provider.ensureDirectory("cloud-architect");
 
-  assert.equal(requestCounts.get("/blob/main/Resources/help.md?raw=1"), 1);
+  assert.equal(requestCounts.get("/blob/main/resources/help.md?raw=1"), 1);
   assert.equal(requestCounts.get("/api/cloud-architect?ref=main"), 1);
   assert.equal(requestCounts.get("/api/cloud-architect/references?ref=main"), 1);
-  assert.equal(requestCounts.get("/blob/main/Resources/cloud-architect/SKILL.md?raw=1"), 1);
-  assert.equal(requestCounts.get("/blob/main/Resources/cloud-architect/references/aws.md?raw=1"), 1);
+  assert.equal(requestCounts.get("/blob/main/resources/cloud-architect/SKILL.md?raw=1"), 1);
+  assert.equal(requestCounts.get("/blob/main/resources/cloud-architect/references/aws.md?raw=1"), 1);
 });

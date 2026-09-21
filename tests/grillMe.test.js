@@ -45,7 +45,7 @@ test("copyGrillMeSkill copies the skill into .agent/skills and .claude/skills", 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-grill-me-"));
   const extensionRoot = path.join(tempRoot, "extension");
   const projectRoot = path.join(tempRoot, "project");
-  const sourceRoot = path.join(extensionRoot, "Resources", "grill-me");
+  const sourceRoot = path.join(extensionRoot, "resources", "grill-me");
 
   fs.mkdirSync(sourceRoot, { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, "SKILL.md"), "# Grill Me\n");
@@ -70,7 +70,7 @@ test("copyGrillMeSkill does not overwrite an existing bundled grill-me skill", a
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "antigravity-grill-me-"));
   const extensionRoot = path.join(tempRoot, "extension");
   const projectRoot = path.join(tempRoot, "project");
-  const sourceRoot = path.join(extensionRoot, "Resources", "grill-me");
+  const sourceRoot = path.join(extensionRoot, "resources", "grill-me");
   const existingAgentSkill = path.join(projectRoot, ".agent", "skills", "grill-me", "SKILL.md");
   const existingClaudeSkill = path.join(projectRoot, ".claude", "skills", "grill-me", "SKILL.md");
 
