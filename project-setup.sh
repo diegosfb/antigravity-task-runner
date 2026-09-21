@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_URL="https://github.com/diegosfb/dsfb-sdlc-v2.git"
+RAW_BASE="https://raw.githubusercontent.com/diegosfb/antigravity-task-runner/main"
 DEST_DIR="test-setup"
 
-echo "Cloning $REPO_URL into $DEST_DIR ..."
-git clone "$REPO_URL" "$DEST_DIR"
-
+mkdir -p "$DEST_DIR"
 cd "$DEST_DIR"
-
-echo "Installing npm dependencies ..."
-npm install
 
 echo "Creating directory structure from project-structure-list.txt ..."
 mkdir -p \
@@ -70,10 +65,10 @@ mkdir -p \
   ".github/workflows" \
   ".vscode"
 
-echo "Creating placeholder files from project-structure-list.txt ..."
+echo "Downloading listed files from GitHub ..."
 while IFS= read -r f; do
   mkdir -p "$(dirname "$f")"
-  touch "$f"
+  curl -fsSL "$RAW_BASE/$f" -o "$f" 2>/dev/null || touch "$f"
 done << 'FILELIST'
 constitution.md
 .gemini/settings.json
@@ -191,5 +186,8 @@ AGENTS.md
 eslint.config.mjs
 CLAUDE.md
 FILELIST
+
+echo "Installing npm dependencies ..."
+npm install
 
 echo "Setup complete. Project is in ./$DEST_DIR"

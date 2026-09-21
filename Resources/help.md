@@ -1,6 +1,6 @@
 # Task Runner Help
 
-This guide describes Task Runner as it is currently implemented in this repository for `v4.10.106`.
+This guide describes Task Runner as it is currently implemented in this repository for `{{TASK_RUNNER_VERSION}}`.
 
 It is intentionally source-of-truth to the extension code. If the UI, an older screenshot, or an older help document says something different, trust this file. Items marked **Under development** exist in code but are incomplete, partially surfaced, or still inconsistent.
 
@@ -10,7 +10,10 @@ It is intentionally source-of-truth to the extension code. If the UI, an older s
 2. Use the title bar buttons:
    - `Settings` opens the built-in Task Runner settings page.
    - `Open Help Doc` opens this help document in Markdown preview.
-3. Configure the basics first:
+3. In `Settings`, use:
+   - `General Settings` for VS Code extension settings.
+   - `SDLC Settings` for project-level `ADLC_workflow_settings.json` controls.
+4. Configure the basics first:
    - `antigravity.buildCommand`
    - `antigravity.projectTestingCommand`
    - `antigravity.agenticHarnessExecutionCommand`
@@ -18,20 +21,33 @@ It is intentionally source-of-truth to the extension code. If the UI, an older s
    - `antigravity.jiraBaseUrl`
    - `antigravity.jiraEmail`
    - `antigravity.jiraApiToken`
-4. If you use Jira flows, make sure the repo has a root `.env` with `JIRA_PROJECT_KEY`, or use `Select/Set Jira Project` to save it.
-5. If you use Claude routing, keep `~/.claude/settings.json` and `~/.claude/routerconfig.json` in good shape.
+5. If you use Jira flows, make sure the repo has a root `.env` with `JIRA_PROJECT_KEY`, or use `Select/Set Jira Project` to save it.
+6. If you use Claude routing, keep `~/.claude/settings.json` and `~/.claude/routerconfig.json` in good shape.
 
 ## What The Sidebar Shows
 
 The current top-level order is:
 
-1. AI launchers and build/test actions
-2. Linked folders such as `~/.gemini/antigravity`, `~/.claude`, `~/.codex`, and optional custom add-ons
-3. Quick actions and categories
+1. AI launchers and project commands: `Claude Terminal`, `Codex Terminal`, `Opencode Terminal`, `Ollama Terminals`, `Agent Monitor Terminals`, `Set Claude Model`, `Build Project`, and `Run Project Tests`
+2. Quick actions and categories: `Setup Workspace`, `Install Agentic Libraries`, `Backlog Management`, repository actions, ADLC agents, auxiliary agents and skills, version increments, manuals, vault, and autocommit actions
+3. `Agentic Harness and AddOns`
 4. `Claude Plugins`
 5. `Agents`
 6. `Skills`
 7. `Workflows`
+
+### Item Types
+
+| Item type | What it means |
+| --- | --- |
+| Action | A clickable command that runs a Task Runner operation, opens a form, opens a terminal, or opens a document. |
+| Category | A collapsible grouping of related actions or generated entries. |
+| Folder | A linked filesystem folder shown for browsing and right-click actions. |
+| Agent | An agent definition file, runnable Claude CLI agent, or agent shortcut. |
+| Skill | A `SKILL.md` capability definition from project, user, plugin, or harness skill folders. |
+| Workflow | A workflow markdown file that can be opened or run through a matching script. |
+| Plugin | A Claude plugin entry returned by `claude plugin list`. |
+| Separator | A visual divider only; it has no command. |
 
 Some items only appear when prerequisites are met:
 
@@ -51,7 +67,7 @@ Task Runner does not bundle the underlying CLIs. Different features expect diffe
 | `gh` authenticated with GitHub | `Init Repository`, `Audit Secrets & Variables`, repo bootstrap scripts |
 | `claude` | `Claude Terminal`, Claude agents/plugins listing, some harness flows |
 | `codex` | `Codex Terminal`, some harness choices, some ADLC workflows |
-| `opencode` | `Opencode`, optional harness choices |
+| `opencode` | `Opencode Terminal`, optional harness choices |
 | `ollama` | `Ollama Claude`, `Ollama Codex` |
 | `zip` | Explorer `Backup-Compress` |
 | `/Applications/DiffMerge.app` on macOS | Explorer `DiffMerge` actions |
@@ -59,6 +75,10 @@ Task Runner does not bundle the underlying CLIs. Different features expect diffe
 ## Settings Reference
 
 Use the title-bar gear button or VS Code settings to edit `antigravity.*`.
+The built-in settings page has two tabs:
+
+- `General Settings` updates VS Code `antigravity.*` settings at workspace or user scope.
+- `SDLC Settings` updates the project root `ADLC_workflow_settings.json` file. Each control includes a description and tooltip. Policy-locked approval gates are shown read-only so users can see why they cannot be changed.
 
 ### Core Settings
 
@@ -106,6 +126,7 @@ a fixed external destination.
 | Setting | What it controls | Used by |
 | --- | --- | --- |
 | `antigravity.customAgenticPlatformAddons` | Extra local folder to show in the linked-folder section. | Sidebar linked folders |
+| `antigravity.projectStructureAndAgentsRepository` | GitHub repository URL used by `create-project-structure.sh` as the source for project structure and agents. Defaults to `https://github.com/diegosfb/antigravity-task-runner`. | Project structure bootstrap |
 | `antigravity.createReleaseBranchWhenCreatingReleases` | If enabled, repo release creation also creates and pushes a release branch. | `Create Repo Release` |
 | `antigravity.autoUpdateClaudeMd` | If autocommit start is used, also asks Claude to update `CLAUDE.md`. | Internal autocommit flow |
 
@@ -128,9 +149,14 @@ These exist today but are mainly used by advanced or partially surfaced commands
 | --- | --- | --- |
 | `Claude Terminal` | Opens an external OS terminal in the repo root and runs `claude`. | If Claude is configured to use a local liteLLM endpoint, Task Runner auto-starts liteLLM first. See the dedicated section below. |
 | `Codex Terminal` | Opens an external OS terminal in the repo root and runs `codex`. | Sidebar only right now, not a contributed Command Palette command. |
+| `Opencode Terminal` | Opens an external OS terminal in the repo root and runs `opencode`. | Sidebar only right now. |
+| `Ollama Terminals` | Category for Ollama-backed harness launchers. | Contains `Ollama Claude` and `Ollama Codex`. |
 | `Ollama Claude` | Opens an external OS terminal and runs `ollama launch claude --model glm-5:cloud --yes`. | Requires `ollama`. |
 | `Ollama Codex` | Opens an external OS terminal and runs `ollama launch codex --model glm-5:cloud --yes`. | Requires `ollama`. Sidebar only right now. |
-| `Opencode` | Opens an external OS terminal in the repo root and runs `opencode`. | Sidebar only right now. |
+| `Agent Monitor Terminals` | Category for agent-monitor terminal launchers. | Contains Claude, Codex, and OpenCode monitor terminals. |
+| `Agent Monitor Claude` | Opens the Claude agent-monitor terminal in the repo root. | Useful for monitoring or supervising agent work. |
+| `Agent Monitor Codex` | Opens the Codex agent-monitor terminal in the repo root. | Useful for monitoring or supervising agent work. |
+| `Agent Monitor OpenCode` | Opens the OpenCode agent-monitor terminal in the repo root. | Useful for monitoring or supervising agent work. |
 | `Set Claude Model` | Opens a model/router configuration page and writes the selected Claude routing values. | Creates `~/.claude/routerconfig.json` from `routerconfig.example.json` if needed. |
 | `Build Project` | Runs `antigravity.buildCommand` in a VS Code task terminal. | Fails fast if the setting is blank. |
 | `Run Project Tests` | Runs `antigravity.projectTestingCommand` in a VS Code task terminal. | Fails fast if the setting is blank. |
@@ -139,44 +165,61 @@ These exist today but are mainly used by advanced or partially surfaced commands
 
 | Item | What it shows | Appears when |
 | --- | --- | --- |
-| `antigravity` | `~/.gemini/antigravity` | That folder exists |
+| `antigravity` or `Missing ~/.gemini/antigravity` | `~/.gemini/antigravity` | Always represented; shows a warning item when the folder is missing |
 | `claude` | `~/.claude` | That folder exists |
 | `codex` | `~/.codex` | That folder exists |
 | Custom add-ons folder | The folder from `antigravity.customAgenticPlatformAddons` | The setting is configured and the folder exists |
 | `Claude Plugins` | Output of `claude plugin list` | Always shown; contents depend on CLI availability |
 | `Agents` | Project and user agents from shared `.agents` plus Claude, Codex, Gemini, OpenCode, and runnable Claude CLI agents | Always shown |
 | `Skills` | Project, user, and plugin skills from shared `.agents` plus Claude, Codex, Gemini, and OpenCode skill folders | Always shown |
-| `Workflows` | Markdown files under `~/.gemini/antigravity/workflows` | When that folder exists |
+| `Workflows` | Markdown workflow files under `<repo>/.agents/workflows` and `~/.gemini/antigravity/workflows` | Always shown; displays an empty or missing-state item when no workflow files exist |
 
 ### Quick Actions
 
 | Item | What it does | Notes |
 | --- | --- | --- |
-| `Update Project Config` | Category containing focused harness-driven update prompts. | Children are listed below. |
-| `Assign Backlog Item to Agent` | Lets you pick a Jira backlog item and/or local backlog markdown item, choose an agent harness command, then either assign it or run `Grill Me`. | Requires valid Jira settings. If `Use Jira` is enabled, the repo also needs `JIRA_PROJECT_KEY`. |
+| `Setup Workspace` | Opens a template-driven workspace setup flow and launches the selected harness to create or download workspace files. | Disabled-looking when the project already has a `.agent` folder. Uses `antigravity.workspaceProjectPath`. |
+| `Install Agentic Libraries` | Category for installing bundled agent/skill libraries into the current workspace. | Children are listed below. |
+| `Backlog Management` | Category for local backlog and Jira backlog actions. | Children are listed below. |
 | `Init Repository` | Creates or connects a Git repo and GitHub repo, then bootstraps repo defaults. | Visible only when the project is not already a Git repo. Also creates CI/CD workflow files, `.gitignore`, `.env.example`, default GitHub environments (`dev`, `qa`, `stage`, `prod`), commits, and pushes. |
+| `Repository Actions` | Category for Git and GitHub repository operations. | Visible only when the workspace is already a Git repository. |
 | `Set Feature Flag for changes` | Opens the selected harness with a prompt to wrap behavior changes in `.env` feature flags and add them to `.env.example`. | Always visible. |
-| `ADLC` | Category of role-based runner forms. | The tooltip still says "coming soon", but the forms are implemented. See the ADLC section below. |
-| `Select/Set Jira Project` | Lets you save an existing Jira project key or launch agentic creation of a company-managed Jira Software project. | Visible when the repo does not already have `JIRA_PROJECT_KEY` in its root `.env`. |
-| `Create Backlog item` | Opens a form to create a local backlog markdown file and, optionally, create the matching Jira item too. | Visible when `JIRA_PROJECT_KEY` is already saved. |
-| `Take Jira Item (Assign)` | Assigns an eligible unassigned Jira item to you and moves it to `In Progress`. | Visible when `JIRA_PROJECT_KEY` is already saved. |
-| `Backlog Item Completed` | Moves a Jira item to `In Review`, or to `Done` if review is unavailable, and can also update the local backlog file status. | Visible when `JIRA_PROJECT_KEY` is already saved. |
-| `Increment Major Version` | Runs the repo bump script with `major`. | Sidebar only right now. |
-| `Increment Minor Version` | Runs the repo bump script with `minor`. | Sidebar only right now. |
-| `Increment Patch Version` | Runs the repo bump script with `patch`. | Sidebar only right now. |
-| `Cloud Architect Review` | Copies the bundled `cloud-architect` skill into the project and launches the selected harness with an infrastructure review prompt. | Stays visible, but behaves as disabled when no cloud/infrastructure signals are detected. |
-| `Feature Estimator` | Estimates a single feature from either a Jira `To Do` item or free text, or runs `Grill Me` on the same input. | Sidebar only right now. Copies the `estimator` or `grill-me` skill into the project first. |
-| `Explain Me` | Copies the `explain-me` skill into the project and asks the selected harness to explain the solution and the latest uncommitted changes. | Sidebar only right now. |
+| `ADLC Agents` | Category of deployed SDLC/ADLC agents. | Runs `.agents/agents/...` definitions with a selected harness, model, and input artifacts. |
+| `Auxiliary Agents and Skills` | Category of supporting agents and skills outside the core ADLC sequence. | Children are listed below. |
+| `Increment Versions` | Category for semantic version bump actions. | Contains major, minor, and patch increments. |
+| `Obsidian Vault Visualization` | Opens the project Obsidian vault visualization. | Requires the vault visualization assets to exist. |
+| `Autocommit Start` / `Autocommit Stop` | Starts or stops Task Runner's autocommit checkpoint flow. | Shows disabled text when no GitHub repository is connected. |
 | `Revert Changes` | Runs the autocommit revert script. | Appears only when autocommit is already running. |
 | `SOP Manual` | Opens the project SOP at `Resources/sop.md` if present, otherwise downloads and opens the bundled SOP. | Right-click the item to copy the SOP into the project. |
+| `ADLC Framework Manual` | Opens the ADLC workflow diagram and framework design document. | Sidebar action. |
 
-### `Update Project Config` Children
+### `Install Agentic Libraries` Children
 
 | Item | What it does |
 | --- | --- |
-| `Update Github Actions` | Opens the selected harness with the GitHub Actions update prompt. |
-| `Update Tests` | Opens the selected harness with the test and Postman update prompt. |
-| `Update AGENTS.md` | Opens the selected harness with the progressive-disclosure `AGENTS.md` update prompt. Requires an existing `AGENTS.md` in the configured workspace path. |
+| `Install SDLC` | Installs the core SDLC agentic library into the current workspace. |
+| `Install SDLC Extended` | Installs the extended SDLC agentic library into the current workspace. |
+| `Install Professional Services` | Installs the professional-services agentic library into the current workspace. |
+| `Install Tech Advisory` | Installs the tech-advisory agentic library into the current workspace. |
+| `Clean Deployed Libs` | Removes deployed agentic-library content from the workspace. |
+
+### `Backlog Management` Children
+
+| Item | What it does |
+| --- | --- |
+| `Select/Set Jira Project` | Saves an existing Jira project key or launches agentic creation of a company-managed Jira Software project. |
+| `Add Backlog Item` | Creates a local `docs/backlog` markdown item and can also create a matching Jira item. |
+| `Take Backlog Item (Assign)` | Takes a Jira or local backlog item, assigns it to you, and moves it to `In Progress` when Jira is involved. |
+| `Mark Backlog Item as Completed` | Marks a local and/or Jira backlog item completed; Jira moves to `In Review` when possible and otherwise falls back to `Done`. |
+| `Assign Backlog Item to Agent` | Assigns a Jira item or local backlog file to the selected harness or runs `Grill Me` against it. |
+
+### `Increment Versions` Children
+
+| Item | What it does |
+| --- | --- |
+| `Increment Major Version` | Runs the version bump flow with `major`. |
+| `Increment Minor Version` | Runs the version bump flow with `minor`. |
+| `Increment Patch Version` | Runs the version bump flow with `patch`. |
 
 ### Repository Actions
 
@@ -193,24 +236,46 @@ These exist today but are mainly used by advanced or partially surfaced commands
 | `Pull Remote and merge` | Updates local `main`, merges it into the current branch, runs tests if configured, and pushes the branch. | Only meaningful off `main`. |
 | `Agentic review of Merge` | Opens the selected harness with a merge review prompt focused on the current branch vs `main`. | Requires a clean worktree. |
 
-### ADLC Role Runners
+### ADLC Agents
 
-The ADLC section is a set of advanced forms that launch a user-supplied script with normalized arguments. These flows do not bundle the script for you. Each form requires an `Agent Script Path`, and most default their file/folder inputs under `<repo>/workspace/...`.
+The `ADLC Agents` section lists deployed agent definitions from `.agents/agents`. Each item opens a run form where you choose the harness, optional model, and required input artifacts. Items show `not deployed` when their agent definition is not installed in the project.
 
 | Item | Purpose | Main required inputs |
 | --- | --- | --- |
-| `Product Designer` | Launch a product-design runner script. | Agent harness, workspace folder, project description folder, agent script path |
-| `Business Analyst` | Launch a business-analyst runner script. | Agent harness, workspace folder, specs folder, agent script path |
-| `Solution Architect` | Launch a solution-architecture runner script. | Agent harness, workspace folder, project description folder, specs folder, agent script path |
-| `Estimate Project` | Launch a project-level estimation runner script. | Agent harness, workspace folder, project description folder, architecture folder, backlog folder, agent script path |
-| `Create Execution Plan` | Launch an execution-planning runner script. | Agent harness, workspace folder, project description folder, architecture folder, backlog folder, agent script path |
-| `Develop Execution Plan` | Launch a development runner script against an execution plan. | Agent harness, workspace folder, execution plan file, architecture folder, backlog folder, agent script path |
+| `Product Agent` | Turns product definition inputs into product requirements context. | Product definition source and optional supporting evidence |
+| `BA Agent` | Converts approved product context into specifications. | Approved PRD and existing specifications |
+| `UX Agent` | Produces UX/design outputs from product and architecture context. | Approved product context; architecture package is optional in the UI |
+| `Architect Agent` | Produces or updates an architecture package from specs and PRD context. | Specification source, PRD, and existing architecture package when available |
+| `Architecture Review Agent` | Reviews an existing architecture package for gaps, risks, and inconsistencies. | Specification source, PRD, and existing architecture package |
+| `Project Planner Agent` | Creates or updates delivery backlog from requirements, architecture, and design context. | Requirements stream, technical stream, design package, and existing backlog |
+| `Create Tests Agent` | Generates tests from sequenced backlog or specification context. | Backlog item or user story/specification |
+| `Coding Agent` | Implements a backlog item or user story/specification. | Backlog item or user story/specification |
+| `Code Review Agent` | Reviews implementation work. | Pull request or review candidate |
+| `Deployment Agent` | Handles deployment planning or execution context. | Deployment/release inputs declared by the deployed agent |
+| `SDLC Orchestrator Agent` | Coordinates the SDLC agent sequence. | Project state and orchestration inputs declared by the deployed agent |
 
-ADLC notes:
+Hidden ADLC catalog entries such as `Documentation Agent` and `Spec Validation Agent` exist in code but are intentionally not shown in the sidebar.
 
-- `Business Analyst`, `Estimate Project`, `Create Execution Plan`, and `Develop Execution Plan` can also pass Jira credentials and Jira project info when `Enable Jira` is turned on.
-- The forms save draft values in workspace state, so reopening them usually restores your last inputs.
-- The current ADLC category tooltip still says "coming soon", but the forms are already wired and usable.
+### `Auxiliary Agents and Skills` Children
+
+| Item | What it is |
+| --- | --- |
+| `Consultant Agent` | Opens `.agents/agents/consultant-agent/consultant-agent.md` when installed. |
+| `Explain-me Agent` | Runs the bundled `explain-me` skill against the current solution and uncommitted changes. |
+| `Grill-me` | Opens the `grill-me` skill when installed. |
+| `Pre-mortem Agent` | Opens the `pre-mortem` skill when installed. |
+| `Handoff` | Opens the `handoff` skill when installed. |
+| `Conversation To Spec` | Opens the `to-spec` skill when installed. |
+| `Spec To Tickets` | Opens the `to-tickets` skill when installed. |
+| `llm-judge-agent` | Opens the LLM judge agent definition when installed. |
+| `Feature Estimator Agent` | Estimates a feature from a Jira item or free-form description. |
+| `Autoresearch Agent` | Opens the `autoresearch` skill when installed. |
+| `Brainstorm Ideas` | Opens the `brainstorm-ideas` skill when installed. |
+| `Customer Interviewer` | Opens the customer interview script skill when installed. |
+| `System Design Agent` | Opens the architecture designer skill when installed. |
+| `Prototype Builder` | Opens the prototype skill when installed. |
+| `Story Point Council` | Opens the story point estimation skill when installed. |
+| `Cloud Architect Review` | Runs a cloud-infrastructure review when cloud or infrastructure files are detected; otherwise it appears disabled. |
 
 ## Claude Terminal And Local liteLLM
 
@@ -283,7 +348,7 @@ Most local backlog flows default to:
 docs/backlog
 ```
 
-### `Create Backlog item`
+### `Add Backlog Item`
 
 Current behavior:
 
@@ -310,7 +375,7 @@ Current behavior:
   - copies the `grill-me` skill into the project
   - launches the same item as a review prompt without changing Jira first
 
-### `Backlog Item Completed`
+### `Mark Backlog Item as Completed`
 
 Current behavior:
 
@@ -370,7 +435,9 @@ Clicking a skill opens its `SKILL.md`. The item description shows the source, su
 
 ### Workflows
 
-- Source: markdown files in `~/.gemini/antigravity/workflows`
+- Sources:
+  - `<repo>/.agents/workflows`
+  - `~/.gemini/antigravity/workflows`
 - Clicking a workflow does one of two things:
   - if the repo has `scripts/<workflow-name>.sh`, it runs that script
   - otherwise it opens the workflow markdown
@@ -407,7 +474,7 @@ These features are implemented today, but they are not all visible in the main s
 | `Antigravity: Review a Pull Request` | Available now | Lets you pick a remote PR branch and checks it out locally after worktree safety checks |
 | `Antigravity: Approve a Pull Request` | Available now | Launches the selected harness against the `approve_pull_request` workflow |
 | `Antigravity: Feedback on Pull Request` | **Under development** | Currently only shows an informational message |
-| `Antigravity: Setup Workspace` | **Under development** | Opens a template picker, creates workspace support folders and harness links, then launches the selected harness to fetch the chosen template into `antigravity.workspaceProjectPath` |
+| `Antigravity: Setup Workspace` | Available now | Opens a template picker, creates workspace support folders and harness links, then launches the selected harness to fetch the chosen template into `antigravity.workspaceProjectPath` |
 | `Antigravity: Create Repo Tag` | Available now | Creates and pushes an annotated `v<package.json version>` Git tag |
 
 ### Explorer Context Menu
@@ -442,17 +509,9 @@ This means a freshly opened help page or copied skill can reflect the latest con
 
 These are the main areas where the implementation is real but the experience is not fully polished yet.
 
-- `Setup Workspace` is only partially wired today.
-  - It already loads live project templates, creates support folders such as `.agent`, `.claude`, `.codex`, and `.opencode`, and launches the selected harness.
-  - Helper code already exists to copy `CLAUDE.md`, `AGENTS.md`, and bundled setup skills, but that copy step is not currently executed in the main command path.
-- `ADLC` works, but the sidebar tooltip still says `ADLC roles coming soon.`
 - `Feedback on Pull Request` is still a placeholder.
-- Autocommit is only partially surfaced.
-  - The revert command is wired.
-  - The internal start/stop command exists.
-  - The main sidebar does not currently expose a normal `Autocommit Start` or `Autocommit Stop` entry.
 - Several commands are implemented and reachable from sidebar clicks, but not contributed as standalone Command Palette commands.
-  - Examples: `Codex Terminal`, `Ollama Codex`, `Opencode`, `Feature Estimator`, `Explain Me`, `Cloud Architect Review`, and the version bump commands.
+  - Examples: `Codex Terminal`, `Ollama Codex`, `Opencode Terminal`, `Feature Estimator Agent`, `Explain-me Agent`, `Cloud Architect Review`, and the version bump commands.
 
 ## Practical Tips
 

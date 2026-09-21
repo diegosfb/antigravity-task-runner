@@ -1,6 +1,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const Module = require("module");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 
 // Mock vscode module before importing settings
 // vscode calls are inside function bodies (not at module level),
@@ -80,6 +83,46 @@ test("settings page omits legacy and internal-only settings", () => {
 test("settings page exposes descriptions and tooltip hooks", () => {
   const html = settings.renderAntigravitySettingsHtml({ cspSource: "vscode-resource:" });
   assert.match(html, /When enabled, agent-driven flows are preferred for GitHub repository management tasks\./);
+  assert.match(html, /Project Structure & Agents Repository/);
+  assert.match(html, /create-project-structure\.sh/);
+  assert.match(html, /https:\/\/github\.com\/diegosfb\/antigravity-task-runner/);
   assert.match(html, /aria-describedby/);
   assert.match(html, /title = helpText/);
+});
+
+test("settings page exposes SDLC settings tab with descriptions", () => {
+  const html = settings.renderAntigravitySettingsHtml({ cspSource: "vscode-resource:" });
+  assert.match(html, /role="tablist"/);
+  assert.match(html, />SDLC Settings</);
+  assert.match(html, /Apply SDLC Settings/);
+  assert.match(html, /spoken_plan\.enabled/);
+  assert.match(html, /Product Pre-Mortem/);
+  assert.match(html, /Enable Obsidian Vault Recording/);
+});
+
+test("writeSdlcWorkflowSettings updates known paths and ignores unknown paths", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "taskrunner-sdlc-settings-"));
+  try {
+    fs.writeFileSync(
+      path.join(tmpDir, "ADLC_workflow_settings.json"),
+      JSON.stringify({
+        version: 1,
+        spoken_plan: { enabled: false },
+        obsidian_vault: { enabled: true, vault_path: "./docs/vault", link_mode: "symlink" }
+      }, null, 2),
+      "utf8"
+    );
+    settings.writeSdlcWorkflowSettings(tmpDir, {
+      "spoken_plan.enabled": true,
+      "obsidian_vault.vault_path": " ./custom-vault ",
+      "unknown.path": "ignored"
+    });
+    const saved = JSON.parse(fs.readFileSync(path.join(tmpDir, "ADLC_workflow_settings.json"), "utf8"));
+    assert.equal(saved.spoken_plan.enabled, true);
+    assert.equal(saved.obsidian_vault.vault_path, "./custom-vault");
+    assert.equal(saved.version, 1);
+    assert.equal(saved.unknown, undefined);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });

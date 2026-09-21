@@ -39,7 +39,8 @@ import {
   normalizeStringArray,
   readClaudeAnthropicBaseUrl,
   isLocalLiteLLMBaseUrl,
-  LOCAL_LITELLM_READY_URL
+  LOCAL_LITELLM_READY_URL,
+  writeSdlcWorkflowSettings
 } from "./settings";
 import { runRepoScript, runWorkflow, runAgent, openFile, ensureScriptFile, downloadConfigFileIfMissing, downloadInfrastructureFileIfMissing } from "./scripts";
 import {
@@ -184,6 +185,37 @@ function getRepoPackageVersion(repoRoot: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function getExtensionPackageVersion(extensionRoot: string): string | undefined {
+  try {
+    const packageJsonPath = path.join(extensionRoot, "package.json");
+    const raw = fs.readFileSync(packageJsonPath, "utf8");
+    const parsed = JSON.parse(raw) as { version?: unknown };
+    return typeof parsed.version === "string" && parsed.version.trim().length > 0
+      ? parsed.version.trim()
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function renderHelpMarkdownWithVersion(rawMarkdown: string, version: string | undefined): string {
+  const versionText = `v${(version || "unknown").trim() || "unknown"}`;
+  const versioned = rawMarkdown.replace(/\{\{TASK_RUNNER_VERSION\}\}/g, versionText);
+  return versioned.replace(
+    /This guide describes Task Runner as it is currently implemented in this repository for `v[^`]+`\./,
+    `This guide describes Task Runner as it is currently implemented in this repository for \`${versionText}\`.`
+  );
+}
+
+async function renderHelpMarkdownFile(helpDocPath: string, extensionVersion: string | undefined): Promise<string> {
+  const rawMarkdown = await fs.promises.readFile(helpDocPath, "utf8");
+  const renderedMarkdown = renderHelpMarkdownWithVersion(rawMarkdown, extensionVersion);
+  const safeVersion = (extensionVersion || "unknown").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const renderedHelpPath = path.join(os.tmpdir(), `task-runner-help-v${safeVersion}.md`);
+  await fs.promises.writeFile(renderedHelpPath, renderedMarkdown, "utf8");
+  return renderedHelpPath;
 }
 
 export function getObsidianVaultScriptDirectory(repoRoot: string): string {
@@ -3426,7 +3458,25 @@ export function activate(context: vscode.ExtensionContext) {
       panel.webview.html = renderAntigravitySettingsHtml(panel.webview);
       panel.webview.onDidReceiveMessage(
         async (message) => {
-          if (!message || message.type !== "applySettings") return;
+          if (!message) return;
+          if (message.type === "applySdlcSettings") {
+            const rootPath = getRootPath();
+            if (!rootPath) {
+              void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to save SDLC settings.");
+              return;
+            }
+            const payload = message.payload || {};
+            const values = payload.values || {};
+            try {
+              writeSdlcWorkflowSettings(getRepoRoot(rootPath), values);
+              void vscode.window.showInformationMessage("SDLC settings updated.");
+            } catch (error) {
+              const messageText = error instanceof Error ? error.message : String(error);
+              void vscode.window.showErrorMessage(`Failed to update SDLC settings: ${messageText}`);
+            }
+            return;
+          }
+          if (message.type !== "applySettings") return;
           const payload = message.payload || {};
           const values = payload.values || {};
           const target =
@@ -3475,9 +3525,13 @@ export function activate(context: vscode.ExtensionContext) {
         );
         return;
       }
+      const renderedHelpDocPath = await renderHelpMarkdownFile(
+        helpDocPath,
+        getExtensionPackageVersion(extensionRoot)
+      );
       await vscode.commands.executeCommand(
         "markdown.showPreview",
-        vscode.Uri.file(helpDocPath)
+        vscode.Uri.file(renderedHelpDocPath)
       );
     })
   );

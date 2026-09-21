@@ -183,3 +183,13 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260921T053841291641Z-implementation-note-removed-obsolete-taskrunner-workflows-folder-setting]] — Removed obsolete TaskRunner Workflows Folder setting
 
 - [[Notes/20260921T055455227491Z-implementation-note-removed-unused-scratch-test-sh-files]] — Removed unused scratch_test.sh files
+
+- [[Notes/20260921T062024219427Z-implementation-note-updated-task-runner-help-item-reference]] — Updated Task Runner help item reference
+
+- [[Notes/20260921T063841331539Z-implementation-note-added-sdlc-settings-tab-for-adlc-workflow-settings]] — Added SDLC settings tab for ADLC workflow settings
+
+- [[Notes/20260921T064417765046Z-implementation-note-added-project-structure-repository-setting]] — Added project structure repository setting
+
+- [[Notes/20260921T064605351083Z-implementation-note-made-help-document-version-dynamic]] — Made help document version dynamic
+
+- [[Notes/20260921T064801874249Z-implementation-note-added-adlc-workflow-settings-help-guide]] — Added ADLC workflow settings help guide

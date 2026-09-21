@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.renderHelpMarkdownWithVersion = renderHelpMarkdownWithVersion;
 exports.getObsidianVaultScriptDirectory = getObsidianVaultScriptDirectory;
 exports.activate = activate;
 exports.deactivate = deactivate;
@@ -45,6 +46,32 @@ function getRepoPackageVersion(repoRoot) {
     catch {
         return undefined;
     }
+}
+function getExtensionPackageVersion(extensionRoot) {
+    try {
+        const packageJsonPath = path.join(extensionRoot, "package.json");
+        const raw = fs.readFileSync(packageJsonPath, "utf8");
+        const parsed = JSON.parse(raw);
+        return typeof parsed.version === "string" && parsed.version.trim().length > 0
+            ? parsed.version.trim()
+            : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function renderHelpMarkdownWithVersion(rawMarkdown, version) {
+    const versionText = `v${(version || "unknown").trim() || "unknown"}`;
+    const versioned = rawMarkdown.replace(/\{\{TASK_RUNNER_VERSION\}\}/g, versionText);
+    return versioned.replace(/This guide describes Task Runner as it is currently implemented in this repository for `v[^`]+`\./, `This guide describes Task Runner as it is currently implemented in this repository for \`${versionText}\`.`);
+}
+async function renderHelpMarkdownFile(helpDocPath, extensionVersion) {
+    const rawMarkdown = await fs.promises.readFile(helpDocPath, "utf8");
+    const renderedMarkdown = renderHelpMarkdownWithVersion(rawMarkdown, extensionVersion);
+    const safeVersion = (extensionVersion || "unknown").replace(/[^a-zA-Z0-9._-]/g, "_");
+    const renderedHelpPath = path.join(os.tmpdir(), `task-runner-help-v${safeVersion}.md`);
+    await fs.promises.writeFile(renderedHelpPath, renderedMarkdown, "utf8");
+    return renderedHelpPath;
 }
 function getObsidianVaultScriptDirectory(repoRoot) {
     return path.join(repoRoot, "scripts");
@@ -2753,7 +2780,27 @@ function activate(context) {
         const panel = vscode.window.createWebviewPanel("antigravitySettings", "TaskRunner Settings", vscode.ViewColumn.Active, { enableScripts: true });
         panel.webview.html = (0, settings_1.renderAntigravitySettingsHtml)(panel.webview);
         panel.webview.onDidReceiveMessage(async (message) => {
-            if (!message || message.type !== "applySettings")
+            if (!message)
+                return;
+            if (message.type === "applySdlcSettings") {
+                const rootPath = (0, utils_1.getRootPath)();
+                if (!rootPath) {
+                    void vscode.window.showErrorMessage("TaskRunner needs an open workspace folder to save SDLC settings.");
+                    return;
+                }
+                const payload = message.payload || {};
+                const values = payload.values || {};
+                try {
+                    (0, settings_1.writeSdlcWorkflowSettings)((0, utils_1.getRepoRoot)(rootPath), values);
+                    void vscode.window.showInformationMessage("SDLC settings updated.");
+                }
+                catch (error) {
+                    const messageText = error instanceof Error ? error.message : String(error);
+                    void vscode.window.showErrorMessage(`Failed to update SDLC settings: ${messageText}`);
+                }
+                return;
+            }
+            if (message.type !== "applySettings")
                 return;
             const payload = message.payload || {};
             const values = payload.values || {};
@@ -2796,7 +2843,8 @@ function activate(context) {
             void vscode.window.showErrorMessage(`Failed to download the Task Runner help document: ${message}`);
             return;
         }
-        await vscode.commands.executeCommand("markdown.showPreview", vscode.Uri.file(helpDocPath));
+        const renderedHelpDocPath = await renderHelpMarkdownFile(helpDocPath, getExtensionPackageVersion(extensionRoot));
+        await vscode.commands.executeCommand("markdown.showPreview", vscode.Uri.file(renderedHelpDocPath));
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.runClaudeAgent", async (agentName) => {
         (0, logger_1.log)(`[runClaudeAgent] agentName: ${agentName}`);

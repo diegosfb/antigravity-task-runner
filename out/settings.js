@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_GITHUB_CODE_REVIEWER = exports.LOCAL_LITELLM_READY_URL = void 0;
+exports.DEFAULT_PROJECT_STRUCTURE_AND_AGENTS_REPOSITORY = exports.DEFAULT_GITHUB_CODE_REVIEWER = exports.LOCAL_LITELLM_READY_URL = void 0;
 exports.isLocalLiteLLMBaseUrl = isLocalLiteLLMBaseUrl;
 exports.readClaudeAnthropicBaseUrl = readClaudeAnthropicBaseUrl;
 exports.normalizeStringArray = normalizeStringArray;
@@ -16,6 +16,8 @@ exports.getBuildCommand = getBuildCommand;
 exports.getProjectTestingCommand = getProjectTestingCommand;
 exports.getUseAgentForGithubRepositoryManagement = getUseAgentForGithubRepositoryManagement;
 exports.getUseExternalTerminal = getUseExternalTerminal;
+exports.getSdlcSettingsPath = getSdlcSettingsPath;
+exports.writeSdlcWorkflowSettings = writeSdlcWorkflowSettings;
 exports.renderAntigravitySettingsHtml = renderAntigravitySettingsHtml;
 exports.renderAgenticSetupHtml = renderAgenticSetupHtml;
 exports.renderClaudeModelConfigHtml = renderClaudeModelConfigHtml;
@@ -25,6 +27,7 @@ const path = require("path");
 const os = require("os");
 exports.LOCAL_LITELLM_READY_URL = "http://localhost:4000/health";
 exports.DEFAULT_GITHUB_CODE_REVIEWER = "";
+exports.DEFAULT_PROJECT_STRUCTURE_AND_AGENTS_REPOSITORY = "https://github.com/diegosfb/antigravity-task-runner";
 function isLocalLiteLLMBaseUrl(baseUrl) {
     if (!baseUrl)
         return false;
@@ -168,6 +171,48 @@ const DEFAULT_LIGHT_AGENTIC_HARNESS_EXECUTION_COMMANDS = [
     "opencode run -m ollama/qwen3-coder:30b",
     "gemini"
 ];
+const APPROVAL_GATE_OPTIONS = [
+    {
+        value: "required",
+        description: "Validate the artifact, show it to the user, and wait for explicit approval before moving forward."
+    },
+    {
+        value: "skip",
+        description: "Validate the artifact and record that review was skipped, then continue without asking for user approval."
+    }
+];
+const BOOLEAN_OPTIONS = {
+    true: "Enabled.",
+    false: "Disabled."
+};
+const SDLC_WRITABLE_PATHS = new Set([
+    "spoken_plan.enabled",
+    "spoken_plan.interrupted_by_next_command",
+    "user_approval_gates.configurable.prd",
+    "user_approval_gates.configurable.specifications",
+    "user_approval_gates.configurable.ux_ui_design",
+    "user_approval_gates.configurable.architecture",
+    "user_approval_gates.configurable.backlog_plan",
+    "user_approval_gates.configurable.test_plan",
+    "user_approval_gates.configurable.pull_request_creation",
+    "product_pre_mortem.enabled",
+    "llm_judge.trigger_mode",
+    "llm_judge.judge_provider",
+    "llm_judge.judge_command",
+    "spec_validation.drift_check_mode",
+    "spec_validation.red_team_mode",
+    "security_check.pre_commit",
+    "security_check.pre_pr",
+    "test_red_team.trigger_mode",
+    "developer_git_workflow.mode",
+    "developer_git_workflow.run_pre_commit_hooks",
+    "developer_git_workflow.run_pre_pr_hooks",
+    "developer_git_workflow.post_pr_branch",
+    "test_failure_tracking.track_in_backlog",
+    "obsidian_vault.enabled",
+    "obsidian_vault.vault_path",
+    "obsidian_vault.link_mode"
+]);
 function getAgenticHarnessExecutionCommand() {
     const config = vscode.workspace.getConfiguration("antigravity");
     return ((config.get("agenticHarnessExecutionCommand") || "").trim() ||
@@ -198,6 +243,334 @@ function getUseAgentForGithubRepositoryManagement() {
 function getUseExternalTerminal() {
     const config = vscode.workspace.getConfiguration("antigravity");
     return config.get("useExternalTerminal") ?? true;
+}
+function getWorkspaceRoot() {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0)
+        return undefined;
+    return folders[0].uri.fsPath;
+}
+function getBundledSdlcSettingsPath() {
+    return path.resolve(__dirname, "..", "ADLC_workflow_settings.json");
+}
+function getSdlcSettingsPath(repoRoot) {
+    return path.join(repoRoot, "ADLC_workflow_settings.json");
+}
+function readJsonFile(filePath) {
+    if (!fs.existsSync(filePath))
+        return undefined;
+    try {
+        const raw = fs.readFileSync(filePath, "utf8");
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+            ? parsed
+            : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function loadSdlcSettingsData(repoRoot) {
+    if (repoRoot) {
+        const projectSettings = readJsonFile(getSdlcSettingsPath(repoRoot));
+        if (projectSettings)
+            return projectSettings;
+    }
+    return readJsonFile(getBundledSdlcSettingsPath()) || {};
+}
+function getNestedValue(data, dottedPath) {
+    let current = data;
+    for (const part of dottedPath.split(".")) {
+        if (!current || typeof current !== "object" || Array.isArray(current))
+            return undefined;
+        current = current[part];
+    }
+    return current;
+}
+function setNestedValue(data, dottedPath, value) {
+    const parts = dottedPath.split(".");
+    let current = data;
+    for (const part of parts.slice(0, -1)) {
+        const next = current[part];
+        if (!next || typeof next !== "object" || Array.isArray(next)) {
+            current[part] = {};
+        }
+        current = current[part];
+    }
+    current[parts[parts.length - 1]] = value;
+}
+function optionList(options) {
+    if (!options)
+        return [];
+    return Object.entries(options).map(([value, description]) => ({ value, description }));
+}
+function booleanOptionDescription(data, optionsPath, trueKey = "true", falseKey = "false") {
+    const options = getNestedValue(data, optionsPath);
+    if (!options || typeof options !== "object" || Array.isArray(options)) {
+        return `True: ${BOOLEAN_OPTIONS.true}\nFalse: ${BOOLEAN_OPTIONS.false}`;
+    }
+    const typedOptions = options;
+    const trueDescription = typeof typedOptions[trueKey] === "string" ? typedOptions[trueKey] : BOOLEAN_OPTIONS.true;
+    const falseDescription = typeof typedOptions[falseKey] === "string" ? typedOptions[falseKey] : BOOLEAN_OPTIONS.false;
+    return `True: ${trueDescription}\nFalse: ${falseDescription}`;
+}
+function stringValue(data, dottedPath, fallback = "") {
+    const value = getNestedValue(data, dottedPath);
+    return typeof value === "string" ? value : fallback;
+}
+function booleanValue(data, dottedPath, fallback) {
+    const value = getNestedValue(data, dottedPath);
+    return typeof value === "boolean" ? value : fallback;
+}
+function selectOptions(data, dottedPath) {
+    const value = getNestedValue(data, dottedPath);
+    return value && typeof value === "object" && !Array.isArray(value)
+        ? optionList(value)
+        : [];
+}
+function getSdlcSettingsGroups(repoRoot) {
+    const data = loadSdlcSettingsData(repoRoot);
+    const gateField = (key, label) => ({
+        path: `user_approval_gates.configurable.${key}`,
+        label,
+        description: "Controls whether Task Runner asks for explicit user approval after validating this artifact.",
+        note: stringValue(data, "user_approval_gates._notes"),
+        type: "select",
+        value: stringValue(data, `user_approval_gates.configurable.${key}`, "required"),
+        options: APPROVAL_GATE_OPTIONS
+    });
+    const mandatoryGateField = (key, label) => ({
+        path: `user_approval_gates.mandatory.${key}`,
+        label,
+        description: "Policy-locked approval gate. It is shown for visibility and cannot be changed here.",
+        note: stringValue(data, "user_approval_gates._notes"),
+        type: "select",
+        value: stringValue(data, `user_approval_gates.mandatory.${key}`, "required"),
+        options: APPROVAL_GATE_OPTIONS,
+        readonly: true
+    });
+    return [
+        {
+            title: "Plan Narration",
+            description: "Audio narration settings for implementation plans. These never replace written plans or approval gates.",
+            fields: [
+                {
+                    path: "spoken_plan.enabled",
+                    label: "Spoken Plan",
+                    description: "Play a safe conversational audio explanation of an implementation plan before approval.",
+                    note: booleanOptionDescription(data, "spoken_plan._options"),
+                    type: "checkbox",
+                    value: booleanValue(data, "spoken_plan.enabled", false)
+                },
+                {
+                    path: "spoken_plan.interrupted_by_next_command",
+                    label: "Interrupt Narration On Next Command",
+                    description: "Stop any active plan narration before processing the next user message.",
+                    note: booleanOptionDescription(data, "spoken_plan._options", "interrupted_by_next_command_true", "interrupted_by_next_command_false"),
+                    type: "checkbox",
+                    value: booleanValue(data, "spoken_plan.interrupted_by_next_command", false)
+                }
+            ]
+        },
+        {
+            title: "User Approval Gates",
+            description: "Configurable artifact review gates. Validation always runs; this controls whether user approval is requested.",
+            fields: [
+                gateField("prd", "PRD Approval"),
+                gateField("specifications", "Specifications Approval"),
+                gateField("ux_ui_design", "UX/UI Design Approval"),
+                gateField("architecture", "Architecture Approval"),
+                gateField("backlog_plan", "Backlog Plan Approval"),
+                gateField("test_plan", "Test Plan Approval"),
+                gateField("pull_request_creation", "Pull Request Creation Approval"),
+                mandatoryGateField("implementation_plan", "Implementation Plan Approval"),
+                mandatoryGateField("pull_request_merge", "Pull Request Merge Approval"),
+                mandatoryGateField("production_release", "Production Release Approval")
+            ]
+        },
+        {
+            title: "Review And Risk Agents",
+            description: "Optional product, architecture, specification, security, and red-team review automation.",
+            fields: [
+                {
+                    path: "product_pre_mortem.enabled",
+                    label: "Product Pre-Mortem",
+                    description: "Run pre-mortem risk analysis before PRD handoff.",
+                    note: booleanOptionDescription(data, "product_pre_mortem._options"),
+                    type: "checkbox",
+                    value: booleanValue(data, "product_pre_mortem.enabled", false)
+                },
+                {
+                    path: "llm_judge.trigger_mode",
+                    label: "LLM Judge Trigger Mode",
+                    description: "Controls when llm-judge-agent is invoked for a second opinion.",
+                    note: stringValue(data, "llm_judge._notes"),
+                    type: "select",
+                    value: stringValue(data, "llm_judge.trigger_mode", "on-demand"),
+                    options: selectOptions(data, "llm_judge._options")
+                },
+                {
+                    path: "llm_judge.judge_provider",
+                    label: "LLM Judge Provider",
+                    description: "Optional provider name for the judge model, such as google, openai, or anthropic.",
+                    note: stringValue(data, "llm_judge._cross_model"),
+                    type: "text",
+                    value: stringValue(data, "llm_judge.judge_provider"),
+                    placeholder: "google"
+                },
+                {
+                    path: "llm_judge.judge_command",
+                    label: "LLM Judge Command",
+                    description: "Optional command used to reach a different judge model.",
+                    note: stringValue(data, "llm_judge._cross_model"),
+                    type: "text",
+                    value: stringValue(data, "llm_judge.judge_command"),
+                    placeholder: "gemini"
+                },
+                {
+                    path: "spec_validation.drift_check_mode",
+                    label: "Spec Drift Check Mode",
+                    description: "Controls when spec-validation-agent checks implementation drift against specifications.",
+                    note: stringValue(data, "spec_validation._notes"),
+                    type: "select",
+                    value: stringValue(data, "spec_validation.drift_check_mode", "on-demand"),
+                    options: selectOptions(data, "spec_validation._drift_check_options")
+                },
+                {
+                    path: "spec_validation.red_team_mode",
+                    label: "Spec Red-Team Mode",
+                    description: "Controls when a spec red-team pass runs.",
+                    note: stringValue(data, "spec_validation._notes"),
+                    type: "select",
+                    value: stringValue(data, "spec_validation.red_team_mode", "on-demand"),
+                    options: selectOptions(data, "spec_validation._red_team_options")
+                },
+                {
+                    path: "security_check.pre_commit",
+                    label: "Security Check Before Commit",
+                    description: "Require security-check-agent pass on the staged diff before developer-agent managed commits.",
+                    note: stringValue(data, "security_check._options.pre_commit"),
+                    type: "checkbox",
+                    value: booleanValue(data, "security_check.pre_commit", true)
+                },
+                {
+                    path: "security_check.pre_pr",
+                    label: "Security Check Before PR",
+                    description: "Require security-check-agent pass on the complete branch diff before developer-agent managed PRs.",
+                    note: stringValue(data, "security_check._options.pre_pr"),
+                    type: "checkbox",
+                    value: booleanValue(data, "security_check.pre_pr", true)
+                },
+                {
+                    path: "test_red_team.trigger_mode",
+                    label: "Test Red-Team Trigger Mode",
+                    description: "Controls when test-agent's red-team-agent runs automatically.",
+                    note: stringValue(data, "test_red_team._notes"),
+                    type: "select",
+                    value: stringValue(data, "test_red_team.trigger_mode", "every-pr"),
+                    options: selectOptions(data, "test_red_team._options")
+                }
+            ]
+        },
+        {
+            title: "Developer Git Workflow",
+            description: "Branch, pull request, and hook behavior for developer-agent managed work.",
+            fields: [
+                {
+                    path: "developer_git_workflow.mode",
+                    label: "Workflow Mode",
+                    description: "Controls whether developer-agent creates branches and pull requests automatically.",
+                    note: stringValue(data, "developer_git_workflow._notes"),
+                    type: "select",
+                    value: stringValue(data, "developer_git_workflow.mode", "always-branch-and-pr"),
+                    options: selectOptions(data, "developer_git_workflow._options")
+                },
+                {
+                    path: "developer_git_workflow.run_pre_commit_hooks",
+                    label: "Run Pre-Commit Hooks",
+                    description: "Run configured repository pre-commit hooks before commit.",
+                    note: stringValue(data, "developer_git_workflow._hook_options.run_pre_commit_hooks"),
+                    type: "checkbox",
+                    value: booleanValue(data, "developer_git_workflow.run_pre_commit_hooks", true)
+                },
+                {
+                    path: "developer_git_workflow.run_pre_pr_hooks",
+                    label: "Run Pre-PR Hooks",
+                    description: "Run configured repository pre-PR hooks before push or PR creation.",
+                    note: stringValue(data, "developer_git_workflow._hook_options.run_pre_pr_hooks"),
+                    type: "checkbox",
+                    value: booleanValue(data, "developer_git_workflow.run_pre_pr_hooks", true)
+                },
+                {
+                    path: "developer_git_workflow.post_pr_branch",
+                    label: "After PR Branch Behavior",
+                    description: "Controls which branch remains checked out after PR creation.",
+                    note: stringValue(data, "developer_git_workflow._notes"),
+                    type: "select",
+                    value: stringValue(data, "developer_git_workflow.post_pr_branch", "stay-on-task-branch"),
+                    options: selectOptions(data, "developer_git_workflow._post_pr_branch_options")
+                }
+            ]
+        },
+        {
+            title: "Failure Tracking And Vault",
+            description: "Backlog tracking for test failures and Obsidian vault recording behavior.",
+            fields: [
+                {
+                    path: "test_failure_tracking.track_in_backlog",
+                    label: "Track Test Failures In Backlog",
+                    description: "Ask project-planner-agent to create or update linked backlog items for actionable test failures.",
+                    note: booleanOptionDescription(data, "test_failure_tracking._options"),
+                    type: "checkbox",
+                    value: booleanValue(data, "test_failure_tracking.track_in_backlog", true)
+                },
+                {
+                    path: "obsidian_vault.enabled",
+                    label: "Enable Obsidian Vault Recording",
+                    description: "Allow obsidian-vault-agent to mirror artifacts and action summaries into the configured vault.",
+                    note: stringValue(data, "obsidian_vault._options.enabled"),
+                    type: "checkbox",
+                    value: booleanValue(data, "obsidian_vault.enabled", false)
+                },
+                {
+                    path: "obsidian_vault.vault_path",
+                    label: "Vault Path",
+                    description: "Folder the vault agent writes into. Relative paths resolve from the project root.",
+                    note: stringValue(data, "obsidian_vault._options.vault_path"),
+                    type: "text",
+                    value: stringValue(data, "obsidian_vault.vault_path", "./docs/vault"),
+                    placeholder: "./docs/vault"
+                },
+                {
+                    path: "obsidian_vault.link_mode",
+                    label: "Vault Link Mode",
+                    description: "Controls whether canonical docs are symlinked or copied into the vault.",
+                    note: stringValue(data, "obsidian_vault._options.link_mode"),
+                    type: "select",
+                    value: stringValue(data, "obsidian_vault.link_mode", "symlink"),
+                    options: [
+                        { value: "symlink", description: "Symlink canonical docs into the vault so content is not duplicated." },
+                        { value: "copy", description: "Copy or link via relative paths for portable vaults where symlinks do not travel." }
+                    ]
+                }
+            ]
+        }
+    ];
+}
+function writeSdlcWorkflowSettings(repoRoot, values) {
+    const data = loadSdlcSettingsData(repoRoot);
+    for (const [dottedPath, rawValue] of Object.entries(values)) {
+        if (!SDLC_WRITABLE_PATHS.has(dottedPath))
+            continue;
+        if (typeof rawValue === "boolean") {
+            setNestedValue(data, dottedPath, rawValue);
+            continue;
+        }
+        if (typeof rawValue === "string") {
+            setNestedValue(data, dottedPath, rawValue.trim());
+        }
+    }
+    fs.writeFileSync(getSdlcSettingsPath(repoRoot), `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 function getExtensionSettingsFields() {
     const config = vscode.workspace.getConfiguration("antigravity");
@@ -316,15 +689,29 @@ function getExtensionSettingsFields() {
             description: "Path to a custom agentic platform addons directory shown in the folder section.",
             placeholder: "~/my-addons",
             value: config.get("customAgenticPlatformAddons") || ""
+        },
+        {
+            key: "projectStructureAndAgentsRepository",
+            label: "Project Structure & Agents Repository",
+            description: "GitHub repository URL used by create-project-structure.sh as the source for project structure and agents.",
+            placeholder: exports.DEFAULT_PROJECT_STRUCTURE_AND_AGENTS_REPOSITORY,
+            value: config.get("projectStructureAndAgentsRepository") || exports.DEFAULT_PROJECT_STRUCTURE_AND_AGENTS_REPOSITORY
         }
     ];
 }
 function renderAntigravitySettingsHtml(webview) {
     const nonce = getNonce();
     const fields = getExtensionSettingsFields();
+    const repoRoot = getWorkspaceRoot();
+    const sdlcSettingsPath = repoRoot ? getSdlcSettingsPath(repoRoot) : undefined;
     const canUseWorkspace = !!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length);
     const payload = {
         fields,
+        sdlc: {
+            groups: getSdlcSettingsGroups(repoRoot),
+            path: sdlcSettingsPath,
+            canSave: !!repoRoot
+        },
         canUseWorkspace,
         defaultTarget: canUseWorkspace ? "workspace" : "user"
     };
@@ -339,14 +726,23 @@ function renderAntigravitySettingsHtml(webview) {
     <style>
       body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--vscode-foreground); background: var(--vscode-editor-background); margin: 0; padding: 24px; }
       h1 { font-size: 18px; margin: 0 0 8px; }
+      h2 { font-size: 15px; margin: 22px 0 6px; }
       p { margin: 0 0 16px; color: var(--vscode-descriptionForeground); font-size: 12px; }
+      .tabs { display: flex; gap: 8px; margin: 16px 0; border-bottom: 1px solid var(--vscode-panel-border); }
+      .tab { border-radius: 6px 6px 0 0; background: transparent; color: var(--vscode-foreground); border: 1px solid transparent; border-bottom: none; }
+      .tab[aria-selected="true"] { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+      .panel[hidden] { display: none; }
       .targets { display: flex; gap: 16px; margin-bottom: 18px; font-size: 12px; }
       .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
       .field-checkbox { display: flex; align-items: center; gap: 8px; }
       label { font-size: 12px; color: var(--vscode-descriptionForeground); }
       input[type="text"], select { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--vscode-input-border); background: var(--vscode-input-background); color: var(--vscode-input-foreground); font-size: 13px; }
+      input:disabled, select:disabled { opacity: 0.75; }
       .description { font-size: 11px; color: var(--vscode-descriptionForeground); }
       .note { font-size: 11px; color: var(--vscode-descriptionForeground); white-space: pre-wrap; }
+      .group { margin: 18px 0 24px; padding-bottom: 4px; border-bottom: 1px solid var(--vscode-panel-border); }
+      .group:last-child { border-bottom: none; }
+      .option-help { font-size: 11px; color: var(--vscode-descriptionForeground); margin-top: -2px; white-space: pre-wrap; }
       .command-list-controls { display: flex; flex-direction: column; gap: 8px; }
       .actions { margin-top: 18px; display: flex; justify-content: flex-end; }
       button { padding: 8px 14px; border-radius: 6px; border: none; background: var(--vscode-button-background); color: var(--vscode-button-foreground); cursor: pointer; }
@@ -357,21 +753,63 @@ function renderAntigravitySettingsHtml(webview) {
   <body>
     <h1>TaskRunner Settings</h1>
     <p>Update extension settings and apply them to your workspace or user profile.</p>
-    <div class="targets" id="targets">
-      <label><input type="radio" name="target" value="workspace" id="target-workspace" /> Workspace</label>
-      <label><input type="radio" name="target" value="user" id="target-user" /> User</label>
+    <div class="tabs" role="tablist" aria-label="TaskRunner settings sections">
+      <button class="tab" id="tab-general" role="tab" aria-selected="true" aria-controls="panel-general">General Settings</button>
+      <button class="tab" id="tab-sdlc" role="tab" aria-selected="false" aria-controls="panel-sdlc">SDLC Settings</button>
     </div>
-    <div id="fields"></div>
-    <div class="actions">
-      <button id="apply">Apply</button>
+    <div id="panel-general" class="panel" role="tabpanel" aria-labelledby="tab-general">
+      <div class="targets" id="targets">
+        <label><input type="radio" name="target" value="workspace" id="target-workspace" /> Workspace</label>
+        <label><input type="radio" name="target" value="user" id="target-user" /> User</label>
+      </div>
+      <div id="fields"></div>
+      <div class="actions">
+        <button id="apply">Apply General Settings</button>
+      </div>
+    </div>
+    <div id="panel-sdlc" class="panel" role="tabpanel" aria-labelledby="tab-sdlc" hidden>
+      <p id="sdlc-summary"></p>
+      <div id="sdlc-fields"></div>
+      <div class="actions">
+        <button id="apply-sdlc">Apply SDLC Settings</button>
+      </div>
     </div>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
       const data = ${JSON.stringify(payload)};
       const fieldsEl = document.getElementById("fields");
+      const sdlcFieldsEl = document.getElementById("sdlc-fields");
+      const sdlcSummary = document.getElementById("sdlc-summary");
       const targetWorkspace = document.getElementById("target-workspace");
       const targetUser = document.getElementById("target-user");
       const applyBtn = document.getElementById("apply");
+      const applySdlcBtn = document.getElementById("apply-sdlc");
+      const tabs = [
+        { tab: document.getElementById("tab-general"), panel: document.getElementById("panel-general") },
+        { tab: document.getElementById("tab-sdlc"), panel: document.getElementById("panel-sdlc") }
+      ];
+
+      function selectTab(selectedTab) {
+        tabs.forEach(({ tab, panel }) => {
+          const selected = tab === selectedTab;
+          tab.setAttribute("aria-selected", selected ? "true" : "false");
+          panel.hidden = !selected;
+          if (selected) tab.focus();
+        });
+      }
+
+      tabs.forEach(({ tab }) => {
+        tab.addEventListener("click", () => selectTab(tab));
+        tab.addEventListener("keydown", (event) => {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          event.preventDefault();
+          const index = tabs.findIndex((entry) => entry.tab === tab);
+          const nextIndex = event.key === "ArrowRight"
+            ? (index + 1) % tabs.length
+            : (index - 1 + tabs.length) % tabs.length;
+          selectTab(tabs[nextIndex].tab);
+        });
+      });
 
       function createField(field) {
         const wrapper = document.createElement("div");
@@ -478,6 +916,90 @@ function renderAntigravitySettingsHtml(webview) {
         return wrapper;
       }
 
+      function createSdlcField(field) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "field";
+        const helpText = [field.description, field.note].filter(Boolean).join("\\n\\n");
+        const descriptionId = "sdlc-description-" + field.path.replace(/[^a-z0-9_-]/gi, "-");
+        const label = document.createElement("label");
+        label.textContent = field.label;
+        label.setAttribute("for", "sdlc-field-" + field.path);
+        label.title = helpText;
+        wrapper.appendChild(label);
+
+        let control;
+        if (field.type === "checkbox") {
+          const checkboxRow = document.createElement("div");
+          checkboxRow.className = "field-checkbox";
+          control = document.createElement("input");
+          control.type = "checkbox";
+          control.checked = field.value === true;
+          checkboxRow.appendChild(control);
+          wrapper.appendChild(checkboxRow);
+        } else if (field.type === "select") {
+          control = document.createElement("select");
+          (field.options || []).forEach((optionValue) => {
+            const option = document.createElement("option");
+            option.value = optionValue.value;
+            option.textContent = optionValue.value;
+            option.title = optionValue.description;
+            control.appendChild(option);
+          });
+          control.value = String(field.value || "");
+          const optionHelp = document.createElement("div");
+          optionHelp.className = "option-help";
+          const updateOptionHelp = () => {
+            const selected = (field.options || []).find((optionValue) => optionValue.value === control.value);
+            optionHelp.textContent = selected ? selected.description : "";
+          };
+          control.addEventListener("change", updateOptionHelp);
+          updateOptionHelp();
+          wrapper.appendChild(control);
+          wrapper.appendChild(optionHelp);
+        } else {
+          control = document.createElement("input");
+          control.type = "text";
+          control.value = String(field.value || "");
+          if (field.placeholder) control.placeholder = field.placeholder;
+          wrapper.appendChild(control);
+        }
+
+        control.id = "sdlc-field-" + field.path;
+        control.dataset.path = field.path;
+        control.dataset.type = field.type;
+        control.disabled = !!field.readonly;
+        control.title = helpText;
+        control.setAttribute("aria-describedby", descriptionId);
+
+        const desc = document.createElement("div");
+        desc.id = descriptionId;
+        desc.className = "description";
+        desc.textContent = field.description || "";
+        desc.title = helpText;
+        wrapper.appendChild(desc);
+        if (field.note) {
+          const note = document.createElement("div");
+          note.className = "note";
+          note.textContent = field.note;
+          note.title = field.note;
+          wrapper.appendChild(note);
+        }
+        return wrapper;
+      }
+
+      function createSdlcGroup(group) {
+        const wrapper = document.createElement("section");
+        wrapper.className = "group";
+        const heading = document.createElement("h2");
+        heading.textContent = group.title;
+        wrapper.appendChild(heading);
+        const description = document.createElement("p");
+        description.textContent = group.description;
+        wrapper.appendChild(description);
+        (group.fields || []).forEach((field) => wrapper.appendChild(createSdlcField(field)));
+        return wrapper;
+      }
+
       if (!data.canUseWorkspace) {
         targetWorkspace.disabled = true;
         targetWorkspace.parentElement.classList.add("hidden");
@@ -489,6 +1011,13 @@ function renderAntigravitySettingsHtml(webview) {
       }
 
       (data.fields || []).forEach((field) => { fieldsEl.appendChild(createField(field)); });
+      sdlcSummary.textContent = data.sdlc && data.sdlc.canSave
+        ? "These project-level settings are saved to " + data.sdlc.path + "."
+        : "Open a workspace folder to edit SDLC settings.";
+      applySdlcBtn.disabled = !(data.sdlc && data.sdlc.canSave);
+      ((data.sdlc && data.sdlc.groups) || []).forEach((group) => {
+        sdlcFieldsEl.appendChild(createSdlcGroup(group));
+      });
 
       applyBtn.addEventListener("click", () => {
         const values = {};
@@ -508,6 +1037,20 @@ function renderAntigravitySettingsHtml(webview) {
         });
         const target = targetWorkspace && targetWorkspace.checked ? "workspace" : "user";
         vscode.postMessage({ type: "applySettings", payload: { target, values } });
+      });
+
+      applySdlcBtn.addEventListener("click", () => {
+        const values = {};
+        const controls = sdlcFieldsEl.querySelectorAll("[data-path]");
+        controls.forEach((control) => {
+          if (control.disabled) return;
+          if (control.dataset.type === "checkbox") {
+            values[control.dataset.path] = control.checked;
+          } else {
+            values[control.dataset.path] = control.value;
+          }
+        });
+        vscode.postMessage({ type: "applySdlcSettings", payload: { values } });
       });
     </script>
   </body>

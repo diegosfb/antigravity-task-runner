@@ -76,3 +76,27 @@ test("Obsidian vault script resolves from the active repository", () => {
     path.join("/workspace/project", "scripts")
   );
 });
+
+test("renderHelpMarkdownWithVersion replaces help version placeholder", () => {
+  const ext = setupExtensionModule();
+  const rendered = ext.renderHelpMarkdownWithVersion(
+    "This guide describes Task Runner as it is currently implemented in this repository for `{{TASK_RUNNER_VERSION}}`.",
+    "9.8.7"
+  );
+  assert.equal(
+    rendered,
+    "This guide describes Task Runner as it is currently implemented in this repository for `v9.8.7`."
+  );
+});
+
+test("renderHelpMarkdownWithVersion replaces stale hardcoded help version", () => {
+  const ext = setupExtensionModule();
+  const rendered = ext.renderHelpMarkdownWithVersion(
+    "This guide describes Task Runner as it is currently implemented in this repository for `v4.10.106`.",
+    "9.8.7"
+  );
+  assert.equal(
+    rendered,
+    "This guide describes Task Runner as it is currently implemented in this repository for `v9.8.7`."
+  );
+});
