@@ -193,3 +193,5 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260921T064605351083Z-implementation-note-made-help-document-version-dynamic]] — Made help document version dynamic
 
 - [[Notes/20260921T064801874249Z-implementation-note-added-adlc-workflow-settings-help-guide]] — Added ADLC workflow settings help guide
+
+- [[Notes/20260921T065624047150Z-implementation-note-restored-create-project-structure-zip-only-extraction]] — Restored create-project-structure zip-only extraction
