@@ -176,7 +176,6 @@
 ./.env.example
 ./AGENTS.md
 ./.vscode
-./.vscode/settings.json
 ./.vscode/arduino.json
 ./.vscode/settings.example.json
 ./.vscode/extensions.json

@@ -197,3 +197,9 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260921T065624047150Z-implementation-note-restored-create-project-structure-zip-only-extraction]] — Restored create-project-structure zip-only extraction
 
 - [[Notes/20260921T070449198765Z-implementation-note-merged-v4-12-61-into-main-as-authoritative-branch]] — Merged v4.12.61 into main as authoritative branch
+
+- [[Notes/20260921T070948540922Z-implementation-note-project-structure-script-extracts-to-workspace-project-path]] — Project structure script extracts to Workspace Project Path
+
+- [[Notes/20260921T071246492502Z-implementation-note-project-structure-script-avoids-blocking-overwrite-prompt]] — Project structure script avoids blocking overwrite prompt
+
+- [[Notes/20260921T084320077620Z-implementation-note-rebuilt-project-structure-zip-with-real-file-contents]] — Rebuilt project structure zip with real file contents

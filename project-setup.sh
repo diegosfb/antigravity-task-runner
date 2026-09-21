@@ -66,9 +66,20 @@ mkdir -p \
   ".vscode"
 
 echo "Downloading listed files from GitHub ..."
-while IFS= read -r f; do
-  mkdir -p "$(dirname "$f")"
-  curl -fsSL "$RAW_BASE/$f" -o "$f" 2>/dev/null || touch "$f"
+while IFS= read -r file_path; do
+  encoded_path=$(python3 - "$file_path" <<'PY'
+import sys
+from urllib.parse import quote
+
+print(quote(sys.argv[1], safe="/._-~"))
+PY
+)
+  mkdir -p "$(dirname "$file_path")"
+  if ! curl -fsSL "$RAW_BASE/$encoded_path" -o "$file_path"; then
+    echo "Error: failed to download $file_path from $RAW_BASE/$encoded_path" >&2
+    rm -f "$file_path"
+    exit 1
+  fi
 done << 'FILELIST'
 constitution.md
 .gemini/settings.json
@@ -179,7 +190,6 @@ tsconfig.json
 GEMINI.md
 .env.example
 AGENTS.md
-.vscode/settings.json
 .vscode/arduino.json
 .vscode/settings.example.json
 .vscode/extensions.json
