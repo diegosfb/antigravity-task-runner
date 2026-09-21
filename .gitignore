@@ -68,6 +68,8 @@ docs/Backup/
 Test & Add/
 *[[]Backup[]]*
 /tmp/
+/antigravity-task-runner/
+/Project Setup/
 
 # Story-points council selector and credentials
 .agents/skills/storypoints-council/storypoints-council.conf
