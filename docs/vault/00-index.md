@@ -195,3 +195,5 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260921T064801874249Z-implementation-note-added-adlc-workflow-settings-help-guide]] — Added ADLC workflow settings help guide
 
 - [[Notes/20260921T065624047150Z-implementation-note-restored-create-project-structure-zip-only-extraction]] — Restored create-project-structure zip-only extraction
+
+- [[Notes/20260921T070449198765Z-implementation-note-merged-v4-12-61-into-main-as-authoritative-branch]] — Merged v4.12.61 into main as authoritative branch
