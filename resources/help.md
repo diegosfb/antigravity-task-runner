@@ -178,7 +178,7 @@ These exist today but are mainly used by advanced or partially surfaced commands
 
 | Item | What it does | Notes |
 | --- | --- | --- |
-| `Setup Workspace` | Opens a template-driven workspace setup flow and launches the selected harness to create or download workspace files. | Disabled-looking when the project already has a `.agent` folder. Uses `antigravity.workspaceProjectPath`. |
+| `Setup Workspace` | Downloads `project-structure.zip` from the configured project-structure source and extracts it into `antigravity.workspaceProjectPath`. | Prompts before overwriting existing files: `All`, `None`, `Yes, this file only`, or `No, not this file`. Disabled-looking when the project already has a `.agent` folder. |
 | `Install Agentic Libraries` | Category for installing bundled agent/skill libraries into the current workspace. | Children are listed below. |
 | `Backlog Management` | Category for local backlog and Jira backlog actions. | Children are listed below. |
 | `Init Repository` | Creates or connects a Git repo and GitHub repo, then bootstraps repo defaults. | Visible only when the project is not already a Git repo. Also creates CI/CD workflow files, `.gitignore`, `.env.example`, default GitHub environments (`dev`, `qa`, `stage`, `prod`), commits, and pushes. |
@@ -474,7 +474,7 @@ These features are implemented today, but they are not all visible in the main s
 | `Antigravity: Review a Pull Request` | Available now | Lets you pick a remote PR branch and checks it out locally after worktree safety checks |
 | `Antigravity: Approve a Pull Request` | Available now | Launches the selected harness against the `approve_pull_request` workflow |
 | `Antigravity: Feedback on Pull Request` | **Under development** | Currently only shows an informational message |
-| `Antigravity: Setup Workspace` | Available now | Opens a template picker, creates workspace support folders and harness links, then launches the selected harness to fetch the chosen template into `antigravity.workspaceProjectPath` |
+| `Antigravity: Setup Workspace` | Available now | Downloads `project-structure.zip`, extracts it into `antigravity.workspaceProjectPath`, and prompts before overwriting existing files |
 | `Antigravity: Create Repo Tag` | Available now | Creates and pushes an annotated `v<package.json version>` Git tag |
 
 ### Explorer Context Menu
@@ -495,7 +495,7 @@ That currently applies to:
 
 - `Open Help Doc`
 - `SOP Manual`
-- `Setup Workspace` templates
+- `Setup Workspace` project-structure ZIP
 - Bundled skills copied into a project, such as:
   - `jira-project-creation`
   - `grill-me`

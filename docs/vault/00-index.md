@@ -211,3 +211,13 @@ PRD · Specs · Architecture · ADRs · Backlog · Estimation · UX · Reviews �
 - [[Notes/20260921T091507308054Z-implementation-note-renamed-resources-folder-to-resources]] — Renamed Resources folder to resources
 
 - [[Notes/20260921T091722226881Z-implementation-note-documented-and-hardened-project-structure-zip-creation]] — Documented and hardened project structure zip creation
+
+- [[Notes/20260921T092331941096Z-implementation-note-added-per-file-overwrite-choices-to-project-structure-deployment]] — Added per-file overwrite choices to project structure deployment
+
+- [[Notes/20260921T092805648479Z-implementation-note-added-dialog-fallback-for-project-structure-overwrite-prompts]] — Added dialog fallback for project structure overwrite prompts
+
+- [[Notes/20260921T094607038640Z-implementation-note-setup-workspace-deploys-project-structure-zip-with-overwrite-prompts]] — Setup Workspace deploys project structure ZIP with overwrite prompts
+
+- [[Notes/20260921T095111361844Z-implementation-note-removed-obsolete-setup-workspace-template-dialog-path]] — Removed obsolete Setup Workspace template dialog path
+
+- [[Notes/20260922T102711875731Z-implementation-note-installed-rebuilt-setup-workspace-zip-deployment-extension]] — Installed rebuilt Setup Workspace zip deployment extension

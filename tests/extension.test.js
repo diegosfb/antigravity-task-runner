@@ -100,3 +100,19 @@ test("renderHelpMarkdownWithVersion replaces stale hardcoded help version", () =
     "This guide describes Task Runner as it is currently implemented in this repository for `v9.8.7`."
   );
 });
+
+test("buildProjectStructureZipUrl converts GitHub repository URLs to raw zip URLs", () => {
+  const ext = setupExtensionModule();
+  assert.equal(
+    ext.buildProjectStructureZipUrl("https://github.com/diegosfb/antigravity-task-runner.git"),
+    "https://raw.githubusercontent.com/diegosfb/antigravity-task-runner/main/project-structure.zip"
+  );
+});
+
+test("buildProjectStructureZipUrl keeps direct zip URLs unchanged", () => {
+  const ext = setupExtensionModule();
+  assert.equal(
+    ext.buildProjectStructureZipUrl("https://example.com/project-structure.zip"),
+    "https://example.com/project-structure.zip"
+  );
+});

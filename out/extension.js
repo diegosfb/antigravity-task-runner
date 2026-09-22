@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.renderHelpMarkdownWithVersion = renderHelpMarkdownWithVersion;
 exports.getObsidianVaultScriptDirectory = getObsidianVaultScriptDirectory;
+exports.buildProjectStructureZipUrl = buildProjectStructureZipUrl;
 exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = require("vscode");
@@ -75,6 +76,17 @@ async function renderHelpMarkdownFile(helpDocPath, extensionVersion) {
 }
 function getObsidianVaultScriptDirectory(repoRoot) {
     return path.join(repoRoot, "scripts");
+}
+function buildProjectStructureZipUrl(repositoryUrl) {
+    const trimmed = repositoryUrl.trim().replace(/\/+$/, "");
+    if (trimmed.endsWith(".zip"))
+        return trimmed;
+    const githubPrefix = "https://github.com/";
+    if (!trimmed.startsWith(githubPrefix)) {
+        return `${trimmed}/project-structure.zip`;
+    }
+    const repoPath = trimmed.slice(githubPrefix.length).replace(/\.git$/, "");
+    return `https://raw.githubusercontent.com/${repoPath}/main/project-structure.zip`;
 }
 function activate(context) {
     const outputChannel = vscode.window.createOutputChannel("Antigravity Task Runner");
@@ -161,6 +173,99 @@ function activate(context) {
             void vscode.window.showErrorMessage(`${taskName} failed: ${message}`);
         }
     };
+    const execFileText = (command, args, cwd) => new Promise((resolve, reject) => {
+        (0, child_process_1.execFile)(command, args, { cwd, maxBuffer: 20 * 1024 * 1024 }, (error, stdout, stderr) => {
+            if (error) {
+                const details = String(stderr || "").trim() || error.message;
+                reject(new Error(details));
+                return;
+            }
+            resolve(String(stdout));
+        });
+    });
+    const isSafeZipFileEntry = (entry) => {
+        if (!entry || entry.includes("\0") || entry.includes("\\"))
+            return false;
+        const normalized = path.posix.normalize(entry);
+        return normalized !== "." && normalized !== ".." && !normalized.startsWith("../") && !normalized.startsWith("/");
+    };
+    const listProjectStructureZipFileEntries = async (zipPath) => {
+        const output = await execFileText("unzip", ["-Z1", zipPath]);
+        const entries = output
+            .split(/\r?\n/)
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0 && !entry.endsWith("/"));
+        const unsafeEntry = entries.find((entry) => !isSafeZipFileEntry(entry));
+        if (unsafeEntry) {
+            throw new Error(`project-structure.zip contains an unsafe path: ${unsafeEntry}`);
+        }
+        return entries;
+    };
+    const extractProjectStructureEntries = async (zipPath, destination, overwrite, entries) => {
+        if (entries.length === 0)
+            return;
+        await execFileText("unzip", [overwrite ? "-o" : "-n", zipPath, ...entries, "-d", destination]);
+    };
+    const promptProjectStructureOverwrite = async (relativePath) => {
+        const choice = await vscode.window.showWarningMessage(`Project structure file already exists: ${relativePath}`, { modal: true }, "All", "None", "Yes, this file only", "No, not this file");
+        if (choice === "All") {
+            const confirmation = await vscode.window.showWarningMessage("Overwrite all existing project structure files?", { modal: true }, "Overwrite All", "Cancel");
+            return confirmation === "Overwrite All" ? "all" : undefined;
+        }
+        if (choice === "None")
+            return "none";
+        if (choice === "Yes, this file only")
+            return "yes-this-file";
+        if (choice === "No, not this file")
+            return "no-this-file";
+        return undefined;
+    };
+    const deployProjectStructureZip = async (repoRoot) => {
+        const config = vscode.workspace.getConfiguration("antigravity");
+        const source = (config.get("projectStructureAndAgentsRepository") ||
+            settings_1.DEFAULT_PROJECT_STRUCTURE_AND_AGENTS_REPOSITORY).trim();
+        if (!source) {
+            throw new Error("antigravity.projectStructureAndAgentsRepository is empty.");
+        }
+        const workspaceDir = (0, utils_1.getWorkspaceProjectPath)(repoRoot);
+        const tmpDir = path.join(repoRoot, "tmp");
+        const zipPath = path.join(tmpDir, "project-structure.zip");
+        const zipUrl = buildProjectStructureZipUrl(source);
+        (0, logger_1.logAlways)(`[Setup Workspace] source: ${source}`);
+        (0, logger_1.logAlways)(`[Setup Workspace] zipUrl: ${zipUrl}`);
+        (0, logger_1.logAlways)(`[Setup Workspace] workspaceDir: ${workspaceDir}`);
+        await fs.promises.mkdir(tmpDir, { recursive: true });
+        await fs.promises.mkdir(workspaceDir, { recursive: true });
+        await (0, scripts_1.downloadFile)(zipUrl, zipPath);
+        const entries = await listProjectStructureZipFileEntries(zipPath);
+        const conflicts = entries.filter((entry) => {
+            const targetPath = path.join(workspaceDir, entry);
+            return fs.existsSync(targetPath) && fs.statSync(targetPath).isFile();
+        });
+        if (conflicts.length === 0) {
+            await extractProjectStructureEntries(zipPath, workspaceDir, true, entries);
+            return workspaceDir;
+        }
+        const selectedEntries = new Set();
+        for (const conflict of conflicts) {
+            const decision = await promptProjectStructureOverwrite(conflict);
+            if (decision === "all") {
+                await extractProjectStructureEntries(zipPath, workspaceDir, true, entries);
+                return workspaceDir;
+            }
+            if (decision === "none" || !decision) {
+                await extractProjectStructureEntries(zipPath, workspaceDir, false, entries);
+                return workspaceDir;
+            }
+            if (decision === "yes-this-file") {
+                selectedEntries.add(conflict);
+                await extractProjectStructureEntries(zipPath, workspaceDir, true, [conflict]);
+            }
+        }
+        const newOnlyEntries = entries.filter((entry) => !selectedEntries.has(entry));
+        await extractProjectStructureEntries(zipPath, workspaceDir, false, newOnlyEntries);
+        return workspaceDir;
+    };
     const branchTypes = [
         {
             label: "Feature",
@@ -226,237 +331,6 @@ function activate(context) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
-    const renderSetupWorkspaceHtml = (webview, workspaceDir, projectTemplates) => {
-        const nonce = getNonce();
-        const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-        const templateCards = projectTemplates
-            .map((template, index) => {
-            const checked = index === 0 ? " checked" : "";
-            const selectedClass = index === 0 ? " selected" : "";
-            const descriptionHtml = escapeHtml(template.description).replace(/\n/g, "<br />");
-            return `
-          <label class="template-card${selectedClass}">
-            <input type="radio" name="project-template" value="${escapeHtml(template.name)}"${checked} />
-            <span class="template-copy">
-              <span class="template-name">${escapeHtml(template.name)}</span>
-              <span class="template-description">${descriptionHtml}</span>
-            </span>
-          </label>
-        `;
-        })
-            .join("");
-        return `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="${csp}" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Setup Workspace</title>
-    <style>
-      :root {
-        color-scheme: light dark;
-        font-family: var(--vscode-font-family);
-      }
-      body {
-        margin: 0;
-        padding: 20px;
-        color: var(--vscode-foreground);
-        background: var(--vscode-editor-background);
-      }
-      form {
-        display: grid;
-        gap: 16px;
-      }
-      .intro {
-        display: grid;
-        gap: 6px;
-      }
-      .hint {
-        font-size: 12px;
-        color: var(--vscode-descriptionForeground);
-      }
-      .workspace-path {
-        font-family: var(--vscode-editor-font-family, monospace);
-        font-size: 12px;
-        color: var(--vscode-textPreformat-foreground);
-        background: var(--vscode-textCodeBlock-background);
-        border-radius: 6px;
-        padding: 10px 12px;
-        overflow-wrap: anywhere;
-      }
-      .template-list {
-        display: grid;
-        gap: 10px;
-      }
-      .template-card {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 12px;
-        align-items: start;
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px solid var(--vscode-input-border, transparent);
-        background: var(--vscode-sideBar-background);
-        cursor: pointer;
-      }
-      .template-card.selected {
-        border-color: var(--vscode-focusBorder);
-        background: var(--vscode-list-hoverBackground);
-      }
-      .template-card input {
-        margin-top: 3px;
-      }
-      .template-copy {
-        display: grid;
-        gap: 6px;
-      }
-      .template-name {
-        font-size: 14px;
-        font-weight: 600;
-      }
-      .template-description {
-        font-size: 12px;
-        color: var(--vscode-descriptionForeground);
-        line-height: 1.5;
-      }
-      .error {
-        min-height: 18px;
-        font-size: 12px;
-        color: var(--vscode-errorForeground);
-      }
-      .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 4px;
-      }
-      button {
-        font: inherit;
-        border: 0;
-        border-radius: 6px;
-        padding: 8px 14px;
-        cursor: pointer;
-      }
-      button[type="submit"] {
-        color: var(--vscode-button-foreground);
-        background: var(--vscode-button-background);
-      }
-      button[type="submit"][data-action="estimate"] {
-        background: var(--vscode-charts-green, #2ea043);
-      }
-      button[type="submit"][data-action="estimate"]:hover {
-        background: color-mix(in srgb, var(--vscode-charts-green, #2ea043) 88%, black 12%);
-      }
-      button[type="button"] {
-        color: var(--vscode-button-secondaryForeground);
-        background: var(--vscode-button-secondaryBackground);
-      }
-    </style>
-  </head>
-  <body>
-    <form id="setup-workspace-form">
-      <div class="intro">
-        <div>Select a project template to download into the configured workspace path.</div>
-        <div class="hint">After you click Setup, the selected Agentic Harness command from Settings will be launched to perform the download.</div>
-        <div class="workspace-path">${escapeHtml(workspaceDir)}</div>
-      </div>
-
-      <div class="template-list">
-        ${templateCards}
-      </div>
-
-      <div id="setup-workspace-error" class="error" aria-live="polite"></div>
-
-      <div class="actions">
-        <button type="button" id="cancel-button">Cancel</button>
-        <button type="submit">Setup</button>
-      </div>
-    </form>
-
-    <script nonce="${nonce}">
-      const vscode = acquireVsCodeApi();
-      const form = document.getElementById("setup-workspace-form");
-      const errorMessage = document.getElementById("setup-workspace-error");
-      const cancelButton = document.getElementById("cancel-button");
-      const cards = Array.from(document.querySelectorAll(".template-card"));
-      const radios = Array.from(document.querySelectorAll('input[name="project-template"]'));
-
-      const syncSelectedState = () => {
-        cards.forEach((card) => {
-          const radio = card.querySelector('input[name="project-template"]');
-          card.classList.toggle("selected", Boolean(radio && radio.checked));
-        });
-      };
-
-      radios.forEach((radio) => {
-        radio.addEventListener("change", syncSelectedState);
-      });
-
-      cancelButton.addEventListener("click", () => {
-        vscode.postMessage({ type: "cancelSetupWorkspace" });
-      });
-
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-        const selected = radios.find((radio) => radio.checked);
-        if (!selected) {
-          errorMessage.textContent = "Select a project type.";
-          return;
-        }
-        errorMessage.textContent = "";
-        vscode.postMessage({
-          type: "submitSetupWorkspace",
-          payload: { templateName: selected.value }
-        });
-      });
-
-      window.addEventListener("message", (event) => {
-        const message = event.data;
-        if (message?.type === "setupWorkspaceError") {
-          errorMessage.textContent =
-            message.payload?.message || "Unable to start workspace setup.";
-        }
-      });
-
-      syncSelectedState();
-    </script>
-  </body>
-</html>`;
-    };
-    const showSetupWorkspaceDialog = async (workspaceDir, projectTemplates) => new Promise((resolve) => {
-        const panel = vscode.window.createWebviewPanel("setupWorkspace", "Setup Workspace", vscode.ViewColumn.Active, { enableScripts: true });
-        panel.webview.html = renderSetupWorkspaceHtml(panel.webview, workspaceDir, projectTemplates);
-        let settled = false;
-        const resolveOnce = (value) => {
-            if (settled)
-                return;
-            settled = true;
-            resolve(value);
-        };
-        panel.onDidDispose(() => resolveOnce(undefined), undefined, context.subscriptions);
-        panel.webview.onDidReceiveMessage(async (message) => {
-            if (!message)
-                return;
-            if (message.type === "cancelSetupWorkspace") {
-                panel.dispose();
-                return;
-            }
-            if (message.type !== "submitSetupWorkspace")
-                return;
-            const payload = message.payload || {};
-            const templateName = typeof payload.templateName === "string" ? payload.templateName.trim() : "";
-            const selectedTemplate = projectTemplates.find((projectTemplate) => projectTemplate.name === templateName);
-            if (!selectedTemplate) {
-                void panel.webview.postMessage({
-                    type: "setupWorkspaceError",
-                    payload: { message: "Select a project type." }
-                });
-                return;
-            }
-            resolveOnce(selectedTemplate);
-            panel.dispose();
-        }, undefined, context.subscriptions);
-    });
     const renderCreateFeatureBranchHtml = (webview, hasJiraProject) => {
         const nonce = getNonce();
         const csp = `default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
@@ -3372,54 +3246,16 @@ function activate(context) {
             return;
         }
         const repoRoot = workspaceRoot;
-        const workspaceDir = (0, utils_1.getWorkspaceProjectPath)(repoRoot);
-        (0, logger_1.logAlways)(`[Setup Workspace] workspaceDir: ${workspaceDir}`);
-        let projectTemplates;
         try {
-            projectTemplates = await (0, projectTemplates_1.loadProjectTemplates)(path.join(extensionRoot, "resources"), resourceProvider);
+            const workspaceDir = await deployProjectStructureZip(repoRoot);
+            (0, logger_1.logAlways)(`[Setup Workspace] Extracted project structure into ${workspaceDir}`);
+            void vscode.window.showInformationMessage(`Setup Workspace extracted project structure files into ${workspaceDir}.`);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logAlways)(`[Setup Workspace] ERROR loading templates: ${message}`);
-            void vscode.window.showErrorMessage(`Unable to load resources/project-templates.json: ${message}`);
-            return;
+            (0, logger_1.logAlways)(`[Setup Workspace] ERROR deploying project structure: ${message}`);
+            void vscode.window.showErrorMessage(`Setup Workspace failed: ${message}`);
         }
-        if (projectTemplates.length === 0) {
-            (0, logger_1.logAlways)("[Setup Workspace] ERROR: No valid project templates found");
-            void vscode.window.showErrorMessage("resources/project-templates.json does not contain any valid project templates.");
-            return;
-        }
-        const selectedTemplate = await showSetupWorkspaceDialog(workspaceDir, projectTemplates);
-        if (!selectedTemplate) {
-            (0, logger_1.logAlways)("[Setup Workspace] Selection cancelled");
-            return;
-        }
-        fs.mkdirSync(workspaceDir, { recursive: true });
-        let createdSupportPaths;
-        try {
-            createdSupportPaths = await (0, projectTemplates_1.ensureSetupWorkspaceDirectories)(workspaceDir);
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logAlways)(`[Setup Workspace] ERROR preparing support folders: ${message}`);
-            void vscode.window.showErrorMessage(`Failed to prepare workspace support folders in ${workspaceDir}: ${message}`);
-            return;
-        }
-        (0, logger_1.logAlways)(`[Setup Workspace] support folders ready in ${workspaceDir}: ${createdSupportPaths.length > 0 ? createdSupportPaths.join(", ") : "already present"}`);
-        const prompt = (0, projectTemplates_1.buildSetupWorkspacePrompt)(selectedTemplate, workspaceDir);
-        const commandLine = (0, terminal_1.buildAgenticHarnessPromptCommand)(workspaceDir, prompt, "unattended");
-        const taskName = `Agentic Harness Setup Workspace ${Date.now()}`;
-        try {
-            await (0, terminal_1.runCommandInTaskTerminal)(taskName, commandLine, { cwd: workspaceDir });
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logAlways)(`[Setup Workspace] ERROR launching harness: ${message}`);
-            void vscode.window.showErrorMessage(`Failed to launch the Agentic Harness terminal: ${message}`);
-            return;
-        }
-        (0, logger_1.logAlways)(`[Setup Workspace] Opened harness for template ${selectedTemplate.name} in ${workspaceDir}`);
-        void vscode.window.showInformationMessage(`Opened Agentic Harness to download ${selectedTemplate.name} into ${workspaceDir}.`);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("antigravity.updateWorkspaceAgentsMd", async () => {
         (0, logger_1.showOutputChannel)();

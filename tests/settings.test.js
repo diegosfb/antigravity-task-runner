@@ -84,7 +84,7 @@ test("settings page exposes descriptions and tooltip hooks", () => {
   const html = settings.renderAntigravitySettingsHtml({ cspSource: "vscode-resource:" });
   assert.match(html, /When enabled, agent-driven flows are preferred for GitHub repository management tasks\./);
   assert.match(html, /Project Structure & Agents Repository/);
-  assert.match(html, /create-project-structure\.sh/);
+  assert.match(html, /deploy-project-structure\.sh/);
   assert.match(html, /https:\/\/github\.com\/diegosfb\/antigravity-task-runner/);
   assert.match(html, /aria-describedby/);
   assert.match(html, /title = helpText/);

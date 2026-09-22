@@ -2,7 +2,7 @@
   "name": "antigravity-task-runner",
   "displayName": "Task Runner",
   "description": "Browse and run Antigravity agents and workflows from the VS Code sidebar.",
-  "version": "4.12.75",
+  "version": "4.12.76",
   "publisher": "dsfb",
   "license": "SEE LICENSE IN LICENSE",
   "icon": "resources/taskrunner.png",
@@ -275,9 +275,9 @@
       "antigravityContainer": [
         {
           "id": "antigravityView",
-          "name": "v4.12.75",
+          "name": "v4.12.76",
           "icon": "resources/taskrunner.svg",
-          "contextualTitle": "Task Runner v4.12.75"
+          "contextualTitle": "Task Runner v4.12.76"
         }
       ]
     },

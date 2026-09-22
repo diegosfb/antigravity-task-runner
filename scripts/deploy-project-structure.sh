@@ -7,6 +7,45 @@ VSCODE_SETTINGS="$PROJECT_ROOT/.vscode/settings.json"
 TMP_DIR="${PROJECT_STRUCTURE_TMP:-$PROJECT_ROOT/tmp}"
 ZIP_PATH="$TMP_DIR/project-structure.zip"
 DEFAULT_REPO_URL="https://github.com/diegosfb/antigravity-task-runner"
+CONFLICTS_PATH="$(mktemp)"
+exec 3<&0
+
+cleanup() {
+  rm -f "$CONFLICTS_PATH"
+  exec 3<&- || true
+}
+trap cleanup EXIT
+
+prompt_user() {
+  local prompt="$1"
+  local answer
+
+  if [ "${PROJECT_STRUCTURE_USE_OSASCRIPT:-1}" != "0" ] && command -v osascript >/dev/null 2>&1; then
+    answer=$(osascript - "$prompt" <<'OSA' 2>/dev/null || true
+on run argv
+  set promptText to item 1 of argv
+  try
+    set dialogResult to display dialog promptText default answer "" buttons {"Cancel", "OK"} default button "OK"
+    return text returned of dialogResult
+  on error
+    return ""
+  end try
+end run
+OSA
+)
+    [ -n "$answer" ] || return 1
+  elif [ -t 3 ] && [ -t 1 ]; then
+    printf "%s" "$prompt" >&2
+    IFS= read -r answer <&3 || return 1
+  elif [ "${PROJECT_STRUCTURE_READ_STDIN:-1}" != "0" ]; then
+    printf "%s" "$prompt" >&2
+    IFS= read -r -t "${PROJECT_STRUCTURE_PROMPT_TIMEOUT:-1}" answer <&3 || return 1
+  else
+    return 1
+  fi
+
+  printf "%s\n" "$answer"
+}
 
 # Read repo URL from the workspace VS Code setting. Fall back to the same
 # default contributed by the extension when the workspace setting is absent.
@@ -67,28 +106,66 @@ fi
 
 # Find files in the zip that already exist in the destination
 echo "Checking for existing files ..."
-CONFLICTS=$(unzip -l "$ZIP_PATH" | awk 'NR>3 && NF==4 && $NF !~ /\/$/ {print $NF}' | while IFS= read -r f; do
-  [ -f "$DEST/$f" ] && echo "  $f"
-done || true)
+unzip -Z1 "$ZIP_PATH" | while IFS= read -r file_path; do
+  [ -z "$file_path" ] && continue
+  [[ "$file_path" == */ ]] && continue
+  if [ -f "$DEST/$file_path" ]; then
+    printf "%s\n" "$file_path"
+  fi
+done > "$CONFLICTS_PATH"
 
-if [ -n "$CONFLICTS" ]; then
+if [ -s "$CONFLICTS_PATH" ]; then
   echo "These files already exist in $DEST:"
-  echo "$CONFLICTS"
+  sed 's/^/  /' "$CONFLICTS_PATH"
   if [[ "${PROJECT_STRUCTURE_OVERWRITE:-}" =~ ^([Yy]|[Yy][Ee][Ss]|1|[Tt][Rr][Uu][Ee])$ ]]; then
     echo "PROJECT_STRUCTURE_OVERWRITE is enabled; overwriting existing files ..."
     unzip -o "$ZIP_PATH" -d "$DEST"
-  elif [ -t 0 ] && [ -t 1 ]; then
-    printf "Overwrite existing files? [y/N] "
-    read -r answer
-    if [[ "${answer:-}" =~ ^[Yy]$ ]]; then
+  else
+    OVERWRITE_ALL=0
+    CAN_PROMPT=1
+
+    while IFS= read -r conflict_path; do
+      while true; do
+        echo
+        echo "Existing file: $conflict_path"
+        if ! answer=$(prompt_user "Overwrite? Type A for All, N for None, or T for This file only (default N): "); then
+          CAN_PROMPT=0
+          break 2
+        fi
+
+        case "${answer:-N}" in
+          [Aa]|[Aa][Ll][Ll])
+            echo "Warning: choosing All overwrites every existing file listed above."
+            confirm=$(prompt_user "Type ALL to confirm overwriting all existing files: " || true)
+            if [ "$confirm" = "ALL" ]; then
+              OVERWRITE_ALL=1
+              break 2
+            fi
+            echo "All overwrite was not confirmed."
+            ;;
+          [Nn]|[Nn][Oo]|[Nn][Oo][Nn][Ee])
+            echo "Keeping existing files, extracting only new ones ..."
+            break 2
+            ;;
+          [Tt]|[Tt][Hh][Ii][Ss]|[Tt][Hh][Ii][Ss]" "[Ff][Ii][Ll][Ee])
+            unzip -o "$ZIP_PATH" "$conflict_path" -d "$DEST"
+            break
+            ;;
+          *)
+            echo "Invalid choice. Enter A for All, N for None, or T for This file only."
+            ;;
+        esac
+      done
+    done < "$CONFLICTS_PATH"
+
+    if [ "$OVERWRITE_ALL" -eq 1 ]; then
       unzip -o "$ZIP_PATH" -d "$DEST"
     else
-      echo "Keeping existing files, extracting only new ones ..."
+      if [ "$CAN_PROMPT" -eq 0 ]; then
+        echo "No interactive input is available; keeping existing files and extracting only new ones ..."
+      fi
       unzip -n "$ZIP_PATH" -d "$DEST"
     fi
-  else
-    echo "No interactive input is available; keeping existing files and extracting only new ones ..."
-    unzip -n "$ZIP_PATH" -d "$DEST"
   fi
 else
   unzip -o "$ZIP_PATH" -d "$DEST"

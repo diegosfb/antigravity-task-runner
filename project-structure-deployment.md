@@ -52,8 +52,12 @@ It then extracts the archive into `antigravity.workspaceProjectPath`, also shown
 
 When existing files are found:
 
-- In an interactive terminal, the script asks whether to overwrite.
-- In non-interactive runners, it keeps existing files and extracts only new files.
+- In an interactive terminal, the script asks for each existing file whether to overwrite `All`, `None`, or `This file only`.
+- In VS Code/Code Runner contexts without a usable terminal prompt, the script uses a macOS dialog when available so the user can still respond.
+- `All` requires typing `ALL` to confirm before every existing file is overwritten.
+- `None` keeps every existing file and extracts only new files.
+- `This file only` overwrites the current file and then asks again for the next existing file.
+- In non-interactive runners, the script keeps existing files and extracts only new files.
 - Set `PROJECT_STRUCTURE_OVERWRITE=1` to force overwrites.
 
 ## Validation Checklist
